@@ -13,12 +13,40 @@ const KlaviyoInterface = () => {
 
   const generateRandomPhoneNumber = () => {
     const getRandomDigit = () => Math.floor(Math.random() * 10);
-
-    const areaCode = `${getRandomDigit()}${getRandomDigit()}${getRandomDigit()}`;
-    const centralOfficeCode = `${getRandomDigit()}${getRandomDigit()}${getRandomDigit()}`;
     const lineNumber = `${getRandomDigit()}${getRandomDigit()}${getRandomDigit()}${getRandomDigit()}`;
 
-    return `+1${areaCode}${centralOfficeCode}${lineNumber}`;
+    return `+1${234}${567}${lineNumber}`;
+  };
+
+  const generateRandomName = length => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let randomName = '';
+
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      randomName += characters.charAt(randomIndex);
+    }
+
+    return randomName;
+  };
+
+  const generateRandomAddress = () => {
+    const streets = ['Main St', 'Elm St', 'Oak Ave', 'Cedar Ln', 'Maple Rd'];
+    const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami'];
+    const states = ['CA', 'NY', 'TX', 'FL', 'IL'];
+    const zipCodes = ['10001', '90001', '60601', '77001', '33101'];
+
+    const randomStreet = streets[Math.floor(Math.random() * streets.length)];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    const randomState = states[Math.floor(Math.random() * states.length)];
+    const randomZipCode = zipCodes[Math.floor(Math.random() * zipCodes.length)];
+
+    return {
+      street: randomStreet,
+      city: randomCity,
+      state: randomState,
+      zipCode: randomZipCode,
+    };
   };
 
   async function setPhoneNumber() {
@@ -65,7 +93,7 @@ const KlaviyoInterface = () => {
         'sound',
       ]);
 
-      console.log("granted === ", granted);
+      console.log('granted === ', granted);
 
       if (granted) {
         console.log('registering for remote notifications');
@@ -76,9 +104,45 @@ const KlaviyoInterface = () => {
     }
   };
 
+  const onSetProfile = async () => {
+    try {
+      NativeModules.Klaviyo.setProfile(
+        generateRandomEmails(),
+        generateRandomPhoneNumber(),
+        generateRandomName(8),
+        generateRandomName(7),
+        generateRandomName(4),
+        generateRandomName(5),
+        generateRandomName(6),
+        'test image',
+        generateRandomAddress().street,
+        '',
+        generateRandomAddress().city,
+        'USA',
+        99,
+        99,
+        generateRandomAddress().city,
+        generateRandomAddress().zipCode,
+        'test timezone',
+        {
+          'test key 1': generateRandomName(5),
+          'test key 2': Math.floor(Math.random() * 90) + 10,
+        },
+      );
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
+
   return (
     <>
       <Button title="Click to init the SDK" color="#841584" onPress={onInit} />
+
+      <Button
+        title="Click to set the full profile"
+        color="#841584"
+        onPress={onSetProfile}
+      />
 
       <Button
         title="Click to set the email"

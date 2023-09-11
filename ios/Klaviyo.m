@@ -16,4 +16,28 @@ RCT_EXTERN_METHOD(requestPushPermission:(NSArray<NSString *> *)value
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(registerForRemoteNotifications)
+RCT_EXTERN_METHOD(setProfile: (NSString *)email
+                  phoneNumber: (NSString *)phoneNumber
+                  externalId: (NSString *)externalId
+                  firstName: (NSString *)firstName
+                  lastName: (NSString *)lastName
+                  organization: (NSString *)organization
+                  title: (NSString *)title
+                  image: (NSString *)image
+                  address1: (NSString *)address1
+                  address2: (NSString *)address2
+                  city: (NSString *)city
+                  country: (NSString *)country
+                  latitude: (nonnull NSNumber *)latitude
+                  longitude: (nonnull NSNumber *)longitude
+                  region: (NSString *)region
+                  zip: (NSString *)zip
+                  timezone: (NSString *)timezone
+                  properties: (NSDictionary * )properties
+)
+
 @end
+
+
+
+

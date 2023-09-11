@@ -22,6 +22,57 @@ class Klaviyo: NSObject {
   }
   
   @objc
+  func setProfile(
+    _ email: String? = nil,
+    phoneNumber: String? = nil,
+    externalId: String? = nil,
+    firstName: String? = nil,
+    lastName: String? = nil,
+    organization: String? = nil,
+    title: String? = nil,
+    image: String? = nil,
+    address1: String? = nil,
+    address2: String? = nil,
+    city: String? = nil,
+    country: String? = nil,
+    latitude: NSNumber? = nil,
+    longitude: NSNumber? = nil,
+    region: String? = nil,
+    zip: String? = nil,
+    timezone: String? = nil,
+    properties: NSDictionary? = nil
+  ) {
+    let location = Profile.Location(
+      address1: address1,
+      address2: address2,
+      city: city,
+      country: country,
+      latitude: latitude as? Double,
+      longitude: longitude as? Double,
+      region: region,
+      zip: zip,
+      timezone: timezone
+    )
+
+    let profile = Profile(
+      email: email,
+      phoneNumber: phoneNumber,
+      externalId: externalId,
+      firstName: firstName,
+      lastName: lastName,
+      organization: organization,
+      title: title,
+      image: image,
+      location: location,
+      properties: properties as? [String : Any]
+    )
+    
+    print("setting profile = ", profile)
+    
+    KlaviyoSDK().set(profile: profile)
+  }
+  
+  @objc
   func setEmail(_ value: String) {
     print("setting email = ", value)
     KlaviyoSDK().set(email: value)
@@ -66,3 +117,6 @@ class Klaviyo: NSObject {
     KlaviyoSDK().set(pushToken: deviceToken)
   }
 }
+
+
+
