@@ -12,6 +12,7 @@
 RCT_EXTERN_METHOD(initializeWithApiKey: (NSString *)value)
 RCT_EXTERN_METHOD(setEmail: (NSString *)value)
 RCT_EXTERN_METHOD(setPhoneNumber: (NSString *)value)
+RCT_EXTERN_METHOD(setExternalId: (NSString *)value)
 RCT_EXTERN_METHOD(requestPushPermission:(NSArray<NSString *> *)value
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -35,6 +36,8 @@ RCT_EXTERN_METHOD(setProfile: (NSString *)email
                   timezone: (NSString *)timezone
                   properties: (NSDictionary * )properties
 )
+
+RCT_EXTERN_METHOD(resetProfile)
 
 @end
 

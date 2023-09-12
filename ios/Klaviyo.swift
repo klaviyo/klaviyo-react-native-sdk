@@ -73,6 +73,12 @@ class Klaviyo: NSObject {
   }
   
   @objc
+  func resetProfile() {
+    print("resetting profile")
+    KlaviyoSDK().resetProfile()
+  }
+  
+  @objc
   func setEmail(_ value: String) {
     print("setting email = ", value)
     KlaviyoSDK().set(email: value)
@@ -84,6 +90,13 @@ class Klaviyo: NSObject {
     KlaviyoSDK().set(phoneNumber: value)
   }
   
+//  TODO: doesn't seem to work. need to investigate
+  @objc
+  func setExternalId(_ value: String) {
+    print("setting external id = ", value)
+    KlaviyoSDK().set(externalId: value)
+  }
+  
   @objc
   func requestPushPermission(
     _ value: [String],
@@ -91,8 +104,23 @@ class Klaviyo: NSObject {
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) -> Void {
     print("requesting permissions for ", value)
+    
+    let permissions: [String: UNAuthorizationOptions] = [
+      "alert": .alert,
+      "sound": .sound,
+      "badge": .badge,
+      "carPlay": .carPlay,
+      "criticalAlert": .criticalAlert,
+      "providesAppNotificationSettings": .providesAppNotificationSettings,
+      "provisional": .provisional
+    ]
+    
+    let options: UNAuthorizationOptions = value
+      .compactMap { permissions[$0] }
+      .reduce([]) { $0.union($1) }
+    
     let center = UNUserNotificationCenter.current()
-    center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+    center.requestAuthorization(options: options) { granted, error in
         if let error = error {
           reject("AuthError", "error while trying to authorize push", error)
         } else {

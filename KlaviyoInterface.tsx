@@ -134,6 +134,22 @@ const KlaviyoInterface = () => {
     }
   };
 
+  const onResetProfile = async () => {
+    try {
+      NativeModules.Klaviyo.resetProfile();
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
+
+  const onExternalId = async () => {
+    try {
+      NativeModules.Klaviyo.setExternalId(generateRandomName(5));
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
+
   return (
     <>
       <Button title="Click to init the SDK" color="#841584" onPress={onInit} />
@@ -149,6 +165,7 @@ const KlaviyoInterface = () => {
         color="#841584"
         onPress={onEmail}
       />
+
       <Button
         title="Click to set the phone number"
         color="#841584"
@@ -156,9 +173,21 @@ const KlaviyoInterface = () => {
       />
 
       <Button
+        title="Click to set external id"
+        color="#841584"
+        onPress={onExternalId}
+      />
+
+      <Button
         title="Click to request push notification persmission"
         color="#841584"
         onPress={onPushPermission}
+      />
+
+      <Button
+        title="Click to RESET the full profile"
+        color="#ffcccb"
+        onPress={onResetProfile}
       />
     </>
   );
