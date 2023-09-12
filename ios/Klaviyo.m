@@ -9,6 +9,8 @@
 #import "React/RCTBridgeModule.h"
 
 @interface RCT_EXTERN_MODULE(Klaviyo, NSObject)
+
+//MARK: Setters
 RCT_EXTERN_METHOD(initializeWithApiKey: (NSString *)value)
 RCT_EXTERN_METHOD(setEmail: (NSString *)value)
 RCT_EXTERN_METHOD(setPhoneNumber: (NSString *)value)
@@ -34,10 +36,14 @@ RCT_EXTERN_METHOD(setProfile: (NSString *)email
                   region: (NSString *)region
                   zip: (NSString *)zip
                   timezone: (NSString *)timezone
-                  properties: (NSDictionary * )properties
-)
-
+                  properties: (NSDictionary * )properties)
 RCT_EXTERN_METHOD(resetProfile)
+
+//MARK: Getters
+RCT_EXTERN_METHOD(getEmail: (RCTResponseSenderBlock)callback)
+RCT_EXTERN_METHOD(getPhoneNumber: (RCTResponseSenderBlock)callback)
+RCT_EXTERN_METHOD(getExternalId: (RCTResponseSenderBlock)callback)
+RCT_EXTERN_METHOD(getPushToken: (RCTResponseSenderBlock)callback)
 
 @end
 

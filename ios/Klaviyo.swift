@@ -15,10 +15,18 @@ class Klaviyo: NSObject {
     return true
   }
   
+  // MARK: Setters
+  
   @objc
   func initializeWithApiKey(_ value: String) {
     print("in initializeWithApiKey ###", value)
     KlaviyoSDK().initialize(with: value)
+  }
+  
+  @objc
+  static func setToken(deviceToken: Data) {
+    print("calling KlaviyoSDK().set(pushToken: deviceToken)", deviceToken)
+    KlaviyoSDK().set(pushToken: deviceToken)
   }
   
   @objc
@@ -73,12 +81,6 @@ class Klaviyo: NSObject {
   }
   
   @objc
-  func resetProfile() {
-    print("resetting profile")
-    KlaviyoSDK().resetProfile()
-  }
-  
-  @objc
   func setEmail(_ value: String) {
     print("setting email = ", value)
     KlaviyoSDK().set(email: value)
@@ -95,6 +97,12 @@ class Klaviyo: NSObject {
   func setExternalId(_ value: String) {
     print("setting external id = ", value)
     KlaviyoSDK().set(externalId: value)
+  }
+  
+  @objc
+  func resetProfile() {
+    print("resetting profile")
+    KlaviyoSDK().resetProfile()
   }
   
   @objc
@@ -139,10 +147,28 @@ class Klaviyo: NSObject {
     }
   }
   
+  // MARK: Getters
+  
   @objc
-  static func setToken(deviceToken: Data) {
-    print("calling KlaviyoSDK().set(pushToken: deviceToken)", deviceToken)
-    KlaviyoSDK().set(pushToken: deviceToken)
+  func getEmail(_ callback: RCTResponseSenderBlock) {
+    print("in get email")
+    callback([KlaviyoSDK().email ?? ""])
+  }
+  
+  @objc
+  func getPhoneNumber(_ callback: RCTResponseSenderBlock) {
+    callback([KlaviyoSDK().phoneNumber ?? ""])
+  }
+  
+  @objc
+  func getExternalId(_ callback: RCTResponseSenderBlock) {
+    print("in get email")
+    callback([KlaviyoSDK().externalId ?? ""])
+  }
+  
+  @objc
+  func getPushToken(_ callback: RCTResponseSenderBlock) {
+    callback([KlaviyoSDK().pushToken ?? ""])
   }
 }
 

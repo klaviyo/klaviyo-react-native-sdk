@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button} from 'react-native';
+import { Button, Text } from "react-native";
 import {NativeModules} from 'react-native';
 const KlaviyoInterface = () => {
   const generateRandomEmails = () => {
@@ -150,6 +150,46 @@ const KlaviyoInterface = () => {
     }
   };
 
+  const onGetEmail = async () => {
+    try {
+      NativeModules.Klaviyo.getEmail(value => {
+        console.log("email is =", value);
+      })
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  }
+
+  const onGetPhoneNumber = async () => {
+    try {
+      NativeModules.Klaviyo.getPhoneNumber(phoneNumber => {
+        console.log("phone number is = ", phoneNumber);
+      })
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  }
+
+  const onGetExternalId = async () => {
+    try {
+      NativeModules.Klaviyo.getExternalId(externalId => {
+        console.log("external id = ", externalId);
+      })
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  }
+
+  const onGetPushToken = async () => {
+    try {
+      NativeModules.Klaviyo.getPushToken(token => {
+        console.log("push token = ", token);
+      })
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  }
+
   return (
     <>
       <Button title="Click to init the SDK" color="#841584" onPress={onInit} />
@@ -188,6 +228,30 @@ const KlaviyoInterface = () => {
         title="Click to RESET the full profile"
         color="#ffcccb"
         onPress={onResetProfile}
+      />
+
+      <Button
+        title="Click to get current email"
+        color="#841584"
+        onPress={onGetEmail}
+      />
+
+      <Button
+        title="Click to get phone number"
+        color="#841584"
+        onPress={onGetPhoneNumber}
+      />
+
+      <Button
+        title="Click to get external id"
+        color="#841584"
+        onPress={onGetExternalId}
+      />
+
+      <Button
+        title="Click to get push token"
+        color="#841584"
+        onPress={onGetPushToken}
       />
     </>
   );
