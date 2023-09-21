@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Text } from "react-native";
+import {Button} from 'react-native';
 import {NativeModules} from 'react-native';
 const KlaviyoInterface = () => {
   const generateRandomEmails = () => {
@@ -153,42 +153,50 @@ const KlaviyoInterface = () => {
   const onGetEmail = async () => {
     try {
       NativeModules.Klaviyo.getEmail(value => {
-        console.log("email is =", value);
-      })
+        console.log('email is =', value);
+      });
     } catch (e: any) {
       console.log(e.message, e.code);
     }
-  }
+  };
 
   const onGetPhoneNumber = async () => {
     try {
       NativeModules.Klaviyo.getPhoneNumber(phoneNumber => {
-        console.log("phone number is = ", phoneNumber);
-      })
+        console.log('phone number is = ', phoneNumber);
+      });
     } catch (e: any) {
       console.log(e.message, e.code);
     }
-  }
+  };
 
   const onGetExternalId = async () => {
     try {
       NativeModules.Klaviyo.getExternalId(externalId => {
-        console.log("external id = ", externalId);
-      })
+        console.log('external id = ', externalId);
+      });
     } catch (e: any) {
       console.log(e.message, e.code);
     }
-  }
+  };
 
   const onGetPushToken = async () => {
     try {
       NativeModules.Klaviyo.getPushToken(token => {
-        console.log("push token = ", token);
-      })
+        console.log('push token = ', token);
+      });
     } catch (e: any) {
       console.log(e.message, e.code);
     }
-  }
+  };
+
+  const onSendTestEvent = async () => {
+    try {
+      NativeModules.Klaviyo.sendTestEvent();
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
 
   return (
     <>
@@ -252,6 +260,12 @@ const KlaviyoInterface = () => {
         title="Click to get push token"
         color="#841584"
         onPress={onGetPushToken}
+      />
+
+      <Button
+        title="Click to send test event"
+        color="#841584"
+        onPress={onSendTestEvent}
       />
     </>
   );

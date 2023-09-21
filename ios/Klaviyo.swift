@@ -147,6 +147,14 @@ class Klaviyo: NSObject {
     }
   }
   
+  @objc
+  func sendTestEvent() {
+    let testEvent = Event(name: .CustomEvent("Test Event"),
+                      properties: [:],
+                      profile: [:])
+    KlaviyoSDK().create(event: testEvent)
+  }
+  
   // MARK: Getters
   
   @objc

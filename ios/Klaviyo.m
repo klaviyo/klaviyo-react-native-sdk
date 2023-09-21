@@ -38,6 +38,7 @@ RCT_EXTERN_METHOD(setProfile: (NSString *)email
                   timezone: (NSString *)timezone
                   properties: (NSDictionary * )properties)
 RCT_EXTERN_METHOD(resetProfile)
+RCT_EXTERN_METHOD(sendTestEvent)
 
 //MARK: Getters
 RCT_EXTERN_METHOD(getEmail: (RCTResponseSenderBlock)callback)
