@@ -198,6 +198,11 @@ const KlaviyoInterface = () => {
     }
   };
 
+  const onHelloWorld = async () => {
+    console.log("trying to log");
+    NativeModules.Klaviyo.helloWorld()
+  }
+
   return (
     <>
       <Button title="Click to init the SDK" color="#841584" onPress={onInit} />
@@ -266,6 +271,12 @@ const KlaviyoInterface = () => {
         title="Click to send test event"
         color="#841584"
         onPress={onSendTestEvent}
+      />
+
+      <Button
+        title="ANDROID hello world"
+        color="#841584"
+        onPress={onHelloWorld}
       />
     </>
   );
