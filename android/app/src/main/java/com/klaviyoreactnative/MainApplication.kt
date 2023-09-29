@@ -6,6 +6,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.PackageList;
 import com.facebook.soloader.SoLoader
+import com.klaviyo.analytics.Klaviyo
 
 class MainApplication : Application(), ReactApplication {
     override fun getReactNativeHost() = object : ReactNativeHost(this) {
@@ -21,6 +22,7 @@ class MainApplication : Application(), ReactApplication {
     override fun onCreate() {
         super.onCreate()
         SoLoader.init(this,  /* native exopackage */false)
+        Klaviyo.initialize("Xr5bFG", applicationContext)
 //        ReactNativeFlipper.initializeFlipper(this, reactNativeHost.reactInstanceManager)
     }
 }

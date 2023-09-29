@@ -108,6 +108,9 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation 'com.github.klaviyo.klaviyo-android-sdk:core:1.3.0'
+    implementation 'com.github.klaviyo.klaviyo-android-sdk:analytics:1.3.0'
+    implementation 'com.github.klaviyo.klaviyo-android-sdk:push-fcm:1.3.0'
 
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {

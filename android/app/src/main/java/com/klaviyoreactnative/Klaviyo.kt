@@ -13,6 +13,7 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
+import com.klaviyo.analytics.Klaviyo
 
 class KlaviyoPackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): MutableList<NativeModule> {
@@ -34,6 +35,17 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
     @ReactMethod
     fun helloWorld() {
         Log.d("Klaviyo", "Hello world")
+    }
+
+    @ReactMethod
+    fun setEmail(email: String) {
+        Log.d("Klaviyo", "setting email = $email")
+        Klaviyo.setEmail(email)
+    }
+
+    @ReactMethod
+    fun setToken(deviceToken: String) {
+
     }
 
     companion object {
