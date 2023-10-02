@@ -18,6 +18,9 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 import com.klaviyo.analytics.Klaviyo
+import com.klaviyo.analytics.model.Event
+import com.klaviyo.analytics.model.EventKey
+import com.klaviyo.analytics.model.EventType
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import java.io.Serializable
@@ -153,6 +156,12 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
     fun resetProfile() {
         Log.d("Klaviyo", "resetting profile")
         Klaviyo.resetProfile()
+    }
+
+    @ReactMethod
+    fun sendTestEvent() {
+        Log.d("Klaviyo", "Sending test event")
+        Klaviyo.createEvent(EventType.CUSTOM("Test Event"))
     }
 
     //endregion

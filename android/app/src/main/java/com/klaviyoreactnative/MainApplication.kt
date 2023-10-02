@@ -26,6 +26,6 @@ class MainApplication : Application(), ReactApplication {
         SoLoader.init(this,  /* native exopackage */false)
         Klaviyo.initialize("Xr5bFG", applicationContext)
 
-//        registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+        registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
     }
 }
