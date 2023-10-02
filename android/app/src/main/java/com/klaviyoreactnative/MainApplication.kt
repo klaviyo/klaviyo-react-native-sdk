@@ -23,9 +23,10 @@ class MainApplication : Application(), ReactApplication {
 
     override fun onCreate() {
         super.onCreate()
-        SoLoader.init(this,  /* native exopackage */false)
-        Klaviyo.initialize("Xr5bFG", applicationContext)
 
+        Klaviyo.initialize("Xr5bFG", applicationContext)
         registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+
+        SoLoader.init(this,  /* native exopackage */false)
     }
 }
