@@ -1,25 +1,18 @@
 package com.klaviyoreactnative
 
 
-import android.media.tv.TvContract.Programs
 import android.util.Log
 import android.view.View
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.NativeModule
-import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
-import com.facebook.react.bridge.ReadableMapKeySetIterator
-import com.facebook.react.bridge.ReadableType
-import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 import com.klaviyo.analytics.Klaviyo
-import com.klaviyo.analytics.model.Event
-import com.klaviyo.analytics.model.EventKey
 import com.klaviyo.analytics.model.EventType
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
@@ -44,10 +37,6 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
 
     //region Setters
 
-    @ReactMethod
-    fun helloWorld() {
-        Log.d("Klaviyo", "Hello world")
-    }
 
     @ReactMethod
     fun setProfile(
@@ -115,6 +104,7 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
             ProfileKey.ADDRESS1 to address1,
             ProfileKey.ADDRESS2 to address2,
             ProfileKey.CITY to city,
+            ProfileKey.COUNTRY to country,
             ProfileKey.LATITUDE to latitude,
             ProfileKey.LONGITUDE to longitude,
             ProfileKey.REGION to region,
