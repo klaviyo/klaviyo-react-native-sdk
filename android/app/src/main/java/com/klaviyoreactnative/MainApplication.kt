@@ -24,7 +24,8 @@ class MainApplication : Application(), ReactApplication {
     override fun onCreate() {
         super.onCreate()
 
-        Klaviyo.initialize("Xr5bFG", applicationContext)
+        // TODO: add your Klaviyo public API key here
+        Klaviyo.initialize("", applicationContext)
         registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
 
         SoLoader.init(this,  /* native exopackage */false)
