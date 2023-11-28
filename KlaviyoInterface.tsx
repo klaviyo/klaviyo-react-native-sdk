@@ -67,7 +67,8 @@ const KlaviyoInterface = () => {
 
   async function initSDK() {
     try {
-      NativeModules.Klaviyo.initializeWithApiKey('Xr5bFG');
+      // TODO: this will be removed but for now pass in the klaviyo public key here for initing iOS SDK
+      NativeModules.Klaviyo.initializeWithApiKey('');
     } catch (e: any) {
       console.log(e.message, e.code);
     }
