@@ -10,6 +10,8 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.ReadableMapKeySetIterator
+import com.facebook.react.bridge.ReadableType
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 import com.klaviyo.analytics.Klaviyo
@@ -59,38 +61,6 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
     timezone: String? = null,
     properties: ReadableMap? = null
     ) {
-// TODO: add properties to profile
-//        val propertiesMap = mapOf<String, Any>()
-//
-//        val properties = properties?.let { it } ?: return
-//
-//        val iterator: ReadableMapKeySetIterator = properties!!.keySetIterator()
-//
-//        while (iterator.hasNextKey()) {
-//            val key = iterator.nextKey()
-//            val value = properties.getType(key)
-//
-//            // Check the type of the value and handle it accordingly
-//            when (value) {
-//                ReadableType.String -> {
-//                    val stringValue = properties.getString(key)
-//                    // Handle the string value
-//                }
-//                ReadableType.Number -> {
-//                    val numberValue = properties.getDouble(key)
-//                    // Handle the number value
-//                }
-//                // Add more cases for other types as needed
-//                else -> {
-//                    // Handle other types or provide a default case
-//                }
-//            }
-//
-//            // Print the key and value (replace with your handling logic)
-//            println("Key: $key, Value: $value")
-//
-//            propertiesMap.apply { ProfileKey.CUSTOM(key) to value }
-//        }
 
         val profileMap = mapOf(
             ProfileKey.EMAIL to email,
@@ -115,6 +85,24 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
             .filterValues { it != null }
             .mapValues { it.value as Serializable }
             .toMutableMap()
+
+        if (properties != null) {
+            val iterator: ReadableMapKeySetIterator = properties.keySetIterator()
+
+            while (iterator.hasNextKey()) {
+                val key = iterator.nextKey()
+
+                when (val value = properties.getType(key)) {
+                    ReadableType.String -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getString(key) as Serializable }
+                    ReadableType.Number -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getDouble(key) as Serializable }
+                    ReadableType.Boolean -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getBoolean(key) as Serializable }
+                    else ->
+                        Log.d("Klaviyo", "Unhandled type: $value")
+                }
+            }
+        }
+
+        filteredProfileMap.putAll(filteredProfileMap)
 
         val profile = Profile(
             filteredProfileMap

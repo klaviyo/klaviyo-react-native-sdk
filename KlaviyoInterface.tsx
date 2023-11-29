@@ -67,7 +67,8 @@ const KlaviyoInterface = () => {
 
   async function initSDK() {
     try {
-      NativeModules.Klaviyo.initializeWithApiKey('Xr5bFG');
+      // TODO: this will be removed but for now pass in the klaviyo public key here for initing iOS SDK
+      NativeModules.Klaviyo.initializeWithApiKey('');
     } catch (e: any) {
       console.log(e.message, e.code);
     }
@@ -125,8 +126,8 @@ const KlaviyoInterface = () => {
         generateRandomAddress().zipCode,
         'test timezone',
         {
-          'test key 1': generateRandomName(5),
-          'test key 2': Math.floor(Math.random() * 90) + 10,
+          'abc': generateRandomName(5),
+          'def': Math.floor(Math.random() * 90) + 10,
         },
       );
     } catch (e: any) {
@@ -198,11 +199,6 @@ const KlaviyoInterface = () => {
     }
   };
 
-  const onHelloWorld = async () => {
-    console.log("trying to log");
-    NativeModules.Klaviyo.helloWorld()
-  }
-
   return (
     <>
       <Button title="Click to init the SDK" color="#841584" onPress={onInit} />
@@ -271,12 +267,6 @@ const KlaviyoInterface = () => {
         title="Click to send test event"
         color="#841584"
         onPress={onSendTestEvent}
-      />
-
-      <Button
-        title="ANDROID hello world"
-        color="#841584"
-        onPress={onHelloWorld}
       />
     </>
   );
