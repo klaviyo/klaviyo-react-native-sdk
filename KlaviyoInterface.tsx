@@ -126,8 +126,8 @@ const KlaviyoInterface = () => {
         generateRandomAddress().zipCode,
         'test timezone',
         {
-          'title': generateRandomName(5),
-          'id': Math.floor(Math.random() * 90) + 10,
+          'abc': generateRandomName(5),
+          'def': Math.floor(Math.random() * 90) + 10,
         },
       );
     } catch (e: any) {

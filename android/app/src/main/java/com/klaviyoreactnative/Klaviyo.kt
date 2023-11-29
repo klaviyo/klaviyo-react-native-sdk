@@ -11,6 +11,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableMapKeySetIterator
+import com.facebook.react.bridge.ReadableType
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 import com.klaviyo.analytics.Klaviyo
@@ -60,17 +61,6 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
     timezone: String? = null,
     properties: ReadableMap? = null
     ) {
-        val propertiesMap = mapOf<ProfileKey, Serializable>()
-
-        if (properties != null) {
-            val iterator: ReadableMapKeySetIterator = properties.keySetIterator()
-
-            while (iterator.hasNextKey()) {
-                val key = iterator.nextKey()
-                val value = properties.getType(key)
-                propertiesMap.apply { ProfileKey.CUSTOM(key) to value as Serializable }
-            }
-        }
 
         val profileMap = mapOf(
             ProfileKey.EMAIL to email,
@@ -96,7 +86,23 @@ class Klaviyo(reactContext: ReactApplicationContext) : ReactContextBaseJavaModul
             .mapValues { it.value as Serializable }
             .toMutableMap()
 
-        filteredProfileMap.putAll(propertiesMap)
+        if (properties != null) {
+            val iterator: ReadableMapKeySetIterator = properties.keySetIterator()
+
+            while (iterator.hasNextKey()) {
+                val key = iterator.nextKey()
+
+                when (val value = properties.getType(key)) {
+                    ReadableType.String -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getString(key) as Serializable }
+                    ReadableType.Number -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getDouble(key) as Serializable }
+                    ReadableType.Boolean -> filteredProfileMap.apply { ProfileKey.CUSTOM(key) to properties.getBoolean(key) as Serializable }
+                    else ->
+                        Log.d("Klaviyo", "Unhandled type: $value")
+                }
+            }
+        }
+
+        filteredProfileMap.putAll(filteredProfileMap)
 
         val profile = Profile(
             filteredProfileMap
