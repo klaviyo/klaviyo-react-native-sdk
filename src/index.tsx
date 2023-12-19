@@ -1,4 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
+import type { IEvent } from './NativeKlaviyoReactNativeSdk';
 
 const LINKING_ERROR =
   `The package 'klaviyo-react-native-sdk' doesn't seem to be linked. Make sure: \n\n` +
@@ -27,3 +28,15 @@ const KlaviyoReactNativeSdk = KlaviyoReactNativeSdkModule
 export function multiply(a: number, b: number): Promise<number> {
   return KlaviyoReactNativeSdk.multiply(a, b);
 }
+
+interface IKlaviyo {
+  readonly createEvent: (event: IEvent) => void;
+}
+
+export const Klaviyo: IKlaviyo = {
+  createEvent(event: IEvent): void {
+    KlaviyoReactNativeSdk.createEvent(event);
+  },
+};
+
+export { EventProperty, EventType } from './NativeKlaviyoReactNativeSdk';

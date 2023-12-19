@@ -1,4 +1,5 @@
 #import "KlaviyoReactNativeSdk.h"
+#import <klaviyo_react_native_sdk-Swift.h>
 
 @implementation KlaviyoReactNativeSdk
 RCT_EXPORT_MODULE()
@@ -13,6 +14,12 @@ RCT_EXPORT_METHOD(multiply:(double)a
     NSNumber *result = @(a * b);
 
     resolve(result);
+}
+
+RCT_EXPORT_METHOD(createEvent:(NSDictionary *)event)
+{
+    NSLog(@"createEvent: %@", event);
+    [KlaviyoBridge createEventWithEvent: event];
 }
 
 // Don't compile this code when we build for the old architecture.
