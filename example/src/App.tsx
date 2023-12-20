@@ -7,6 +7,12 @@ export default function App() {
   const [result] = React.useState<number | undefined>();
 
   React.useEffect(() => {
+    Klaviyo.initialize('LuYLmF');
+
+    Klaviyo.setProfile({
+      email: 'test@klaviyo.com',
+    });
+
     Klaviyo.createEvent(EventType.OPENED_PUSH, {
       [EventProperty.EVENT_ID]: '123',
     });
