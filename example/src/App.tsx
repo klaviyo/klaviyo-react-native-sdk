@@ -1,12 +1,8 @@
 import * as React from 'react';
 
 import { StyleSheet, View, Text, Button } from 'react-native';
-import {
-  multiply,
-  Klaviyo,
-  EventProperty,
-  EventType,
-} from 'klaviyo-react-native-sdk';
+import { multiply } from '../../src/KlaviyoReactNativeSdk';
+import { Klaviyo, EventProperty, EventType } from 'klaviyo-react-native-sdk';
 
 export default function App() {
   const [result, setResult] = React.useState<number | undefined>();
