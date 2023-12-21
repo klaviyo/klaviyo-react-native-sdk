@@ -1,18 +1,12 @@
 import * as React from 'react';
 
 import { StyleSheet, View, Text, Button } from 'react-native';
-import {
-  multiply,
-  Klaviyo,
-  EventProperty,
-  EventType,
-} from 'klaviyo-react-native-sdk';
+import { Klaviyo, EventProperty, EventType } from 'klaviyo-react-native-sdk';
 
 export default function App() {
-  const [result, setResult] = React.useState<number | undefined>();
+  const [result] = React.useState<number | undefined>();
 
   React.useEffect(() => {
-    multiply(3, 7).then(setResult);
     Klaviyo.createEvent({
       event: EventType.CUSTOM('EXAMPLE_EVENT'),
       properties: {
