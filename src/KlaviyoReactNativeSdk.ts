@@ -23,7 +23,3 @@ export const KlaviyoReactNativeSdk = KlaviyoReactNativeSdkModule
         },
       }
     );
-
-export function multiply(a: number, b: number): Promise<number> {
-  return KlaviyoReactNativeSdk.multiply(a, b);
-}

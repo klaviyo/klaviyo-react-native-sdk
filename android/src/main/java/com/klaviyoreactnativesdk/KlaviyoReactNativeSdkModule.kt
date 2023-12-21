@@ -32,13 +32,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
   }
 
-  // Example method
-  // See https://reactnative.dev/docs/native-modules-android
-  @ReactMethod
-  override fun multiply(a: Double, b: Double, promise: Promise) {
-    promise.resolve(a * b)
-  }
-
   @ReactMethod
   override fun createEvent(event: ReadableMap) {
     val parsedEvent = event.toHashMap()

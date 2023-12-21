@@ -30,7 +30,6 @@ export interface IEvent {
 }
 
 export interface Spec extends TurboModule {
-  multiply(a: number, b: number): Promise<number>;
   createEvent(event: IEvent): void;
 }
 
