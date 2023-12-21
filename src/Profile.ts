@@ -22,8 +22,8 @@ export enum ProfileProperty {
   TIMEZONE = PROFILE_KEYS.TIMEZONE,
 }
 
-type KlaviyoProfilePropertyType = ProfileProperty | string;
-type ProfileProperties = Record<KlaviyoProfilePropertyType, Object>;
+export type KlaviyoProfilePropertyType = ProfileProperty | string;
+export type ProfileProperties = Record<KlaviyoProfilePropertyType, Object>;
 
 export class Profile {
   public externalId?: String;

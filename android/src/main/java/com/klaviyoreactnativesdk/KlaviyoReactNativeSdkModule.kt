@@ -100,7 +100,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
 
   @ReactMethod
   override fun createEvent(name: String, properties: ReadableMap?) {
-    Klaviyo.initialize("LuYLmF", context)
     val event = Event(
       type = name,
       properties =properties?.toHashMap()?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }

@@ -1,17 +1,21 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 import { EventType } from './Event';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
+import type { KlaviyoProfilePropertyType, ProfileProperties } from './Profile';
 
 export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
 
-  setProfile(profile: Object): void {
+  setProfile(profile: ProfileProperties): void {
     KlaviyoReactNativeSdk.setProfile(profile);
   },
 
-  setProfileAttribute(propertyKey: String, value: String): void {
+  setProfileAttribute(
+    propertyKey: KlaviyoProfilePropertyType,
+    value: String
+  ): void {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
 
@@ -61,3 +65,10 @@ export const Klaviyo: Spec = {
 };
 
 export { EventProperty, EventType } from './Event';
+
+export type {
+  Profile,
+  ProfileProperties,
+  KlaviyoProfilePropertyType,
+  ProfileProperty,
+} from './Profile';
