@@ -2,7 +2,6 @@ package com.klaviyoreactnativesdk
 
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReadableMap
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.*
@@ -33,21 +32,14 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
   }
 
   @ReactMethod
-  override fun createEvent(event: ReadableMap) {
-    val parsedEvent = event.toHashMap()
-    val eventName = parsedEvent.remove("event") as HashMap<String, String>
-    val eventProperties = parsedEvent.map { entry ->
-      EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable
-    }.toMap()
-
-    println(eventName["name"])
-    println(eventProperties)
-
+  override fun createEvent(name: String, properties: ReadableMap?) {
     Klaviyo.initialize("LuYLmF", context)
-    Klaviyo.createEvent(Event(
-      type = eventName["name"] as String,
-      properties = eventProperties
-    ))
+    val event = Event(
+      type = name,
+      properties =properties?.toHashMap()?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }
+        ?.toMap(),
+    )
+    Klaviyo.createEvent(event = event)
   }
 
   companion object {

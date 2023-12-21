@@ -1,9 +1,9 @@
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type { IEvent } from './Event';
+import type { KlaviyoEventAPI } from './Event';
 
-export interface Spec extends TurboModule {
-  createEvent(event: IEvent): void;
-}
+export interface KlaviyoSpec extends TurboModule, KlaviyoEventAPI {}
 
-export default TurboModuleRegistry.getEnforcing<Spec>('KlaviyoReactNativeSdk');
+export default TurboModuleRegistry.getEnforcing<KlaviyoSpec>(
+  'KlaviyoReactNativeSdk'
+);
