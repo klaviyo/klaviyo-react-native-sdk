@@ -1,10 +1,17 @@
+import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
+
+const { EVENT_NAMES, EVENT_KEYS } = KlaviyoReactNativeSdk.getConstants();
+
 export enum EventType {
-  OPENED_PUSH = '$opened_push',
+  OPENED_APP = EVENT_NAMES.VIEWED_PRODUCT,
+  VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
+  ADDED_TO_CART = EVENT_NAMES.VIEWED_PRODUCT,
+  STARTED_CHECKOUT = EVENT_NAMES.VIEWED_PRODUCT,
 }
 
 export enum EventProperty {
-  EVENT_ID = '$event_id',
-  VALUE = 'value',
+  EVENT_ID = EVENT_KEYS.EVENT_ID,
+  VALUE = EVENT_KEYS.VALUE,
 }
 
 type KlaviyoEventPropertyType = EventProperty | string;

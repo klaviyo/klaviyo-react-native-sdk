@@ -13,7 +13,7 @@ export default function App() {
       email: 'test@klaviyo.com',
     });
 
-    Klaviyo.createEvent(EventType.OPENED_PUSH, {
+    Klaviyo.createEvent(EventType.VIEWED_PRODUCT, {
       [EventProperty.EVENT_ID]: '123',
     });
   }, []);

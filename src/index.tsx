@@ -1,25 +1,8 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
-import { EventType, type KlaviyoEventAPI } from './Event';
+import { EventType } from './Event';
+import type { Spec } from './NativeKlaviyoReactNativeSdk';
 
-interface IKlaviyo extends KlaviyoEventAPI {
-  readonly initialize: (apiKey: String) => void;
-
-  readonly setProfile: (profile: Object) => void;
-  readonly setProfileAttribute: (propertyKey: String, value: String) => void;
-  readonly setEmail: (email: String) => void;
-  readonly setExternalId: (externalId: String) => void;
-  readonly setPhoneNumber: (phoneNumber: String) => void;
-  readonly setPushToken: (pushToken: String) => void;
-
-  readonly resetProfile: () => void;
-
-  readonly getEmail: () => String | null;
-  readonly getExternalId: () => String | null;
-  readonly getPhoneNumber: () => String | null;
-  readonly getPushToken: () => String | null;
-}
-
-export const Klaviyo: IKlaviyo = {
+export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
@@ -69,7 +52,7 @@ export const Klaviyo: IKlaviyo = {
   },
 
   createEvent(name: EventType, properties?: Record<any, Object>): void {
-    this.createCustomEvent(name, properties);
+    this.createCustomEvent(name.toString(), properties);
   },
 
   createCustomEvent(name: string, properties?: Record<any, Object>): void {
