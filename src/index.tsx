@@ -1,4 +1,4 @@
-import type { IEvent } from './NativeKlaviyoReactNativeSdk';
+import type { IEvent } from './Event';
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
 interface IKlaviyo {
@@ -11,4 +11,4 @@ export const Klaviyo: IKlaviyo = {
   },
 };
 
-export { EventProperty, EventType } from './NativeKlaviyoReactNativeSdk';
+export { EventProperty, EventType } from './Event';
