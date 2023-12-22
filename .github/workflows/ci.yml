@@ -149,5 +149,5 @@ jobs:
 
       - name: Build example for iOS
         run: |
-          echo $NODE_BINARY
-          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+          npx react-native run-ios --terminal t2
+#          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
