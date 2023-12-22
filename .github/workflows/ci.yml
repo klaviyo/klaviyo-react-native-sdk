@@ -147,6 +147,10 @@ jobs:
         env:
           NO_FLIPPER: 1
 
+      - name: Export Node
+        run: |
+          echo export NODE_BINARY=$(command -v node) > .xcode.env.local
+
       - name: Build example for iOS
         run: |
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
