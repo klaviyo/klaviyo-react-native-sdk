@@ -145,7 +145,6 @@ jobs:
           yarn pod-install example/ios
         env:
           NO_FLIPPER: 1
-          USE_FRAMEWORKS: 0
 
       - name: Build example for iOS
         run: |
