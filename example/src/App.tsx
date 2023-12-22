@@ -7,11 +7,14 @@ export default function App() {
   const [result] = React.useState<number | undefined>();
 
   React.useEffect(() => {
-    Klaviyo.createEvent({
-      event: EventType.CUSTOM('EXAMPLE_EVENT'),
-      properties: {
-        [EventProperty.EVENT_ID.name]: '123',
-      },
+    Klaviyo.initialize('LuYLmF');
+
+    Klaviyo.setProfile({
+      email: 'test@klaviyo.com',
+    });
+
+    Klaviyo.createEvent(EventType.VIEWED_PRODUCT, {
+      [EventProperty.EVENT_ID]: '123',
     });
   }, []);
 
@@ -21,11 +24,9 @@ export default function App() {
       <Button
         title="Click Me"
         onPress={() => {
-          Klaviyo.createEvent({
-            event: EventType.CUSTOM('EXAMPLE_EVENT_2'),
-            properties: {
-              [EventProperty.EVENT_ID.name]: '321',
-            },
+          Klaviyo.createCustomEvent('CUSTOM_EVENT', {
+            custom_property_2: '321',
+            [EventProperty.VALUE]: 12,
           });
         }}
       />
