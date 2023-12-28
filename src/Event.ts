@@ -1,27 +1,28 @@
-export class EventType {
-  public name: string;
+import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
-  private constructor(name: string) {
-    this.name = name;
-  }
+const { EVENT_NAMES, EVENT_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
-  public static OPENED_PUSH: EventType = new EventType('$opened_push');
-  public static CUSTOM = (name: string): EventType => new EventType(name);
+export enum EventType {
+  OPENED_APP = EVENT_NAMES.VIEWED_PRODUCT,
+  VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
+  ADDED_TO_CART = EVENT_NAMES.VIEWED_PRODUCT,
+  STARTED_CHECKOUT = EVENT_NAMES.VIEWED_PRODUCT,
 }
 
-export class EventProperty {
-  public name: string;
-
-  private constructor(name: string) {
-    this.name = name;
-  }
-
-  public static EVENT_ID: EventProperty = new EventProperty('$event_id');
-  public static CUSTOM = (name: string): EventProperty =>
-    new EventProperty(name);
+export enum EventProperty {
+  EVENT_ID = EVENT_KEYS.EVENT_ID,
+  VALUE = EVENT_KEYS.VALUE,
 }
 
-export interface IEvent {
-  event: EventType;
-  properties?: Object;
+type KlaviyoEventPropertyType = EventProperty | string;
+
+export interface KlaviyoEventAPI {
+  readonly createEvent: (
+    name: EventType,
+    properties?: Record<KlaviyoEventPropertyType, Object>
+  ) => void;
+  readonly createCustomEvent: (
+    name: string,
+    properties?: Record<KlaviyoEventPropertyType, Object>
+  ) => void;
 }
