@@ -70,5 +70,6 @@ export type {
   Profile,
   ProfileProperties,
   KlaviyoProfilePropertyType,
-  ProfileProperty,
 } from './Profile';
+
+export { ProfileProperty } from './Profile';

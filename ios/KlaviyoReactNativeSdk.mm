@@ -4,6 +4,19 @@
 @implementation KlaviyoReactNativeSdk
 RCT_EXPORT_MODULE()
 
+// this is required if we are using constantsToExport (read constantsToExport docs for more info)
++ (BOOL)requiresMainQueueSetup {
+    return YES;
+}
+
+- (NSDictionary *)constantsToExport {
+   return @{
+           @"PROFILE_KEYS": @"",
+           @"EVENT_NAMES": @"",
+           @"EVENT_KEYS": @"",
+   };
+}
+
 //MARK: Setters
 
 RCT_EXPORT_METHOD(initialize:(NSString *)publicToken)

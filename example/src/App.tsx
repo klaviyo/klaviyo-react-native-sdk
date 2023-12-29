@@ -1,7 +1,12 @@
 import * as React from 'react';
 
 import { StyleSheet, View, Text, Button } from 'react-native';
-import { Klaviyo, EventProperty } from 'klaviyo-react-native-sdk';
+import {
+  Klaviyo,
+  EventProperty,
+  ProfileProperties,
+  ProfileProperty,
+} from 'klaviyo-react-native-sdk';
 
 export default function App() {
   const generateRandomEmails = () => {
@@ -144,20 +149,57 @@ export default function App() {
     }
   };
 
+  const onSetProfile = async () => {
+    try {
+      // const profileProperties: ProfileProperties = {
+      //   [ProfileProperty.EMAIL]: 'abc',
+      //   [ProfileProperty.PHONE_NUMBER]: 34243,
+      // };
+      //
+      // console.log('profileProperties', profileProperties);
+
+      // Klaviyo.setProfile(
+      //   generateRandomEmails(),
+      //   generateRandomPhoneNumber(),
+      //   generateRandomName(8),
+      //   generateRandomName(7),
+      //   generateRandomName(4),
+      //   generateRandomName(5),
+      //   generateRandomName(6),
+      //   'test image',
+      //   generateRandomAddress().street,
+      //   '',
+      //   generateRandomAddress().city,
+      //   'USA',
+      //   99,
+      //   99,
+      //   generateRandomAddress().city,
+      //   generateRandomAddress().zipCode,
+      //   'test timezone',
+      //   {
+      //     'abc': generateRandomName(5),
+      //     'def': Math.floor(Math.random() * 90) + 10,
+      //   },
+      // );
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <>
         <Button
-          title="Click to init the SDK (ONLY FOR TESTING IN DEBUG MODE))"
+          title="Click to init the SDK (ONLY FOR TESTING IN DEBUG MODE)"
           color="#841584"
           onPress={onInit}
         />
 
-        {/*<Button*/}
-        {/*  title="Click to set the full profile"*/}
-        {/*  color="#841584"*/}
-        {/*  onPress={onSetProfile}*/}
-        {/*/>*/}
+        <Button
+          title="Click to set the full profile"
+          color="#841584"
+          onPress={onSetProfile}
+        />
 
         <Button
           title="Click to set the email"
@@ -176,12 +218,6 @@ export default function App() {
           color="#841584"
           onPress={onExternalId}
         />
-
-        {/*<Button*/}
-        {/*  title="Click to request push notification permission"*/}
-        {/*  color="#841584"*/}
-        {/*  onPress={onPushPermission}*/}
-        {/*/>*/}
 
         <Button
           title="Click to RESET the full profile"
