@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { StyleSheet, View, Button } from 'react-native';
 import { Klaviyo } from 'klaviyo-react-native-sdk';
+import { LocationModel, ProfileKey, ProfileModel } from '../../src/Profile';
 
 export default function App() {
   const generateRandomEmails = () => {
@@ -30,6 +31,25 @@ export default function App() {
     }
 
     return randomName;
+  };
+
+  const generateRandomAddress = () => {
+    const streets = ['Main St', 'Elm St', 'Oak Ave', 'Cedar Ln', 'Maple Rd'];
+    const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami'];
+    const states = ['CA', 'NY', 'TX', 'FL', 'IL'];
+    const zipCodes = ['10001', '90001', '60601', '77001', '33101'];
+
+    const randomStreet = streets[Math.floor(Math.random() * streets.length)];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    const randomState = states[Math.floor(Math.random() * states.length)];
+    const randomZipCode = zipCodes[Math.floor(Math.random() * zipCodes.length)];
+
+    return {
+      street: randomStreet,
+      city: randomCity,
+      state: randomState,
+      zipCode: randomZipCode,
+    };
   };
 
   const onInit = async () => {
@@ -127,7 +147,48 @@ export default function App() {
 
   const onSetProfile = async () => {
     try {
-      //TODO: TDB
+      const myLocation = new LocationModel(
+        generateRandomAddress().street,
+        '',
+        generateRandomAddress().city,
+        'USA',
+        99,
+        99,
+        generateRandomAddress().city,
+        generateRandomAddress().zipCode,
+        'test timezone'
+      );
+
+      const myProperties: Record<ProfileKey, any> = {
+        [ProfileKey.FirstName]: 'John',
+        [ProfileKey.LastName]: 'Smith',
+        [ProfileKey.Address1]: '123 Main Street',
+        [ProfileKey.Address2]: 'Apt 456',
+        [ProfileKey.Title]: 'Mr.',
+        [ProfileKey.Organization]: 'ABC Inc.',
+        [ProfileKey.City]: 'Cityville',
+        [ProfileKey.Region]: 'Regionville',
+        [ProfileKey.Country]: 'Countryland',
+        [ProfileKey.Zip]: '12345',
+        [ProfileKey.Image]: 'profile.jpg',
+        [ProfileKey.Latitude]: 40.7128,
+        [ProfileKey.Longitude]: -74.006,
+        [ProfileKey.Custom]: 'custom value',
+      };
+
+      const myProfile = new ProfileModel(
+        generateRandomEmails(),
+        generateRandomPhoneNumber(),
+        generateRandomName(8),
+        generateRandomName(7),
+        generateRandomName(4),
+        generateRandomName(5),
+        generateRandomName(6),
+        'test image',
+        myLocation,
+        myProperties
+      );
+      Klaviyo.setProfileNew(myProfile);
     } catch (e: any) {
       console.log(e.message, e.code);
     }
