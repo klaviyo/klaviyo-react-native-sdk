@@ -45,7 +45,14 @@ export interface KlaviyoProfileApi {
 
   readonly resetProfile: () => void;
 
-  readonly getEmail: () => String | null;
-  readonly getExternalId: () => String | null;
-  readonly getPhoneNumber: () => String | null;
+  /***
+   TODO: we need to figure out how to handle callbacks in the native module given on
+  iOS it's always a async call where as in Android it's seems a sync call
+  may be we can handle it on the javascript side before calling into native modules
+  so that the caller doesn't have to worry about it but if they don't await on the response
+  on iOS things may not work as expected
+   ***/
+  readonly getEmail: (callback: Function | undefined) => String | null;
+  readonly getExternalId: (callback: Function | undefined) => String | null;
+  readonly getPhoneNumber: (callback: Function | undefined) => String | null;
 }

@@ -39,20 +39,20 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.resetProfile();
   },
 
-  getEmail(): String | null {
-    return KlaviyoReactNativeSdk.getEmail();
+  getEmail(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getEmail(callback);
   },
 
-  getExternalId(): String | null {
-    return KlaviyoReactNativeSdk.getExternalId();
+  getExternalId(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getExternalId(callback);
   },
 
-  getPhoneNumber(): String | null {
-    return KlaviyoReactNativeSdk.getPhoneNumber();
+  getPhoneNumber(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPhoneNumber(callback);
   },
 
-  getPushToken(): String | null {
-    return KlaviyoReactNativeSdk.getPushToken();
+  getPushToken(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPushToken(callback);
   },
 
   createEvent(name: EventType, properties?: Record<any, Object>): void {
