@@ -1,12 +1,7 @@
 import * as React from 'react';
 
-import { StyleSheet, View, Text, Button } from 'react-native';
-import {
-  Klaviyo,
-  EventProperty,
-  ProfileProperties,
-  ProfileProperty,
-} from 'klaviyo-react-native-sdk';
+import { StyleSheet, View, Button } from 'react-native';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 export default function App() {
   const generateRandomEmails = () => {
@@ -35,25 +30,6 @@ export default function App() {
     }
 
     return randomName;
-  };
-
-  const generateRandomAddress = () => {
-    const streets = ['Main St', 'Elm St', 'Oak Ave', 'Cedar Ln', 'Maple Rd'];
-    const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami'];
-    const states = ['CA', 'NY', 'TX', 'FL', 'IL'];
-    const zipCodes = ['10001', '90001', '60601', '77001', '33101'];
-
-    const randomStreet = streets[Math.floor(Math.random() * streets.length)];
-    const randomCity = cities[Math.floor(Math.random() * cities.length)];
-    const randomState = states[Math.floor(Math.random() * states.length)];
-    const randomZipCode = zipCodes[Math.floor(Math.random() * zipCodes.length)];
-
-    return {
-      street: randomStreet,
-      city: randomCity,
-      state: randomState,
-      zipCode: randomZipCode,
-    };
   };
 
   const onInit = async () => {
@@ -151,36 +127,7 @@ export default function App() {
 
   const onSetProfile = async () => {
     try {
-      // const profileProperties: ProfileProperties = {
-      //   [ProfileProperty.EMAIL]: 'abc',
-      //   [ProfileProperty.PHONE_NUMBER]: 34243,
-      // };
-      //
-      // console.log('profileProperties', profileProperties);
-
-      // Klaviyo.setProfile(
-      //   generateRandomEmails(),
-      //   generateRandomPhoneNumber(),
-      //   generateRandomName(8),
-      //   generateRandomName(7),
-      //   generateRandomName(4),
-      //   generateRandomName(5),
-      //   generateRandomName(6),
-      //   'test image',
-      //   generateRandomAddress().street,
-      //   '',
-      //   generateRandomAddress().city,
-      //   'USA',
-      //   99,
-      //   99,
-      //   generateRandomAddress().city,
-      //   generateRandomAddress().zipCode,
-      //   'test timezone',
-      //   {
-      //     'abc': generateRandomName(5),
-      //     'def': Math.floor(Math.random() * 90) + 10,
-      //   },
-      // );
+      //TODO: TDB
     } catch (e: any) {
       console.log(e.message, e.code);
     }
@@ -249,6 +196,7 @@ export default function App() {
           onPress={onGetPushToken}
         />
 
+        {/*TODO: TBD*/}
         {/*<Button*/}
         {/*  title="Click to send test event"*/}
         {/*  color="#841584"*/}
