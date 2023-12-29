@@ -112,7 +112,7 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2.2' # Not needed with a .ruby-version file
+          ruby-version: '3.2.2'
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -147,7 +147,11 @@ jobs:
       - name: Install cocoapods
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
+          xcode-select --install
           yarn pod-install example/ios
+          brew install watchman
+        env:
+          NO_FLIPPER: 1
 
       - name: Build example for iOS
         run: |
