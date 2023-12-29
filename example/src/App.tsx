@@ -160,8 +160,8 @@ export default function App() {
       );
 
       const myProperties: Record<ProfileKey, any> = {
-        [ProfileKey.FirstName]: 'John',
-        [ProfileKey.LastName]: 'Smith',
+        [ProfileKey.FirstName]: generateRandomName(5),
+        [ProfileKey.LastName]: generateRandomName(5),
         [ProfileKey.Address1]: '123 Main Street',
         [ProfileKey.Address2]: 'Apt 456',
         [ProfileKey.Title]: 'Mr.',

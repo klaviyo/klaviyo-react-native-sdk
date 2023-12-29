@@ -10,11 +10,30 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSDictionary *)constantsToExport {
-   return @{
-           @"PROFILE_KEYS": @"",
-           @"EVENT_NAMES": @"",
-           @"EVENT_KEYS": @"",
-   };
+    // TODO: below is just hardcoded example need to figure out how to get this out of the iOS SDK since it's not exposed
+    return @{
+        @"PROFILE_KEYS": @{
+            @"EXTERNAL_ID": @"external_id",
+            @"EMAIL": @"email",
+            @"PHONE_NUMBER": @"phone_number",
+            @"FIRST_NAME": @"first_name",
+            @"LAST_NAME": @"last_name",
+            @"ORGANIZATION": @"organization",
+            @"TITLE": @"title",
+            @"IMAGE": @"image",
+            @"ADDRESS1": @"address1",
+            @"ADDRESS2": @"address2",
+            @"CITY": @"city",
+            @"COUNTRY": @"country",
+            @"LATITUDE": @"latitude",
+            @"LONGITUDE": @"longitude",
+            @"REGION": @"region",
+            @"ZIP": @"zip",
+            @"TIMEZONE": @"timezone"
+        },
+        @"EVENT_NAMES": @"",
+        @"EVENT_KEYS": @""
+    };
 }
 
 //MARK: Setters

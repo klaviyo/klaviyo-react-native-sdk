@@ -76,7 +76,7 @@ interface Location {
   readonly timezone?: string | null;
 }
 
-// TODO: this might have to come form the native module at some point to avoid mismatch between the native module and the javascript module
+// TODO: this might have to come form the native module at some point to avoid mismatch between the native module and the javascript module but on iOS this is an internal model so we'd have to do some iOS SDK changes
 export enum ProfileKey {
   FirstName = 'first_name',
   LastName = 'last_name',
@@ -92,6 +92,7 @@ export enum ProfileKey {
   Latitude = 'latitude',
   Longitude = 'longitude',
   Custom = 'custom',
+  EXTERNAL_ID = 'external_id'
 }
 
 interface ProfileNew {
