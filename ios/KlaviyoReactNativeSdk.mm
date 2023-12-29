@@ -87,7 +87,6 @@ RCT_EXPORT_METHOD(setProfile: (NSString *)email
                   timezone: (NSString *)timezone
                   properties: (NSDictionary * )properties)
 {
-    NSLog(@"in set profile");
     [KlaviyoBridge setProfile: email
                    phoneNumber: phoneNumber
                    externalId: externalId
