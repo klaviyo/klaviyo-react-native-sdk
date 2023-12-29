@@ -147,7 +147,6 @@ jobs:
       - name: Install cocoapods
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
-          xcode-select --install
           yarn pod-install example/ios
           brew install watchman
         env:
