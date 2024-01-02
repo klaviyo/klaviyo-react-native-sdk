@@ -2,7 +2,11 @@ import * as React from 'react';
 
 import { Button, StyleSheet, View } from 'react-native';
 import { EventType, Klaviyo } from 'klaviyo-react-native-sdk';
-import { LocationModel, ProfileKey, ProfileModel } from '../../src/Profile';
+import {
+  type Location,
+  ProfileProperty,
+  type Profile,
+} from '../../src/Profile';
 import { EventModel, Identifiers } from '../../src/Event';
 
 export default function App() {
@@ -148,48 +152,48 @@ export default function App() {
 
   const onSetProfile = async () => {
     try {
-      const myLocation = new LocationModel(
-        generateRandomAddress().street,
-        '',
-        generateRandomAddress().city,
-        'USA',
-        99,
-        99,
-        generateRandomAddress().city,
-        generateRandomAddress().zipCode,
-        'test timezone'
-      );
-
-      const myProperties: Record<ProfileKey, any> = {
-        [ProfileKey.FirstName]: generateRandomName(5),
-        [ProfileKey.LastName]: generateRandomName(5),
-        [ProfileKey.Address1]: '123 Main Street',
-        [ProfileKey.Address2]: 'Apt 456',
-        [ProfileKey.Title]: 'Mr.',
-        [ProfileKey.Organization]: 'ABC Inc.',
-        [ProfileKey.City]: 'Cityville',
-        [ProfileKey.Region]: 'Regionville',
-        [ProfileKey.Country]: 'Countryland',
-        [ProfileKey.Zip]: '12345',
-        [ProfileKey.Image]: 'profile.jpg',
-        [ProfileKey.Latitude]: 40.7128,
-        [ProfileKey.Longitude]: -74.006,
-        [ProfileKey.Custom]: 'custom value',
+      const myLocation: Location = {
+        address1: generateRandomAddress().street,
+        address2: '',
+        city: generateRandomAddress().city,
+        country: 'USA',
+        latitude: 99,
+        longitude: 99,
+        region: generateRandomAddress().region,
+        zip: generateRandomAddress().zipCode,
+        timezone: 'test timezone',
       };
 
-      const myProfile = new ProfileModel(
-        generateRandomEmails(),
-        generateRandomPhoneNumber(),
-        generateRandomName(8),
-        generateRandomName(7),
-        generateRandomName(4),
-        generateRandomName(5),
-        generateRandomName(6),
-        'test image',
-        myLocation,
-        myProperties
-      );
-      Klaviyo.setProfileNew(myProfile);
+      const myProperties: Record<ProfileProperty, any> = {
+        [ProfileProperty.First_Name]: generateRandomName(5),
+        [ProfileProperty.Last_Name]: generateRandomName(5),
+        [ProfileProperty.Address1]: '123 Main Street',
+        [ProfileProperty.Address2]: 'Apt 456',
+        [ProfileProperty.Title]: 'Mr.',
+        [ProfileProperty.Organization]: 'ABC Inc.',
+        [ProfileProperty.City]: 'Cityville',
+        [ProfileProperty.Region]: 'Regionville',
+        [ProfileProperty.Country]: 'Countryland',
+        [ProfileProperty.Zip]: '12345',
+        [ProfileProperty.Image]: 'profile.jpg',
+        [ProfileProperty.Latitude]: 40.7128,
+        [ProfileProperty.Longitude]: -74.006,
+      };
+
+      const myProfile: Profile = {
+        email: generateRandomEmails(),
+        phoneNumber: generateRandomPhoneNumber(),
+        externalId: generateRandomName(8),
+        firstName: generateRandomName(7),
+        lastName: generateRandomName(4),
+        organization: generateRandomName(5),
+        title: generateRandomName(6),
+        image: 'test image',
+        location: myLocation,
+        properties: myProperties,
+      };
+
+      Klaviyo.setProfile(myProfile);
     } catch (e: any) {
       console.log(e.message, e.code);
     }

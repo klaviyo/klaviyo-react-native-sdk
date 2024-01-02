@@ -3,8 +3,7 @@ import { EventType } from './Event';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
 import {
   type KlaviyoProfilePropertyType,
-  ProfileModel,
-  type ProfileProperties,
+  type Profile,
 } from './Profile';
 
 export const Klaviyo: Spec = {
@@ -12,8 +11,27 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
 
-  setProfile(profile: ProfileProperties): void {
-    KlaviyoReactNativeSdk.setProfile(profile);
+  setProfile(profile: Profile): void {
+    KlaviyoReactNativeSdk.setProfile(
+      profile.email ?? '',
+      profile.phoneNumber ?? '',
+      profile.externalId ?? '',
+      profile.firstName ?? '',
+      profile.lastName ?? '',
+      profile.organization ?? '',
+      profile.title ?? '',
+      profile.image ?? '',
+      profile.location?.address1 ?? '',
+      profile.location?.address2 ?? '',
+      profile.location?.city ?? '',
+      profile.location?.country ?? '',
+      profile.location?.latitude ?? 0,
+      profile.location?.longitude ?? 0,
+      profile.location?.region ?? '',
+      profile.location?.zip ?? '',
+      profile.location?.timezone ?? '',
+      profile.properties ?? {}
+    );
   },
 
   setProfileAttribute(
@@ -72,31 +90,6 @@ export const Klaviyo: Spec = {
       event.uniqueId ?? ''
     );
   },
-
-  // TODO: need to consolidate this with the above
-
-  setProfileNew(profile: ProfileModel): void {
-    KlaviyoReactNativeSdk.setProfile(
-      profile.email ?? '',
-      profile.phoneNumber ?? '',
-      profile.externalId ?? '',
-      profile.firstName ?? '',
-      profile.lastName ?? '',
-      profile.organization ?? '',
-      profile.title ?? '',
-      profile.image ?? '',
-      profile.location?.address1 ?? '',
-      profile.location?.address2 ?? '',
-      profile.location?.city ?? '',
-      profile.location?.country ?? '',
-      profile.location?.latitude ?? 0,
-      profile.location?.longitude ?? 0,
-      profile.location?.region ?? '',
-      profile.location?.zip ?? '',
-      profile.location?.timezone ?? '',
-      profile.properties ?? {}
-    );
-  },
 };
 
 export { EventProperty, EventType } from './Event';
@@ -105,6 +98,5 @@ export type {
   Profile,
   ProfileProperties,
   KlaviyoProfilePropertyType,
+  ProfileProperty,
 } from './Profile';
-
-export { ProfileProperty } from './Profile';

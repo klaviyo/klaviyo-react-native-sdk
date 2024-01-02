@@ -3,6 +3,41 @@ import KlaviyoSwift
 @objc
 public class KlaviyoBridge: NSObject {
 
+  enum ProfileProperty: String, CaseIterable {
+      case address1 = "address1"
+      case address2 = "address2"
+      case city = "city"
+      case country = "country"
+      case externalID = "external_id"
+      case firstName = "first_name"
+      case image = "image"
+      case lastName = "last_name"
+      case latitude = "latitude"
+      case longitude = "longitude"
+      case organization = "organization"
+      case region = "region"
+      case title = "title"
+      case zip = "zip"
+  }
+
+  @objc
+  public static func getProfilePropertyKeys() -> [String: String] {
+      ProfileProperty.allCases.map { enumCase in
+          (convertToSnakeCase(enumCase.rawValue), enumCase.rawValue)
+      }.reduce(into: [String: String]()) { result, tuple in
+          result[tuple.0] = tuple.1
+      }
+  }
+
+  private static func convertToSnakeCase(_ input: String) -> String {
+      let regex = try! NSRegularExpression(pattern: "([a-z])([A-Z])", options: [])
+      let range = NSRange(location: 0, length: input.utf16.count)
+      var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
+      
+      snakeCase = snakeCase.uppercased()
+      return snakeCase
+  }
+
   #if DEBUG
   // TODO: use only for testing.
   @objc
@@ -94,7 +129,7 @@ public class KlaviyoBridge: NSObject {
       uniqueId: String? = nil
     ) {
         let identifiers = Event.Identifiers(email: email, phoneNumber: phoneNumber, externalId: externalId)
-        
+
         let event = Event(
             name: .StartedCheckout, //TODO
             properties: properties as? [String: Any],
