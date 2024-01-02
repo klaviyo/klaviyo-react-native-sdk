@@ -59,12 +59,18 @@ export const Klaviyo: Spec = {
     return KlaviyoReactNativeSdk.getPushToken(callback);
   },
 
-  createEvent(name: EventType, properties?: Record<any, Object>): void {
-    this.createCustomEvent(name.toString(), properties);
-  },
-
-  createCustomEvent(name: string, properties?: Record<any, Object>): void {
-    KlaviyoReactNativeSdk.createEvent(name, properties);
+  createEvent(event): void {
+    KlaviyoReactNativeSdk.createEvent(
+      event.name,
+      event.properties ?? {},
+      event.identifier?.email ?? '',
+      event.identifier?.phoneNumber ?? '',
+      event.identifier?.externalId ?? '',
+      event.profile ?? {},
+      event.value ?? 0,
+      event.time ?? 0,
+      event.uniqueId ?? ''
+    );
   },
 
   // TODO: need to consolidate this with the above

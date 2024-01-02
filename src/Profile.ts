@@ -92,7 +92,7 @@ export enum ProfileKey {
   Latitude = 'latitude',
   Longitude = 'longitude',
   Custom = 'custom',
-  EXTERNAL_ID = 'external_id'
+  EXTERNAL_ID = 'external_id',
 }
 
 interface ProfileNew {

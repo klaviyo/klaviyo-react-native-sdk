@@ -82,6 +82,31 @@ public class KlaviyoBridge: NSObject {
     }
 
   @objc
+  public static func createEvent(
+      _ eventName: String,
+      properties: NSDictionary? = nil,
+      email: String? = nil,
+      phoneNumber: String? = nil,
+      externalId: String? = nil,
+      profile: NSDictionary? = nil,
+      value: NSNumber? = nil,
+      time: String? = nil,
+      uniqueId: String? = nil
+    ) {
+        let identifiers = Event.Identifiers(email: email, phoneNumber: phoneNumber, externalId: externalId)
+        
+        let event = Event(
+            name: .StartedCheckout, //TODO
+            properties: properties as? [String: Any],
+            identifiers: identifiers,
+            profile: profile as? [String: Any],
+            time: Date(),
+            uniqueId: uniqueId
+        )
+        KlaviyoSDK().create(event: event)
+    }
+
+  @objc
   public static func resetProfile() {
     KlaviyoSDK().resetProfile()
   }

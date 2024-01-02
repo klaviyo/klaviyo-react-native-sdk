@@ -1,8 +1,9 @@
 import * as React from 'react';
 
-import { StyleSheet, View, Button } from 'react-native';
-import { Klaviyo } from 'klaviyo-react-native-sdk';
+import { Button, StyleSheet, View } from 'react-native';
+import { EventType, Klaviyo } from 'klaviyo-react-native-sdk';
 import { LocationModel, ProfileKey, ProfileModel } from '../../src/Profile';
+import { EventModel, Identifiers } from '../../src/Event';
 
 export default function App() {
   const generateRandomEmails = () => {
@@ -194,6 +195,39 @@ export default function App() {
     }
   };
 
+  const onSendTestEvent = async () => {
+    try {
+      const myProperties: Record<ProfileKey, any> = {
+        [ProfileKey.FirstName]: generateRandomName(5),
+        [ProfileKey.LastName]: generateRandomName(5),
+      };
+
+      let identifiers = new Identifiers(
+        generateRandomEmails(),
+        generateRandomPhoneNumber(),
+        generateRandomName(5)
+      );
+
+      const myProfile: Record<ProfileKey, any> = {
+        [ProfileKey.FirstName]: generateRandomName(5),
+        [ProfileKey.LastName]: generateRandomName(5),
+      };
+
+      let event = new EventModel(
+        EventType.STARTED_CHECKOUT,
+        myProperties,
+        identifiers,
+        myProfile,
+        0,
+        null,
+        generateRandomName(5)
+      );
+      Klaviyo.createEvent(event);
+    } catch (e: any) {
+      console.log(e.message, e.code);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <>
@@ -257,12 +291,11 @@ export default function App() {
           onPress={onGetPushToken}
         />
 
-        {/*TODO: TBD*/}
-        {/*<Button*/}
-        {/*  title="Click to send test event"*/}
-        {/*  color="#841584"*/}
-        {/*  onPress={onSendTestEvent}*/}
-        {/*/>*/}
+        <Button
+          title="Click to send test event"
+          color="#841584"
+          onPress={onSendTestEvent}
+        />
       </>
     </View>
   );
