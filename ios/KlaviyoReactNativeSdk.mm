@@ -45,44 +45,11 @@ RCT_EXPORT_METHOD(resetProfile)
     [KlaviyoBridge resetProfile];
 }
 
-RCT_EXPORT_METHOD(setProfile: (NSString *)email
-                  phoneNumber: (NSString *)phoneNumber
-                  externalId: (NSString *)externalId
-                  firstName: (NSString *)firstName
-                  lastName: (NSString *)lastName
-                  organization: (NSString *)organization
-                  title: (NSString *)title
-                  image: (NSString *)image
-                  address1: (NSString *)address1
-                  address2: (NSString *)address2
-                  city: (NSString *)city
-                  country: (NSString *)country
-                  latitude: (nonnull NSNumber *)latitude
-                  longitude: (nonnull NSNumber *)longitude
-                  region: (NSString *)region
-                  zip: (NSString *)zip
-                  timezone: (NSString *)timezone
-                  properties: (NSDictionary * )properties)
+RCT_EXPORT_METHOD(setProfile:(NSDictionary *)profileDict)
 {
-    [KlaviyoBridge setProfile: email
-                   phoneNumber: phoneNumber
-                   externalId: externalId
-                   firstName: firstName
-                   lastName: lastName
-                   organization: organization
-                   title: title
-                   image: image
-                   address1: address1
-                   address2: address2
-                   city: city
-                   country: country
-                   latitude: latitude
-                   longitude: longitude
-                   region: region
-                   zip: zip
-                   timezone: timezone
-                   properties: properties];
+    [KlaviyoBridge setProfile:profileDict];
 }
+
 
 RCT_EXPORT_METHOD(createEvent:(NSDictionary *)event)
 {

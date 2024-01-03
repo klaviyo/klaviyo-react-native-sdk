@@ -57,6 +57,12 @@ export default function App() {
     };
   };
 
+  const getRandomEvent: () => EventName = () => {
+    const eventValues = Object.values(EventName);
+    const randomIndex = Math.floor(Math.random() * eventValues.length);
+    return eventValues[randomIndex] as EventName;
+  };
+
   const onInit = async () => {
     await initSDK();
   };
@@ -95,8 +101,7 @@ export default function App() {
 
   async function initSDK() {
     try {
-      // TODO: this is only used for testing in debug mode
-      Klaviyo.initialize('Xr5bFG');
+      Klaviyo.initialize('YOUR_PUBLIC_API_KEY');
     } catch (e: any) {
       console.log(e.message, e.code);
     }
@@ -167,8 +172,8 @@ export default function App() {
       const myProperties: Record<ProfileProperty, any> = {
         [ProfileProperty.FIRST_NAME]: generateRandomName(5),
         [ProfileProperty.LAST_NAME]: generateRandomName(5),
-        [ProfileProperty.ADDRESS1]: '123 Main Street',
-        [ProfileProperty.ADDRESS1]: 'Apt 456',
+        [ProfileProperty.ADDRESS1]: generateRandomAddress().street,
+        [ProfileProperty.ADDRESS2]: 'Apt 456',
         [ProfileProperty.TITLE]: 'Mr.',
         [ProfileProperty.ORGANIZATION]: 'ABC Inc.',
         [ProfileProperty.CITY]: 'Cityville',
@@ -199,7 +204,7 @@ export default function App() {
     }
   };
 
-  const onSendTestEvent = async () => {
+  const onSendRandomEvent = async () => {
     try {
       const identifiers: Identifiers = {
         email: generateRandomEmails(),
@@ -208,10 +213,10 @@ export default function App() {
       };
 
       const event: Events = {
-        name: EventName.PAID_FOR_ORDER,
+        name: getRandomEvent(),
         properties: { abc: 'def' },
         identifier: identifiers,
-        profile: { [ProfileProperty.FIRST_NAME]: 'Kumar' },
+        profile: { [ProfileProperty.FIRST_NAME]: generateRandomName(5) },
         value: 0,
         time: new Date(),
         uniqueId: generateRandomName(5),
@@ -286,9 +291,9 @@ export default function App() {
         />
 
         <Button
-          title="Click to send test event"
+          title="Click to send random event"
           color="#841584"
-          onPress={onSendTestEvent}
+          onPress={onSendRandomEvent}
         />
       </>
     </View>

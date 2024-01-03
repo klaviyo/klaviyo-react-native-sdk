@@ -88,6 +88,56 @@ public class KlaviyoBridge: NSObject {
   #endif
 
   @objc
+  public static func setEmail(_ value: String) {
+    KlaviyoSDK().set(email: value)
+  }
+
+  @objc
+  public static func setPhoneNumber(_ value: String) {
+    KlaviyoSDK().set(phoneNumber: value)
+  }
+
+  @objc
+  public static func setExternalId(_ value: String) {
+    KlaviyoSDK().set(externalId: value)
+  }
+
+  @objc
+  public static func setProfile(
+      _ profileDict: [String: AnyObject]
+  ) {
+      var location: Profile.Location? = nil
+      if let locationDict = profileDict["location"] as? [String: AnyObject] {
+          location = Profile.Location(
+            address1:  locationDict["address1"] as? String,
+            address2:  locationDict["address2"] as? String,
+            city:  locationDict["city"] as? String,
+            country:  locationDict["country"] as? String,
+            latitude:  locationDict["latitude"] as? Double,
+            longitude:  locationDict["longitude"] as? Double,
+            region:  locationDict["region"] as? String,
+            zip:  locationDict["zip"] as? String,
+            timezone:  locationDict["timezone"] as? String
+          )
+      }
+
+      let profile = Profile(
+        email: profileDict["email"] as? String,
+        phoneNumber: profileDict["phoneNumber"] as? String,
+        externalId: profileDict["externalId"] as? String,
+        firstName: profileDict["firstName"] as? String,
+        lastName: profileDict["lastName"] as? String,
+        organization: profileDict["organization"] as? String,
+        title: profileDict["title"] as? String,
+        image: profileDict["image"] as? String,
+        location: location,
+        properties: profileDict["properties"] as? [String: Any]
+      )
+
+      KlaviyoSDK().set(profile: profile)
+  }
+
+  @objc
   public static func createEvent(event: [String: AnyObject]) {
       guard let eventName = event["name"] as? String,
             let eventType = EventType.getEventType(eventName) else {
@@ -116,97 +166,6 @@ public class KlaviyoBridge: NSObject {
 
       KlaviyoSDK().create(event: event)
   }
-
-  @objc
-  public static func setEmail(_ value: String) {
-    KlaviyoSDK().set(email: value)
-  }
-
-  @objc
-  public static func setPhoneNumber(_ value: String) {
-    KlaviyoSDK().set(phoneNumber: value)
-  }
-
-  @objc
-  public static func setExternalId(_ value: String) {
-    KlaviyoSDK().set(externalId: value)
-  }
-
-  @objc
-  public static func setProfile(
-      _ email: String? = nil,
-      phoneNumber: String? = nil,
-      externalId: String? = nil,
-      firstName: String? = nil,
-      lastName: String? = nil,
-      organization: String? = nil,
-      title: String? = nil,
-      image: String? = nil,
-      address1: String? = nil,
-      address2: String? = nil,
-      city: String? = nil,
-      country: String? = nil,
-      latitude: NSNumber? = nil,
-      longitude: NSNumber? = nil,
-      region: String? = nil,
-      zip: String? = nil,
-      timezone: String? = nil,
-      properties: NSDictionary? = nil
-    ) {
-      let location = Profile.Location(
-        address1: address1,
-        address2: address2,
-        city: city,
-        country: country,
-        latitude: latitude as? Double,
-        longitude: longitude as? Double,
-        region: region,
-        zip: zip,
-        timezone: timezone
-      )
-
-      let profile = Profile(
-        email: email,
-        phoneNumber: phoneNumber,
-        externalId: externalId,
-        firstName: firstName,
-        lastName: lastName,
-        organization: organization,
-        title: title,
-        image: image,
-        location: location,
-        properties: properties as? [String : Any]
-      )
-
-      KlaviyoSDK().set(profile: profile)
-    }
-
-  @objc
-  public static func createEvent(
-      _ eventName: String,
-      properties: NSDictionary? = nil,
-      email: String? = nil,
-      phoneNumber: String? = nil,
-      externalId: String? = nil,
-      profile: NSDictionary? = nil,
-      value: NSNumber? = nil,
-      time: String? = nil,
-      uniqueId: String? = nil
-    ) {
-        let identifiers = Event.Identifiers(email: email, phoneNumber: phoneNumber, externalId: externalId)
-
-        if let eventName = EventType.getEventType(eventName) {
-            let event = Event(
-                name: eventName,
-                properties: properties as? [String: Any],
-                identifiers: identifiers,
-                profile: profile as? [String: Any],
-                time: Date(),
-                uniqueId: uniqueId
-            )
-            KlaviyoSDK().create(event: event)
-        }
-    }
 
   @objc
   public static func resetProfile() {

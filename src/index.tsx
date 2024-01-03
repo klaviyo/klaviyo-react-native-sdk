@@ -8,26 +8,7 @@ export const Klaviyo: Spec = {
   },
 
   setProfile(profile: Profile): void {
-    KlaviyoReactNativeSdk.setProfile(
-      profile.email ?? '',
-      profile.phoneNumber ?? '',
-      profile.externalId ?? '',
-      profile.firstName ?? '',
-      profile.lastName ?? '',
-      profile.organization ?? '',
-      profile.title ?? '',
-      profile.image ?? '',
-      profile.location?.address1 ?? '',
-      profile.location?.address2 ?? '',
-      profile.location?.city ?? '',
-      profile.location?.country ?? '',
-      profile.location?.latitude ?? 0,
-      profile.location?.longitude ?? 0,
-      profile.location?.region ?? '',
-      profile.location?.zip ?? '',
-      profile.location?.timezone ?? '',
-      profile.properties ?? {}
-    );
+    KlaviyoReactNativeSdk.setProfile(profile);
   },
 
   setProfileAttribute(
