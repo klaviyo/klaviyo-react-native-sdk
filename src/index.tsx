@@ -38,6 +38,11 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.resetProfile();
   },
 
+  createEvent(event: Events): void {
+    console.log('createEvent', event);
+    KlaviyoReactNativeSdk.createEvent(event.name, event);
+  },
+
   getEmail(callback: Function | undefined): String | null {
     return KlaviyoReactNativeSdk.getEmail(callback);
   },
@@ -52,10 +57,6 @@ export const Klaviyo: Spec = {
 
   getPushToken(callback: Function | undefined): String | null {
     return KlaviyoReactNativeSdk.getPushToken(callback);
-  },
-
-  createEvent(event: Events): void {
-    KlaviyoReactNativeSdk.createEvent(event);
   },
 };
 

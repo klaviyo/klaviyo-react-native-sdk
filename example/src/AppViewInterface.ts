@@ -12,7 +12,7 @@ import {
   setProfile,
 } from './KlaviyoReactWrapper';
 
-interface AppViewInterface {
+export interface AppViewInterface {
   title: string;
   color: string;
   onPress: () => Promise<void>;

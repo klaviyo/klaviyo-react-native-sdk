@@ -45,18 +45,17 @@ RCT_EXPORT_METHOD(resetProfile)
     [KlaviyoBridge resetProfile];
 }
 
-RCT_EXPORT_METHOD(setProfile:(NSDictionary *)profileDict)
+RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
 {
     [KlaviyoBridge setProfile:profileDict];
 }
 
 
-RCT_EXPORT_METHOD(createEvent:(NSDictionary *)event)
+RCT_EXPORT_METHOD(createEvent: (NSString *) name
+                  properties: (NSDictionary *) properties)
 {
-    [KlaviyoBridge createEventWithEvent: event];
+    [KlaviyoBridge createEventWithName:name event:properties];
 }
-
-
 
 //MARK: Getters
 

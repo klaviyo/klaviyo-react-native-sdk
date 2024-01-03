@@ -138,12 +138,12 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
-  public static func createEvent(event: [String: AnyObject]) {
-      guard let eventName = event["name"] as? String,
-            let eventType = EventType.getEventType(eventName) else {
+  public static func createEvent(name: String, event: [String: AnyObject]) {
+      guard !name.isEmpty,
+            let eventType = EventType.getEventType(name) else {
           return
       }
-
+      
       var identifiers: Event.Identifiers? = nil
 
       if let ids = event["identifiers"] {
@@ -158,7 +158,6 @@ public class KlaviyoBridge: NSObject {
           name: eventType,
           properties: event["properties"] as? [String: Any],
           identifiers: identifiers,
-          // might need to map profile to the right keys
           profile: event["profile"] as? [String: Any],
           time: Date(), //TODO: fix time
           uniqueId: event["uniqueId"] as? String
