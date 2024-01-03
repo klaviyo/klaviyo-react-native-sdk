@@ -28,7 +28,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     return hashMapOf(
       "PROFILE_KEYS" to this.extractConstants<ProfileKey>(),
       "EVENT_NAMES" to this.extractConstants<EventType>(),
-      "EVENT_KEYS" to this.extractConstants<EventKey>(),
     )
   }
 

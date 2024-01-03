@@ -61,7 +61,7 @@ export const Klaviyo: Spec = {
 };
 
 export type { EventProperty, Events } from './Event';
-export { EventName } from './Event';
+export { MetricName } from './Event';
 export type {
   Profile,
   ProfileProperties,

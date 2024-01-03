@@ -11,23 +11,15 @@ export interface KlaviyoEventAPI {
   // ) => void;
 }
 
-const { EVENT_NAMES, EVENT_KEYS } = KlaviyoReactNativeSdk.getConstants();
+const { EVENT_NAMES } = KlaviyoReactNativeSdk.getConstants();
 
 /* Event interface types */
-export enum EventName {
+export enum MetricName {
   OPENED_PUSH = EVENT_NAMES.OPENED_PUSH,
   VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
-  SEARCHED_PRODUCTS = EVENT_NAMES.SEARCHED_PRODUCTS,
   STARTED_CHECKOUT = EVENT_NAMES.STARTED_CHECKOUT,
-  PLACED_ORDER = EVENT_NAMES.PLACED_ORDER,
-  ORDERED_PRODUCT = EVENT_NAMES.ORDERED_PRODUCT,
-  CANCELLED_ORDER = EVENT_NAMES.CANCELLED_ORDER,
-  PAID_FOR_ORDER = EVENT_NAMES.PAID_FOR_ORDER,
-  SUBSCRIBED_TO_BACK_IN_STOCK = EVENT_NAMES.SUBSCRIBED_TO_BACK_IN_STOCK,
-  SUBSCRIBED_TO_COMING_SOON = EVENT_NAMES.SUBSCRIBED_TO_COMING_SOON,
-  SUBSCRIBED_TO_LIST = EVENT_NAMES.SUBSCRIBED_TO_LIST,
-  SUCCESSFUL_PAYMENT = EVENT_NAMES.SUCCESSFUL_PAYMENT,
-  FAILED_PAYMENT = EVENT_NAMES.FAILED_PAYMENT,
+  OPENED_APP = EVENT_NAMES.OPENED_APP,
+  ADDED_TO_CART = EVENT_NAMES.ADDED_TO_CART,
 }
 
 /* various event properties that can be set on an event */
@@ -38,8 +30,8 @@ export interface Identifiers {
 }
 
 export interface Events {
-  readonly name?: EventName;
-  readonly properties?: Record<KlaviyoEventPropertyType, Object>;
+  readonly name?: MetricName;
+  readonly properties?: Record<string, Object>;
   readonly identifier?: Identifiers;
   readonly profile?: Record<ProfileProperty, Object>;
   readonly value?: number;
@@ -47,9 +39,3 @@ export interface Events {
   readonly uniqueId?: string;
 }
 
-export enum EventProperty {
-  EVENT_ID = EVENT_KEYS.EVENT_ID,
-  VALUE = EVENT_KEYS.VALUE,
-}
-
-export type KlaviyoEventPropertyType = EventProperty | string;
