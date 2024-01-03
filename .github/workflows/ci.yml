@@ -154,7 +154,4 @@ jobs:
 
       - name: Build example for iOS
         run: |
-          cd example
-          npx react-native info
-          cd ..
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
