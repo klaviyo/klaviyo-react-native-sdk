@@ -1,14 +1,13 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
-import { EventType } from './Event';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
-import type { KlaviyoProfilePropertyType, ProfileProperties } from './Profile';
-
+import { type KlaviyoProfilePropertyType, type Profile } from './Profile';
+import type { Events } from './Event';
 export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
 
-  setProfile(profile: ProfileProperties): void {
+  setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(profile);
   },
 
@@ -39,33 +38,30 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.resetProfile();
   },
 
-  getEmail(): String | null {
-    return KlaviyoReactNativeSdk.getEmail();
+  createEvent(event: Events): void {
+    console.log('createEvent', event);
+    KlaviyoReactNativeSdk.createEvent(event.name, event);
   },
 
-  getExternalId(): String | null {
-    return KlaviyoReactNativeSdk.getExternalId();
+  getEmail(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getEmail(callback);
   },
 
-  getPhoneNumber(): String | null {
-    return KlaviyoReactNativeSdk.getPhoneNumber();
+  getExternalId(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getExternalId(callback);
   },
 
-  getPushToken(): String | null {
-    return KlaviyoReactNativeSdk.getPushToken();
+  getPhoneNumber(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPhoneNumber(callback);
   },
 
-  createEvent(name: EventType, properties?: Record<any, Object>): void {
-    this.createCustomEvent(name.toString(), properties);
-  },
-
-  createCustomEvent(name: string, properties?: Record<any, Object>): void {
-    KlaviyoReactNativeSdk.createEvent(name, properties);
+  getPushToken(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPushToken(callback);
   },
 };
 
-export { EventProperty, EventType } from './Event';
-
+export type { EventProperty, Events } from './Event';
+export { EventName } from './Event';
 export type {
   Profile,
   ProfileProperties,

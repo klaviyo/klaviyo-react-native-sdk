@@ -1,7 +1,29 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
+/*API interfaces for profile related operations*/
+export interface KlaviyoProfileApi {
+  readonly setProfile: (profile: Profile) => void;
+  readonly setEmail: (email: String) => void;
+  readonly setExternalId: (externalId: String) => void;
+  readonly setPhoneNumber: (phoneNumber: String) => void;
+  // TODO: TDB
+  readonly setProfileAttribute: (
+    propertyKey: KlaviyoProfilePropertyType,
+    value: String
+  ) => void;
+
+  readonly resetProfile: () => void;
+
+  readonly getEmail: (callback: Function | undefined) => String | null;
+  readonly getExternalId: (callback: Function | undefined) => String | null;
+  readonly getPhoneNumber: (callback: Function | undefined) => String | null;
+}
+
+/* Profile interface types */
+
 const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
+/* various profile properties that can be set on a user */
 export enum ProfileProperty {
   EXTERNAL_ID = PROFILE_KEYS.EXTERNAL_ID,
   EMAIL = PROFILE_KEYS.EMAIL,
@@ -22,30 +44,30 @@ export enum ProfileProperty {
   TIMEZONE = PROFILE_KEYS.TIMEZONE,
 }
 
+export interface Location {
+  readonly address1?: string;
+  readonly address2?: string;
+  readonly city?: string;
+  readonly country?: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
+  readonly region?: string;
+  readonly zip?: string;
+  readonly timezone?: string;
+}
+
+export interface Profile {
+  email?: string;
+  phoneNumber?: string;
+  externalId?: string;
+  firstName?: string;
+  lastName?: string;
+  organization?: string;
+  title?: string;
+  image?: string;
+  location?: Location;
+  properties?: Record<ProfileProperty, any>;
+}
+
 export type KlaviyoProfilePropertyType = ProfileProperty | string;
 export type ProfileProperties = Record<KlaviyoProfilePropertyType, Object>;
-
-export class Profile {
-  public externalId?: String;
-  public email?: String;
-  public phoneNumber?: String;
-  public properties?: ProfileProperties;
-}
-
-export interface KlaviyoProfileApi {
-  readonly setProfile: (profile: ProfileProperties) => void;
-
-  readonly setEmail: (email: String) => void;
-  readonly setExternalId: (externalId: String) => void;
-  readonly setPhoneNumber: (phoneNumber: String) => void;
-  readonly setProfileAttribute: (
-    propertyKey: KlaviyoProfilePropertyType,
-    value: String
-  ) => void;
-
-  readonly resetProfile: () => void;
-
-  readonly getEmail: () => String | null;
-  readonly getExternalId: () => String | null;
-  readonly getPhoneNumber: () => String | null;
-}
