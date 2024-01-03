@@ -38,4 +38,3 @@ export interface Events {
   readonly time?: Date;
   readonly uniqueId?: string;
 }
-
