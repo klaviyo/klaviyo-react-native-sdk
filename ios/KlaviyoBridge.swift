@@ -89,8 +89,32 @@ public class KlaviyoBridge: NSObject {
 
   @objc
   public static func createEvent(event: [String: AnyObject]) {
-    let event = Event(name: .CustomEvent(event["event"]!["name"] as! String), properties: event["properties"] as? [String: Any])
-    KlaviyoSDK().create(event: event)
+      guard let eventName = event["name"] as? String,
+            let eventType = EventType.getEventType(eventName) else {
+          return
+      }
+
+      var identifiers: Event.Identifiers? = nil
+
+      if let ids = event["identifiers"] {
+          identifiers = Event.Identifiers(
+            email: ids["email"] as? String,
+            phoneNumber: ids["phoneNumber"] as? String,
+            externalId: ids["externalId"] as? String
+          )
+      }
+
+      let event = Event(
+          name: eventType,
+          properties: event["properties"] as? [String: Any],
+          identifiers: identifiers,
+          // might need to map profile to the right keys
+          profile: event["profile"] as? [String: Any],
+          time: Date(), //TODO: fix time
+          uniqueId: event["uniqueId"] as? String
+      )
+
+      KlaviyoSDK().create(event: event)
   }
 
   @objc
@@ -170,7 +194,7 @@ public class KlaviyoBridge: NSObject {
       uniqueId: String? = nil
     ) {
         let identifiers = Event.Identifiers(email: email, phoneNumber: phoneNumber, externalId: externalId)
-        
+
         if let eventName = EventType.getEventType(eventName) {
             let event = Event(
                 name: eventName,

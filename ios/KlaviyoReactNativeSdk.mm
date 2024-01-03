@@ -25,11 +25,6 @@ RCT_EXPORT_METHOD(initialize:(NSString *)publicToken)
     [KlaviyoBridge initializeSDK: publicToken];
 }
 
-RCT_EXPORT_METHOD(createEvent:(NSDictionary *)event)
-{
-    [KlaviyoBridge createEventWithEvent: event];
-}
-
 RCT_EXPORT_METHOD(setEmail: (NSString *)email)
 {
     [KlaviyoBridge setEmail: email];
@@ -89,25 +84,9 @@ RCT_EXPORT_METHOD(setProfile: (NSString *)email
                    properties: properties];
 }
 
-RCT_EXPORT_METHOD(createEvent: (NSString *)name
-                  properties: (NSDictionary * )properties
-                  email: (NSString *)email
-                  phoneNumber: (NSString *)phoneNumber
-                  externalId: (NSString *)externalId
-                  profile: (NSDictionary * )profile
-                  value: (nonnull NSNumber *)value
-                  time: (NSString *)time
-                  uniqueId: (NSString *)uniqueId)
+RCT_EXPORT_METHOD(createEvent:(NSDictionary *)event)
 {
-    [KlaviyoBridge createEvent:name
-                   properties:properties
-                   email:email
-                   phoneNumber:phoneNumber
-                   externalId:externalId
-                   profile:profile
-                   value:value
-                   time:time
-                   uniqueId:uniqueId];
+    [KlaviyoBridge createEventWithEvent: event];
 }
 
 

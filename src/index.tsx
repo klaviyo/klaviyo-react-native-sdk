@@ -74,17 +74,7 @@ export const Klaviyo: Spec = {
   },
 
   createEvent(event: Events): void {
-    KlaviyoReactNativeSdk.createEvent(
-      event.name,
-      event.properties ?? {},
-      event.identifier?.email ?? '',
-      event.identifier?.phoneNumber ?? '',
-      event.identifier?.externalId ?? '',
-      event.profile ?? {},
-      event.value ?? 0,
-      event.time ?? 0,
-      event.uniqueId ?? ''
-    );
+    KlaviyoReactNativeSdk.createEvent(event);
   },
 };
 

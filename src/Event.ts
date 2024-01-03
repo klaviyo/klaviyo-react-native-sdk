@@ -1,4 +1,5 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
+import type { ProfileProperty } from './Profile';
 
 /*API interfaces for event related operations*/
 export interface KlaviyoEventAPI {
@@ -40,7 +41,7 @@ export interface Events {
   readonly name?: EventName;
   readonly properties?: Record<KlaviyoEventPropertyType, Object>;
   readonly identifier?: Identifiers;
-  readonly profile?: Record<string, Object>;
+  readonly profile?: Record<ProfileProperty, Object>;
   readonly value?: number;
   readonly time?: Date;
   readonly uniqueId?: string;

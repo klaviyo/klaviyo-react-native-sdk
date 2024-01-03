@@ -208,10 +208,10 @@ export default function App() {
       };
 
       const event: Events = {
-        name: EventName.CANCELLED_ORDER,
+        name: EventName.PAID_FOR_ORDER,
         properties: { abc: 'def' },
         identifier: identifiers,
-        profile: { def: 'abc' },
+        profile: { [ProfileProperty.FIRST_NAME]: 'Kumar' },
         value: 0,
         time: new Date(),
         uniqueId: generateRandomName(5),
