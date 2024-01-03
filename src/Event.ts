@@ -1,5 +1,6 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
+/*API interfaces for event related operations*/
 export interface KlaviyoEventAPI {
   readonly createEvent: (event: Events) => void;
   //TODO: TBD
@@ -11,6 +12,7 @@ export interface KlaviyoEventAPI {
 
 const { EVENT_NAMES, EVENT_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
+/* Event interface types */
 export enum EventName {
   OPENED_PUSH = EVENT_NAMES.OPENED_PUSH,
   VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
@@ -27,6 +29,7 @@ export enum EventName {
   FAILED_PAYMENT = EVENT_NAMES.FAILED_PAYMENT,
 }
 
+/* various event properties that can be set on an event */
 export interface Identifiers {
   email?: string;
   phoneNumber?: string;
@@ -34,11 +37,11 @@ export interface Identifiers {
 }
 
 export interface Events {
-  readonly name: EventName;
+  readonly name?: EventName;
   readonly properties?: Record<KlaviyoEventPropertyType, Object>;
   readonly identifier?: Identifiers;
   readonly profile?: Record<string, Object>;
-  readonly value: number;
+  readonly value?: number;
   readonly time?: Date;
   readonly uniqueId?: string;
 }

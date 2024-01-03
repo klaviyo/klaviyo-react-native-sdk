@@ -33,13 +33,47 @@ public class KlaviyoBridge: NSObject {
       case subscribedToList = "$subscribed_to_list"
       case successfulPayment = "$successful_payment"
       case failedPayment = "$failed_payment"
+
+      static func getEventType(_ str: String) -> Event.EventName? {
+      switch str {
+      case "$opened_app":
+          return .OpenedPush
+      case "$viewed_product":
+          return .ViewedProduct
+      case "$searched_products":
+          return .SearchedProducts
+      case "$started_checkout":
+          return .StartedCheckout
+      case "$placed_order":
+          return .PlacedOrder
+      case "$ordered_product":
+          return .OrderedProduct
+      case "$cancelled_order":
+          return .CancelledOrder
+      case "$paid_for_order":
+          return .PaidForOrder
+      case "$subscribed_to_back_in_stock":
+          return .SubscribedToBackInStock
+      case "$subscribed_to_coming_soon":
+          return .SubscribedToComingSoon
+      case "$subscribed_to_list":
+          return .SubscribedToList
+      case "$successful_payment":
+          return .SuccessfulPayment
+      case "$failed_payment":
+          return .FailedPayment
+      default:
+          break
+      }
+      return nil
+      }
   }
-    
+
   @objc
   public static var getEventTypesKeys: [String: String] {
       EventType.allCases.getDictionaryFromEnum()
   }
-    
+
   @objc
   public static var getProfilePropertyKey: [String: String] {
       ProfileProperty.allCases.getDictionaryFromEnum()
@@ -136,16 +170,18 @@ public class KlaviyoBridge: NSObject {
       uniqueId: String? = nil
     ) {
         let identifiers = Event.Identifiers(email: email, phoneNumber: phoneNumber, externalId: externalId)
-
-        let event = Event(
-            name: .StartedCheckout, //TODO
-            properties: properties as? [String: Any],
-            identifiers: identifiers,
-            profile: profile as? [String: Any],
-            time: Date(),
-            uniqueId: uniqueId
-        )
-        KlaviyoSDK().create(event: event)
+        
+        if let eventName = EventType.getEventType(eventName) {
+            let event = Event(
+                name: eventName,
+                properties: properties as? [String: Any],
+                identifiers: identifiers,
+                profile: profile as? [String: Any],
+                time: Date(),
+                uniqueId: uniqueId
+            )
+            KlaviyoSDK().create(event: event)
+        }
     }
 
   @objc
@@ -183,13 +219,15 @@ extension Collection where Element: RawRepresentable, Element.RawValue == String
             result[tuple.0] = tuple.1
         }
     }
-    
+
     func convertToSnakeCase(_ input: String) -> String {
         let regex = try! NSRegularExpression(pattern: "([a-z])([A-Z])", options: [])
         let range = NSRange(location: 0, length: input.utf16.count)
         var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
 
         snakeCase = snakeCase.uppercased()
+        // to aviod the $ in event names
+        snakeCase = snakeCase.replacingOccurrences(of: "$", with: "")
         return snakeCase
     }
 }

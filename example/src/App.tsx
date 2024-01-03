@@ -209,8 +209,11 @@ export default function App() {
 
       const event: Events = {
         name: EventName.CANCELLED_ORDER,
+        properties: { abc: 'def' },
         identifier: identifiers,
+        profile: { def: 'abc' },
         value: 0,
+        time: new Date(),
         uniqueId: generateRandomName(5),
       };
       Klaviyo.createEvent(event);

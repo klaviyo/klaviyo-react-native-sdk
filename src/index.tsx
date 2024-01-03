@@ -1,7 +1,7 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
 import { type KlaviyoProfilePropertyType, type Profile } from './Profile';
-
+import type { Events } from './Event';
 export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
@@ -73,8 +73,7 @@ export const Klaviyo: Spec = {
     return KlaviyoReactNativeSdk.getPushToken(callback);
   },
 
-  createEvent(event): void {
-    console.log('event ***', event);
+  createEvent(event: Events): void {
     KlaviyoReactNativeSdk.createEvent(
       event.name,
       event.properties ?? {},
