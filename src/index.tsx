@@ -1,10 +1,6 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
-import { EventType } from './Event';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
-import {
-  type KlaviyoProfilePropertyType,
-  type Profile,
-} from './Profile';
+import { type KlaviyoProfilePropertyType, type Profile } from './Profile';
 
 export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
@@ -78,6 +74,7 @@ export const Klaviyo: Spec = {
   },
 
   createEvent(event): void {
+    console.log('event ***', event);
     KlaviyoReactNativeSdk.createEvent(
       event.name,
       event.properties ?? {},
@@ -92,8 +89,8 @@ export const Klaviyo: Spec = {
   },
 };
 
-export { EventProperty, EventType } from './Event';
-
+export type { EventProperty, Events } from './Event';
+export { EventName } from './Event';
 export type {
   Profile,
   ProfileProperties,

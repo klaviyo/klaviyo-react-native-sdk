@@ -1,79 +1,46 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
+export interface KlaviyoEventAPI {
+  readonly createEvent: (event: Events) => void;
+  //TODO: TBD
+  // readonly createCustomEvent: (
+  //   name: string,
+  //   properties?: Record<KlaviyoEventPropertyType, Object>
+  // ) => void;
+}
+
 const { EVENT_NAMES, EVENT_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
-// TODO: should probably come from the native module using export constants
-export enum EventType {
-  OPENED_PUSH = '$opened_app',
-  VIEWED_PRODUCT = '$viewed_product',
-  SEARCHED_PRODUCTS = '$searched_products',
-  STARTED_CHECKOUT = '$started_checkout',
-  PLACED_ORDER = '$placed_order',
-  Ordered_Product = '$ordered_product',
-  Cancelled_Order = '$cancelled_order',
-  Paid_For_Order = '$paid_for_order',
-  Subscribed_To_Back_In_Stock = '$subscribed_to_back_in_stock',
-  Subscribed_To_Coming_Soon = '$subscribed_to_coming_soon',
-  Subscribed_To_List = '$subscribed_to_list',
-  Successful_Payment = '$successful_payment',
-  Failed_Payment = '$failed_payment',
+export enum EventName {
+  OPENED_PUSH = EVENT_NAMES.OPENED_PUSH,
+  VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
+  SEARCHED_PRODUCTS = EVENT_NAMES.SEARCHED_PRODUCTS,
+  STARTED_CHECKOUT = EVENT_NAMES.STARTED_CHECKOUT,
+  PLACED_ORDER = EVENT_NAMES.PLACED_ORDER,
+  ORDERED_PRODUCT = EVENT_NAMES.ORDERED_PRODUCT,
+  CANCELLED_ORDER = EVENT_NAMES.CANCELLED_ORDER,
+  PAID_FOR_ORDER = EVENT_NAMES.PAID_FOR_ORDER,
+  SUBSCRIBED_TO_BACK_IN_STOCK = EVENT_NAMES.SUBSCRIBED_TO_BACK_IN_STOCK,
+  SUBSCRIBED_TO_COMING_SOON = EVENT_NAMES.SUBSCRIBED_TO_COMING_SOON,
+  SUBSCRIBED_TO_LIST = EVENT_NAMES.SUBSCRIBED_TO_LIST,
+  SUCCESSFUL_PAYMENT = EVENT_NAMES.SUCCESSFUL_PAYMENT,
+  FAILED_PAYMENT = EVENT_NAMES.FAILED_PAYMENT,
 }
 
-export class Identifiers {
-  email?: string | null;
-  phoneNumber?: string | null;
-  externalId?: string | null;
-
-  constructor(
-    email: string | null = null,
-    phoneNumber: string | null = null,
-    externalId: string | null = null
-  ) {
-    this.email = email;
-    this.phoneNumber = phoneNumber;
-    this.externalId = externalId;
-  }
+export interface Identifiers {
+  email?: string;
+  phoneNumber?: string;
+  externalId?: string;
 }
 
-// Usage example:
-
-
-interface Event {
-  readonly name: EventType;
-  readonly properties?: Record<string, Object> | null;
-  readonly identifier?: Identifiers | null;
-  readonly profile?: Record<string, Object> | null;
-  readonly value: number | null;
-  readonly time?: Date | null;
-  readonly uniqueId?: string | null;
-}
-
-export class EventModel implements Event {
-  readonly name: EventType;
-  readonly properties?: Record<string, Object> | null;
-  readonly identifier?: Identifiers | null;
-  readonly profile?: Record<string, Object> | null;
-  readonly value: number | null;
-  readonly time?: Date | null;
-  readonly uniqueId?: string | null;
-
-  constructor(
-    name: EventType,
-    properties: Record<string, Object> | null = null,
-    identifier: Identifiers | null = null,
-    profile: Record<string, Object> | null = null,
-    value: number = 0,
-    time: Date | null = null,
-    uniqueId: string | null = null
-  ) {
-    this.name = name;
-    this.properties = properties;
-    this.identifier = identifier;
-    this.profile = profile;
-    this.value = value;
-    this.time = time;
-    this.uniqueId = uniqueId;
-  }
+export interface Events {
+  readonly name: EventName;
+  readonly properties?: Record<KlaviyoEventPropertyType, Object>;
+  readonly identifier?: Identifiers;
+  readonly profile?: Record<string, Object>;
+  readonly value: number;
+  readonly time?: Date;
+  readonly uniqueId?: string;
 }
 
 export enum EventProperty {
@@ -81,12 +48,4 @@ export enum EventProperty {
   VALUE = EVENT_KEYS.VALUE,
 }
 
-type KlaviyoEventPropertyType = EventProperty | string;
-
-export interface KlaviyoEventAPI {
-  readonly createEvent: (event: Event) => void;
-  readonly createCustomEvent: (
-    name: string,
-    properties?: Record<KlaviyoEventPropertyType, Object>
-  ) => void;
-}
+export type KlaviyoEventPropertyType = EventProperty | string;

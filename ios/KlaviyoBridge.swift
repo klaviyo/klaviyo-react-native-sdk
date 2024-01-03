@@ -2,7 +2,6 @@ import KlaviyoSwift
 
 @objc
 public class KlaviyoBridge: NSObject {
-
   enum ProfileProperty: String, CaseIterable {
       case address1 = "address1"
       case address2 = "address2"
@@ -20,22 +19,30 @@ public class KlaviyoBridge: NSObject {
       case zip = "zip"
   }
 
-  @objc
-  public static func getProfilePropertyKeys() -> [String: String] {
-      ProfileProperty.allCases.map { enumCase in
-          (convertToSnakeCase(enumCase.rawValue), enumCase.rawValue)
-      }.reduce(into: [String: String]()) { result, tuple in
-          result[tuple.0] = tuple.1
-      }
+  enum EventType: String, CaseIterable {
+      case openedPush = "$opened_app"
+      case viewedProduct = "$viewed_product"
+      case searchedProducts = "$searched_products"
+      case startedCheckout = "$started_checkout"
+      case placedOrder = "$placed_order"
+      case orderedProduct = "$ordered_product"
+      case cancelledOrder = "$cancelled_order"
+      case paidForOrder = "$paid_for_order"
+      case subscribedToBackInStock = "$subscribed_to_back_in_stock"
+      case subscribedToComingSoon = "$subscribed_to_coming_soon"
+      case subscribedToList = "$subscribed_to_list"
+      case successfulPayment = "$successful_payment"
+      case failedPayment = "$failed_payment"
   }
-
-  private static func convertToSnakeCase(_ input: String) -> String {
-      let regex = try! NSRegularExpression(pattern: "([a-z])([A-Z])", options: [])
-      let range = NSRange(location: 0, length: input.utf16.count)
-      var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
-      
-      snakeCase = snakeCase.uppercased()
-      return snakeCase
+    
+  @objc
+  public static var getEventTypesKeys: [String: String] {
+      EventType.allCases.getDictionaryFromEnum()
+  }
+    
+  @objc
+  public static var getProfilePropertyKey: [String: String] {
+      ProfileProperty.allCases.getDictionaryFromEnum()
   }
 
   #if DEBUG
@@ -165,4 +172,24 @@ public class KlaviyoBridge: NSObject {
   public static func getPushToken() -> String {
       return KlaviyoSDK().pushToken ?? ""
   }
+}
+
+
+extension Collection where Element: RawRepresentable, Element.RawValue == String {
+    func getDictionaryFromEnum() -> [String: String] {
+        return self.map { enumCase in
+            (convertToSnakeCase(enumCase.rawValue), enumCase.rawValue)
+        }.reduce(into: [String: String]()) { result, tuple in
+            result[tuple.0] = tuple.1
+        }
+    }
+    
+    func convertToSnakeCase(_ input: String) -> String {
+        let regex = try! NSRegularExpression(pattern: "([a-z])([A-Z])", options: [])
+        let range = NSRange(location: 0, length: input.utf16.count)
+        var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
+
+        snakeCase = snakeCase.uppercased()
+        return snakeCase
+    }
 }

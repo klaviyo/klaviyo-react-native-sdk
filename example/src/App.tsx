@@ -1,13 +1,13 @@
 import * as React from 'react';
 
 import { Button, StyleSheet, View } from 'react-native';
-import { EventType, Klaviyo } from 'klaviyo-react-native-sdk';
+import { EventName, Klaviyo, type Events } from 'klaviyo-react-native-sdk';
 import {
   type Location,
   ProfileProperty,
   type Profile,
 } from '../../src/Profile';
-import { EventModel, Identifiers } from '../../src/Event';
+import type { Identifiers } from '../../src/Event';
 
 export default function App() {
   const generateRandomEmails = () => {
@@ -159,25 +159,25 @@ export default function App() {
         country: 'USA',
         latitude: 99,
         longitude: 99,
-        region: generateRandomAddress().region,
+        region: generateRandomAddress().city,
         zip: generateRandomAddress().zipCode,
         timezone: 'test timezone',
       };
 
       const myProperties: Record<ProfileProperty, any> = {
-        [ProfileProperty.First_Name]: generateRandomName(5),
-        [ProfileProperty.Last_Name]: generateRandomName(5),
-        [ProfileProperty.Address1]: '123 Main Street',
-        [ProfileProperty.Address2]: 'Apt 456',
-        [ProfileProperty.Title]: 'Mr.',
-        [ProfileProperty.Organization]: 'ABC Inc.',
-        [ProfileProperty.City]: 'Cityville',
-        [ProfileProperty.Region]: 'Regionville',
-        [ProfileProperty.Country]: 'Countryland',
-        [ProfileProperty.Zip]: '12345',
-        [ProfileProperty.Image]: 'profile.jpg',
-        [ProfileProperty.Latitude]: 40.7128,
-        [ProfileProperty.Longitude]: -74.006,
+        [ProfileProperty.FIRST_NAME]: generateRandomName(5),
+        [ProfileProperty.LAST_NAME]: generateRandomName(5),
+        [ProfileProperty.ADDRESS1]: '123 Main Street',
+        [ProfileProperty.ADDRESS1]: 'Apt 456',
+        [ProfileProperty.TITLE]: 'Mr.',
+        [ProfileProperty.ORGANIZATION]: 'ABC Inc.',
+        [ProfileProperty.CITY]: 'Cityville',
+        [ProfileProperty.REGION]: 'Regionville',
+        [ProfileProperty.COUNTRY]: 'Countryland',
+        [ProfileProperty.ZIP]: '12345',
+        [ProfileProperty.IMAGE]: 'profile.jpg',
+        [ProfileProperty.LATITUDE]: 40.7128,
+        [ProfileProperty.LONGITUDE]: -74.006,
       };
 
       const myProfile: Profile = {
@@ -201,31 +201,18 @@ export default function App() {
 
   const onSendTestEvent = async () => {
     try {
-      const myProperties: Record<ProfileKey, any> = {
-        [ProfileKey.FirstName]: generateRandomName(5),
-        [ProfileKey.LastName]: generateRandomName(5),
+      const identifiers: Identifiers = {
+        email: generateRandomEmails(),
+        phoneNumber: generateRandomPhoneNumber(),
+        externalId: generateRandomName(5),
       };
 
-      let identifiers = new Identifiers(
-        generateRandomEmails(),
-        generateRandomPhoneNumber(),
-        generateRandomName(5)
-      );
-
-      const myProfile: Record<ProfileKey, any> = {
-        [ProfileKey.FirstName]: generateRandomName(5),
-        [ProfileKey.LastName]: generateRandomName(5),
+      const event: Events = {
+        name: EventName.CANCELLED_ORDER,
+        identifier: identifiers,
+        value: 0,
+        uniqueId: generateRandomName(5),
       };
-
-      let event = new EventModel(
-        EventType.STARTED_CHECKOUT,
-        myProperties,
-        identifiers,
-        myProfile,
-        0,
-        null,
-        generateRandomName(5)
-      );
       Klaviyo.createEvent(event);
     } catch (e: any) {
       console.log(e.message, e.code);

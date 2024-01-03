@@ -9,11 +9,11 @@ RCT_EXPORT_MODULE()
     return YES;
 }
 
+// The values here eventually should come from the iOS SDK once exposed there.
 - (NSDictionary *)constantsToExport {
-    // TODO: below is just hardcoded example need to figure out how to get this out of the iOS SDK since it's not exposed
     return @{
-        @"PROFILE_KEYS": [KlaviyoBridge getProfilePropertyKeys],
-        @"EVENT_NAMES": @"",
+        @"PROFILE_KEYS": [KlaviyoBridge getProfilePropertyKey],
+        @"EVENT_NAMES": [KlaviyoBridge getEventTypesKeys],
         @"EVENT_KEYS": @""
     };
 }
