@@ -98,14 +98,14 @@ export const setProfile = async () => {
   try {
     const myLocation: Location = {
       address1: generateRandomAddress().street,
-      address2: '',
+      address2: 'apt 123',
       city: generateRandomAddress().city,
       country: 'USA',
       latitude: 99,
       longitude: 99,
       region: generateRandomAddress().city,
       zip: generateRandomAddress().zipCode,
-      timezone: 'test timezone',
+      timezone: 'EST',
     };
 
     const myProperties: Record<ProfileProperty, any> = {
@@ -157,7 +157,7 @@ export const sendRandomEvent = async () => {
       identifier: identifiers,
       profile: { [ProfileProperty.FIRST_NAME]: generateRandomName(5) },
       value: 0,
-      time: new Date(),
+      time: new Date().toISOString(),
       uniqueId: generateRandomName(5),
     };
     Klaviyo.createEvent(event);

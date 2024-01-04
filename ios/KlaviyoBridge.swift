@@ -109,15 +109,15 @@ public class KlaviyoBridge: NSObject {
       var location: Profile.Location? = nil
       if let locationDict = profileDict["location"] as? [String: AnyObject] {
           location = Profile.Location(
-            address1:  locationDict["address1"] as? String,
-            address2:  locationDict["address2"] as? String,
-            city:  locationDict["city"] as? String,
-            country:  locationDict["country"] as? String,
-            latitude:  locationDict["latitude"] as? Double,
-            longitude:  locationDict["longitude"] as? Double,
-            region:  locationDict["region"] as? String,
-            zip:  locationDict["zip"] as? String,
-            timezone:  locationDict["timezone"] as? String
+            address1: locationDict["address1"] as? String,
+            address2: locationDict["address2"] as? String,
+            city: locationDict["city"] as? String,
+            country: locationDict["country"] as? String,
+            latitude: locationDict["latitude"] as? Double,
+            longitude: locationDict["longitude"] as? Double,
+            region: locationDict["region"] as? String,
+            zip: locationDict["zip"] as? String,
+            timezone: locationDict["timezone"] as? String
           )
       }
 
@@ -153,13 +153,20 @@ public class KlaviyoBridge: NSObject {
             externalId: ids["externalId"] as? String
           )
       }
+      
+      var dateFormatter: DateFormatter {
+          let df = DateFormatter()
+          df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+          df.locale = Locale(identifier: "en_US_POSIX")
+          return df
+      }
 
       let event = Event(
           name: eventType,
           properties: event["properties"] as? [String: Any],
           identifiers: identifiers,
           profile: event["profile"] as? [String: Any],
-          time: Date(), //TODO: fix time
+          time: dateFormatter.date(from: event["time"] as! String) ?? Date(),
           uniqueId: event["uniqueId"] as? String
       )
 

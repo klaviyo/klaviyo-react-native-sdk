@@ -35,6 +35,6 @@ export interface Events {
   readonly identifier?: Identifiers;
   readonly profile?: Record<ProfileProperty, Object>;
   readonly value?: number;
-  readonly time?: Date;
+  readonly time?: string;
   readonly uniqueId?: string;
 }
