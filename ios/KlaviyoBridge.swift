@@ -138,36 +138,17 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
-  public static func createEvent(name: String, event: [String: AnyObject]) {
-      guard !name.isEmpty,
+  public static func createEvent(event: [String: AnyObject]) {
+      guard let name = event["name"] as? String, !name.isEmpty,
             let eventType = EventType.getEventType(name) else {
           return
-      }
-      
-      var identifiers: Event.Identifiers? = nil
-
-      if let ids = event["identifiers"] {
-          identifiers = Event.Identifiers(
-            email: ids["email"] as? String,
-            phoneNumber: ids["phoneNumber"] as? String,
-            externalId: ids["externalId"] as? String
-          )
-      }
-      
-      var dateFormatter: DateFormatter {
-          let df = DateFormatter()
-          df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-          df.locale = Locale(identifier: "en_US_POSIX")
-          return df
       }
 
       let event = Event(
           name: eventType,
-          properties: event["properties"] as? [String: Any],
-          identifiers: identifiers,
-          profile: event["profile"] as? [String: Any],
-          time: dateFormatter.date(from: event["time"] as! String) ?? Date(),
-          uniqueId: event["uniqueId"] as? String
+          value: event["value"] as? Double,
+          uniqueId: event["uniqueId"] as? String,
+          properties: event["properties"] as? [String: Any]
       )
 
       KlaviyoSDK().create(event: event)
