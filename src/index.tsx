@@ -39,7 +39,6 @@ export const Klaviyo: Spec = {
   },
 
   createEvent(event: Events): void {
-    console.log('createEvent', event);
     KlaviyoReactNativeSdk.createEvent(event.name, event);
   },
 

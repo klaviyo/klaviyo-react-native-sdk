@@ -31,8 +31,8 @@ export interface Identifiers {
 
 export interface Events {
   readonly name?: MetricName;
-  readonly properties?:         Record<string, Object>;
-  readonly identifier?:            Identifiers;
+  readonly properties?: Record<string, Object>;
+  readonly identifier?: Identifiers;
   readonly profile?: Record<ProfileProperty, Object>;
 
   readonly value?: number;
