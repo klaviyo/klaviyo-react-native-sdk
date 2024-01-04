@@ -50,20 +50,12 @@ export const Klaviyo: Spec = {
   },
 };
 
-<<<<<<< HEAD
-export type { Events, Identifiers } from './Event';
-=======
->>>>>>> main
 export { MetricName } from './Event';
 export type { Event } from './Event';
 export type {
   Profile,
   ProfileProperties,
   KlaviyoProfilePropertyType,
-<<<<<<< HEAD
-  ProfileProperty,
-=======
->>>>>>> main
   Location,
 } from './Profile';
 export { ProfileProperty } from './Profile';
