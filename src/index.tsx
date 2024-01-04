@@ -39,6 +39,7 @@ export const Klaviyo: Spec = {
   },
 
   createEvent(event: Events): void {
+    console.log('createEvent', event);
     KlaviyoReactNativeSdk.createEvent(event.name, event);
   },
 
@@ -59,11 +60,12 @@ export const Klaviyo: Spec = {
   },
 };
 
-export type { Events } from './Event';
+export type { Events, Identifiers } from './Event';
 export { MetricName } from './Event';
 export type {
   Profile,
   ProfileProperties,
   KlaviyoProfilePropertyType,
   ProfileProperty,
+  Location,
 } from './Profile';
