@@ -14,7 +14,6 @@ RCT_EXPORT_MODULE()
     return @{
         @"PROFILE_KEYS": [KlaviyoBridge getProfilePropertyKey],
         @"EVENT_NAMES": [KlaviyoBridge getEventTypesKeys],
-        @"EVENT_KEYS": @""
     };
 }
 

@@ -1,5 +1,6 @@
 package com.klaviyoreactnativesdk
 
+import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
@@ -28,7 +29,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     return hashMapOf(
       "PROFILE_KEYS" to this.extractConstants<ProfileKey>(),
       "EVENT_NAMES" to this.extractConstants<EventType>(),
-      "EVENT_KEYS" to this.extractConstants<EventKey>(),
     )
   }
 
@@ -71,8 +71,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
       ProfileKey.CUSTOM(entry.key) as ProfileKey to entry.value as Serializable
     }.toMap()
 
-    println(parsedProfile)
-
     Klaviyo.setProfile(Profile(parsedProfile))
   }
 
@@ -87,16 +85,24 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
   }
 
   @ReactMethod
-  override fun getEmail(): String? = Klaviyo.getEmail()
+  override fun getEmail(callback: Callback) {
+    callback.invoke(Klaviyo.getEmail())
+  }
 
   @ReactMethod
-  override fun getExternalId(): String? = Klaviyo.getExternalId()
+  override fun getExternalId(callback: Callback) {
+    callback.invoke(Klaviyo.getExternalId())
+  }
 
   @ReactMethod
-  override fun getPhoneNumber(): String? = Klaviyo.getPhoneNumber()
+  override fun getPhoneNumber(callback: Callback) {
+    callback.invoke(Klaviyo.getPhoneNumber())
+  }
 
   @ReactMethod
-  override fun getPushToken(): String? = Klaviyo.getPushToken()
+  override fun getPushToken(callback: Callback) {
+    callback.invoke(Klaviyo.getPushToken())
+  }
 
   @ReactMethod
   override fun createEvent(name: String, properties: ReadableMap?) {
