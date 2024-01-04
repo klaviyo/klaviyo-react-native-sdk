@@ -33,7 +33,7 @@
     "prepare": "bob build",
     "release": "release-it",
     "lint": "eslint \"**/*.{js,ts,tsx}\" && swiftlint && ktlint \"**/*.kt\" ",
-    "format": "prettier --write \"**/*.{js,ts,tsx, jsx}\"",
+    "format": "prettier --write \"**/*.{js,ts,tsx, jsx}\""
   },
   "keywords": [
     "react-native",
