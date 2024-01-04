@@ -1,5 +1,6 @@
 package com.klaviyoreactnativesdk
 
+import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReadableMap
@@ -18,10 +19,10 @@ abstract class KlaviyoReactNativeSdkSpec internal constructor(context: ReactAppl
 
   abstract fun resetProfile()
 
-  abstract fun getEmail(): String?
-  abstract fun getExternalId(): String?
-  abstract fun getPhoneNumber(): String?
-  abstract fun getPushToken(): String?
+  abstract fun getEmail(callback: Callback)
+  abstract fun getExternalId(callback: Callback)
+  abstract fun getPhoneNumber(callback: Callback)
+  abstract fun getPushToken(callback: Callback)
 
   abstract fun createEvent(name: String, properties: ReadableMap?)
 }
