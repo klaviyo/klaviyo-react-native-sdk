@@ -146,9 +146,9 @@ public class KlaviyoBridge: NSObject {
 
       let event = Event(
           name: eventType,
+          properties: event["properties"] as? [String: Any],
           value: event["value"] as? Double,
-          uniqueId: event["uniqueId"] as? String,
-          properties: event["properties"] as? [String: Any]
+          uniqueId: event["uniqueId"] as? String
       )
 
       KlaviyoSDK().create(event: event)
