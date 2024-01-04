@@ -9,6 +9,7 @@ import {
   setEmail,
   setExternalId,
   setPhoneNumber,
+  setProfileAttribute,
   setProfile,
 } from './KlaviyoReactWrapper';
 
@@ -28,6 +29,11 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to set the full profile',
     color: '#841584',
     onPress: setProfile,
+  },
+  {
+    title: 'Click to set custom profile attribute',
+    color: '#841584',
+    onPress: setProfileAttribute,
   },
   {
     title: 'Click to set the email',

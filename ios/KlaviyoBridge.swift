@@ -3,20 +3,28 @@ import KlaviyoSwift
 @objc
 public class KlaviyoBridge: NSObject {
   enum ProfileProperty: String, CaseIterable {
+      case email = "email"
+      case phoneNumber = "phone_number"
+      case externalId = "external_id"
+
+      case firstName = "first_name"
+      case lastName = "last_name"
+      case title = "title"
+      case organization = "organization"
+      case image = "image"
+
       case address1 = "address1"
       case address2 = "address2"
       case city = "city"
       case country = "country"
-      case externalID = "external_id"
-      case firstName = "first_name"
-      case image = "image"
-      case lastName = "last_name"
+      case zip = "zip"
+      case region = "region"
       case latitude = "latitude"
       case longitude = "longitude"
-      case organization = "organization"
-      case region = "region"
-      case title = "title"
-      case zip = "zip"
+      case timezone = "timezone"
+
+      case location = "location"
+      case properties = "properties"
   }
 
   enum EventType: String, CaseIterable {
@@ -77,26 +85,48 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
-  public static var getProfilePropertyKey: [String: String] {
+  public static var getProfilePropertyKeys: [String: String] {
       ProfileProperty.allCases.getDictionaryFromEnum()
   }
 
-  #if DEBUG
-  // NOTE: use only for testing.
   @objc
-  public static func initializeSDK(_ token: String) {
+  public static func initialize(_ token: String) {
       KlaviyoSDK().initialize(with: token)
   }
-  #endif
 
   @objc
-  public static func setEmail(_ value: String) {
-    KlaviyoSDK().set(email: value)
-  }
+  public static func setProfile(
+      _ profileDict: [String: AnyObject]
+  ) {
+      var location: Profile.Location?
+      if let locationDict = profileDict[ProfileProperty.location.rawValue] as? [String: AnyObject] {
+          location = Profile.Location(
+            address1: locationDict[ProfileProperty.address1.rawValue] as? String,
+            address2: locationDict[ProfileProperty.address2.rawValue] as? String,
+            city: locationDict[ProfileProperty.city.rawValue] as? String,
+            country: locationDict[ProfileProperty.country.rawValue] as? String,
+            latitude: locationDict[ProfileProperty.latitude.rawValue] as? Double,
+            longitude: locationDict[ProfileProperty.longitude.rawValue] as? Double,
+            region: locationDict[ProfileProperty.region.rawValue] as? String,
+            zip: locationDict[ProfileProperty.zip.rawValue] as? String,
+            timezone: locationDict[ProfileProperty.timezone.rawValue] as? String
+          )
+      }
 
-  @objc
-  public static func setPhoneNumber(_ value: String) {
-    KlaviyoSDK().set(phoneNumber: value)
+      let profile = Profile(
+        email: profileDict[ProfileProperty.email.rawValue] as? String,
+        phoneNumber: profileDict[ProfileProperty.phoneNumber.rawValue] as? String,
+        externalId: profileDict[ProfileProperty.externalId.rawValue] as? String,
+        firstName: profileDict[ProfileProperty.firstName.rawValue] as? String,
+        lastName: profileDict[ProfileProperty.lastName.rawValue] as? String,
+        organization: profileDict[ProfileProperty.organization.rawValue] as? String,
+        title: profileDict[ProfileProperty.title.rawValue] as? String,
+        image: profileDict[ProfileProperty.image.rawValue] as? String,
+        location: location,
+        properties: profileDict[ProfileProperty.properties.rawValue] as? [String: Any]
+      )
+
+      KlaviyoSDK().set(profile: profile)
   }
 
   @objc
@@ -105,38 +135,43 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
-  public static func setProfile(
-      _ profileDict: [String: AnyObject]
-  ) {
-      var location: Profile.Location?
-      if let locationDict = profileDict["location"] as? [String: AnyObject] {
-          location = Profile.Location(
-            address1: locationDict["address1"] as? String,
-            address2: locationDict["address2"] as? String,
-            city: locationDict["city"] as? String,
-            country: locationDict["country"] as? String,
-            latitude: locationDict["latitude"] as? Double,
-            longitude: locationDict["longitude"] as? Double,
-            region: locationDict["region"] as? String,
-            zip: locationDict["zip"] as? String,
-            timezone: locationDict["timezone"] as? String
-          )
-      }
+  public static func getExternalId() -> String {
+      return KlaviyoSDK().externalId ?? ""
+  }
 
-      let profile = Profile(
-        email: profileDict["email"] as? String,
-        phoneNumber: profileDict["phoneNumber"] as? String,
-        externalId: profileDict["externalId"] as? String,
-        firstName: profileDict["firstName"] as? String,
-        lastName: profileDict["lastName"] as? String,
-        organization: profileDict["organization"] as? String,
-        title: profileDict["title"] as? String,
-        image: profileDict["image"] as? String,
-        location: location,
-        properties: profileDict["properties"] as? [String: Any]
-      )
+  @objc
+  public static func setEmail(_ value: String) {
+    KlaviyoSDK().set(email: value)
+  }
 
-      KlaviyoSDK().set(profile: profile)
+  @objc
+  public static func getEmail() -> String {
+      return KlaviyoSDK().email ?? ""
+  }
+
+  @objc
+  public static func setPhoneNumber(_ value: String) {
+    KlaviyoSDK().set(phoneNumber: value)
+  }
+
+  @objc
+  public static func getPhoneNumber() -> String {
+      return KlaviyoSDK().phoneNumber ?? ""
+  }
+
+  @objc
+  public static func resetProfile() {
+    KlaviyoSDK().resetProfile()
+  }
+
+  @objc
+  public static func setPushToken(_ value: String) {
+    KlaviyoSDK().set(pushToken: value)
+  }
+
+  @objc
+  public static func getPushToken() -> String {
+      return KlaviyoSDK().pushToken ?? ""
   }
 
   @objc
@@ -154,31 +189,6 @@ public class KlaviyoBridge: NSObject {
       )
 
       KlaviyoSDK().create(event: event)
-  }
-
-  @objc
-  public static func resetProfile() {
-    KlaviyoSDK().resetProfile()
-  }
-
-  @objc
-  public static func getEmail() -> String {
-      return KlaviyoSDK().email ?? ""
-  }
-
-  @objc
-  public static func getPhoneNumber() -> String {
-      return KlaviyoSDK().phoneNumber ?? ""
-  }
-
-  @objc
-  public static func getExternalId() -> String {
-      return KlaviyoSDK().externalId ?? ""
-  }
-
-  @objc
-  public static func getPushToken() -> String {
-      return KlaviyoSDK().pushToken ?? ""
   }
 }
 
