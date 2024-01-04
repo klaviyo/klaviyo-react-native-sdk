@@ -24,5 +24,5 @@ abstract class KlaviyoReactNativeSdkSpec internal constructor(context: ReactAppl
   abstract fun getPhoneNumber(callback: Callback)
   abstract fun getPushToken(callback: Callback)
 
-  abstract fun createEvent(name: String, properties: ReadableMap?)
+  abstract fun createEvent(event: ReadableMap)
 }

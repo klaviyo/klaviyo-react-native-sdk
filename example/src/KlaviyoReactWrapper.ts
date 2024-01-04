@@ -1,9 +1,10 @@
-import { Klaviyo } from 'klaviyo-react-native-sdk';
 import {
-  type Location,
-  ProfileProperty,
+  Klaviyo,
   type Profile,
-} from '../../src/Profile';
+  ProfileProperty,
+  type Event,
+  type Location,
+} from 'klaviyo-react-native-sdk';
 
 import {
   generateRandomAddress,
@@ -12,7 +13,6 @@ import {
   generateRandomPhoneNumber,
   getRandomEvent,
 } from './RandomGenerators';
-import type { Identifiers, Events } from '../../src/Event';
 
 export const initialize = async () => {
   try {
@@ -145,19 +145,9 @@ export const setProfile = async () => {
 
 export const sendRandomEvent = async () => {
   try {
-    const identifiers: Identifiers = {
-      email: generateRandomEmails(),
-      phoneNumber: generateRandomPhoneNumber(),
-      externalId: generateRandomName(5),
-    };
-
-    const event: Events = {
+    const event: Event = {
       name: getRandomEvent(),
       properties: { abc: 'def' },
-      identifier: identifiers,
-      profile: { [ProfileProperty.FIRST_NAME]: generateRandomName(5) },
-      value: 0,
-      time: new Date().toISOString(),
       uniqueId: generateRandomName(5),
     };
     Klaviyo.createEvent(event);
