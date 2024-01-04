@@ -71,7 +71,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
       ProfileKey.CUSTOM(entry.key) as ProfileKey to entry.value as Serializable
     }.toMap()
 
-    val a = Klaviyo.setProfile(Profile(parsedProfile)).getPhoneNumber()
+    Klaviyo.setProfile(Profile(parsedProfile))
   }
 
   @ReactMethod
