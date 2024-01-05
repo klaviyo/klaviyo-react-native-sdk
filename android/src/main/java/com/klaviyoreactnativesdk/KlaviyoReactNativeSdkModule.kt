@@ -17,10 +17,10 @@ import kotlin.reflect.KVisibility
 class KlaviyoReactNativeSdkModule internal constructor(private val context: ReactApplicationContext) :
   KlaviyoReactNativeSdkSpec(context) {
 
-  private companion object {
+  companion object {
     const val NAME = "KlaviyoReactNativeSdk"
-    const val LOCATION = "location"
-    const val PROPERTIES = "properties"
+    private const val LOCATION = "location"
+    private const val PROPERTIES = "properties"
   }
 
     override fun getName(): String {
