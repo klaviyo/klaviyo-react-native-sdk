@@ -106,7 +106,7 @@ public class KlaviyoBridge: NSObject {
   public static func setProfile(
       _ profileDict: [String: AnyObject]
   ) {
-      var location: Profile.Location? = nil
+      var location: Profile.Location?
       if let locationDict = profileDict["location"] as? [String: AnyObject] {
           location = Profile.Location(
             address1: locationDict["address1"] as? String,
@@ -179,7 +179,6 @@ public class KlaviyoBridge: NSObject {
       return KlaviyoSDK().pushToken ?? ""
   }
 }
-
 
 extension Collection where Element: RawRepresentable, Element.RawValue == String {
     func getDictionaryFromEnum() -> [String: String] {
