@@ -32,8 +32,15 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
     "release": "release-it",
-    "lint": "eslint \"**/*.{js,ts,tsx}\" && swiftlint && ktlint \"**/*.kt\" ",
-    "format": "prettier --write \"**/*.{js,ts,tsx, jsx}\""
+    "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && swiftlint && ktlint \"**/*.kt\"",
+    "lint-fix": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && swiftlint --fix && ktlint \"**/*.kt\" --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx}\""
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": "eslint --fix",
+    "*.{swift}": "swiftlint --fix",
+    "*.{kt}": "ktlint --fix",
+    "*.{js,jsx,ts,tsx,json,md,yml}": "prettier --write"
   },
   "keywords": [
     "react-native",
@@ -68,6 +75,7 @@
     "eslint-plugin-prettier": "^4.0.0",
     "husky": "^8.0.3",
     "jest": "^28.1.1",
+    "lint-staged": "^15.2.0",
     "pod-install": "^0.1.0",
     "prettier": "^2.8.8",
     "react": "18.2.0",
@@ -97,11 +105,6 @@
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run lint && npm run format"
-    }
   },
   "commitlint": {
     "extends": [
