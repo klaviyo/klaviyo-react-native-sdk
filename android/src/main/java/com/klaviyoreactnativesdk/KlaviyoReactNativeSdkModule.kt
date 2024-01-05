@@ -5,7 +5,12 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import com.klaviyo.analytics.Klaviyo
-import com.klaviyo.analytics.model.*
+import com.klaviyo.analytics.model.Event
+import com.klaviyo.analytics.model.EventKey
+import com.klaviyo.analytics.model.EventType
+import com.klaviyo.analytics.model.Keyword
+import com.klaviyo.analytics.model.Profile
+import com.klaviyo.analytics.model.ProfileKey
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 
