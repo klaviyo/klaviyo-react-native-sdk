@@ -96,11 +96,11 @@ export const resetProfile = async () => {
 
 export const setProfileAttribute = async () => {
   try {
-    Klaviyo.setProfileAttribute("CUSTOM", generateRandomName(12));
+    Klaviyo.setProfileAttribute('CUSTOM', generateRandomName(12));
   } catch (e: any) {
     console.log(e.message, e.code);
   }
-}
+};
 
 export const setProfile = async () => {
   try {

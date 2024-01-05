@@ -34,14 +34,14 @@ export const Klaviyo: Spec = {
   ): void {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
+  resetProfile(): void {
+    KlaviyoReactNativeSdk.resetProfile();
+  },
   setPushToken(pushToken: String): void {
     KlaviyoReactNativeSdk.setPushToken(pushToken);
   },
   getPushToken(callback: Function | undefined): String | null {
     return KlaviyoReactNativeSdk.getPushToken(callback);
-  },
-  resetProfile(): void {
-    KlaviyoReactNativeSdk.resetProfile();
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);

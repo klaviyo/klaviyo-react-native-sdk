@@ -208,7 +208,7 @@ extension Collection where Element: RawRepresentable, Element.RawValue == String
         var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
 
         snakeCase = snakeCase.uppercased()
-        // to aviod the $ in event names
+        // to avoid the $ in event names
         snakeCase = snakeCase.replacingOccurrences(of: "$", with: "")
         return snakeCase
     }
