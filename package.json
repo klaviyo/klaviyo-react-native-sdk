@@ -34,7 +34,7 @@
     "release": "release-it",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && ktlint '**/*.kt' '!**/node_modules/**' && swiftlint",
     "lint-fix": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && ktlint '**/*.kt' '!**/node_modules/**' -F && swiftlint --fix ",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx}\""
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,yml}\""
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
