@@ -38,8 +38,8 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
-    "*.{swift}": "swiftlint --fix",
-    "*.{kt}": "ktlint '**/*.kt' '!**/node_modules/**' -F",
+    "*.swift": "swiftlint --fix",
+    "*.kt": "ktlint '**/*.kt' '!**/node_modules/**' -F",
     "*.{js,jsx,ts,tsx,json,md,yml}": "prettier --write"
   },
   "keywords": [
