@@ -107,6 +107,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
         ?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }
         ?.toMap(),
     )
+    // TODO: Update this after the Android SDK is updated to support setting null property values
     if (event.hasKey("value")) {
       klaviyoEvent.setProperty(EventKey.VALUE, event.getDouble("value"))
     }
