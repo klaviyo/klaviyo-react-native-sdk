@@ -158,7 +158,7 @@ export function formatProfile(profile: Profile): Record<ProfileProperty, any> {
     bridgedProfile[ProfileProperty.PROPERTIES] = profile.properties;
   }
 
-  return bridgedProfile
+  return bridgedProfile;
 }
 
 export type KlaviyoProfilePropertyType = ProfileProperty | string;

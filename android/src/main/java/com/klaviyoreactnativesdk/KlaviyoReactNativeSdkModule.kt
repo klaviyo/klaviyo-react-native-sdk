@@ -56,9 +56,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
 
     profile.toHashMap().forEach { (key, value) ->
       when (key) {
-        ProfileKey.EMAIL.name -> parsedProfile.email = value.toString()
-        ProfileKey.EXTERNAL_ID.name -> parsedProfile.externalId = value.toString()
-        ProfileKey.PHONE_NUMBER.name -> parsedProfile.phoneNumber = value.toString()
         LOCATION, PROPERTIES -> (value as? HashMap<*, *>)?.forEach { (key, value) ->
           if (key is String && value is Serializable) {
             parsedProfile[key] = value

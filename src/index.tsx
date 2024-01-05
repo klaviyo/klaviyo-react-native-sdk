@@ -1,6 +1,10 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
-import { type KlaviyoProfilePropertyType, type Profile, formatProfile } from './Profile';
+import {
+  type KlaviyoProfilePropertyType,
+  type Profile,
+  formatProfile,
+} from './Profile';
 import type { Event } from './Event';
 
 export const Klaviyo: Spec = {
@@ -45,7 +49,7 @@ export const Klaviyo: Spec = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
-  }
+  },
 };
 
 export { MetricName } from './Event';
@@ -55,5 +59,5 @@ export {
   type ProfileProperties,
   type KlaviyoProfilePropertyType,
   type Location,
-  ProfileProperty
+  ProfileProperty,
 } from './Profile';
