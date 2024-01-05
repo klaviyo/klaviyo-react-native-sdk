@@ -111,16 +111,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
   }
 
   @ReactMethod
-  override fun setPushToken(pushToken: String) {
-    Klaviyo.setPushToken(pushToken)
-  }
-
-  @ReactMethod
-  override fun getPushToken(callback: Callback) {
-    callback.invoke(Klaviyo.getPushToken())
-  }
-
-  @ReactMethod
   override fun createEvent(event: ReadableMap) {
     val event = Event(
       type = event.getString("name")!!.let { EventType.CUSTOM(it) },

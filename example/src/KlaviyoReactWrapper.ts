@@ -76,16 +76,6 @@ export const getExternalId = async () => {
   }
 };
 
-export const getPushToken = async () => {
-  try {
-    Klaviyo.getPushToken((token: string) => {
-      console.log('push token = ', token);
-    });
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
 export const resetProfile = async () => {
   try {
     Klaviyo.resetProfile();

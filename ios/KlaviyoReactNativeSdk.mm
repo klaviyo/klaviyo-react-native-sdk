@@ -64,16 +64,6 @@ RCT_EXPORT_METHOD(resetProfile)
     [KlaviyoBridge resetProfile];
 }
 
-RCT_EXPORT_METHOD(setPushToken: (NSString *)pushToken)
-{
-    [KlaviyoBridge setPushToken: pushToken];
-}
-
-RCT_EXPORT_METHOD(getPushToken: (RCTResponseSenderBlock)callback) {
-    NSString *pushToken = [KlaviyoBridge getPushToken];
-    callback(@[pushToken]);
-}
-
 RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
 {
     [KlaviyoBridge createEventWithEvent:event];

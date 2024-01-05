@@ -41,12 +41,6 @@ export const Klaviyo: Spec = {
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();
   },
-  setPushToken(pushToken: String): void {
-    KlaviyoReactNativeSdk.setPushToken(pushToken);
-  },
-  getPushToken(callback: Function | undefined): String | null {
-    return KlaviyoReactNativeSdk.getPushToken(callback);
-  },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
   },

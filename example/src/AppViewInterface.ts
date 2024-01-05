@@ -2,7 +2,6 @@ import {
   getEmail,
   getExternalId,
   getPhoneNumber,
-  getPushToken,
   initialize,
   resetProfile,
   sendRandomEvent,
@@ -69,11 +68,6 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to get external id',
     color: '#841584',
     onPress: getExternalId,
-  },
-  {
-    title: 'Click to get push token',
-    color: '#841584',
-    onPress: getPushToken,
   },
   {
     title: 'Click to send random event',

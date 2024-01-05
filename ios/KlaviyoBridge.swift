@@ -165,16 +165,6 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
-  public static func setPushToken(_ value: String) {
-    KlaviyoSDK().set(pushToken: value)
-  }
-
-  @objc
-  public static func getPushToken() -> String {
-      return KlaviyoSDK().pushToken ?? ""
-  }
-
-  @objc
   public static func createEvent(event: [String: AnyObject]) {
       guard let name = event["name"] as? String, !name.isEmpty,
             let eventType = EventType.getEventType(name) else {
