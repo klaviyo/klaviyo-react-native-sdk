@@ -16,93 +16,96 @@ import kotlin.reflect.KVisibility
 
 class KlaviyoReactNativeSdkModule internal constructor(private val context: ReactApplicationContext) :
   KlaviyoReactNativeSdkSpec(context) {
-
-  companion object {
-    const val NAME = "KlaviyoReactNativeSdk"
-  }
-
-  override fun getName(): String {
-    return NAME
-  }
-
-  override fun getConstants(): MutableMap<String, Any> {
-    return hashMapOf(
-      "PROFILE_KEYS" to this.extractConstants<ProfileKey>(),
-      "EVENT_NAMES" to this.extractConstants<EventType>(),
-    )
-  }
-
-  private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword {
-    return T::class.nestedClasses.filter {
-      it.visibility == KVisibility.PUBLIC && it.objectInstance != null
-    }.associate {
-      it.simpleName.toString() to (it.objectInstance as T).name
+    companion object {
+      const val NAME = "KlaviyoReactNativeSdk"
     }
-  }
 
-  @ReactMethod
-  override fun initialize(apiKey: String) {
-    Klaviyo.initialize(apiKey, context)
-  }
+    override fun getName(): String {
+      return NAME
+    }
 
-  @ReactMethod
-  override fun setEmail(email: String) {
-    Klaviyo.setEmail(email)
-  }
+    override fun getConstants(): MutableMap<String, Any> {
+      return hashMapOf(
+        "PROFILE_KEYS" to this.extractConstants<ProfileKey>(),
+        "EVENT_NAMES" to this.extractConstants<EventType>(),
+      )
+    }
 
-  @ReactMethod
-  override fun setExternalId(externalId: String) {
-    Klaviyo.setExternalId(externalId)
-  }
+    private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword {
+      return T::class.nestedClasses.filter {
+        it.visibility == KVisibility.PUBLIC && it.objectInstance != null
+      }.associate {
+        it.simpleName.toString() to (it.objectInstance as T).name
+      }
+    }
 
-  @ReactMethod
-  override fun setPhoneNumber(phoneNumber: String) {
-    Klaviyo.setPhoneNumber(phoneNumber)
-  }
+    @ReactMethod
+    override fun initialize(apiKey: String) {
+      Klaviyo.initialize(apiKey, context)
+    }
 
-  @ReactMethod
-  override fun setPushToken(pushToken: String) {
-    Klaviyo.setPushToken(pushToken)
-  }
+    @ReactMethod
+    override fun setEmail(email: String) {
+      Klaviyo.setEmail(email)
+    }
 
-  @ReactMethod
-  override fun setProfile(profile: ReadableMap) {
-    val parsedProfile = profile.toHashMap().map { entry ->
-      ProfileKey.CUSTOM(entry.key) as ProfileKey to entry.value as Serializable
-    }.toMap()
+    @ReactMethod
+    override fun setExternalId(externalId: String) {
+      Klaviyo.setExternalId(externalId)
+    }
 
-    Klaviyo.setProfile(Profile(parsedProfile))
-  }
+    @ReactMethod
+    override fun setPhoneNumber(phoneNumber: String) {
+      Klaviyo.setPhoneNumber(phoneNumber)
+    }
 
-  @ReactMethod
-  override fun setProfileAttribute(propertyKey: String, value: String) {
-    Klaviyo.setProfileAttribute(ProfileKey.CUSTOM(propertyKey), value)
-  }
+    @ReactMethod
+    override fun setPushToken(pushToken: String) {
+      Klaviyo.setPushToken(pushToken)
+    }
 
-  @ReactMethod
-  override fun resetProfile() {
-    Klaviyo.resetProfile()
-  }
+    @ReactMethod
+    override fun setProfile(profile: ReadableMap) {
+      val parsedProfile =
+        profile.toHashMap().map { entry ->
+          ProfileKey.CUSTOM(entry.key) as ProfileKey to entry.value as Serializable
+        }.toMap()
 
-  @ReactMethod
-  override fun getEmail(callback: Callback) {
-    callback.invoke(Klaviyo.getEmail())
-  }
+      Klaviyo.setProfile(Profile(parsedProfile))
+    }
 
-  @ReactMethod
-  override fun getExternalId(callback: Callback) {
-    callback.invoke(Klaviyo.getExternalId())
-  }
+    @ReactMethod
+    override fun setProfileAttribute(
+      propertyKey: String,
+      value: String,
+    ) {
+      Klaviyo.setProfileAttribute(ProfileKey.CUSTOM(propertyKey), value)
+    }
 
-  @ReactMethod
-  override fun getPhoneNumber(callback: Callback) {
-    callback.invoke(Klaviyo.getPhoneNumber())
-  }
+    @ReactMethod
+    override fun resetProfile() {
+      Klaviyo.resetProfile()
+    }
 
-  @ReactMethod
-  override fun getPushToken(callback: Callback) {
-    callback.invoke(Klaviyo.getPushToken())
-  }
+    @ReactMethod
+    override fun getEmail(callback: Callback) {
+      callback.invoke(Klaviyo.getEmail())
+    }
+
+    @ReactMethod
+    override fun getExternalId(callback: Callback) {
+      callback.invoke(Klaviyo.getExternalId())
+    }
+
+    @ReactMethod
+    override fun getPhoneNumber(callback: Callback) {
+      callback.invoke(Klaviyo.getPhoneNumber())
+    }
+
+    @ReactMethod
+    override fun getPushToken(callback: Callback) {
+      callback.invoke(Klaviyo.getPushToken())
+    }
 
   @ReactMethod
   override fun createEvent(event: ReadableMap) {
@@ -118,4 +121,3 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
     Klaviyo.createEvent(event = klaviyoEvent)
   }
-}
