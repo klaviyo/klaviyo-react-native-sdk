@@ -35,7 +35,6 @@ export const Klaviyo: Spec = {
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();
   },
-
   getEmail(callback: Function | undefined): String | null {
     return KlaviyoReactNativeSdk.getEmail(callback);
   },

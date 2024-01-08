@@ -9,13 +9,18 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: macos-13
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.1.0/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
 
       - name: Lint files
         run: yarn lint
@@ -24,7 +29,7 @@ jobs:
         run: yarn typecheck
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,7 +41,7 @@ jobs:
         run: yarn test --maxWorkers=2 --coverage
 
   build-library:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -48,7 +53,7 @@ jobs:
         run: yarn prepare
 
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       TURBO_CACHE_DIR: .turbo/android
     steps:

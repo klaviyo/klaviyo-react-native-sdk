@@ -34,6 +34,7 @@ public class KlaviyoBridge: NSObject {
       case successfulPayment = "$successful_payment"
       case failedPayment = "$failed_payment"
 
+      // swiftlint:disable cyclomatic_complexity
       static func getEventType(_ str: String) -> Event.EventName? {
       switch str {
       case "$opened_app":
@@ -67,6 +68,7 @@ public class KlaviyoBridge: NSObject {
       }
       return nil
       }
+      // swiftlint:enable cyclomatic_complexity
   }
 
   @objc
@@ -80,7 +82,7 @@ public class KlaviyoBridge: NSObject {
   }
 
   #if DEBUG
-  // TODO: use only for testing.
+  // NOTE: use only for testing.
   @objc
   public static func initializeSDK(_ token: String) {
       KlaviyoSDK().initialize(with: token)
@@ -106,7 +108,7 @@ public class KlaviyoBridge: NSObject {
   public static func setProfile(
       _ profileDict: [String: AnyObject]
   ) {
-      var location: Profile.Location? = nil
+      var location: Profile.Location?
       if let locationDict = profileDict["location"] as? [String: AnyObject] {
           location = Profile.Location(
             address1: locationDict["address1"] as? String,
@@ -180,7 +182,6 @@ public class KlaviyoBridge: NSObject {
   }
 }
 
-
 extension Collection where Element: RawRepresentable, Element.RawValue == String {
     func getDictionaryFromEnum() -> [String: String] {
         return self.map { enumCase in
@@ -190,6 +191,7 @@ extension Collection where Element: RawRepresentable, Element.RawValue == String
         }
     }
 
+    // swiftlint:disable force_try
     func convertToSnakeCase(_ input: String) -> String {
         let regex = try! NSRegularExpression(pattern: "([a-z])([A-Z])", options: [])
         let range = NSRange(location: 0, length: input.utf16.count)
@@ -200,4 +202,5 @@ extension Collection where Element: RawRepresentable, Element.RawValue == String
         snakeCase = snakeCase.replacingOccurrences(of: "$", with: "")
         return snakeCase
     }
+    // swiftlint:enable force_try
 }
