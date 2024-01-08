@@ -2,13 +2,13 @@ import {
   getEmail,
   getExternalId,
   getPhoneNumber,
-  getPushToken,
   initialize,
   resetProfile,
   sendRandomEvent,
   setEmail,
   setExternalId,
   setPhoneNumber,
+  setProfileAttribute,
   setProfile,
 } from './KlaviyoReactWrapper';
 
@@ -28,6 +28,11 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to set the full profile',
     color: '#841584',
     onPress: setProfile,
+  },
+  {
+    title: 'Click to set custom profile attribute',
+    color: '#841584',
+    onPress: setProfileAttribute,
   },
   {
     title: 'Click to set the email',
@@ -63,11 +68,6 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to get external id',
     color: '#841584',
     onPress: getExternalId,
-  },
-  {
-    title: 'Click to get push token',
-    color: '#841584',
-    onPress: getPushToken,
   },
   {
     title: 'Click to send random event',

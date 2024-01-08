@@ -12,7 +12,7 @@ RCT_EXPORT_MODULE()
 // The values here eventually should come from the iOS SDK once exposed there.
 - (NSDictionary *)constantsToExport {
     return @{
-        @"PROFILE_KEYS": [KlaviyoBridge getProfilePropertyKey],
+        @"PROFILE_KEYS": [KlaviyoBridge getProfilePropertyKeys],
         @"EVENT_NAMES": [KlaviyoBridge getEventTypesKeys],
     };
 }
@@ -21,27 +21,7 @@ RCT_EXPORT_MODULE()
 
 RCT_EXPORT_METHOD(initialize:(NSString *)publicToken)
 {
-    [KlaviyoBridge initializeSDK: publicToken];
-}
-
-RCT_EXPORT_METHOD(setEmail: (NSString *)email)
-{
-    [KlaviyoBridge setEmail: email];
-}
-
-RCT_EXPORT_METHOD(setPhoneNumber: (NSString *)phoneNumber)
-{
-    [KlaviyoBridge setPhoneNumber: phoneNumber];
-}
-
-RCT_EXPORT_METHOD(setExternalId: (NSString *)externalId)
-{
-    [KlaviyoBridge setExternalId: externalId];
-}
-
-RCT_EXPORT_METHOD(resetProfile)
-{
-    [KlaviyoBridge resetProfile];
+    [KlaviyoBridge initialize: publicToken];
 }
 
 RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
@@ -49,31 +29,45 @@ RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
     [KlaviyoBridge setProfile:profileDict];
 }
 
-
-RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
+RCT_EXPORT_METHOD(setExternalId: (NSString *)externalId)
 {
-    [KlaviyoBridge createEventWithEvent:event];
+    [KlaviyoBridge setExternalId: externalId];
 }
 
-//MARK: Getters
+RCT_EXPORT_METHOD(getExternalId: (RCTResponseSenderBlock)callback) {
+    NSString *externalId = [KlaviyoBridge getExternalId];
+    callback(@[externalId]);
+}
+
+RCT_EXPORT_METHOD(setEmail: (NSString *)email)
+{
+    [KlaviyoBridge setEmail: email];
+}
 
 RCT_EXPORT_METHOD(getEmail: (RCTResponseSenderBlock)callback) {
     NSString *email = [KlaviyoBridge getEmail];
     callback(@[email]);
 }
+
+RCT_EXPORT_METHOD(setPhoneNumber: (NSString *)phoneNumber)
+{
+    [KlaviyoBridge setPhoneNumber: phoneNumber];
+}
+
 RCT_EXPORT_METHOD(getPhoneNumber: (RCTResponseSenderBlock)callback) {
     NSString *phoneNumber = [KlaviyoBridge getPhoneNumber];
     callback(@[phoneNumber]);
 }
-RCT_EXPORT_METHOD(getExternalId: (RCTResponseSenderBlock)callback) {
-    NSString *externalId = [KlaviyoBridge getExternalId];
-    callback(@[externalId]);
-}
-RCT_EXPORT_METHOD(getPushToken: (RCTResponseSenderBlock)callback) {
-    NSString *pushToken = [KlaviyoBridge getPushToken];
-    callback(@[pushToken]);
+
+RCT_EXPORT_METHOD(resetProfile)
+{
+    [KlaviyoBridge resetProfile];
 }
 
+RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
+{
+    [KlaviyoBridge createEventWithEvent:event];
+}
 
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED

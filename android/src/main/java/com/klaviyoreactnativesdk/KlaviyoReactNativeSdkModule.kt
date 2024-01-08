@@ -18,6 +18,8 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
   KlaviyoReactNativeSdkSpec(context) {
     companion object {
       const val NAME = "KlaviyoReactNativeSdk"
+      private const val LOCATION = "location"
+      private const val PROPERTIES = "properties"
     }
 
     override fun getName(): String {
@@ -26,7 +28,11 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
 
     override fun getConstants(): MutableMap<String, Any> {
       return hashMapOf(
-        "PROFILE_KEYS" to this.extractConstants<ProfileKey>(),
+        "PROFILE_KEYS" to
+          this.extractConstants<ProfileKey>().toMutableMap().apply {
+            this[LOCATION] = LOCATION
+            this[PROPERTIES] = PROPERTIES
+          },
         "EVENT_NAMES" to this.extractConstants<EventType>(),
       )
     }
@@ -45,8 +51,25 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
 
     @ReactMethod
-    override fun setEmail(email: String) {
-      Klaviyo.setEmail(email)
+    override fun setProfile(profile: ReadableMap) {
+      val parsedProfile = Profile()
+
+      profile.toHashMap().forEach { (key, value) ->
+        when (key) {
+          LOCATION, PROPERTIES ->
+            (value as? HashMap<*, *>)?.forEach { (key, value) ->
+              if (key is String && value is Serializable) {
+                parsedProfile[key] = value
+              }
+            }
+          else ->
+            if (value is Serializable) {
+              parsedProfile[key] = value
+            }
+        }
+      }
+
+      Klaviyo.setProfile(parsedProfile)
     }
 
     @ReactMethod
@@ -55,23 +78,28 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
 
     @ReactMethod
+    override fun getExternalId(callback: Callback) {
+      callback.invoke(Klaviyo.getExternalId())
+    }
+
+    @ReactMethod
+    override fun setEmail(email: String) {
+      Klaviyo.setEmail(email)
+    }
+
+    @ReactMethod
+    override fun getEmail(callback: Callback) {
+      callback.invoke(Klaviyo.getEmail())
+    }
+
+    @ReactMethod
     override fun setPhoneNumber(phoneNumber: String) {
       Klaviyo.setPhoneNumber(phoneNumber)
     }
 
     @ReactMethod
-    override fun setPushToken(pushToken: String) {
-      Klaviyo.setPushToken(pushToken)
-    }
-
-    @ReactMethod
-    override fun setProfile(profile: ReadableMap) {
-      val parsedProfile =
-        profile.toHashMap().map { entry ->
-          ProfileKey.CUSTOM(entry.key) as ProfileKey to entry.value as Serializable
-        }.toMap()
-
-      Klaviyo.setProfile(Profile(parsedProfile))
+    override fun getPhoneNumber(callback: Callback) {
+      callback.invoke(Klaviyo.getPhoneNumber())
     }
 
     @ReactMethod
@@ -85,26 +113,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     @ReactMethod
     override fun resetProfile() {
       Klaviyo.resetProfile()
-    }
-
-    @ReactMethod
-    override fun getEmail(callback: Callback) {
-      callback.invoke(Klaviyo.getEmail())
-    }
-
-    @ReactMethod
-    override fun getExternalId(callback: Callback) {
-      callback.invoke(Klaviyo.getExternalId())
-    }
-
-    @ReactMethod
-    override fun getPhoneNumber(callback: Callback) {
-      callback.invoke(Klaviyo.getPhoneNumber())
-    }
-
-    @ReactMethod
-    override fun getPushToken(callback: Callback) {
-      callback.invoke(Klaviyo.getPushToken())
     }
 
     @ReactMethod

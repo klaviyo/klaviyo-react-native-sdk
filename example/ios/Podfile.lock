@@ -1333,13 +1333,13 @@ SPEC CHECKSUMS:
   Flipper-PeerTalk: 116d8f857dc6ef55c7a5a75ea3ceaafe878aadc9
   FlipperKit: 37525a5d056ef9b93d1578e04bc3ea1de940094f
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
-  glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
-  hermes-engine: 34df9d5034e90bd9bf1505e1ca198760373935af
-  klaviyo-react-native-sdk: aea61d8d21e03ad49b5d233dc2336ee2e757c417
+  glog: 79d13cd7c34b5d0cea5f4ca72c0e6b462ef8fb4d
+  hermes-engine: 27e2b987216ec9a2366634827d9ae9d9148e979a
+  klaviyo-react-native-sdk: 704a63eed4d1a9eec13953a15001b26607515ee1
   KlaviyoSwift: 4f37be44339539a44f3224cc5a0bfbaffbf491d8
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   OpenSSL-Universal: ebc357f1e6bc71fa463ccb2fe676756aff50e88c
-  RCT-Folly: 7169b2b1c44399c76a47b5deaaba715eeeb476c0
+  RCT-Folly: 082c31bb88ae3582d685f8923b9938147be587b3
   RCTRequired: 6dda55e483f75d2b43781d8ad5bd7df276a50981
   RCTTypeSafety: df0f2632f4e89938b9b9f6152b5e6c66fc6e969e
   React: 5373769b4a544945831d9c5d455212186d68f763
