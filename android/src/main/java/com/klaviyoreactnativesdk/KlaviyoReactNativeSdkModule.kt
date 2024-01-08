@@ -109,7 +109,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
 
     @ReactMethod
     override fun createEvent(event: ReadableMap) {
-      val event =
+      val klaviyoEvent =
         Event(
           type = event.getString("name")!!.let { EventType.CUSTOM(it) },
           properties =
@@ -117,7 +117,10 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
               ?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }
               ?.toMap(),
         )
-          .setProperty(EventKey.VALUE, event.getDouble("value"))
-      Klaviyo.createEvent(event = event)
+      // TODO: Update this after the Android SDK is updated to support setting null property values
+      if (event.hasKey("value")) {
+        klaviyoEvent.setProperty(EventKey.VALUE, event.getDouble("value"))
+      }
+      Klaviyo.createEvent(event = klaviyoEvent)
     }
   }
