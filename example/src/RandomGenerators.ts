@@ -47,8 +47,16 @@ export const generateRandomAddress = () => {
   };
 };
 
-export const getRandomEvent: () => MetricName = () => {
-  const eventValues = Object.values(MetricName);
-  const randomIndex = Math.floor(Math.random() * eventValues.length);
-  return eventValues[randomIndex] as MetricName;
+export const getRandomMetric: () => MetricName = () => {
+  const metricValues = [
+    MetricName.OPENED_PUSH,
+    MetricName.VIEWED_PRODUCT,
+    MetricName.STARTED_CHECKOUT,
+    MetricName.OPENED_APP,
+    MetricName.ADDED_TO_CART,
+  ];
+
+  const randomIndex = Math.floor(Math.random() * metricValues.length);
+
+  return (metricValues[randomIndex] as MetricName) ?? MetricName.OPENED_PUSH;
 };

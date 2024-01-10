@@ -27,61 +27,15 @@ public class KlaviyoBridge: NSObject {
       case properties = "properties"
   }
 
-  enum EventType: String, CaseIterable {
-      case openedPush = "$opened_app"
-      case viewedProduct = "$viewed_product"
-      case searchedProducts = "$searched_products"
-      case startedCheckout = "$started_checkout"
-      case placedOrder = "$placed_order"
-      case orderedProduct = "$ordered_product"
-      case cancelledOrder = "$cancelled_order"
-      case paidForOrder = "$paid_for_order"
-      case subscribedToBackInStock = "$subscribed_to_back_in_stock"
-      case subscribedToComingSoon = "$subscribed_to_coming_soon"
-      case subscribedToList = "$subscribed_to_list"
-      case successfulPayment = "$successful_payment"
-      case failedPayment = "$failed_payment"
-
-      // swiftlint:disable cyclomatic_complexity
-      static func getEventType(_ str: String) -> Event.EventName? {
-      switch str {
-      case "$opened_app":
-          return .OpenedPush
-      case "$viewed_product":
-          return .ViewedProduct
-      case "$searched_products":
-          return .SearchedProducts
-      case "$started_checkout":
-          return .StartedCheckout
-      case "$placed_order":
-          return .PlacedOrder
-      case "$ordered_product":
-          return .OrderedProduct
-      case "$cancelled_order":
-          return .CancelledOrder
-      case "$paid_for_order":
-          return .PaidForOrder
-      case "$subscribed_to_back_in_stock":
-          return .SubscribedToBackInStock
-      case "$subscribed_to_coming_soon":
-          return .SubscribedToComingSoon
-      case "$subscribed_to_list":
-          return .SubscribedToList
-      case "$successful_payment":
-          return .SuccessfulPayment
-      case "$failed_payment":
-          return .FailedPayment
-      default:
-          break
-      }
-      return nil
-      }
-      // swiftlint:enable cyclomatic_complexity
-  }
-
   @objc
   public static var getEventTypesKeys: [String: String] {
-      EventType.allCases.getDictionaryFromEnum()
+      [
+        "OPENED_PUSH": Event.V1.MetricName.OpenedPush.value,
+        "VIEWED_PRODUCT": Event.V1.MetricName.ViewedProduct.value,
+        "STARTED_CHECKOUT": Event.V1.MetricName.StartedCheckout.value,
+        "OPENED_APP": Event.V1.MetricName.OpenedApp.value,
+        "ADDED_TO_CART": Event.V1.MetricName.AddedToCart.value
+      ]
   }
 
   @objc
@@ -166,8 +120,9 @@ public class KlaviyoBridge: NSObject {
 
   @objc
   public static func createEvent(event: [String: AnyObject]) {
-      guard let name = event["name"] as? String, !name.isEmpty,
-            let eventType = EventType.getEventType(name) else {
+      guard let name = event["name"] as? String,
+            !name.isEmpty,
+            let eventType = getEventMetricsName(name) else {
           return
       }
 
@@ -179,6 +134,23 @@ public class KlaviyoBridge: NSObject {
       )
 
       KlaviyoSDK().create(event: event)
+  }
+
+  static func getEventMetricsName(_ str: String) -> Event.V1.MetricName? {
+    switch str {
+    case Event.V1.MetricName.OpenedPush.value:
+        return .OpenedPush
+    case Event.V1.MetricName.ViewedProduct.value:
+        return .ViewedProduct
+    case Event.V1.MetricName.StartedCheckout.value:
+        return .StartedCheckout
+    case Event.V1.MetricName.AddedToCart.value:
+        return .AddedToCart
+    case Event.V1.MetricName.OpenedApp.value:
+        return .OpenedApp
+    default:
+        return .CustomEvent(str)
+    }
   }
 }
 
@@ -198,8 +170,6 @@ extension Collection where Element: RawRepresentable, Element.RawValue == String
         var snakeCase = regex.stringByReplacingMatches(in: input, options: [], range: range, withTemplate: "$1_$2")
 
         snakeCase = snakeCase.uppercased()
-        // to avoid the $ in event names
-        snakeCase = snakeCase.replacingOccurrences(of: "$", with: "")
         return snakeCase
     }
     // swiftlint:enable force_try

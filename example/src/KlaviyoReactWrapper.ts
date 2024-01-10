@@ -11,7 +11,7 @@ import {
   generateRandomEmails,
   generateRandomName,
   generateRandomPhoneNumber,
-  getRandomEvent,
+  getRandomMetric,
 } from './RandomGenerators';
 
 export const initialize = async () => {
@@ -130,7 +130,7 @@ export const setProfile = async () => {
       lastName: generateRandomName(4),
       organization: generateRandomName(5),
       title: generateRandomName(6),
-      image: 'test image',
+      image: generateRandomName(5),
       location: myLocation,
       properties: myProperties,
     };
@@ -144,8 +144,8 @@ export const setProfile = async () => {
 export const sendRandomEvent = async () => {
   try {
     const event: Event = {
-      name: getRandomEvent(),
-      properties: { abc: 'def' },
+      name: getRandomMetric(),
+      properties: { testKey: generateRandomName(3) },
       uniqueId: generateRandomName(5),
     };
     Klaviyo.createEvent(event);

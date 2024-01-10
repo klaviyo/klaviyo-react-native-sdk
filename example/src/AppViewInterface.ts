@@ -70,7 +70,7 @@ export const appViews: AppViewInterface[] = [
     onPress: getExternalId,
   },
   {
-    title: 'Click to send random event',
+    title: 'Click to send event with random metric',
     color: '#841584',
     onPress: sendRandomEvent,
   },
