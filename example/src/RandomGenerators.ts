@@ -49,7 +49,6 @@ export const generateRandomAddress = () => {
 
 export const getRandomMetric: () => MetricName = () => {
   const metricValues = [
-    MetricName.OPENED_PUSH,
     MetricName.VIEWED_PRODUCT,
     MetricName.STARTED_CHECKOUT,
     MetricName.OPENED_APP,
@@ -58,5 +57,5 @@ export const getRandomMetric: () => MetricName = () => {
 
   const randomIndex = Math.floor(Math.random() * metricValues.length);
 
-  return (metricValues[randomIndex] as MetricName) ?? MetricName.OPENED_PUSH;
+  return (metricValues[randomIndex] as MetricName) ?? MetricName.OPENED_APP;
 };

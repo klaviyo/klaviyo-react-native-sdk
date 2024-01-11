@@ -3,7 +3,6 @@ import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 const { EVENT_NAMES } = KlaviyoReactNativeSdk.getConstants();
 
 export enum MetricName {
-  OPENED_PUSH = EVENT_NAMES.OPENED_PUSH,
   VIEWED_PRODUCT = EVENT_NAMES.VIEWED_PRODUCT,
   STARTED_CHECKOUT = EVENT_NAMES.STARTED_CHECKOUT,
   OPENED_APP = EVENT_NAMES.OPENED_APP,

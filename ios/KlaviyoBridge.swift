@@ -30,7 +30,6 @@ public class KlaviyoBridge: NSObject {
   @objc
   public static var getEventTypesKeys: [String: String] {
       [
-        "OPENED_PUSH": Event.V1.MetricName.OpenedPush.value,
         "VIEWED_PRODUCT": Event.V1.MetricName.ViewedProduct.value,
         "STARTED_CHECKOUT": Event.V1.MetricName.StartedCheckout.value,
         "OPENED_APP": Event.V1.MetricName.OpenedApp.value,
@@ -138,8 +137,6 @@ public class KlaviyoBridge: NSObject {
 
   static func getEventMetricsName(_ str: String) -> Event.V1.MetricName? {
     switch str {
-    case Event.V1.MetricName.OpenedPush.value:
-        return .OpenedPush
     case Event.V1.MetricName.ViewedProduct.value:
         return .ViewedProduct
     case Event.V1.MetricName.StartedCheckout.value:
