@@ -1,4 +1,4 @@
-import { MetricName } from 'klaviyo-react-native-sdk';
+import { EventName } from 'klaviyo-react-native-sdk';
 
 export const generateRandomEmails = () => {
   const chars = 'abcdefghijklmnopqrstuvwxyz1234567890';
@@ -47,15 +47,15 @@ export const generateRandomAddress = () => {
   };
 };
 
-export const getRandomMetric: () => MetricName = () => {
-  const metricValues = [
-    MetricName.VIEWED_PRODUCT,
-    MetricName.STARTED_CHECKOUT,
-    MetricName.OPENED_APP,
-    MetricName.ADDED_TO_CART,
+export const getRandomMetric: () => EventName = () => {
+  const eventNames = [
+    EventName.VIEWED_PRODUCT_METRIC,
+    EventName.STARTED_CHECKOUT_METRIC,
+    EventName.OPENED_APP_METRIC,
+    EventName.ADDED_TO_CART_METRIC,
   ];
 
-  const randomIndex = Math.floor(Math.random() * metricValues.length);
+  const randomIndex = Math.floor(Math.random() * eventNames.length);
 
-  return (metricValues[randomIndex] as MetricName) ?? MetricName.OPENED_APP;
+  return (eventNames[randomIndex] as EventName) ?? EventName.OPENED_APP_METRIC;
 };

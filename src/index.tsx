@@ -46,7 +46,7 @@ export const Klaviyo: Spec = {
   },
 };
 
-export { MetricName } from './Event';
+export { EventName } from './Event';
 export type { Event } from './Event';
 export {
   type Profile,
