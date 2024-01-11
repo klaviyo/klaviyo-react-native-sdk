@@ -92,17 +92,17 @@ Profile attributes can be set all at once:
 import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 Klaviyo.setProfile({
-    email: 'kermit@example.com",
-    phone: '+15555555555',
-    externalId: '12345',
-    firstName: 'Kermit',
-    lastName: 'The Frog',
-    title: 'CEO',
-    organization: 'Muppets, Inc.',
-    location: {
-        latitude: 42.3601,
-        longitude: 71.0589,
-    },
+  email: 'kermit@example.com',
+  phone: '+15555555555',
+  externalId: '12345',
+  firstName: 'Kermit',
+  lastName: 'The Frog',
+  title: 'CEO',
+  organization: 'Muppets, Inc.',
+  location: {
+    latitude: 42.3601,
+    longitude: 71.0589,
+  },
 });
 ```
 
