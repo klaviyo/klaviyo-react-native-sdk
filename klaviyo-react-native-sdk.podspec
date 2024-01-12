@@ -38,5 +38,5 @@ Pod::Spec.new do |s|
       s.dependency "ReactCommon/turbomodule/core"
     end
   end
-  s.dependency "KlaviyoSwift", "2.3.0"
+  s.dependency "KlaviyoSwift", "3.0.0-alpha.1"
 end
