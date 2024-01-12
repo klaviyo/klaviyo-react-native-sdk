@@ -19,7 +19,7 @@ npm install klaviyo-react-native-sdk
 To get started with iOS setup you need to run the following command in your ios directory:
 
 ```sh
-cocopods install
+pod install
 ```
 
 This may require you to install [Cocoapods](https://cocoapods.org/).
