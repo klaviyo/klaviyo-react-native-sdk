@@ -8,7 +8,7 @@ klaviyo-react-native-sdk is an SDK, written in TypeScript that can be integrated
 
 ## Installation
 
-The Klaviyo React Native SDK is available via [NPM](http://npmjs.com). To add it to your project run the following:
+The Klaviyo React Native SDK is available via [NPM](http://npmjs.com). To add it to your project run the following from your project's root directory:
 
 ```sh
 npm install klaviyo-react-native-sdk
@@ -28,11 +28,7 @@ Once you have installed Cocoapods. You will need to follow some setup steps from
 
 ### Android Setup
 
-To get started with Android setup you need to add the following to your `android/build.gradle` file:
-
-`gradle /// help me with this??`
-
-Once you have added the above to your `build.gradle` file you will need to follow some setup steps from the Android SDK [README](https://github.com/klaviyo/klaviyo-android-sdk/blob/master/README.md).
+For Android no additional steps are needed to start using the SDK.
 
 ## SDK Initialization
 
@@ -51,28 +47,28 @@ A list of common Klaviyo-defined event names is provided in [MetricName](https:/
 you can just provide a string for a custom event name:
 
 ```typescript
-import { KlaviyoEventAPI, MetricName } from 'klaviyo-react-native-sdk';
+import { Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
 
-KlaviyoEventAPI.createEvent({
+Klaviyo.createEvent({
   name: 'My Custom Event',
 });
-KlaviyoEventAPI.createEvent(event);
+Klaviyo.createEvent(event);
 ```
 
-Additional event properties can be specified as part of `EventModel`
+Additional event properties can be specified as part of the `Event`
 
 ```typescript
-import { Klaviyo, MetricName } from 'klaviyo-react-native-sdk'
+import { Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
 
-val event = {
-    name: MetricName.ADDED_TO_CART,
-    properties: {
-        "Item Name": "Shirt",
-        "Item Size": "Large",
-        "Item Price": 19.99
-    }
-}
-Klaviyo.createEvent(event)
+const event = {
+  name: MetricName.ADDED_TO_CART,
+  properties: {
+    'Item Name': 'Shirt',
+    'Item Size': 'Large',
+    'Item Price': 19.99,
+  },
+};
+Klaviyo.createEvent(event);
 ```
 
 ## Identifying a Profile
@@ -91,7 +87,7 @@ Profile attributes can be set all at once:
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-Klaviyo.setProfile({
+const profile = {
   email: 'kermit@example.com',
   phone: '+15555555555',
   externalId: '12345',
@@ -103,7 +99,8 @@ Klaviyo.setProfile({
     latitude: 42.3601,
     longitude: 71.0589,
   },
-});
+};
+Klaviyo.setProfile(profile);
 ```
 
 or individually:
@@ -120,14 +117,14 @@ Klaviyo.setProfileAttribute(KlaviyoProfilePropertyType.FIRST_NAME, 'Kermit');
 If a user is logged out or you want to reset the profile for some reason use the following:
 
 ```typescript
-import { KlaviyoProfileApi } from 'klaviyo-react-native-sdk';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-KlaviyoProfileApi.resetProfile();
+Klaviyo.resetProfile();
 ```
 
 ## Push Notifications
 
-When setting up push notifications you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#push-notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#push-notifications) SDKs.
+When setting up push notifications (including rich push notifications) you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#push-notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#push-notifications) SDKs.
 
 ## Deep Linking
 
