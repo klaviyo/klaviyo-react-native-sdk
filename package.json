@@ -10,6 +10,7 @@
   "files": [
     "src",
     "lib",
+    "docs",
     "android",
     "ios",
     "cpp",
@@ -34,7 +35,8 @@
     "release": "release-it",
     "lint": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' && swiftlint",
     "lint-fix": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --fix && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' -F && swiftlint --fix ",
-    "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,md,yml}'"
+    "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,md,yml}'",
+    "generate-docs": "typedoc src"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
