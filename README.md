@@ -58,9 +58,9 @@ Klaviyo.createEvent(event);
 Additional event properties can be specified as part of the `Event`
 
 ```typescript
-import { Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
+import { Event, Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
 
-const event = {
+const event: Event = {
   name: MetricName.ADDED_TO_CART,
   properties: {
     'Item Name': 'Shirt',
@@ -85,9 +85,9 @@ on proper phone number formatting
 Profile attributes can be set all at once:
 
 ```typescript
-import { Klaviyo } from 'klaviyo-react-native-sdk';
+import { Klaviyo, Profile } from 'klaviyo-react-native-sdk';
 
-const profile = {
+const profile: Profile = {
   email: 'kermit@example.com',
   phone: '+15555555555',
   externalId: '12345',
