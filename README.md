@@ -106,12 +106,12 @@ Klaviyo.setProfile(profile);
 or individually:
 
 ```typescript
-import { KlaviyoProfilePropertyType, Klaviyo } from 'klaviyo-react-native-sdk';
+import { ProfilePropertyKey, Klaviyo } from 'klaviyo-react-native-sdk';
 
 Klaviyo.setEmail('kermit@example.com');
 Klaviyo.setPhone('+15555555555');
 Klaviyo.setExternalId('12345');
-Klaviyo.setProfileAttribute(KlaviyoProfilePropertyType.FIRST_NAME, 'Kermit');
+Klaviyo.setProfileAttribute(ProfilePropertyKey.FIRST_NAME, 'Kermit');
 ```
 
 If a user is logged out or you want to reset the profile for some reason use the following:

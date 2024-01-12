@@ -10,7 +10,7 @@ export interface KlaviyoProfileApi {
   readonly setPhoneNumber: (phoneNumber: String) => void;
   readonly getPhoneNumber: (callback: Function | undefined) => String | null;
   readonly setProfileAttribute: (
-    propertyKey: KlaviyoProfilePropertyType,
+    propertyKey: ProfilePropertyKey,
     value: String
   ) => void;
   readonly resetProfile: () => void;
@@ -161,5 +161,5 @@ export function formatProfile(profile: Profile): Record<ProfileProperty, any> {
   return bridgedProfile;
 }
 
-export type KlaviyoProfilePropertyType = ProfileProperty | string;
-export type ProfileProperties = Record<KlaviyoProfilePropertyType, Object>;
+export type ProfilePropertyKey = ProfileProperty | string;
+export type ProfileProperties = Record<ProfilePropertyKey, Object>;
