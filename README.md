@@ -61,7 +61,7 @@ Additional event properties can be specified as part of the `Event`
 import { Event, Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
 
 const event: Event = {
-  name: MetricName.ADDED_TO_CART,
+  name: EventName.ADDED_TO_CART_METRIC,
   properties: {
     'Item Name': 'Shirt',
     'Item Size': 'Large',
