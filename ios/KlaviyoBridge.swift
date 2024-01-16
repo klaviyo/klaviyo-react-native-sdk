@@ -30,10 +30,10 @@ public class KlaviyoBridge: NSObject {
   @objc
   public static var getEventTypesKeys: [String: String] {
       [
-        "VIEWED_PRODUCT_METRIC": Event.EventName.ViewedProductMetric.value,
-        "STARTED_CHECKOUT_METRIC": Event.EventName.StartedCheckoutMetric.value,
-        "OPENED_APP_METRIC": Event.EventName.OpenedAppMetric.value,
-        "ADDED_TO_CART_METRIC": Event.EventName.AddedToCartMetric.value
+        "VIEWED_PRODUCT": Event.EventName.ViewedProductMetric.value,
+        "STARTED_CHECKOUT": Event.EventName.StartedCheckoutMetric.value,
+        "OPENED_APP": Event.EventName.OpenedAppMetric.value,
+        "ADDED_TO_CART": Event.EventName.AddedToCartMetric.value
       ]
   }
 
