@@ -1,7 +1,7 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 import type { Spec } from './NativeKlaviyoReactNativeSdk';
 import {
-  type KlaviyoProfilePropertyType,
+  type ProfilePropertyKey,
   type Profile,
   formatProfile,
 } from './Profile';
@@ -32,10 +32,7 @@ export const Klaviyo: Spec = {
   getPhoneNumber(callback: Function | undefined): String | null {
     return KlaviyoReactNativeSdk.getPhoneNumber(callback);
   },
-  setProfileAttribute(
-    propertyKey: KlaviyoProfilePropertyType,
-    value: String
-  ): void {
+  setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
   resetProfile(): void {
@@ -51,7 +48,7 @@ export type { Event } from './Event';
 export {
   type Profile,
   type ProfileProperties,
-  type KlaviyoProfilePropertyType,
+  type ProfilePropertyKey,
   type Location,
   ProfileProperty,
 } from './Profile';
