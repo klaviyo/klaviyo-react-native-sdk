@@ -28,11 +28,11 @@ Once you have installed Cocoapods. You will need to follow some setup steps from
 
 ### Android Setup
 
-For Android no additional steps are needed to start using the SDK.
+For Android simple follow any initialization instructions as indicated [here](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#configuration).
 
 ## SDK Initialization
 
-Initialization can typically be done from the native layer but if you want to initialize the SDK from the React Native layer you can do so by calling the following:
+Initialization should be done from the native layer. However if needed you can also initialize the React Native layer you can do so as follows:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
