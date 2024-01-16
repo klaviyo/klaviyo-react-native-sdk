@@ -145,6 +145,7 @@ export const sendRandomEvent = async () => {
   try {
     const event: Event = {
       name: getRandomMetric(),
+      value: Math.floor(Math.random() * 100),
       properties: { testKey: generateRandomName(3) },
       uniqueId: generateRandomName(5),
     };
