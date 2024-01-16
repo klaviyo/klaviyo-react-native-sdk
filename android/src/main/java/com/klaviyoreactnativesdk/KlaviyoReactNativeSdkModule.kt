@@ -7,7 +7,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
-import com.klaviyo.analytics.model.EventType
+import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
@@ -33,7 +33,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
             this[LOCATION] = LOCATION
             this[PROPERTIES] = PROPERTIES
           },
-        "EVENT_NAMES" to this.extractConstants<EventType>(),
+        "EVENT_NAMES" to this.extractConstants<EventMetric>(),
       )
     }
 
@@ -119,16 +119,15 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     override fun createEvent(event: ReadableMap) {
       val klaviyoEvent =
         Event(
-          type = event.getString("name")!!.let { EventType.CUSTOM(it) },
+          metric = event.getString("name")!!.let { EventMetric.CUSTOM(it) },
           properties =
             event.getMap("properties")?.toHashMap()
               ?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }
               ?.toMap(),
+        ).setValue(
+          event.getDouble("value"),
         )
-      // TODO: Update this after the Android SDK is updated to support setting null property values
-      if (event.hasKey("value")) {
-        klaviyoEvent.setProperty(EventKey.VALUE, event.getDouble("value"))
-      }
+
       Klaviyo.createEvent(event = klaviyoEvent)
     }
   }
