@@ -1,5 +1,7 @@
 # klaviyo-react-native-sdk
 
+⚠️ Please note that this repository is still in alpha development ⚠️
+
 Official Klaviyo React Native SDK
 
 ## Overview
