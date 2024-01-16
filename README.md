@@ -47,7 +47,7 @@ A list of common Klaviyo-defined event names is provided in [MetricName](https:/
 you can just provide a string for a custom event name:
 
 ```typescript
-import { Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 Klaviyo.createEvent({
   name: 'My Custom Event',
@@ -128,7 +128,44 @@ When setting up push notifications (including rich push notifications) you will 
 
 ## Deep Linking
 
-Similarly for deep linking you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#handling-deep-linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#deep-linking-in-push-notification) SDKs.
+To handle deep links in your app start by familiarizing yourself with the React Native [guide](https://reactnative.dev/docs/linking) to deep linking. Once you've done that you should follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#handling-deep-linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#deep-linking-in-push-notification) SDKs.
+The sections below give additional details for each platform as it pertains to React Native.
+
+### iOS
+
+As shown in the native SDK documentation you can follow option 1 or 2. With Option 1 when you get the callback you can handle it as follows:
+
+```objective-c
+[RCTLinkingManager application:application openURL:url options:options]
+```
+
+Since you won't have `options` you can just pass in an empty dictionary for that parameter.
+
+With Option 2 when you handle the open url (in `application(_:open:options)`) you call the linking as in option 1.
+
+### Android
+
+On Android simply follow the Android sdk docs on handling intent filters.
+
+### React Native Changes
+
+Then on the React Native side you can handle the deep link as follows:
+
+```typescript
+import { Linking } from 'react-native';
+
+Linking.addEventListener('url', (event) => {
+  console.log(event.url);
+});
+
+Linking.getInitialURL().then((url) => {
+  console.log('Initial Url: url', url);
+});
+```
+
+## Push Permissions
+
+It is recommended that handling push permissions be done from the native layer. On iOS you can follow the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#sending-push-notifications) guide on requesting permissions. On Android you can follow the [Android](https://source.android.com/docs/core/display/notification-perm) guide on requesting permissions.
 
 ## Contributing
 
