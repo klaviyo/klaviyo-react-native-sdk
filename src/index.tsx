@@ -1,29 +1,54 @@
-import { NativeModules, Platform } from 'react-native';
+import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
+import type { Spec } from './NativeKlaviyoReactNativeSdk';
+import {
+  type ProfilePropertyKey,
+  type Profile,
+  formatProfile,
+} from './Profile';
+import type { Event } from './Event';
 
-const LINKING_ERROR =
-  `The package 'klaviyo-react-native-sdk' doesn't seem to be linked. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
-  '- You rebuilt the app after installing the package\n' +
-  '- You are not using Expo Go\n';
+export const Klaviyo: Spec = {
+  initialize(apiKey: String): void {
+    KlaviyoReactNativeSdk.initialize(apiKey);
+  },
+  setProfile(profile: Profile): void {
+    KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
+  },
+  setExternalId(externalId: String): void {
+    KlaviyoReactNativeSdk.setExternalId(externalId);
+  },
+  getExternalId(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getExternalId(callback);
+  },
+  setEmail(email: String): void {
+    KlaviyoReactNativeSdk.setEmail(email);
+  },
+  getEmail(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getEmail(callback);
+  },
+  setPhoneNumber(phoneNumber: String): void {
+    KlaviyoReactNativeSdk.setPhoneNumber(phoneNumber);
+  },
+  getPhoneNumber(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPhoneNumber(callback);
+  },
+  setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void {
+    KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
+  },
+  resetProfile(): void {
+    KlaviyoReactNativeSdk.resetProfile();
+  },
+  createEvent(event: Event): void {
+    KlaviyoReactNativeSdk.createEvent(event);
+  },
+};
 
-// @ts-expect-error
-const isTurboModuleEnabled = global.__turboModuleProxy != null;
-
-const KlaviyoReactNativeSdkModule = isTurboModuleEnabled
-  ? require('./NativeKlaviyoReactNativeSdk').default
-  : NativeModules.KlaviyoReactNativeSdk;
-
-const KlaviyoReactNativeSdk = KlaviyoReactNativeSdkModule
-  ? KlaviyoReactNativeSdkModule
-  : new Proxy(
-      {},
-      {
-        get() {
-          throw new Error(LINKING_ERROR);
-        },
-      }
-    );
-
-export function multiply(a: number, b: number): Promise<number> {
-  return KlaviyoReactNativeSdk.multiply(a, b);
-}
+export { EventName } from './Event';
+export type { Event } from './Event';
+export {
+  type Profile,
+  type ProfileProperties,
+  type ProfilePropertyKey,
+  type Location,
+  ProfileProperty,
+} from './Profile';

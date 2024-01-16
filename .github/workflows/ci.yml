@@ -9,13 +9,18 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: macos-13
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.1.0/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
 
       - name: Lint files
         run: yarn lint
@@ -24,7 +29,7 @@ jobs:
         run: yarn typecheck
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,7 +41,7 @@ jobs:
         run: yarn test --maxWorkers=2 --coverage
 
   build-library:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -48,7 +53,7 @@ jobs:
         run: yarn prepare
 
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       TURBO_CACHE_DIR: .turbo/android
     steps:
@@ -79,7 +84,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '17'
 
       - name: Finalize Android SDK
         if: env.turbo_cache_hit != 1
@@ -102,12 +107,17 @@ jobs:
           yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}"
 
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-13-xlarge
     env:
       TURBO_CACHE_DIR: .turbo/ios
+      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.2'
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -143,6 +153,7 @@ jobs:
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
           yarn pod-install example/ios
+          brew install watchman
         env:
           NO_FLIPPER: 1
 
