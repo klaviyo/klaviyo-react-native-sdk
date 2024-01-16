@@ -58,7 +58,7 @@ Klaviyo.createEvent(event);
 Additional event properties can be specified as part of the `Event`
 
 ```typescript
-import { Event, Klaviyo, MetricName } from 'klaviyo-react-native-sdk';
+import { Event, Klaviyo, EventName } from 'klaviyo-react-native-sdk';
 
 const event: Event = {
   name: EventName.ADDED_TO_CART_METRIC,
