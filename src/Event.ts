@@ -36,7 +36,7 @@ export interface Event {
    */
   readonly value?: number;
   /**
-   * A unique identifier for an event. If the unique_id is repeated for the same
+   * A unique identifier for an event. If the uniqueId is repeated for the same
    * profile and metric, only the first processed event will be recorded. If this is not
    * present, this will use the time to the second. Using the default, this limits only one
    * event per profile per second.

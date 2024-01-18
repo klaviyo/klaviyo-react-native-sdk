@@ -19,7 +19,7 @@ export interface KlaviyoProfileApi {
    * @param email - The email address to set
    */
   setEmail(email: String): void;
-  getEmail(callback: Function | undefined)z: String | null;
+  getEmail(callback: Function | undefined): String | null;
 
   /**
    * Update a profile's phone number.
@@ -140,7 +140,7 @@ export interface Profile {
    */
   readonly image?: string;
   /**
-   *
+   * An object containing location information for this profile
    */
   readonly location?: Location;
   /**
