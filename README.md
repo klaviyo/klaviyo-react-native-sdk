@@ -18,7 +18,7 @@ npm install klaviyo-react-native-sdk
 
 ### iOS Setup
 
-To get started with iOS setup, you need to run the following command in your ios directory:
+To get started with iOS setup, you need to run the following command in the `ios` directory of your React Native project:
 
 ```sh
 pod install
@@ -82,7 +82,7 @@ so that the SDK can keep track of the current profile.
 
 The Klaviyo SDK does not validate email address or phone number inputs locally. See
 [documentation](https://help.klaviyo.com/hc/en-us/articles/360046055671-Accepted-phone-number-formats-for-SMS-in-Klaviyo)
-on proper phone number formatting.
+for guidance on proper phone number formatting.
 
 Profile attributes can be set all at once:
 
@@ -116,7 +116,7 @@ Klaviyo.setExternalId('12345');
 Klaviyo.setProfileAttribute(ProfilePropertyKey.FIRST_NAME, 'Kermit');
 ```
 
-If a user is logged out, or you want to reset the profile for some reason, use the following:
+If a user is logged out or if you want to reset the profile for some reason, use the following:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
