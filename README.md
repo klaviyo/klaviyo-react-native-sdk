@@ -34,13 +34,11 @@ For Android simple follow any initialization instructions as indicated [here](ht
 
 ## SDK Initialization
 
-Initialization should be done from the native layer. However if needed you can also initialize the React Native layer you can do so as follows:
-
-```typescript
-import { Klaviyo } from 'klaviyo-react-native-sdk';
-
-Klaviyo.initialize('YOUR_PUBLIC_API_KEY');
-```
+Initialization should be done from the native layer:
+### Android
+Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#configuration) guide on configuration.
+### iOS
+Follow the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#:~:text=To%20add%20Klaviyo%27s,YOUR_KLAVIYO_PUBLIC_API_KEY%22) guide on configuration.
 
 ## Event Tracking
 

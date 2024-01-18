@@ -11,9 +11,6 @@ import type { Event } from './Event';
  * Implementation of the {@link KlaviyoInterface}
  */
 export const Klaviyo: Spec = {
-  initialize(apiKey: String): void {
-    KlaviyoReactNativeSdk.initialize(apiKey);
-  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },

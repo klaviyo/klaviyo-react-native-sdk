@@ -9,14 +9,7 @@ import type { KlaviyoProfileApi } from './Profile';
  * This interface extends the KlaviyoEventAPI and KlaviyoProfileApi interfaces,
  * providing a unified API for interacting with Klaviyo's event tracking and profile management features.
  */
-export interface KlaviyoInterface extends KlaviyoEventAPI, KlaviyoProfileApi {
-  /**
-   * Initialize the Klaviyo SDK with your public API key.
-   * This method should be called before any other methods in the SDK are used.
-   * @param apiKey - Your public API key
-   */
-  initialize(apiKey: String): void;
-}
+export interface KlaviyoInterface extends KlaviyoEventAPI, KlaviyoProfileApi {}
 
 export interface Spec extends TurboModule, KlaviyoInterface {}
 
