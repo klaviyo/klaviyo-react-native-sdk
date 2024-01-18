@@ -43,27 +43,81 @@ const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
 /* various profile properties that can be set on a user */
 export enum ProfileProperty {
+  /**
+   * A unique identifier used by customers to associate Klaviyo profiles with profiles in an external system, such as a point-of-sale system. Format varies based on the external system.
+   */
   EXTERNAL_ID = PROFILE_KEYS.EXTERNAL_ID ?? 'external_id',
+  /**
+   * Individual's email address
+   */
   EMAIL = PROFILE_KEYS.EMAIL ?? 'email',
+  /**
+   * Individual's phone number in E.164 format
+   */
   PHONE_NUMBER = PROFILE_KEYS.PHONE_NUMBER ?? 'phone_number',
-
+  /**
+   * Individual's first name
+   */
   FIRST_NAME = PROFILE_KEYS.FIRST_NAME ?? 'first_name',
+  /**
+   * Individual's last name
+   */
   LAST_NAME = PROFILE_KEYS.LAST_NAME ?? 'last_name',
+  /**
+   * Individual's job title
+   */
   TITLE = PROFILE_KEYS.TITLE ?? 'title',
+  /**
+   * Name of the company or organization within the company for whom the individual works
+   */
   ORGANIZATION = PROFILE_KEYS.ORGANIZATION ?? 'organization',
+  /**
+   * URL pointing to the location of a profile image
+   */
   IMAGE = PROFILE_KEYS.IMAGE ?? 'image',
-
+  /**
+   * First line of street address
+   */
   ADDRESS1 = PROFILE_KEYS.ADDRESS1 ?? 'address1',
+  /**
+   * Second line of street address
+   */
   ADDRESS2 = PROFILE_KEYS.ADDRESS2 ?? 'address2',
+  /**
+   * City name
+   */
   CITY = PROFILE_KEYS.CITY ?? 'city',
+  /**
+   * Country name
+   */
   COUNTRY = PROFILE_KEYS.COUNTRY ?? 'country',
+  /**
+   * Zip code
+   */
   ZIP = PROFILE_KEYS.ZIP ?? 'zip',
+  /**
+   * Region within a country, such as state or province
+   */
   REGION = PROFILE_KEYS.REGION ?? 'region',
+  /**
+   * Latitude coordinate. We recommend providing a precision of four decimal places.
+   */
   LATITUDE = PROFILE_KEYS.LATITUDE ?? 'latitude',
+  /**
+   * Longitude coordinate. We recommend providing a precision of four decimal places.
+   */
   LONGITUDE = PROFILE_KEYS.LONGITUDE ?? 'longitude',
+  /**
+   * Time zone name. We recommend using time zones from the IANA Time Zone Database.
+   */
   TIMEZONE = PROFILE_KEYS.TIMEZONE ?? 'timezone',
-
+  /**
+   * An object containing location information for this profile
+   */
   LOCATION = PROFILE_KEYS.LOCATION ?? 'location',
+  /**
+   * An object containing key/value pairs for any custom properties assigned to this profile
+   */
   PROPERTIES = PROFILE_KEYS.TIMEZONE ?? 'properties',
 }
 
