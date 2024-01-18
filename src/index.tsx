@@ -7,6 +7,9 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 
+/**
+ * Implementation of the {@link KlaviyoInterface}
+ */
 export const Klaviyo: Spec = {
   initialize(apiKey: String): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
@@ -43,8 +46,7 @@ export const Klaviyo: Spec = {
   },
 };
 
-export { EventName } from './Event';
-export type { Event } from './Event';
+export { type Event, type EventProperties, EventName } from './Event';
 export {
   type Profile,
   type ProfileProperties,
@@ -52,3 +54,4 @@ export {
   type Location,
   ProfileProperty,
 } from './Profile';
+export type { KlaviyoInterface } from './NativeKlaviyoReactNativeSdk';

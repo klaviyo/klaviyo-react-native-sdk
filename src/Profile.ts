@@ -2,18 +2,39 @@ import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
 /*API interfaces for profile related operations*/
 export interface KlaviyoProfileApi {
-  readonly setProfile: (profile: Profile) => void;
-  readonly setExternalId: (externalId: String) => void;
-  readonly getExternalId: (callback: Function | undefined) => String | null;
-  readonly setEmail: (email: String) => void;
-  readonly getEmail: (callback: Function | undefined) => String | null;
-  readonly setPhoneNumber: (phoneNumber: String) => void;
-  readonly getPhoneNumber: (callback: Function | undefined) => String | null;
-  readonly setProfileAttribute: (
-    propertyKey: ProfilePropertyKey,
-    value: String
-  ) => void;
-  readonly resetProfile: () => void;
+  /**
+   * Create and update properties about a profile without tracking an associated event.
+   * @param profile - The profile object to set
+   */
+  setProfile(profile: Profile): void;
+  /**
+   * Update a profile's external ID.
+   * @param externalId - The external ID to set
+   */
+  setExternalId(externalId: String): void;
+  getExternalId(callback: Function | undefined): String | null;
+
+  /**
+   * Update a profile's email address.
+   * @param email - The email address to set
+   */
+  setEmail(email: String): void;
+  getEmail(callback: Function | undefined)z: String | null;
+
+  /**
+   * Update a profile's phone number.
+   * @param phoneNumber - The phone number to set
+   */
+  setPhoneNumber(phoneNumber: String): void;
+  getPhoneNumber(callback: Function | undefined): String | null;
+
+  /**
+   * Update a profile's properties.
+   * @param propertyKey - The property key to set
+   * @param value - The property value to set
+   */
+  setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void;
+  resetProfile(): void;
 }
 
 /* Profile interface types */
@@ -47,38 +68,95 @@ export enum ProfileProperty {
 }
 
 export interface Location {
+  /**
+   * First line of street address
+   */
   readonly address1?: string;
+  /**
+   * Second line of street address
+   */
   readonly address2?: string;
+  /**
+   * City name
+   */
   readonly city?: string;
+  /**
+   * Country name
+   */
   readonly country?: string;
+  /**
+   * Zip code
+   */
   readonly zip?: string;
+  /**
+   * Region within a country, such as state or province
+   */
   readonly region?: string;
+  /**
+   * Latitude coordinate. We recommend providing a precision of four decimal places.
+   */
   readonly latitude?: number;
+  /**
+   * Longitude coordinate. We recommend providing a precision of four decimal places.
+   */
   readonly longitude?: number;
+  /**
+   * Time zone name. We recommend using time zones from the IANA Time Zone Database.
+   */
   readonly timezone?: string;
 }
 
 export interface Profile {
-  externalId?: string;
-  email?: string;
-  phoneNumber?: string;
-  firstName?: string;
-  lastName?: string;
-  title?: string;
-  organization?: string;
-  image?: string;
-  location?: Location;
-  properties?: Record<ProfileProperty, any>;
+  /**
+   * A unique identifier used by customers to associate Klaviyo profiles with profiles in an external system, such as a point-of-sale system. Format varies based on the external system.
+   */
+  readonly externalId?: string;
+  /**
+   * Individual's email address
+   */
+  readonly email?: string;
+  /**
+   * Individual's phone number in E.164 format
+   */
+  readonly phoneNumber?: string;
+  /**
+   * Individual's first name
+   */
+  readonly firstName?: string;
+  /**
+   * Individual's last name
+   */
+  readonly lastName?: string;
+  /**
+   * Individual's job title
+   */
+  readonly title?: string;
+  /**
+   * Name of the company or organization within the company for whom the individual works
+   */
+  readonly organization?: string;
+  /**
+   * URL pointing to the location of a profile image
+   */
+  readonly image?: string;
+  /**
+   *
+   */
+  readonly location?: Location;
+  /**
+   * An object containing key/value pairs for any custom properties assigned to this profile
+   */
+  readonly properties?: ProfileProperties;
 }
 
 /**
- * Convert a Profile object to a Record<ProfileProperty, any> object
+ * Convert a Profile object to a Record<ProfileProperty, Object> object
  * where the keys are the ProfileProperty enum values mapped to the native module's constants
  *
- * @param profile
+ * @param profile {@link Profile} - The profile object to convert
  */
-export function formatProfile(profile: Profile): Record<ProfileProperty, any> {
-  let bridgedProfile: Record<ProfileProperty, any> = {};
+export function formatProfile(profile: Profile): Record<ProfileProperty, Object> {
+  let bridgedProfile: Record<ProfileProperty, Object> = {};
 
   if (profile.externalId) {
     bridgedProfile[ProfileProperty.EXTERNAL_ID] = profile.externalId;
@@ -113,7 +191,7 @@ export function formatProfile(profile: Profile): Record<ProfileProperty, any> {
   }
 
   if (profile.location) {
-    let bridgedLocation: Record<ProfileProperty, any> = {};
+    let bridgedLocation: Record<ProfileProperty, Object> = {};
 
     if (profile.location.address1) {
       bridgedLocation[ProfileProperty.ADDRESS1] = profile.location.address1;
