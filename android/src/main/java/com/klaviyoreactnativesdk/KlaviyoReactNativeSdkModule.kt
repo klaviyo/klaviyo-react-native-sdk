@@ -46,11 +46,6 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
 
     @ReactMethod
-    override fun initialize(apiKey: String) {
-      Klaviyo.initialize(apiKey, context)
-    }
-
-    @ReactMethod
     override fun setProfile(profile: ReadableMap) {
       val parsedProfile = Profile()
 

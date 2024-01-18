@@ -19,11 +19,6 @@ RCT_EXPORT_MODULE()
 
 //MARK: Setters
 
-RCT_EXPORT_METHOD(initialize:(NSString *)publicToken)
-{
-    [KlaviyoBridge initialize: publicToken];
-}
-
 RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
 {
     [KlaviyoBridge setProfile:profileDict];
