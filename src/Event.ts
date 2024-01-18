@@ -10,31 +10,42 @@ export enum EventName {
    * The 'Added to Cart' event is used to track when a user adds a product to their cart.
    */
   ADDED_TO_CART_METRIC = EVENT_NAMES.ADDED_TO_CART,
+
   /**
    * The 'Opened App' event is used to track when a user opens the app.
    */
   OPENED_APP_METRIC = EVENT_NAMES.OPENED_APP,
+
   /**
    * The 'Started Checkout' event is used to track when a user starts the checkout process.
    */
   STARTED_CHECKOUT_METRIC = EVENT_NAMES.STARTED_CHECKOUT,
+
   /**
    * The 'Viewed Product' event is used to track when a user views a product.
    */
   VIEWED_PRODUCT_METRIC = EVENT_NAMES.VIEWED_PRODUCT,
 }
 
+/**
+ * Type for event properties
+ */
 export type EventProperties = Record<string, Object>;
 
+/**
+ * Interface for an event
+ */
 export interface Event {
   /**
    * Name of the event. Must be less than 128 characters.
    */
   readonly name: EventName | string;
+
   /**
    * A numeric value to associate with this event. For example, the dollar amount of a purchase.
    */
   readonly value?: number;
+
   /**
    * A unique identifier for an event. If the uniqueId is repeated for the same
    * profile and metric, only the first processed event will be recorded. If this is not
@@ -42,6 +53,7 @@ export interface Event {
    * event per profile per second.
    */
   readonly uniqueId?: string;
+
   /**
    * Properties of this event. Any top level property (that are not objects) can be
    * used to create segments. The $extra property is a special property. This records any
@@ -54,6 +66,9 @@ export interface Event {
   readonly properties?: EventProperties;
 }
 
+/**
+ * Interface for the Klaviyo Event API
+ */
 export interface KlaviyoEventAPI {
   /**
    * Create a new event to track a profile's activity.
