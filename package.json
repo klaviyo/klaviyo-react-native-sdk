@@ -47,7 +47,8 @@
   "keywords": [
     "react-native",
     "ios",
-    "android"
+    "android",
+    "klaviyo"
   ],
   "repository": {
     "type": "git",
