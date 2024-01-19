@@ -169,6 +169,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       CI_COMMIT_MESSAGE: Generated docs for ${{ github.sha }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
