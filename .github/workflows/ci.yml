@@ -182,7 +182,8 @@ jobs:
         run: |
           git fetch --depth=1 --no-tags
           git checkout documentation
-          git merge master
+          git pull
+          git merge master --allow-unrelated-histories
           yarn generate-docs
           git config user.name github-actions
           git config user.email github-actions@github.com
