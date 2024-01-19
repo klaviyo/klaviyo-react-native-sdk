@@ -1,11 +1,12 @@
 name: CI
+
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   lint:
@@ -160,3 +161,31 @@ jobs:
       - name: Build example for iOS
         run: |
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+
+
+  generate-documentation:
+    # Only run on master branch push (e.g. after pull request merge).
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    env:
+      CI_COMMIT_MESSAGE: Generated docs for ${{ github.sha }}
+      CI_COMMIT_AUTHOR: Mobile Push - CI
+      CI_COMMIT_EMAIL: mobile-push@klaviyo.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Commit and push docs
+        run: |
+          git checkout documentation
+          git fetch
+          git merge master
+          yarn generate-docs
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "${{ env.CI_COMMIT_EMAIL }}"
+          git add docs
+          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          git push

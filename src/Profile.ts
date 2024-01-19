@@ -1,17 +1,27 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 
-/*API interfaces for profile related operations*/
+const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
+
+/**
+ * Interface for the Klaviyo Profile API
+ */
 export interface KlaviyoProfileApi {
   /**
    * Create and update properties about a profile without tracking an associated event.
    * @param profile - The profile object to set
    */
   setProfile(profile: Profile): void;
+
   /**
    * Update a profile's external ID.
    * @param externalId - The external ID to set
    */
   setExternalId(externalId: String): void;
+
+  /**
+   * Retrieve a profile's external ID.
+   * @param callback - The callback function to handle the response
+   */
   getExternalId(callback: Function | undefined): String | null;
 
   /**
@@ -19,6 +29,11 @@ export interface KlaviyoProfileApi {
    * @param email - The email address to set
    */
   setEmail(email: String): void;
+
+  /**
+   * Retrieve a profile's email address.
+   * @param callback - The callback function to handle the response
+   */
   getEmail(callback: Function | undefined): String | null;
 
   /**
@@ -26,6 +41,11 @@ export interface KlaviyoProfileApi {
    * @param phoneNumber - The phone number to set
    */
   setPhoneNumber(phoneNumber: String): void;
+
+  /**
+   * Retrieve a profile's phone number.
+   * @param callback - The callback function to handle the response
+   */
   getPhoneNumber(callback: Function | undefined): String | null;
 
   /**
@@ -34,169 +54,212 @@ export interface KlaviyoProfileApi {
    * @param value - The property value to set
    */
   setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void;
+
+  /**
+   * Clear the current profile and set it to a new anonymous profile
+   */
   resetProfile(): void;
 }
 
-/* Profile interface types */
-
-const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
-
-/* various profile properties that can be set on a user */
+/**
+ * Enum for various profile properties that can be set on a user
+ */
 export enum ProfileProperty {
   /**
    * A unique identifier used by customers to associate Klaviyo profiles with profiles in an external system, such as a point-of-sale system. Format varies based on the external system.
    */
   EXTERNAL_ID = PROFILE_KEYS.EXTERNAL_ID ?? 'external_id',
+
   /**
    * Individual's email address
    */
   EMAIL = PROFILE_KEYS.EMAIL ?? 'email',
+
   /**
    * Individual's phone number in E.164 format
    */
   PHONE_NUMBER = PROFILE_KEYS.PHONE_NUMBER ?? 'phone_number',
+
   /**
    * Individual's first name
    */
   FIRST_NAME = PROFILE_KEYS.FIRST_NAME ?? 'first_name',
+
   /**
    * Individual's last name
    */
   LAST_NAME = PROFILE_KEYS.LAST_NAME ?? 'last_name',
+
   /**
    * Individual's job title
    */
   TITLE = PROFILE_KEYS.TITLE ?? 'title',
+
   /**
    * Name of the company or organization within the company for whom the individual works
    */
   ORGANIZATION = PROFILE_KEYS.ORGANIZATION ?? 'organization',
+
   /**
    * URL pointing to the location of a profile image
    */
   IMAGE = PROFILE_KEYS.IMAGE ?? 'image',
+
   /**
    * First line of street address
    */
   ADDRESS1 = PROFILE_KEYS.ADDRESS1 ?? 'address1',
+
   /**
    * Second line of street address
    */
   ADDRESS2 = PROFILE_KEYS.ADDRESS2 ?? 'address2',
+
   /**
    * City name
    */
   CITY = PROFILE_KEYS.CITY ?? 'city',
+
   /**
    * Country name
    */
   COUNTRY = PROFILE_KEYS.COUNTRY ?? 'country',
+
   /**
    * Zip code
    */
   ZIP = PROFILE_KEYS.ZIP ?? 'zip',
+
   /**
    * Region within a country, such as state or province
    */
   REGION = PROFILE_KEYS.REGION ?? 'region',
+
   /**
    * Latitude coordinate. We recommend providing a precision of four decimal places.
    */
   LATITUDE = PROFILE_KEYS.LATITUDE ?? 'latitude',
+
   /**
    * Longitude coordinate. We recommend providing a precision of four decimal places.
    */
   LONGITUDE = PROFILE_KEYS.LONGITUDE ?? 'longitude',
+
   /**
    * Time zone name. We recommend using time zones from the IANA Time Zone Database.
    */
   TIMEZONE = PROFILE_KEYS.TIMEZONE ?? 'timezone',
+
   /**
    * An object containing location information for this profile
    */
   LOCATION = PROFILE_KEYS.LOCATION ?? 'location',
+
   /**
    * An object containing key/value pairs for any custom properties assigned to this profile
    */
   PROPERTIES = PROFILE_KEYS.TIMEZONE ?? 'properties',
 }
 
+/**
+ * Interface for location information of a profile
+ */
 export interface Location {
   /**
    * First line of street address
    */
   readonly address1?: string;
+
   /**
    * Second line of street address
    */
   readonly address2?: string;
+
   /**
    * City name
    */
   readonly city?: string;
+
   /**
    * Country name
    */
   readonly country?: string;
+
   /**
    * Zip code
    */
   readonly zip?: string;
+
   /**
    * Region within a country, such as state or province
    */
   readonly region?: string;
+
   /**
    * Latitude coordinate. We recommend providing a precision of four decimal places.
    */
   readonly latitude?: number;
+
   /**
    * Longitude coordinate. We recommend providing a precision of four decimal places.
    */
   readonly longitude?: number;
+
   /**
    * Time zone name. We recommend using time zones from the IANA Time Zone Database.
    */
   readonly timezone?: string;
 }
 
+/**
+ * Interface for a profile
+ */
 export interface Profile {
   /**
    * A unique identifier used by customers to associate Klaviyo profiles with profiles in an external system, such as a point-of-sale system. Format varies based on the external system.
    */
   readonly externalId?: string;
+
   /**
    * Individual's email address
    */
   readonly email?: string;
+
   /**
    * Individual's phone number in E.164 format
    */
   readonly phoneNumber?: string;
+
   /**
    * Individual's first name
    */
   readonly firstName?: string;
+
   /**
    * Individual's last name
    */
   readonly lastName?: string;
+
   /**
    * Individual's job title
    */
   readonly title?: string;
+
   /**
    * Name of the company or organization within the company for whom the individual works
    */
   readonly organization?: string;
+
   /**
    * URL pointing to the location of a profile image
    */
   readonly image?: string;
+
   /**
    * An object containing location information for this profile
    */
   readonly location?: Location;
+
   /**
    * An object containing key/value pairs for any custom properties assigned to this profile
    */
@@ -209,7 +272,9 @@ export interface Profile {
  *
  * @param profile {@link Profile} - The profile object to convert
  */
-export function formatProfile(profile: Profile): Record<ProfileProperty, Object> {
+export function formatProfile(
+  profile: Profile
+): Record<ProfileProperty, Object> {
   let bridgedProfile: Record<ProfileProperty, Object> = {};
 
   if (profile.externalId) {
@@ -293,5 +358,12 @@ export function formatProfile(profile: Profile): Record<ProfileProperty, Object>
   return bridgedProfile;
 }
 
+/**
+ * Type for a profile property key
+ */
 export type ProfilePropertyKey = ProfileProperty | string;
+
+/**
+ * Type for profile properties
+ */
 export type ProfileProperties = Record<ProfilePropertyKey, Object>;

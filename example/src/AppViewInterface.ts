@@ -2,7 +2,6 @@ import {
   getEmail,
   getExternalId,
   getPhoneNumber,
-  initialize,
   resetProfile,
   sendRandomEvent,
   setEmail,
@@ -19,11 +18,6 @@ export interface AppViewInterface {
 }
 
 export const appViews: AppViewInterface[] = [
-  {
-    title: 'Click to init the SDK (ONLY FOR TESTING IN DEBUG MODE)',
-    color: '#841584',
-    onPress: initialize,
-  },
   {
     title: 'Click to set the full profile',
     color: '#841584',

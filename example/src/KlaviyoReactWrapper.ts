@@ -14,14 +14,6 @@ import {
   getRandomMetric,
 } from './RandomGenerators';
 
-export const initialize = async () => {
-  try {
-    Klaviyo.initialize('YOUR_PUBLIC_API_KEY');
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
 export const setEmail = async () => {
   try {
     Klaviyo.setEmail(generateRandomEmails());
