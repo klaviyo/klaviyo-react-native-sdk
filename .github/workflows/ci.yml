@@ -177,7 +177,6 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Commit and push docs
-        uses: actions/checkout@v4
         run: |
           git fetch origin documentation
           git checkout documentation
