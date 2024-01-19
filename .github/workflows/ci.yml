@@ -165,7 +165,7 @@ jobs:
 
   generate-documentation:
     # Only run on master branch push (e.g. after pull request merge).
-    if: github.event_name == 'push'
+#    if: github.event_name == 'push'
     runs-on: ubuntu-22.04
     env:
       CI_COMMIT_MESSAGE: Generated docs for ${{ github.sha }}
@@ -182,8 +182,9 @@ jobs:
           git checkout documentation
           git merge master
           yarn generate-docs
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add docs
-          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
-          git push
+          git status
+#          git config user.name github-actions
+#          git config user.email github-actions@github.com
+#          git add docs
+#          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+#          git push
