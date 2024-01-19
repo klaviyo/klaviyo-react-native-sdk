@@ -178,9 +178,9 @@ jobs:
 
       - name: Commit and push docs
         run: |
-          git fetch
+          git fetch --depth=1 --no-tags
           git checkout documentation
-          git merge origin master
+          git merge master
           yarn generate-docs
           git config user.name github-actions
           git config user.email github-actions@github.com
