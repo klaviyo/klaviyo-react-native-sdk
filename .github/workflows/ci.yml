@@ -182,7 +182,7 @@ jobs:
         run: |
           git fetch origin documentation
           git checkout documentation
-          git fetch
+          git fetch origin master
           git merge master
           yarn generate-docs
           git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
