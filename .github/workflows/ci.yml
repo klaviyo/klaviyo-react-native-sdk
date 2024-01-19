@@ -180,6 +180,7 @@ jobs:
 
       - name: Commit and push docs
         run: |
+          git fetch origin documentation
           git checkout documentation
           git fetch
           git merge master
