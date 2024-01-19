@@ -8,9 +8,6 @@ on:
     branches:
       - master
 
-permissions:
-  contents: write
-
 jobs:
   lint:
     runs-on: macos-13
