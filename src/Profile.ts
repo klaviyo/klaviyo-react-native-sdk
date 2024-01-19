@@ -272,7 +272,9 @@ export interface Profile {
  *
  * @param profile {@link Profile} - The profile object to convert
  */
-export function formatProfile(profile: Profile): Record<ProfileProperty, Object> {
+export function formatProfile(
+  profile: Profile
+): Record<ProfileProperty, Object> {
   let bridgedProfile: Record<ProfileProperty, Object> = {};
 
   if (profile.externalId) {
