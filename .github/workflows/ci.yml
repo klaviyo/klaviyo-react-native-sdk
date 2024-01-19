@@ -178,9 +178,8 @@ jobs:
 
       - name: Commit and push docs
         run: |
-          git fetch origin documentation
+          git fetch
           git checkout documentation
-          git fetch origin master
           git merge origin master
           yarn generate-docs
           git config user.name github-actions
