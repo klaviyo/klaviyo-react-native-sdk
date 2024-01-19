@@ -179,8 +179,8 @@ jobs:
       - name: Commit and push docs
         run: |
           git fetch --depth=1 --no-tags
-          git checkout documentation
-          git merge master
+          git checkout origin/documentation
+          git merge origin/master
           yarn generate-docs
           git status
 #          git config user.name github-actions
