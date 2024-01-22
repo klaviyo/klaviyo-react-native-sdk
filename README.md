@@ -26,7 +26,7 @@ pod install
 
 This may require you to install [Cocoapods](https://cocoapods.org/).
 
-Once you have installed Cocoapods, you will need to follow some setup steps from the iOS SDK [README](https://github.com/klaviyo/klaviyo-swift-sdk/blob/master/README.md).
+Once you have installed all the dependencies using cocoapods, you should have access to the native Klaviyo iOS SDK which we will use in the following section to setup your react native iOS project.
 
 ### Android Setup
 
@@ -35,10 +35,18 @@ For Android, simply follow any initialization instructions as indicated [here](h
 ## SDK Initialization
 
 Initialization should be done from the native layer:
+
 ### Android
+
 Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#configuration) guide on configuration.
+
 ### iOS
-Follow the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#:~:text=To%20add%20Klaviyo%27s,YOUR_KLAVIYO_PUBLIC_API_KEY%22) guide on configuration.
+
+Here's we'll create the native iOS SDK instance and initialize it with your Klaviyo public key.
+
+```swift
+KlaviyoSDK().initialize(with: "YOUR_KLAVIYO_PUBLIC_API_KEY")
+```
 
 ## Event Tracking
 
