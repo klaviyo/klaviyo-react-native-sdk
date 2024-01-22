@@ -35,9 +35,13 @@ For Android, simply follow any initialization instructions as indicated [here](h
 ## SDK Initialization
 
 Initialization should be done from the native layer:
+
 ### Android
+
 Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#configuration) guide on configuration.
+
 ### iOS
+
 Follow the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#:~:text=To%20add%20Klaviyo%27s,YOUR_KLAVIYO_PUBLIC_API_KEY%22) guide on configuration.
 
 ## Event Tracking
@@ -171,7 +175,7 @@ It is recommended that handling push permissions be done from the native layer. 
 
 ## Contributing
 
-See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+See the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
 ## License
 
