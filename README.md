@@ -42,7 +42,7 @@ Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#configuratio
 
 ### iOS
 
-Here's we'll create the native iOS SDK instance and initialize it with your Klaviyo public key.
+Here we'll create the native iOS SDK instance and initialize it with your Klaviyo public key.
 
 ```swift
 KlaviyoSDK().initialize(with: "YOUR_KLAVIYO_PUBLIC_API_KEY")
