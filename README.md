@@ -185,7 +185,7 @@ It is recommended that handling push permissions be done from the native layer. 
 
 ## Contributing
 
-See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+See the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
 ## License
 
