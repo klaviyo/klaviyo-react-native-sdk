@@ -51,8 +51,24 @@ KlaviyoSDK().initialize(with: "YOUR_KLAVIYO_PUBLIC_API_KEY")
 ## Event Tracking
 
 The SDK also provides tools for tracking analytics events to the Klaviyo API.
-A list of common Klaviyo-defined event names is provided in [MetricName](https://github.com/klaviyo/klaviyo-react-native-sdk/blob/main/src/Event.ts), or
-you can just provide a string for a custom event name:
+A list of common Klaviyo-defined event names is provided in [MetricName](https://github.com/klaviyo/klaviyo-react-native-sdk/blob/master/src/Event.ts), or
+you can just provide a string for a custom event name.
+
+Below is an example using one of the Klaviyo-defined event names:
+
+```typescript
+import { Event, Klaviyo, EventName } from 'klaviyo-react-native-sdk';
+
+const event: Event = {
+  name: EventName.STARTED_CHECKOUT_METRIC,
+  value: 99,
+  properties: { products: ['SKU1', 'SKU2'] },
+};
+
+Klaviyo.createEvent(event);
+```
+
+You can also create an event by providing a string for the event name as follows:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -60,22 +76,6 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 Klaviyo.createEvent({
   name: 'My Custom Event',
 });
-Klaviyo.createEvent(event);
-```
-
-Additional event properties can be specified as part of the `Event`
-
-```typescript
-import { Event, Klaviyo, EventName } from 'klaviyo-react-native-sdk';
-
-const event: Event = {
-  name: EventName.ADDED_TO_CART_METRIC,
-  properties: {
-    'Item Name': 'Shirt',
-    'Item Size': 'Large',
-    'Item Price': 19.99,
-  },
-};
 Klaviyo.createEvent(event);
 ```
 
