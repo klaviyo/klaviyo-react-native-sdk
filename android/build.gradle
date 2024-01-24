@@ -110,8 +110,8 @@ dependencies {
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-android:0.73.1"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  api "com.github.klaviyo.klaviyo-android-sdk:analytics:2.0.0-alpha.1"
-  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:2.0.0-alpha.1"
+  api "com.github.klaviyo.klaviyo-android-sdk:analytics:2.0.0"
+  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:2.0.0"
   implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
 }
 
