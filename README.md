@@ -35,7 +35,8 @@ Once you have installed all the dependencies using cocoapods, you should have ac
 
 ### Android Setup
 
-For Android, simply follow any initialization instructions as indicated [here](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#configuration).
+For Android, there are no additional installation requirements. The React Native SDK gradle file exposes transitive dependencies upon the Klaviyo Android SDK
+so you can import in your kotlin/java classes without modifying your gradle files. 
 
 ## SDK Initialization
 
@@ -43,7 +44,7 @@ Initialization should be done from the native layer:
 
 ### Android
 
-Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#configuration) guide on configuration.
+Follow the [Android](https://github.com/klaviyo/klaviyo-android-sdk#Initialization) guide on initializing.
 
 ### iOS
 
@@ -137,11 +138,11 @@ Klaviyo.createEvent(event);
 
 ## Push Notifications
 
-When setting up push notifications (including rich push notifications), you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#push-notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#push-notifications) SDKs.
+When setting up push notifications (including rich push notifications), you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#push-notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Push-Notifications) SDKs.
 
 ## Deep Linking
 
-To handle deep links in your app, start by familiarizing yourself with the React Native [guide](https://reactnative.dev/docs/linking) to deep linking. Once you've done that, you should follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#handling-deep-linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#deep-linking-in-push-notification) SDKs.
+To handle deep links in your app, start by familiarizing yourself with the React Native [guide](https://reactnative.dev/docs/linking) to deep linking. Once you've done that, you should follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#handling-deep-linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Deep-Linking) SDKs.
 The sections below give additional details for each platform as it pertains to React Native.
 
 ### iOS
@@ -161,7 +162,7 @@ you call the linking code block above similar to what you would do with option 1
 
 ### Android
 
-On Android, simply follow the [Android SDK docs](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#deep-linking-in-push-notification) on handling intent filters.
+On Android, simply follow the [Android SDK docs](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Deep-Linking) on handling intent filters.
 
 ### React Native Changes
 
