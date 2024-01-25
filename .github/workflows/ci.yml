@@ -180,7 +180,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: documentation
+          ref: master
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -190,8 +190,11 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git fetch origin
+          git pull
+          git checkout documentation
+          git pull
           git checkout -b "documentation-${{ github.sha }}"
-          git merge origin/master --no-edit --allow-unrelated-histories
+          git merge master --no-edit --allow-unrelated-histories
           yarn generate-docs
           git add docs
           git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
