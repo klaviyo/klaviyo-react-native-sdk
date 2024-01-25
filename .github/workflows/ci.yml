@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - ecm/doc-bot-fix
   pull_request:
     branches:
       - master
