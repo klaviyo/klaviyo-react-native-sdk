@@ -179,7 +179,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: documentation
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -188,6 +188,7 @@ jobs:
         run: |
           git fetch --depth=1 --no-tags
           git checkout -b "documentation-${{ github.sha }}"
+          git merge origin/master --no-edit
           yarn generate-docs
           git config user.name github-actions
           git config user.email github-actions@github.com
