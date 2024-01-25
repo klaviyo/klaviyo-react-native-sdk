@@ -138,11 +138,11 @@ Klaviyo.createEvent(event);
 
 ## Push Notifications
 
-When setting up push notifications (including rich push notifications), you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#push-notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Push-Notifications) SDKs.
+When setting up push notifications (including rich push notifications), you will need to follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#Push-Notifications) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Push-Notifications) SDKs.
 
 ## Deep Linking
 
-To handle deep links in your app, start by familiarizing yourself with the React Native [guide](https://reactnative.dev/docs/linking) to deep linking. Once you've done that, you should follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#handling-deep-linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Deep-Linking) SDKs.
+To handle deep links in your app, start by familiarizing yourself with the React Native [guide](https://reactnative.dev/docs/linking) to deep linking. Once you've done that, you should follow directions from the [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#Deep-Linking) and [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#Deep-Linking) SDKs.
 The sections below give additional details for each platform as it pertains to React Native.
 
 ### iOS
