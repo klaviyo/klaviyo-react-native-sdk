@@ -186,7 +186,6 @@ jobs:
 
       - name: Create Updated Documentation PR
         run: |
-          git fetch --depth=1 --no-tags
           git checkout -b "documentation-${{ github.sha }}"
           git merge origin/master --no-edit
           yarn generate-docs
