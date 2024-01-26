@@ -33,10 +33,41 @@ This may require you to install [Cocoapods](https://cocoapods.org/).
 
 Once you have installed all the dependencies using cocoapods, you should have access to the native Klaviyo iOS SDK which we will use in the following section to setup your react native iOS project.
 
+### Troubleshooting pod install issues
+
+if you are seeing issues with deployment versions when installing pods,
+you may need to update you minimum iOS version to 13.0 in your Podfile.
+
+An example of overriding the minimum iOS version in your Podfile is shown below:
+
+```ruby
+MIN_IOS_OVERRIDE = '13.0'
+if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
+    min_ios_version_supported = MIN_IOS_OVERRIDE
+end
+# existing code
+platform :ios, min_ios_version_supported
+```
+
+Another option is to use `IPHONEOS_DEPLOYMENT_TARGET` from your Xcode project file like below,
+
+```ruby
+#######
+# Read min iOS version from Xcode project and set as min iOS version for Podfile
+require 'xcodeproj'
+
+project_path = './YOUR_XCODE_PROJECT.xcodeproj'
+project = Xcodeproj::Project.open(project_path)
+min_ios_version_supported = project.build_configurations.first.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+######
+
+platform :ios, min_ios_version_supported
+```
+
 ### Android Setup
 
 For Android, there are no additional installation requirements. The React Native SDK gradle file exposes transitive dependencies upon the Klaviyo Android SDK
-so you can import in your kotlin/java classes without modifying your gradle files. 
+so you can import in your kotlin/java classes without modifying your gradle files.
 
 ## SDK Initialization
 
