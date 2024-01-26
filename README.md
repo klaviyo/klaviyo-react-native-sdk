@@ -36,7 +36,7 @@ Once you have installed all the dependencies using cocoapods, you should have ac
 ### Android Setup
 
 For Android, there are no additional installation requirements. The React Native SDK gradle file exposes transitive dependencies upon the Klaviyo Android SDK
-so you can import in your kotlin/java classes without modifying your gradle files. 
+so you can import in your kotlin/java classes without modifying your gradle files.
 
 ## SDK Initialization
 
@@ -190,6 +190,5 @@ See the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute
 
 ## License
 
-MIT
-
----
+## License
+The Klaviyo React Native SDK is available under the MIT license. See [LICENSE](./LICENSE) for more info.
