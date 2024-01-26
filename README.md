@@ -17,10 +17,6 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 The Klaviyo React Native SDK is available via [NPM](http://npmjs.com). To add it to your project,
 run the following from your project's root directory:
 
-### Platform Requirements
-- Android API Level 23+
-- iOS 13.0+
-
 ```sh
 # Using npm
 npm install klaviyo-react-native-sdk
@@ -30,16 +26,46 @@ yarn add klaviyo-react-native-sdk
 ```
 
 ### Android
+> ⚠️ The Klaviyo Android SDK supports Android API Level 23+.
+
 There are no additional installation requirements for Android. The React Native SDK's Gradle file exposes transitive
-dependencies upon the Klaviyo Android SDK, so you can import in your kotlin/java classes without modifying your
-gradle files.
+dependencies upon the Klaviyo Android SDK, so you can import the Klaviyo SDK from your kotlin/java files without
+modifying your gradle configuration.
 
 ### iOS
-On iOS, after installing the npm package run the following command in the `ios` directory of your React Native project:
-> Install [Cocoapods](https://cocoapods.org/) if you have not already.
+> ⚠️ The Klaviyo Swift SDK supports iOS 13+.
+
+After installing the npm package, run the following command in the `ios` directory of your React Native project.
+Install [Cocoapods](https://cocoapods.org/) if you have not already.
 ```sh
 pod install
 ```
+
+#### Troubleshooting
+If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
+minimum iOS version to 13.0 in your Podfile with one of the following strategies.
+- Specify iOS version directly in the podfile:
+  ```ruby
+  MIN_IOS_OVERRIDE = '13.0'
+  if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
+      min_ios_version_supported = MIN_IOS_OVERRIDE
+  end
+  # existing code
+  platform :ios, min_ios_version_supported
+  ```
+- Set the deployment target to 13.0 in XCode, and then pull `IPHONEOS_DEPLOYMENT_TARGET` from the XCode project:
+  ```ruby
+  #######
+  # Read min iOS version from Xcode project and set as min iOS version for Podfile
+  require 'xcodeproj'
+
+  project_path = './YOUR_XCODE_PROJECT.xcodeproj'
+  project = Xcodeproj::Project.open(project_path)
+  min_ios_version_supported = project.build_configurations.first.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+  ######
+
+  platform :ios, min_ios_version_supported
+  ```
 
 ## Initialization
 The SDK must be initialized with the short alphanumeric
