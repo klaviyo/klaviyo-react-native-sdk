@@ -29,7 +29,7 @@ yarn add klaviyo-react-native-sdk
 > ⚠️ The Klaviyo Android SDK supports Android API Level 23+.
 
 There are no additional installation requirements for Android. The React Native SDK's Gradle file exposes transitive
-dependencies upon the Klaviyo Android SDK, so you can import the Klaviyo SDK from your kotlin/java files without
+dependencies upon the Klaviyo Android SDK, so you can import the Klaviyo SDK from your Kotlin/Java files without
 modifying your gradle configuration.
 
 ### iOS
