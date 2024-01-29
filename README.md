@@ -44,7 +44,7 @@ pod install
 #### Troubleshooting
 If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
 minimum iOS version to 13.0 in your Podfile with one of the following strategies.
-- Specify iOS version directly in the podfile:
+- Specify iOS version directly in the `Podfile`:
   ```ruby
   MIN_IOS_OVERRIDE = '13.0'
   if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
