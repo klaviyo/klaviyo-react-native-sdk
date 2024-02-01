@@ -38,7 +38,11 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
 
     private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword {
-      return emptyMap()
+      return T::class.nestedClasses.filter {
+        it.visibility == KVisibility.PUBLIC && it.objectInstance != null
+      }.associate {
+        it.simpleName.toString() to (it.objectInstance as T).name
+      }
     }
 
     @ReactMethod
