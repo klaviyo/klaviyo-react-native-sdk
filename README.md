@@ -16,25 +16,14 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 ## Requirements
 For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
-Our current compatibility matrix is as follows:
 
-| React Native Version | Android | iOS |
-|----------------------|---------|-----|
-| >= 0.73.1            | ✅       | ✅   |
-| 0.72.10              | ⚠️      | ✅   |
-| 0.71.15              | ⚠️      | ✅   |
-| 0.68.7 - 0.70.15     | ✅       | ✅   |
-| <= 0.67.x            | ❔       | ❔   |
-
-- ✅ Fully supported and tested
-- ⚠️ Supported with modifications to config files, see installation notes
-- ❌ Not yet supported due to installation issues
+### React Native
+- `0.68.7+` - We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
+  Testing is ongoing to verify on older versions.
 
 ### Android
-- `minSdkVersion` of `24+` - We are investigating a React Native issue in order to bring this down to 23+,
-  for consistency with the Klaviyo Android SDK.
+- `minSdkVersion` of `23+`
 - `compileSdkVersion` of `34+`
-- `kotlinVersion` of `1.8.0+`
 
 ### iOS
 - Minimum Deployment Target `13.0+`
@@ -60,21 +49,19 @@ so you can import Android Klaviyo SDK references from your Kotlin/Java files wit
 There are no additional installation requirements. Android support is fully tested and verified,
 including `minSdkVersion=23`.
 
-#### React Native 0.71.x - 0.72.x
-We have successfully tested the Klaviyo React Native SDK in a bare React Native template app for these versions
+#### React Native 0.68.x - 0.72.x
+We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
 with the following modifications to the `android/build.gradle` file:
-- Set `compileSdkVersion=34`, if you have not already.
-- Set `minSdkVersion=24` in `android/build.gradle`.
-  We are actively working to address this inconsistency with the Klaviyo Android SDK, which supports API 23+.
-- Set `kotlinVersion` to at least `1.8.0`, the Klaviyo Android SDK is developed in Kotlin `1.9.22`
+- Set `compileSdkVersion=34`
+- Set `minSdkVersion=23`
 
-#### React Native <= 0.70.x
-We are actively working to resolve a gradle dependency issue related to the 0.71.0 React Native outage.
+#### React Native <= 0.67.x
+We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
 
 #### Android Troubleshooting
-- If you have set the proper `kotlinVersion`, yet still see errors related to kotlin version,
-  try adding `kotlin_version=kotlinVersion`. In some cases, it appears that setting the `kotlinVersion` variable is
-  not enough, perhaps due to some inconsistency in variable formatting within React Native build files.
+- We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
+  of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
+  repository and provide version numbers of your react-native dependencies.
 
 ### iOS
 After installing the npm package, run the following command in the `ios` directory of your React Native project.
