@@ -13,6 +13,32 @@ so that data is not lost if the device is offline or the app is terminated.
 Once integrated, your marketing team will be able to better understand your app users' needs and send them timely
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).
 
+## Requirements
+For initial beta release, the SDK was developed and tested against the latest release of React Native (0.73.1).
+We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
+Our current compatibility matrix is as follows:
+
+| React Native Version | Android  | iOS      |
+|----------------------|----------|----------|
+| 0.73.1               | ✅        | ✅        |
+| 0.72.10              | ⚠️       | ✅        |
+| 0.71.15              | ⚠️       | ✅        |
+| 0.68.7 - 0.70.15     | ❌        | ✅        |
+| <= 0.67.x            | untested | untested |
+
+- ✅ Fully supported and tested
+- ⚠️ Supported with modifications to config files, see installation notes
+- ❌ Not yet supported due to installation issues
+
+### Android
+- `minSdkVersion` of `24+` - We are investigating a React Native issue in order to bring this down to 23+,
+  for consistency with the Klaviyo Android SDK.
+- `compileSdkVersion` of `34+`
+- `kotlinVersion` of `1.8.0+`
+
+### iOS
+- Minimum Deployment Target `13.0+`
+
 ## Installation
 The Klaviyo React Native SDK is available via [NPM](http://npmjs.com). To add it to your project,
 run the following from your project's root directory:
@@ -25,39 +51,14 @@ npm install klaviyo-react-native-sdk
 yarn add klaviyo-react-native-sdk
 ```
 
-For initial release the SDK was developed and tested against the latest release of React Native (0.73.1). We are
-actively testing and expanding support to the latest patch release of recent minor versions of React Native.
-Our current compatibility matrix is as follows:
-
-| React Native Version | Android | iOS     |
-|----------------------|---------|---------|
-| 0.73.1               | ✅       | ✅       |
-| 0.72.10              | ⚠️      | ✅       |
-| 0.71.15              | ⚠️      | ✅       |
-| 0.68.7 - 0.70.15     | ❌       | ✅       |
-| <= 0.67.x            | unknown | unknown |
-
-- ✅ Fully supported and tested
-- ⚠️ Supported with modifications to config files, see installation notes
-- ❌ Not yet supported due to installation issues
-
 ### Android
-> ⚠️ The Klaviyo Android SDK supports Android API Level 23+.
-
-Requirements:
-- `minSdkVersion=23`
-- `compileSdkVersion=34`
-- `kotlinVersion=1.8.0` or higher
-
 Android installation requirements may vary depending upon your project configuration and other dependencies.
-The following instructions are generalized for a typical React Native project, based on testing against the React Native
-template applications.
-
-The Klaviyo React Native SDK's Gradle file exposes transitive dependencies upon the Klaviyo Android SDK, so you can
-import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
+The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
+so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
 #### React Native 0.73.x
-There are no additional installation requirements.
+There are no additional installation requirements. Android support is fully tested and verified,
+including `minSdkVersion=23`.
 
 #### React Native 0.71.x - 0.72.x
 We have successfully tested the Klaviyo React Native SDK in a bare React Native template app for these versions
@@ -76,11 +77,6 @@ We are actively working to resolve a gradle dependency issue related to the 0.71
   not enough, perhaps due to some inconsistency in variable formatting within React Native build files.
 
 ### iOS
-> ⚠️ The Klaviyo Swift SDK supports iOS 13+.
-
-Requirements:
-- Minimum Deployment Target of `13.0` or higher, see below.
-
 After installing the npm package, run the following command in the `ios` directory of your React Native project.
 Install [Cocoapods](https://cocoapods.org/) if you have not already.
 ```sh
