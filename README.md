@@ -29,16 +29,17 @@ For initial release the SDK was developed and tested against the latest release 
 actively testing and expanding support to the latest patch release of recent minor versions of React Native.
 Our current compatibility matrix is as follows:
 
-| React Native Version | Android  | iOS      |
-|----------------------|----------|----------|
-| 0.73.1               | ✅        | ✅        |
-| 0.72.10              | ⚠️       | ✅        |
-| 0.71.15              | ⚠️       | ✅        |
-| <= 0.70.15           | ❌        | ✅        |
+| React Native Version | Android | iOS     |
+|----------------------|---------|---------|
+| 0.73.1               | ✅       | ✅       |
+| 0.72.10              | ⚠️      | ✅       |
+| 0.71.15              | ⚠️      | ✅       |
+| 0.68.7 - 0.70.15     | ❌       | ✅       |
+| <= 0.67.x            | unknown | unknown |
 
-✅ - Fully supported and tested
-⚠️ - Supported with modifications to config files, see installation notes
-❌ - Not yet supported due to installation issues
+- ✅ Fully supported and tested
+- ⚠️ Supported with modifications to config files, see installation notes
+- ❌ Not yet supported due to installation issues
 
 ### Android
 > ⚠️ The Klaviyo Android SDK supports Android API Level 23+.
