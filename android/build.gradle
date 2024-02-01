@@ -1,7 +1,6 @@
 buildscript {
   // Buildscript is evaluated before everything else so we can't use getExtOrDefault
   def kotlin_version = rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["KlaviyoReactNativeSdk_kotlinVersion"]
-  def kotlinVersion = kotlin_version
 
   repositories {
     google()
@@ -113,7 +112,6 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:2.0.0"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:2.0.0"
-  implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
 }
 
 if (isNewArchitectureEnabled()) {
