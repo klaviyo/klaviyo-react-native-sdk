@@ -20,7 +20,7 @@ Our current compatibility matrix is as follows:
 
 | React Native Version | Android  | iOS      |
 |----------------------|----------|----------|
-| 0.73.1               | ✅        | ✅        |
+| >= 0.73.1            | ✅        | ✅        |
 | 0.72.10              | ⚠️       | ✅        |
 | 0.71.15              | ⚠️       | ✅        |
 | 0.68.7 - 0.70.15     | ❌        | ✅        |
