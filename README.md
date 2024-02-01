@@ -14,17 +14,17 @@ Once integrated, your marketing team will be able to better understand your app 
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).
 
 ## Requirements
-For initial beta release, the SDK was developed and tested against the latest release of React Native (0.73.1).
+For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 Our current compatibility matrix is as follows:
 
-| React Native Version | Android  | iOS      |
-|----------------------|----------|----------|
-| >= 0.73.1            | ✅        | ✅        |
-| 0.72.10              | ⚠️       | ✅        |
-| 0.71.15              | ⚠️       | ✅        |
-| 0.68.7 - 0.70.15     | ❌        | ✅        |
-| <= 0.67.x            | untested | untested |
+| React Native Version | Android | iOS |
+|----------------------|---------|-----|
+| >= 0.73.1            | ✅       | ✅   |
+| 0.72.10              | ⚠️      | ✅   |
+| 0.71.15              | ⚠️      | ✅   |
+| 0.68.7 - 0.70.15     | ✅       | ✅   |
+| <= 0.67.x            | ❔       | ❔   |
 
 - ✅ Fully supported and tested
 - ⚠️ Supported with modifications to config files, see installation notes
