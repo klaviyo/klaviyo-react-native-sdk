@@ -5,8 +5,10 @@
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
 Klaviyo iOS and Android SDKs. For more information on the native SDKs, please see the
-[iOS](https://github.com/klaviyo/klaviyo-swift-sdk) and [Android](https://github.com/klaviyo/klaviyo-android-sdk)
-repositories. The SDK assists in identifying users and tracking user events via the latest Klaviyo Client APIs.
+[iOS](https://github.com/klaviyo/klaviyo-swift-sdk) and [Android](https://github.com/klaviyo/klaviyo-android-sdk).
+repositories. This repo also contains a basic [React Native sample app](./example) to assist your integration.
+
+The SDK assists in identifying users and tracking user events via the latest Klaviyo Client APIs.
 To reduce performance overhead, API requests are queued and sent in batches. The queue is persisted to local storage
 so that data is not lost if the device is offline or the app is terminated.
 
@@ -100,9 +102,12 @@ minimum iOS version to 13.0 in your Podfile with one of the following strategies
 The SDK must be initialized with the short alphanumeric
 [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID. Initialization is done in the native layer, and must occur before
-any other SDK methods can be invoked. Follow the native SDK instructions for initialization:
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Initialization)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization)
+any other SDK methods can be invoked. Follow the native SDK instructions for initialization, and refer to the
+[example app](./example) in this repository for guidance:
+- [Android SDK instructions](https://github.com/klaviyo/klaviyo-android-sdk#Initialization), and
+  [example app `MainApplication.kt`](./example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainApplication.kt#L39)
+- [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
+  [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
 
 ## Identifying a Profile
 The SDK provides methods to identify profiles via the
