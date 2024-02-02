@@ -49,7 +49,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     override fun setProfile(profile: ReadableMap) {
       val parsedProfile = Profile()
 
-      profile.toHashMap().forEach { (key, value) ->
+      profile.toHashMap().iterator().forEach { (key, value) ->
         when (key) {
           LOCATION, PROPERTIES ->
             (value as? HashMap<*, *>)?.forEach { (key, value) ->
