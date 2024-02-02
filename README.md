@@ -102,9 +102,7 @@ The SDK must be initialized with the short alphanumeric
 for your Klaviyo account, also known as your Site ID. Initialization is done in the native layer, and must occur before
 any other SDK methods can be invoked. Follow the native SDK instructions for initialization:
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Initialization)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#event-tracking)
-
-[//]: # (TODO - change swift-sdk link to #Initialization)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization)
 
 ## Identifying a Profile
 The SDK provides methods to identify profiles via the
@@ -204,16 +202,12 @@ instructions for Push Notifications in the README from each native Klaviyo SDK:
 ### Setup
 Refer to the following README sections on push setup:
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Setup)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications
-
-[//]: # (TODO - change swift-sdk link to #Setup)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Setup)
 
 ### Collecting Push Tokens
 Push tokens must be collected in the native layer. Follow the platform-specific instructions below:
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Collecting-Push-Tokens)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#sending-push-notifications)
-
-[//]: # (TODO - change swift-sdk link to #Collecting-Push-Tokens)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Collecting-Push-Tokens)
 
 #### Notification Permission
 Requesting user permission to display notifications can be managed in the native layer as instructed in our native SDK
@@ -231,17 +225,13 @@ feature in order to test your integration.
 push notification messages. On iOS, you will need to implement an extension service to attach images to notifications.
 No additional setup is needed to support rich push on Android.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Rich-Push)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#rich-push-notifications)
-
-[//]: # (TODO - change swift-sdk link to #Rich-Push)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
 #### Tracking Open Events
 Klaviyo tracks push opens events with a specially formatted event `Opened Push` that includes message tracking
 parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#tracking-push-notifications)
-
-[//]: # (TODO - change swift-sdk link to #Tracking-Open-Events)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
 
 #### Tracking Open Events
 To track push notification opens, you must call `Klaviyo.handlePush(intent)` when your app is launched from an intent.
