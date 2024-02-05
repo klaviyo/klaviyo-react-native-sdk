@@ -8,7 +8,7 @@ Klaviyo iOS and Android SDKs. For more information on the native SDKs, please se
 [iOS](https://github.com/klaviyo/klaviyo-swift-sdk) and [Android](https://github.com/klaviyo/klaviyo-android-sdk).
 repositories. This repo also contains a basic [React Native sample app](./example) to assist your integration.
 
-The SDK assists in identifying users and tracking user events via the latest Klaviyo Client APIs.
+The SDK assists in identifying users and tracking user events via the latest [Klaviyo Client APIs](https://developers.klaviyo.com/en/reference/api_overview).
 To reduce performance overhead, API requests are queued and sent in batches. The queue is persisted to local storage
 so that data is not lost if the device is offline or the app is terminated.
 
