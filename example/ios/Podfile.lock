@@ -72,12 +72,12 @@ PODS:
   - hermes-engine (0.73.1):
     - hermes-engine/Pre-built (= 0.73.1)
   - hermes-engine/Pre-built (0.73.1)
-  - klaviyo-react-native-sdk (0.1.0):
+  - klaviyo-react-native-sdk (0.1.1):
     - glog
-    - KlaviyoSwift (= 3.0.0)
+    - KlaviyoSwift (= 3.0.2)
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
-  - KlaviyoSwift (3.0.0):
+  - KlaviyoSwift (3.0.2):
     - AnyCodable-FlightSchool
   - libevent (2.1.12)
   - OpenSSL-Universal (1.1.1100)
@@ -1335,8 +1335,8 @@ SPEC CHECKSUMS:
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
   glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
   hermes-engine: 34df9d5034e90bd9bf1505e1ca198760373935af
-  klaviyo-react-native-sdk: ab1e9cd0d87782ebbd45235ed71bed06c0c85ee7
-  KlaviyoSwift: 772fd78ef4b1f5d22c192b19e3ac2fd58ad49c90
+  klaviyo-react-native-sdk: 77958d8c266009950362f3c51e325b4d26d328a9
+  KlaviyoSwift: b3454b6c177b67b72b0afa1b77f6bf6281e9c754
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   OpenSSL-Universal: ebc357f1e6bc71fa463ccb2fe676756aff50e88c
   RCT-Folly: 7169b2b1c44399c76a47b5deaaba715eeeb476c0
