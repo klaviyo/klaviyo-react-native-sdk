@@ -103,15 +103,33 @@ repositories {
 }
 
 def kotlin_version = getExtOrDefault("kotlinVersion")
+def localProperties = new Properties()
+if (rootProject.file("local.properties").canRead()) {
+    localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+}
+def reactNativeVersion = localProperties['reactNativeAndroidVersion'] ?: ""
+
 
 dependencies {
-  // For < 0.71, this will be from the local maven repo
-  // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
-  //noinspection GradleDynamicVersion
-  implementation "com.facebook.react:react-android:0.73.1"
+  if (reactNativeVersion) {
+    // For local development of the SDK code, specify the react-android version to use
+    // So that the SDK can be built and .kt files are linted against a real version of react-native
+    implementation "com.facebook.react:react-android:$reactNativeVersion"
+  } else {
+    // Production build / once embedded in a react-native app,
+    // the react-native version gets loaded in from the application dependencies.
+    // For < 0.71, this will be from the local maven repo
+    // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
+    //noinspection GradleDynamicVersion
+    implementation "com.facebook.react:react-native:+"
+  }
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+  // Klaviyo Android SDK
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:2.0.0"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:2.0.0"
+
+  // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
   implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
 }
 
