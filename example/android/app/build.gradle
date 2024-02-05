@@ -70,6 +70,12 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
+    def localProperties = new Properties()
+    if (rootProject.file("local.properties").canRead()) {
+        localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+    }
+    def apiKey = localProperties['publicApiKey'] ?: publicApiKey
+
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
@@ -93,6 +99,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -100,6 +107,7 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
         }
     }
 }
