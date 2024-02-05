@@ -158,8 +158,8 @@ jobs:
       - name: Install cocoapods
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
-          yarn pod-install example/ios
-          brew install watchman
+          cd example/ios
+          pod install
         env:
           NO_FLIPPER: 1
 
