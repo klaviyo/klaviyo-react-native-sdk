@@ -36,7 +36,7 @@ class MainApplication : Application(), ReactApplication {
   override fun onCreate() {
     super.onCreate()
     SoLoader.init(this, false)
-    Klaviyo.initialize("YOUR_PUBLIC_API_KEY", this)
+    Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
     registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
 
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
