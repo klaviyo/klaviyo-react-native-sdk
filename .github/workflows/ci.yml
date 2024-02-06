@@ -158,8 +158,7 @@ jobs:
       - name: Install cocoapods
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
-          cd example/ios
-          pod install
+          yarn pod-install example/ios
         env:
           NO_FLIPPER: 1
 
