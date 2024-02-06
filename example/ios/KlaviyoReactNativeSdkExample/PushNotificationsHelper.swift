@@ -6,6 +6,11 @@ import KlaviyoSwift
 @objc(PushNotificationsHelper)
 class PushNotificationsHelper: NSObject {
   @objc
+  static func initializeSDK() {
+    KlaviyoSDK().initialize(with: "YOUR_PUBLIC_API_KEY")
+  }
+
+  @objc
   static func requestPushPermission() {
     // since we need the SDK to be initialized before setting the push token to it
     initializeSDK()
@@ -29,10 +34,5 @@ class PushNotificationsHelper: NSObject {
   @objc
   static func setPushToken(token: Data) {
     KlaviyoSDK().set(pushToken: token)
-  }
-
-  @objc
-  private static func initializeSDK() {
-    KlaviyoSDK().initialize(with: "YOUR_PUBLIC_API_KEY")
   }
 }
