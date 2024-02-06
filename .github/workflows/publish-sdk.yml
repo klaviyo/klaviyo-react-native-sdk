@@ -2,7 +2,7 @@ name: Publish SDK to NPM
 
 on:
   release:
-    types: [ published, prereleased ]
+    types: [ published ]
 
 jobs:
   publish-sdk:
@@ -24,4 +24,4 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           registry: "https://npm.pkg.github.com"
-          dry-run: ${{ github.event_type == 'prereleased' }}
+          dry-run: true
