@@ -1,0 +1,24 @@
+on:
+  push:
+    branches: ecm/publish-action
+
+jobs:
+  publish-sdk:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+#      packages: write # allow GITHUB_TOKEN to publish packages
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Prepare
+        run: yarn prepare
+
+      - uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          registry: "https://npm.pkg.github.com"
+          dry-run: true
