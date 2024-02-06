@@ -1,13 +1,16 @@
+name: Publish SDK to NPM
+
 on:
-  push:
-    branches: ecm/publish-action
+  release:
+    types: [ published ]
 
 jobs:
   publish-sdk:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
-#      packages: write # allow GITHUB_TOKEN to publish packages
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,4 +24,3 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           registry: "https://npm.pkg.github.com"
-          dry-run: true
