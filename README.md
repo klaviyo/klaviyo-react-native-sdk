@@ -72,8 +72,9 @@ We are actively working to verify compatibility with these versions. If you enco
 After installing the npm package, run the following command in the `ios` directory of your React Native project.
 Install [Cocoapods](https://cocoapods.org/) if you have not already.
 ```sh
-pod install --repo-update
+pod install
 ```
+> ℹ️ if the above command is outputting version mismatch errors for `KlaviyoSwift`, please run `pod update KlaviyoSwift` as indicated in the error message to update your local pods spec repo.
 
 #### iOS Troubleshooting
 If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
