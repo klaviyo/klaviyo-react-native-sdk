@@ -113,36 +113,6 @@ any other SDK methods can be invoked. Follow the native SDK instructions for ini
 - [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
   [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
 
-### Android
-Android installation requirements may vary depending upon your project configuration and other dependencies.
-The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
-so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
-
-#### React Native 0.73.x
-There are no additional installation requirements. Android support is fully tested and verified,
-including `minSdkVersion=23`.
-
-#### React Native 0.68.x - 0.72.x
-We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
-with the following modifications to the `android/build.gradle` file:
-- Set `compileSdkVersion=34`
-- Set `minSdkVersion=23`
-
-#### React Native <= 0.67.x
-We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
-
-#### Android Troubleshooting
-- We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
-  of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
-  repository and provide version numbers of your react-native dependencies.
-
-### iOS
-After installing the npm package, run the following command in the `ios` directory of your React Native project.
-Install [Cocoapods](https://cocoapods.org/) if you have not already.
-```sh
-pod install --repo-update
-```
-
 #### iOS Troubleshooting
 If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
 minimum iOS version to 13.0 in your Podfile with one of the following strategies.
