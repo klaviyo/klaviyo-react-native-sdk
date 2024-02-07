@@ -1,5 +1,8 @@
 # klaviyo-react-native-sdk
 
+[![Android](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml)
+[![iOS](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml)
+
 ⚠️ This repository is in beta development ⚠️
 
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
