@@ -1,5 +1,8 @@
 # klaviyo-react-native-sdk
 
+[![Android](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml)
+[![iOS](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml)
+
 ⚠️ This repository is in beta development ⚠️
 
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
@@ -41,6 +44,74 @@ npm install klaviyo-react-native-sdk
 # Using yarn
 yarn add klaviyo-react-native-sdk
 ```
+
+### Android
+Android installation requirements may vary depending upon your project configuration and other dependencies.
+The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
+so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
+
+#### React Native 0.73.x
+There are no additional installation requirements. Android support is fully tested and verified,
+including `minSdkVersion=23`.
+
+#### React Native 0.68.x - 0.72.x
+We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
+with the following modifications to the `android/build.gradle` file:
+- Set `compileSdkVersion=34`
+- Set `minSdkVersion=23`
+
+#### React Native <= 0.67.x
+We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
+
+#### Android Troubleshooting
+- We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
+  of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
+  repository and provide version numbers of your react-native dependencies.
+
+### iOS
+After installing the npm package, run the following command in the `ios` directory of your React Native project.
+Install [Cocoapods](https://cocoapods.org/) if you have not already.
+```sh
+pod install
+```
+> ℹ️ if the above command is outputting version mismatch errors for `KlaviyoSwift`, please run `pod update KlaviyoSwift` as indicated in the error message to update your local pods spec repo.
+
+#### iOS Troubleshooting
+If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
+minimum iOS version to 13.0 in your Podfile with one of the following strategies.
+- Specify iOS version directly in the `Podfile`:
+  ```ruby
+  MIN_IOS_OVERRIDE = '13.0'
+  if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
+      min_ios_version_supported = MIN_IOS_OVERRIDE
+  end
+  # existing code
+  platform :ios, min_ios_version_supported
+  ```
+- Set the deployment target to 13.0 in XCode, and then pull `IPHONEOS_DEPLOYMENT_TARGET` from the XCode project:
+  ```ruby
+  #######
+  # Read min iOS version from Xcode project and set as min iOS version for Podfile
+  require 'xcodeproj'
+
+  project_path = './YOUR_XCODE_PROJECT.xcodeproj'
+  project = Xcodeproj::Project.open(project_path)
+  min_ios_version_supported = project.build_configurations.first.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+  ######
+
+  platform :ios, min_ios_version_supported
+  ```
+
+## Initialization
+The SDK must be initialized with the short alphanumeric
+[public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
+for your Klaviyo account, also known as your Site ID. Initialization is done in the native layer, and must occur before
+any other SDK methods can be invoked. Follow the native SDK instructions for initialization, and refer to the
+[example app](./example) in this repository for guidance:
+- [Android SDK instructions](https://github.com/klaviyo/klaviyo-android-sdk#Initialization), and
+  [example app `MainApplication.kt`](./example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainApplication.kt#L39)
+- [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
+  [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
 
 ### Android
 Android installation requirements may vary depending upon your project configuration and other dependencies.
