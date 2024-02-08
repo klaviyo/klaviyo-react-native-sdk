@@ -36,6 +36,8 @@ class MainApplication : Application(), ReactApplication {
   override fun onCreate() {
     super.onCreate()
     SoLoader.init(this, false)
+
+    // If initializing from the native layer:
     Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
     registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
 

@@ -11,6 +11,7 @@
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
 
+  // If initializing from Native layer
   [PushNotificationsHelper initializeSDK];
   [PushNotificationsHelper requestPushPermission];
 

@@ -17,6 +17,11 @@ RCT_EXPORT_MODULE()
     };
 }
 
+RCT_EXPORT_METHOD(initialize: (NSString *)apiKey)
+{
+    [KlaviyoBridge initialize: apiKey];
+}
+
 //MARK: Setters
 
 RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)

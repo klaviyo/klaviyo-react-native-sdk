@@ -1,4 +1,5 @@
 import {
+  initialize,
   getEmail,
   getExternalId,
   getPhoneNumber,
@@ -18,6 +19,11 @@ export interface AppViewInterface {
 }
 
 export const appViews: AppViewInterface[] = [
+  {
+    title: 'Click to initialize',
+    color: '#841584',
+    onPress: initialize,
+  },
   {
     title: 'Click to set the full profile',
     color: '#841584',

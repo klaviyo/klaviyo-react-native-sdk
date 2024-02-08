@@ -1,5 +1,6 @@
 package com.klaviyoreactnativesdk
 
+import android.app.Application
 import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
@@ -44,6 +45,14 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
         it.simpleName.toString() to (it.objectInstance as T).name
       }
     }
+
+  @ReactMethod
+  override fun initialize(apiKey: String) {
+    Klaviyo.initialize(apiKey, context)
+
+    val application = context.applicationContext as? Application
+    application?.registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+  }
 
     @ReactMethod
     override fun setProfile(profile: ReadableMap) {

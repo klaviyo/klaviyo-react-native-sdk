@@ -43,6 +43,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func initialize(_ apiKey: String) {
+      KlaviyoSDK().initialize(with: apiKey)
+  }
+
+  @objc
   public static func setProfile(
       _ profileDict: [String: AnyObject]
   ) {
