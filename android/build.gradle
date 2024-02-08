@@ -107,7 +107,7 @@ def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
     localProperties.load(new FileInputStream(rootProject.file("local.properties")))
 }
-def reactNativeVersion = localProperties['reactNativeAndroidVersion'] ?: ""
+def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
 
 
 dependencies {
