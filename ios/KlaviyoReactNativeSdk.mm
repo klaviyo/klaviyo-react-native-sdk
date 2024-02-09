@@ -22,8 +22,6 @@ RCT_EXPORT_METHOD(initialize: (NSString *)apiKey)
     [KlaviyoBridge initialize: apiKey];
 }
 
-//MARK: Setters
-
 RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
 {
     [KlaviyoBridge setProfile:profileDict];
@@ -57,6 +55,11 @@ RCT_EXPORT_METHOD(setPhoneNumber: (NSString *)phoneNumber)
 RCT_EXPORT_METHOD(getPhoneNumber: (RCTResponseSenderBlock)callback) {
     NSString *phoneNumber = [KlaviyoBridge getPhoneNumber];
     callback(@[phoneNumber]);
+}
+
+RCT_EXPORT_METHOD(setPushToken: (NSString *)pushToken)
+{
+    [KlaviyoBridge setPushToken: pushToken];
 }
 
 RCT_EXPORT_METHOD(resetProfile)

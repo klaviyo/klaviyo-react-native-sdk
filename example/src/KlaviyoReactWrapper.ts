@@ -85,6 +85,14 @@ export const resetProfile = async () => {
   }
 };
 
+export const setPushToken = async () => {
+  try {
+    Klaviyo.setPushToken('FAKE_PUSH_TOKEN');
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const setProfileAttribute = async () => {
   try {
     Klaviyo.setProfileAttribute('CUSTOM', generateRandomName(12));

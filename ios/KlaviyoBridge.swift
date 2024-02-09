@@ -113,6 +113,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func setPushToken(_ value: String) {
+    KlaviyoSDK().set(pushToken: value)
+  }
+
+  @objc
   public static func resetProfile() {
     KlaviyoSDK().resetProfile()
   }

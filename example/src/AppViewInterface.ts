@@ -4,6 +4,7 @@ import {
   getExternalId,
   getPhoneNumber,
   resetProfile,
+  setPushToken,
   sendRandomEvent,
   setEmail,
   setExternalId,
@@ -53,6 +54,11 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to RESET the full profile',
     color: '#ffcccb',
     onPress: resetProfile,
+  },
+  {
+    title: 'Click to set a FAKE push token',
+    color: '#ffcccb',
+    onPress: setPushToken,
   },
   {
     title: 'Click to get current email',
