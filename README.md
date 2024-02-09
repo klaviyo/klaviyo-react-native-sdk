@@ -45,6 +45,14 @@ npm install klaviyo-react-native-sdk
 yarn add klaviyo-react-native-sdk
 ```
 
+### Example App
+We have included a bare-bones example app in this repository for reference. To run the example app:
+- Make a local clone of this repository
+- Run `yarn install --immutable` from the root directory
+- Navigate to the `example` directory and run `bundle install`
+- Navigate to the `example/ios` directory and run `bundle exec pod install`
+- Run `yarn start` from the root directory
+
 ### Android
 Android installation requirements may vary depending upon your project configuration and other dependencies.
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
