@@ -46,21 +46,21 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
       }
     }
 
-  @ReactMethod
-  override fun initialize(apiKey: String) {
-    Klaviyo.initialize(apiKey, context)
+    @ReactMethod
+    override fun initialize(apiKey: String) {
+      Klaviyo.initialize(apiKey, context)
 
-    // Attach the Klaviyo lifecycle callbacks to the application if initialize
-    // is invoked from the react-native layer.
-    val application = context.applicationContext as? Application
+      // Attach the Klaviyo lifecycle callbacks to the application if initialize
+      // is invoked from the react-native layer.
+      val application = context.applicationContext as? Application
 
-    if (application != null) {
-      application.unregisterActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
-      application.registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
-    } else {
-      println("KlaviyoReactNativeSdkModule: Could not register lifecycle callbacks.")
+      if (application != null) {
+        application.unregisterActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+        application.registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+      } else {
+        println("KlaviyoReactNativeSdkModule: Could not register lifecycle callbacks.")
+      }
     }
-  }
 
     @ReactMethod
     override fun setProfile(profile: ReadableMap) {
@@ -74,6 +74,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
                 parsedProfile[key] = value
               }
             }
+
           else ->
             if (value is Serializable) {
               parsedProfile[key] = value
