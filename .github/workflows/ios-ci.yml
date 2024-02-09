@@ -25,9 +25,9 @@ jobs:
         with:
           ruby-version: '2.6.10'
 
-      - name: Setup
-        uses: ./.github/actions/setup
-
+#      - name: Setup
+#        uses: ./.github/actions/setup
+#
 #      - name: Cache turborepo for iOS
 #        uses: actions/cache@v4
 #        with:
@@ -35,7 +35,7 @@ jobs:
 #          key: ${{ runner.os }}-turborepo-ios-${{ hashFiles('yarn.lock') }}
 #          restore-keys: |
 #            ${{ runner.os }}-turborepo-ios-
-
+#
 #      - name: Check turborepo cache for iOS
 #        run: |
 #          TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
@@ -58,11 +58,10 @@ jobs:
       - name: Install cocoapods
 #        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
+          yarn install --immutable
           cd example/ios
           pod install
-        env:
-          NO_FLIPPER: 1
 
       - name: Build example for iOS
         run: |
-          yarn turbo run build:ios
+          yarn build:ios
