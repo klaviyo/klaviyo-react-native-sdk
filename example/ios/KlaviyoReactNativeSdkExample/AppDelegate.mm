@@ -44,7 +44,8 @@ BOOL isDebug = YES;
   }
 }
 
-// Installation Step 9: Implement the delegate didReceiveNotificationResponse to handle push notifications when the app is in the background
+// Installation Step 9: Implement the delegate didReceiveNotificationResponse to response to user actions (tapping on push) push notifications
+// when the app is in the background
 // NOTE: this delegate will NOT be called if Installation Step 2 is not done.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
   // Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments. Note that handleReceivingPushWithResponse calls our SDK and is
