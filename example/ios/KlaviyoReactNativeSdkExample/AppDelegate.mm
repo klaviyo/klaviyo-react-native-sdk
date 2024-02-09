@@ -87,6 +87,13 @@ BOOL isDebug = YES;
   completionHandler(UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound);
 }
 
+// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
+// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
+// additionally routing to the right screen in the app based on the url is also something that should be handled
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+  return [PushNotificationsHelper handleDeepLinksWithUrl:url];
+}
+
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
 {
