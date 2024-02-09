@@ -50,8 +50,16 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
   override fun initialize(apiKey: String) {
     Klaviyo.initialize(apiKey, context)
 
+    // Attach the Klaviyo lifecycle callbacks to the application if initialize
+    // is invoked from the react-native layer.
     val application = context.applicationContext as? Application
-    application?.registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+
+    if (application != null) {
+      application.unregisterActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+      application.registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+    } else {
+      println("KlaviyoReactNativeSdkModule: Could not register lifecycle callbacks.")
+    }
   }
 
     @ReactMethod
@@ -117,6 +125,16 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     @ReactMethod
     override fun resetProfile() {
       Klaviyo.resetProfile()
+    }
+
+    @ReactMethod
+    override fun setPushToken(token: String) {
+      Klaviyo.setPushToken(token)
+    }
+
+    @ReactMethod
+    override fun getPushToken(callback: Callback) {
+      callback.invoke(Klaviyo.getPushToken())
     }
 
     @ReactMethod
