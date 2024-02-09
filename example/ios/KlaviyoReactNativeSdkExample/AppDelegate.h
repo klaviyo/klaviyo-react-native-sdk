@@ -3,6 +3,7 @@
 #import <UserNotifications/UserNotifications.h>
 #import "KlaviyoReactNativeSdkExample-Swift.h"
 
-@interface AppDelegate : RCTAppDelegate
+// Installation Step 1: Conform AppDelegate to UNUserNotificationCenterDelegate
+@interface AppDelegate: RCTAppDelegate <UNUserNotificationCenterDelegate>
 
 @end
