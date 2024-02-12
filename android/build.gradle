@@ -102,6 +102,7 @@ repositories {
   google()
 }
 
+def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 def kotlin_version = getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
@@ -126,8 +127,8 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
   // Klaviyo Android SDK
-  api "com.github.klaviyo.klaviyo-android-sdk:analytics:2.0.0"
-  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:2.0.0"
+  api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
+  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
 
   // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
   implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"

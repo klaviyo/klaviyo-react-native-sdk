@@ -16,7 +16,7 @@ BOOL isDebug = YES;
   // Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  // Installation Step 3: Initilize the SDK with public key.
+  // Installation Step 3: Initialize the SDK with public key.
   [PushNotificationsHelper initializeSDK: @"YOUR_COMPANY_API_KEY_HERE"];
 
   // Installation Step 4: Request push permission from the user
