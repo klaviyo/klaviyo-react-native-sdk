@@ -16,26 +16,51 @@ jobs:
     runs-on: macos-13
     env:
       DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
+      TURBO_CACHE_DIR: .turbo/ios
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
+      - name: Setup
+        uses: ./.github/actions/setup
 
-      - uses: ruby/setup-ruby@v1
+      - name: Cache turborepo for iOS
+        uses: actions/cache@v4
         with:
-          ruby-version: '2.6.10'
+          path: ${{ env.TURBO_CACHE_DIR }}
+          key: ${{ runner.os }}-turborepo-ios-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-turborepo-ios-
+
+      - name: Check turborepo cache for iOS
+        run: |
+          TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
+
+          if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
+            echo "turbo_cache_hit=1" >> $GITHUB_ENV
+          fi
+
+      - name: Cache cocoapods
+        if: env.turbo_cache_hit != 1
+        id: cocoapods-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/ios/Pods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-
 
       - name: Install cocoapods
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
-          npx react-native info
-          yarn install --immutable
-          cd example/ios
-          pod install --repo-update
+          yarn pod-install example/ios
+          echo "$(<example/ios/xcode.env.local )"
+          rm example/ios/xcode.env.local
+
+        env:
+          NO_FLIPPER: 1
 
       - name: Build example for iOS
         run: |
-          yarn build:ios
+          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
