@@ -54,13 +54,9 @@ jobs:
       - name: Install cocoapods
         if: (env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true') || ${{ github.run_attempt > 1 }}
         run: |
-#          yarn pod-install example/ios
           (cd example/ios && pod install)
           git status
           git diff
-
-#        env:
-#          NO_FLIPPER: 1
 
       - name: Build example for iOS
         run: |
