@@ -255,11 +255,6 @@ parameters in the event properties. To track push opens, you will need to follow
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
 
-#### Tracking Open Events
-To track push notification opens, you must call `Klaviyo.handlePush(intent)` when your app is launched from an intent.
-This method will check if the app was opened from a notification originating from Klaviyo and if so, create an
-`Opened Push` event with required message tracking parameters. For example:
-
 #### Deep Linking
 [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
 page within your app in response to the user opening a notification. Familiarize yourself with the
