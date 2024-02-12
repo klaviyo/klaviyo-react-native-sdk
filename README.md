@@ -113,43 +113,6 @@ any other SDK methods can be invoked. Follow the native SDK instructions for ini
 - [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
   [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
 
-#### iOS Troubleshooting
-If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
-minimum iOS version to 13.0 in your Podfile with one of the following strategies.
-- Specify iOS version directly in the `Podfile`:
-  ```ruby
-  MIN_IOS_OVERRIDE = '13.0'
-  if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
-      min_ios_version_supported = MIN_IOS_OVERRIDE
-  end
-  # existing code
-  platform :ios, min_ios_version_supported
-  ```
-- Set the deployment target to 13.0 in XCode, and then pull `IPHONEOS_DEPLOYMENT_TARGET` from the XCode project:
-  ```ruby
-  #######
-  # Read min iOS version from Xcode project and set as min iOS version for Podfile
-  require 'xcodeproj'
-
-  project_path = './YOUR_XCODE_PROJECT.xcodeproj'
-  project = Xcodeproj::Project.open(project_path)
-  min_ios_version_supported = project.build_configurations.first.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
-  ######
-
-  platform :ios, min_ios_version_supported
-  ```
-
-## Initialization
-The SDK must be initialized with the short alphanumeric
-[public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
-for your Klaviyo account, also known as your Site ID. Initialization is done in the native layer, and must occur before
-any other SDK methods can be invoked. Follow the native SDK instructions for initialization, and refer to the
-[example app](./example) in this repository for guidance:
-- [Android SDK instructions](https://github.com/klaviyo/klaviyo-android-sdk#Initialization), and
-  [example app `MainApplication.kt`](./example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainApplication.kt#L39)
-- [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
-  [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
-
 ## Identifying a Profile
 The SDK provides methods to identify profiles via the
 [Create Client Profile API](https://developers.klaviyo.com/en/reference/create_client_profile).
@@ -283,11 +246,6 @@ Klaviyo tracks push opens events with a specially formatted event `Opened Push` 
 parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
-
-#### Tracking Open Events
-To track push notification opens, you must call `Klaviyo.handlePush(intent)` when your app is launched from an intent.
-This method will check if the app was opened from a notification originating from Klaviyo and if so, create an
-`Opened Push` event with required message tracking parameters. For example:
 
 #### Deep Linking
 [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
