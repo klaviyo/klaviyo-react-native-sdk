@@ -55,8 +55,8 @@ jobs:
         if: (env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true') || ${{ github.run_attempt > 1 }}
         run: |
           yarn pod-install example/ios
-          echo "$(<example/ios/xcode.env.local )"
-          rm example/ios/xcode.env.local
+          git status
+          git diff
 
         env:
           NO_FLIPPER: 1
