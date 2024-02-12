@@ -2,5 +2,6 @@
 # as it contains information specific to your local configuration,
 # such as your Klaviyo company ID aka "Public API Key".
 # Only the base template should be checked in to VCS.
+# Copy this file to `local.properties` to set your local overrides
 
-#publicApiKey=YOUR_PUBLIC_API_KEY
+publicApiKey=YOUR_PUBLIC_API_KEY

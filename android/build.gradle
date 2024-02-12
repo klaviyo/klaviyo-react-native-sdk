@@ -107,14 +107,14 @@ def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
     localProperties.load(new FileInputStream(rootProject.file("local.properties")))
 }
-def reactNativeVersion = localProperties['reactNativeAndroidVersion'] ?: ""
+def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
 
 
 dependencies {
-  if (reactNativeVersion) {
+  if (reactNativeAndroidVersion) {
     // For local development of the SDK code, specify the react-android version to use
     // So that the SDK can be built and .kt files are linted against a real version of react-native
-    implementation "com.facebook.react:react-android:$reactNativeVersion"
+    implementation "com.facebook.react:react-android:$reactNativeAndroidVersion"
   } else {
     // Production build / once embedded in a react-native app,
     // the react-native version gets loaded in from the application dependencies.
