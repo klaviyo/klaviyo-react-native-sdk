@@ -15,8 +15,8 @@ jobs:
   build-ios:
     runs-on: macos-13
     env:
-      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
       TURBO_CACHE_DIR: .turbo/ios
+      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
           fi
 
       - name: Cache cocoapods
-        if: env.turbo_cache_hit != 1
+        if: env.turbo_cache_hit != 1 || ${{ github.run_attempt > 1 }}
         id: cocoapods-cache
         uses: actions/cache@v4
         with:
@@ -52,7 +52,7 @@ jobs:
             ${{ runner.os }}-cocoapods-
 
       - name: Install cocoapods
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        if: (env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true') || ${{ github.run_attempt > 1 }}
         run: |
           yarn pod-install example/ios
           echo "$(<example/ios/xcode.env.local )"
