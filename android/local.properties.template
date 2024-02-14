@@ -1,7 +1,8 @@
 ## Changes in this file must *NOT* be tracked by Version Control Systems,
 # as it contains information specific to your local configuration.
 # Only the base template should be checked in to VCS.
+# Copy this file to `local.properties` to set your local overrides
 
-## Uncomment for local SDK development, so that gradle can locate the
+## Used for local SDK development, so that gradle can locate the
 # correct RN version outside the context of an application
-#reactNativeAndroidVersion=0.73.1
+reactNativeAndroidVersion=0.73.1
