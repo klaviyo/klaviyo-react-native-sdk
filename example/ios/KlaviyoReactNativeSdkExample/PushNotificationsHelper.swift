@@ -39,15 +39,4 @@ class PushNotificationsHelper: NSObject {
       completionHandler()
     }
   }
-
-  @objc
-  static func handleDeepLinks(url: URL) -> Bool {
-    guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true)
-    else {
-      print("Invalid deep linking URL")
-      return false
-    }
-    print("components: \(components.debugDescription)")
-    return true
-  }
 }
