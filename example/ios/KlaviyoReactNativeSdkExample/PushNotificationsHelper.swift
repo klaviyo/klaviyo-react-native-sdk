@@ -33,8 +33,16 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
-  static func handleReceivingPush(response: UNNotificationResponse, completionHandler: @escaping () -> Void ) {
-    let handled = KlaviyoSDK().handle(notificationResponse: response, withCompletionHandler: completionHandler)
+  static func handleReceivingPush(
+    response: UNNotificationResponse,
+    completionHandler: @escaping () -> Void,
+    deepLinkHandler: ((URL) -> Void)? = nil
+  ) {
+    let handled = KlaviyoSDK().handle(
+      notificationResponse: response,
+      withCompletionHandler: completionHandler,
+      deepLinkHandler: deepLinkHandler
+    )
     if !handled {
       completionHandler()
     }
