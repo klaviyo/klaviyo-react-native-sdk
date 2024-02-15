@@ -255,16 +255,17 @@ instructions below.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
   As shown in the native SDK documentation, you can follow option 1 or 2.
-  With option 1, when you get the callback, you can handle it as follows:
+  
+  With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
+  you call the linking code block above similar to what you would do with option 1.
+
+  With option 2, when you get the `deepLinkHandler`, you can handle it as follows:
 
   ```objective-c
   [RCTLinkingManager application:application openURL:url options:options]
   ```
 
-  Since you won't have `options`, you can just pass in an empty dictionary for that parameter.
-
-  With option 2, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
-  you call the linking code block above similar to what you would do with option 1.
+  For application, you can pass in an instance of `UIApplication` and since you won't have `options`, you can just pass in an empty dictionary for that parameter.
 
 In your React Native code, you can handle the deep link as follows:
 
