@@ -152,13 +152,13 @@ instructions below.</p>
 <li><p><a href="https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking">Android</a> instructions for handling intent filters</p>
 </li>
 <li><p><a href="https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking">iOS</a>
-As shown in the native SDK documentation, you can follow option 1 or 2.
-With option 1, when you get the callback, you can handle it as follows:</p>
-<pre><code class="language-objective-c"><span class="hl-2">[RCTLinkingManager </span><span class="hl-1">application:</span><span class="hl-2">application </span><span class="hl-1">openURL:</span><span class="hl-2">url </span><span class="hl-1">options:</span><span class="hl-2">options]</span>
-</code><button>Copy</button></pre>
-<p>Since you won&#39;t have <code>options</code>, you can just pass in an empty dictionary for that parameter.</p>
-<p>With option 2, when you handle the open url (in <a href="https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application"><code>application(_:open:options)</code></a>),
+As shown in the native SDK documentation, you can follow option 1 or 2.</p>
+<p>With option 1, when you handle the open url (in <a href="https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application"><code>application(_:open:options)</code></a>),
 you call the linking code block above similar to what you would do with option 1.</p>
+<p>With option 2, when you get the <code>deepLinkHandler</code>, you can handle it as follows:</p>
+<pre><code class="language-objective-c"><span class="hl-2">  [RCTLinkingManager </span><span class="hl-1">application:</span><span class="hl-2">UIApplication.sharedApplication </span><span class="hl-1">openURL:</span><span class="hl-2"> url </span><span class="hl-1">options:</span><span class="hl-2"> @{}];</span>
+</code><button>Copy</button></pre>
+<p>For application, you can pass in an instance of <code>UIApplication</code> and since you won&#39;t have <code>options</code>, you can just pass in an empty dictionary for that parameter.</p>
 </li>
 </ul>
 <p>In your React Native code, you can handle the deep link as follows:</p>
