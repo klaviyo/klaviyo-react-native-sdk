@@ -262,7 +262,7 @@ instructions below.
   With option 2, when you get the `deepLinkHandler`, you can handle it as follows:
 
   ```objective-c
-  [RCTLinkingManager application:application openURL:url options:options]
+    [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   ```
 
   For application, you can pass in an instance of `UIApplication` and since you won't have `options`, you can just pass in an empty dictionary for that parameter.
