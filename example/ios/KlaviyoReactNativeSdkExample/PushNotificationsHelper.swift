@@ -33,21 +33,18 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
-  static func handleReceivingPush(response: UNNotificationResponse, completionHandler: @escaping () -> Void ) {
-    let handled = KlaviyoSDK().handle(notificationResponse: response, withCompletionHandler: completionHandler)
+  static func handleReceivingPush(
+    response: UNNotificationResponse,
+    completionHandler: @escaping () -> Void,
+    deepLinkHandler: ((URL) -> Void)? = nil
+  ) {
+    let handled = KlaviyoSDK().handle(
+      notificationResponse: response,
+      withCompletionHandler: completionHandler,
+      deepLinkHandler: deepLinkHandler
+    )
     if !handled {
       completionHandler()
     }
-  }
-
-  @objc
-  static func handleDeepLinks(url: URL) -> Bool {
-    guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true)
-    else {
-      print("Invalid deep linking URL")
-      return false
-    }
-    print("components: \(components.debugDescription)")
-    return true
   }
 }

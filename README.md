@@ -247,11 +247,6 @@ parameters in the event properties. To track push opens, you will need to follow
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
 
-#### Tracking Open Events
-To track push notification opens, you must call `Klaviyo.handlePush(intent)` when your app is launched from an intent.
-This method will check if the app was opened from a notification originating from Klaviyo and if so, create an
-`Opened Push` event with required message tracking parameters. For example:
-
 #### Deep Linking
 [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
 page within your app in response to the user opening a notification. Familiarize yourself with the
@@ -260,16 +255,17 @@ instructions below.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
   As shown in the native SDK documentation, you can follow option 1 or 2.
-  With option 1, when you get the callback, you can handle it as follows:
+  
+  With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
+  you call the linking code block above similar to what you would do with option 1.
+
+  With option 2, when you get the `deepLinkHandler`, you can handle it as follows:
 
   ```objective-c
-  [RCTLinkingManager application:application openURL:url options:options]
+    [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   ```
 
-  Since you won't have `options`, you can just pass in an empty dictionary for that parameter.
-
-  With option 2, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
-  you call the linking code block above similar to what you would do with option 1.
+  For application, you can pass in an instance of `UIApplication` and since you won't have `options`, you can just pass in an empty dictionary for that parameter.
 
 In your React Native code, you can handle the deep link as follows:
 
