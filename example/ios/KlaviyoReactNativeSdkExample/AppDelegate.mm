@@ -1,6 +1,8 @@
 #import "AppDelegate.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTLinkingManager.h>
+
 
 @implementation AppDelegate
 
@@ -31,9 +33,8 @@ BOOL isDebug = YES;
   [PushNotificationsHelper setPushTokenWithToken:deviceToken];
   
   if (isDebug) {
-    NSString *token = [[deviceToken description] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"<>"]];
-    token = [token stringByReplacingOccurrencesOfString:@" " withString:@""];
-    NSLog(@"Device Token: %@", token);
+      NSString *token = [self stringFromDeviceToken:deviceToken];
+      NSLog(@"Device Token: %@", token);
   }
 }
 
@@ -50,7 +51,11 @@ BOOL isDebug = YES;
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
   // Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments. Note that handleReceivingPushWithResponse calls our SDK and is
   // something that has to be implemented in your app as well.
-  [PushNotificationsHelper handleReceivingPushWithResponse:response completionHandler:completionHandler];
+  // furthur, if you want to intercept urls instead of them being routed to the system and system calling `application:openURL:options:` you can implement the `deepLinkHandler` below
+  [PushNotificationsHelper handleReceivingPushWithResponse:response completionHandler:completionHandler deepLinkHandler:^(NSURL * _Nonnull url) {
+    NSLog(@"URL is %@", url);
+    [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
+  }];
   
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
@@ -90,6 +95,13 @@ BOOL isDebug = YES;
 
 // Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
 // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
+// Calling `RCTLinkingManager` is required for your react native listeners to be called
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+  return [RCTLinkingManager application:app openURL:url options:options];
+}
+
+// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
+// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
 // additionally routing to the right screen in the app based on the url is also something that should be handled
 - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
   return [PushNotificationsHelper handleDeepLinksWithUrl:url];
@@ -108,6 +120,15 @@ BOOL isDebug = YES;
 #else
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
+}
+
+- (NSString *)stringFromDeviceToken:(NSData *)deviceToken {
+    const unsigned char *tokenBytes = (const unsigned char *)[deviceToken bytes];
+    NSMutableString *token = [NSMutableString stringWithCapacity:([deviceToken length] * 2)];
+    for (NSUInteger i = 0; i < [deviceToken length]; i++) {
+        [token appendFormat:@"%02x", tokenBytes[i]];
+    }
+    return token;
 }
 
 @end
