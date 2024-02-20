@@ -1,5 +1,11 @@
 # Troubleshooting Guide
 
+## Android Troubleshooting
+
+1. We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
+   of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
+   repository and provide version numbers of your react-native dependencies.
+
 ## iOS Troubleshooting
 
 ### CocoaPods Installation Issues
@@ -33,9 +39,3 @@
 
 2. If the command `pod install` is outputting version mismatch errors for `KlaviyoSwift`, please run `pod update KlaviyoSwift`
    as indicated in the error message to update your local pods spec repo.
-
-## Android Troubleshooting
-
-1. We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
-   of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
-   repository and provide version numbers of your react-native dependencies.
