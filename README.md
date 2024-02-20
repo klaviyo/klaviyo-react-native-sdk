@@ -29,6 +29,7 @@
     - [Rich Push](#rich-push)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
+  - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
   - [Code Documentation](#code-documentation)
@@ -285,7 +286,7 @@ instructions below.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
   As shown in the native SDK documentation, you can follow option 1 or 2.
-  
+
   With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
   you call the linking code block above similar to what you would do with option 1.
 
@@ -313,7 +314,10 @@ Linking.getInitialURL().then((url) => {
 
 ## Troubleshooting
 
-Use [the](Troubeshooting.md) following troubleshooting guide to resolve common issues with the Klaviyo React Native SDK.
+Use the [troubleshooting guide](Troubeshooting.md) to resolve common issues with the Klaviyo React Native SDK.
+If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK, please file an issue in our repository.
+
+> > > > > > > e9844d37d673f0d82fb9d06fe7bb6896aa75884f
 
 ## Contributing
 

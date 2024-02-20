@@ -1,5 +1,11 @@
 # Troubleshooting Guide
 
+## Android Troubleshooting
+
+1. We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
+   of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
+   repository and provide version numbers of your react-native dependencies.
+
 ## iOS Troubleshooting
 
 ### CocoaPods Installation Issues
