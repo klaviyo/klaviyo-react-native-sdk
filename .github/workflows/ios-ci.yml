@@ -13,13 +13,17 @@ permissions:
 
 jobs:
   build-ios:
-    runs-on: macos-13
+    runs-on: macos-13-xlarge
     env:
       TURBO_CACHE_DIR: .turbo/ios
       DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.6.10'
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -41,7 +45,7 @@ jobs:
           fi
 
       - name: Cache cocoapods
-        if: env.turbo_cache_hit != 1 || ${{ github.run_attempt > 1 }}
+        if: env.turbo_cache_hit != 1
         id: cocoapods-cache
         uses: actions/cache@v4
         with:
@@ -52,10 +56,10 @@ jobs:
             ${{ runner.os }}-cocoapods-
 
       - name: Install cocoapods
-        if: (env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true') || ${{ github.run_attempt > 1 }}
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
-          (cd example/ios && pod install)
-
+          yarn example-setup
+          rm -f example/ios/.xcode.env.local
         env:
           NO_FLIPPER: 1
 
