@@ -102,6 +102,13 @@ BOOL isDebug = YES;
 
 // Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
 // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
+// Calling `RCTLinkingManager` is required for your react native listeners to be called
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+  return [RCTLinkingManager application:app openURL:url options:options];
+}
+
+// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
+// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
 // additionally routing to the right screen in the app based on the url is also something that should be handled
 - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
   return [PushNotificationsHelper handleDeepLinksWithUrl:url];
