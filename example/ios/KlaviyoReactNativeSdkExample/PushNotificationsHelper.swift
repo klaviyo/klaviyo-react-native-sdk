@@ -19,7 +19,7 @@ class PushNotificationsHelper: NSObject {
         if let error = error {
           print("AuthError", "error while trying to authorize push", error)
         } else {
-          // Installation Step 5: register for remote notifications after requesting permission on the main thread 
+          // Installation Step 5: register for remote notifications after requesting permission on the main thread
           DispatchQueue.main.async {
             UIApplication.shared.registerForRemoteNotifications()
           }
