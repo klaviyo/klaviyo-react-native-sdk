@@ -1,6 +1,5 @@
 package com.klaviyoreactnativesdk
 
-import android.app.Application
 import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
