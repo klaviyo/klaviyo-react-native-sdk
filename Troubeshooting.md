@@ -40,6 +40,13 @@
 2. If the command `pod install` is outputting version mismatch errors for `KlaviyoSwift`, please run `pod update KlaviyoSwift`
    as indicated in the error message to update your local pods spec repo.
 
+### `UNUserNotificationCenter` delegate methods not being called
+
+If you are not seeing the delegate methods for `UNUserNotificationCenter` being called in `AppDelegate`, there are two possible reasons for this,
+
+1. [Notifee](https://notifee.app/) intercepts the AppDelegate delegate methods and hence you may not receive the delegate calls if notifee is included in the iOS project. The solution is to remove notifee dependency from your project or exclude it for iOS.
+2. Firebase iOS SDK also swizzles AppDelegate methods when configured on your iOS app. If after disabling notifee, if the delegates are still not call, this may be the reason. [Here's](https://firebase.google.com/docs/cloud-messaging/ios/client) Firebase documentation on how to turn off swizzling.
+
 ## Android Troubleshooting
 
 1. We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
