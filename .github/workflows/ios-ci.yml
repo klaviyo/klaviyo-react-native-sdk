@@ -59,9 +59,7 @@ jobs:
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
           yarn example-setup
-          cat example/ios/.xcode.env
-          cat example/ios/.xcode.env.local
-          echo $(command -v node)
+          rm -f example/ios/.xcode.env.local
         env:
           NO_FLIPPER: 1
 
