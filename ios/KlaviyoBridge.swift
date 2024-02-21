@@ -43,6 +43,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func initialize(_ apiKey: String) {
+      KlaviyoSDK().initialize(with: apiKey)
+  }
+
+  @objc
   public static func setProfile(
       _ profileDict: [String: AnyObject]
   ) {
@@ -105,6 +110,11 @@ public class KlaviyoBridge: NSObject {
   @objc
   public static func getPhoneNumber() -> String {
       return KlaviyoSDK().phoneNumber ?? ""
+  }
+
+  @objc
+  public static func setPushToken(_ value: String) {
+    KlaviyoSDK().set(pushToken: value)
   }
 
   @objc

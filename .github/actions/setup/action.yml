@@ -22,6 +22,6 @@ runs:
           ${{ runner.os }}-yarn-
 
     - name: Install dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
+      if: steps.yarn-cache.outputs.cache-hit != 'true' || ${{ github.run_attempt > 1 }}
       run: yarn install --immutable
       shell: bash
