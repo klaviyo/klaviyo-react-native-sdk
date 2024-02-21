@@ -45,4 +45,4 @@
 If you are not seeing the delegate methods for `UNUserNotificationCenter` being called in `AppDelegate`, there are two possible reasons for this,
 
 1. [Notifee](https://notifee.app/) intercepts the AppDelegate delegate methods and hence you may not receive the delegate calls if notifee is included in the iOS project. The solution is to remove notifee dependency from your project or exclude it for iOS.
-2. Firebase iOS SDK also swizzles AppDelegate methods when configured on your iOS app. If after disabling notifee, if the delegates are still not called, this may be the reason. [Here's](https://firebase.google.com/docs/cloud-messaging/ios/client) Firebase documentation on how to turn off swizzling.
+2. Firebase iOS SDK also swizzles AppDelegate methods when configured on your iOS app. If after disabling notifee, if the delegates are still not called, this may be the reason. Method swizzling can be turned off by following [Firebase's documentation](https://firebase.google.com/docs/cloud-messaging/ios/client).
