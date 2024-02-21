@@ -9,6 +9,8 @@
 // Change to NO if you don't want debug alerts or logs.
 BOOL isDebug = YES;
 
+// Change to NO if you prefer to initialize and handle push tokens in the React Native layer
+BOOL useNativeImplementation = YES;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -18,19 +20,30 @@ BOOL isDebug = YES;
   // Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  // Installation Step 3: Initialize the SDK with public key.
-  [PushNotificationsHelper initializeSDK: @"YOUR_COMPANY_API_KEY_HERE"];
+  if (useNativeImplementation) {
+    // Installation Step 3: Initialize the SDK with public key.
+    // Exclude if initializing from react native layer
+    [PushNotificationsHelper initializeSDK: @"YOUR_PUBLIC_KLAVIYO_API_KEY"];
 
-  // Installation Step 4: Request push permission from the user
-  [PushNotificationsHelper requestPushPermission];
+    // Installation Step 4: Request push permission from the user
+    // Exclude if handling permissions from react native layer
+    [PushNotificationsHelper requestPushPermission];
+  } else {
+    // Initialize cross-platform push library, e.g. Firebase
+  }
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
 // Installation Step 6: Implement this delegate to receive and set the push token
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-  // Installation Step 7: set the push token to Klaviyo SDK
-  [PushNotificationsHelper setPushTokenWithToken:deviceToken];
+  if (useNativeImplementation) {
+    // Installation Step 7: set the push token to Klaviyo SDK
+    // Exclude if handling push tokens from react native layer
+    [PushNotificationsHelper setPushTokenWithToken:deviceToken];
+  } else {
+    // Provide token to cross-platform push library, e.g. firebase
+  }
 
   if (isDebug) {
       NSString *token = [self stringFromDeviceToken:deviceToken];

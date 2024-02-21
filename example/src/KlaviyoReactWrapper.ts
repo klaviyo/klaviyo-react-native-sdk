@@ -17,7 +17,7 @@ import {
 export const initialize = async () => {
   try {
     // If initializing from RN Layer: (replace with your public key)
-    Klaviyo.initialize('YOUR_PUBLIC_API_KEY');
+    Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -87,6 +87,8 @@ export const resetProfile = async () => {
 
 export const setPushToken = async () => {
   try {
+    // If handling push tokens from the react native layer
+    // You would need a cross-platform push library to fetch the device token, e.g. firebase
     Klaviyo.setPushToken('FAKE_PUSH_TOKEN');
   } catch (e: any) {
     console.log(e.message, e.code);

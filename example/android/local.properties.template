@@ -4,4 +4,4 @@
 # Only the base template should be checked in to VCS.
 # Copy this file to `local.properties` to set your local overrides
 
-publicApiKey=YOUR_PUBLIC_API_KEY
+publicApiKey=YOUR_PUBLIC_KLAVIYO_API_KEY
