@@ -50,7 +50,7 @@ We have included a bare-bones example app in this repository for reference of ho
 It is primarily intended to give code samples such as how and where to `initialize` or how to implement notification
 delegate methods on iOS. To actually run the example app:
 - Clone this repository
-- From the root directory, run `yarn example-setup`. This is an alias that will to the following:
+- From the root directory, run `yarn example-setup`. This is an alias that will do the following:
   - Run `yarn install --immutable` from the root directory
   - Navigate to the `example` directory and run `bundle install`
   - Navigate to the `example/ios` directory and run `bundle exec pod install`
