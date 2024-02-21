@@ -286,8 +286,7 @@ In order to collect the APNs push token in your React Native code you need to:
 
 1.  Import a library such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
 2.  Import Firebase iOS SDK to your iOS project. Setup instructions can be found [here](https://firebase.google.com/docs/ios/setup).
-3.  In order for the Klaviyo SDK to handle push opens via the notification center delegate methods, we need to disable
-    method swizzling for the Firebase SDK. For more information on this,
+3.  In order for the `UNUserNotificationCenter` delegate methods to be called in `AppDelegate`, method swizzling should be disabled for the Firebase SDK. For more information on this,
     please refer to the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/ios/client). Disabling method swizzling be done by adding the following to your `Info.plist`:
 
 ```xml
