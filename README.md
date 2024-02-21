@@ -295,6 +295,10 @@ FIRMessaging.messaging.APNSToken = deviceToken;
 5. Finally, in your React Native code, you can collect & set the push token as follows:
 
 ```typescript
+import messaging from '@react-native-firebase/messaging';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+import { Platform } from 'react-native';
+
 const fetchAndSetPushToken = async () => {
   try {
     let deviceToken: string | null = null;
@@ -337,6 +341,36 @@ Requesting user permission to display notifications can be managed in,
 
 2. Leveraging a third party library that provides cross-platform permissions APIs like firebase [`react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging). If you opt for a
    cross-platform permission solution, you can now call the Klaviyo's react native SDK's `setToken` method to refresh the token's enablement status.
+
+   Below is an example of how to use `@react-native-firebase/messaging` to request permission and set the token:
+
+```typescript
+import messaging from '@react-native-firebase/messaging';
+
+const requestUserPermission = async () => {
+  let isAuthorized = false;
+
+  if (Platform.OS === 'android') {
+    const androidAuthStatus = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+    isAuthorized = androidAuthStatus === 'granted';
+  } else if (Platform.OS === 'ios') {
+    const iOsAuthStatus = await messaging().requestPermission();
+    isAuthorized =
+      iOsAuthStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      iOsAuthStatus === messaging.AuthorizationStatus.PROVISIONAL;
+  }
+
+  // refer the `fetchAndSetPushToken` method from the previous section for how to get and set the push token
+
+  if (isAuthorized) {
+    console.log('User has notification permissions enabled.');
+  } else {
+    console.log('User has notification permissions disabled');
+  }
+};
+```
 
 Note that either one of the above approaches is sufficient to inform the Klaviyo SDK of the permission change.
 
