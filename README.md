@@ -3,7 +3,38 @@
 [![Android](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml)
 [![iOS](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml)
 
-⚠️ This repository is in beta development ⚠️
+> ⚠️ This repository is in beta development ⚠️
+
+## Contents
+
+- [klaviyo-react-native-sdk](#klaviyo-react-native-sdk)
+  - [Introduction](#introduction)
+  - [Requirements](#requirements)
+    - [React Native](#react-native)
+    - [Android](#android)
+    - [iOS](#ios)
+  - [Installation](#installation)
+    - [Android](#android-1)
+    - [iOS](#ios-1)
+  - [Initialization](#initialization)
+  - [Identifying a Profile](#identifying-a-profile)
+    - [Reset Profile](#reset-profile)
+    - [Anonymous Tracking](#anonymous-tracking)
+  - [Event Tracking](#event-tracking)
+  - [Push Notifications](#push-notifications)
+    - [Prerequisites](#prerequisites)
+    - [Setup](#setup)
+    - [Collecting Push Tokens](#collecting-push-tokens)
+    - [Receiving Push Notifications](#receiving-push-notifications)
+    - [Rich Push](#rich-push)
+    - [Tracking Open Events](#tracking-open-events)
+    - [Deep Linking](#deep-linking)
+  - [Troubleshooting](#troubleshooting)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Code Documentation](#code-documentation)
+
+## Introduction
 
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
@@ -19,21 +50,26 @@ Once integrated, your marketing team will be able to better understand your app 
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).
 
 ## Requirements
+
 For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 
 ### React Native
+
 - `0.68.7+` - We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
   Testing is ongoing to verify on older versions.
 
 ### Android
+
 - `minSdkVersion` of `23+`
 - `compileSdkVersion` of `34+`
 
 ### iOS
+
 - Minimum Deployment Target `13.0+`
 
 ## Installation
+
 The Klaviyo React Native SDK is available via [NPM](http://npmjs.com). To add it to your project,
 run the following from your project's root directory:
 
@@ -46,13 +82,32 @@ yarn add klaviyo-react-native-sdk
 ```
 
 ### Android
+
 Android installation requirements may vary depending upon your project configuration and other dependencies.
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
 #### React Native 0.73.x
+
 There are no additional installation requirements. Android support is fully tested and verified,
 including `minSdkVersion=23`.
+
+#### React Native 0.68.x - 0.72.x
+
+We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
+with the following modifications to the `android/build.gradle` file:
+
+- Set `compileSdkVersion=34`
+- Set `minSdkVersion=23`
+
+#### React Native <= 0.67.x
+
+We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
+
+### iOS
+
+After installing the npm package, run the following command in the `ios` directory of your React Native project.
+Install [Cocoapods](https://cocoapods.org/) if you have not already.
 
 #### React Native 0.68.x - 0.72.x
 We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
@@ -76,44 +131,24 @@ pod install
 ```
 > ℹ️ if the above command is outputting version mismatch errors for `KlaviyoSwift`, please run `pod update KlaviyoSwift` as indicated in the error message to update your local pods spec repo.
 
-#### iOS Troubleshooting
-If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
-minimum iOS version to 13.0 in your Podfile with one of the following strategies.
-- Specify iOS version directly in the `Podfile`:
-  ```ruby
-  MIN_IOS_OVERRIDE = '13.0'
-  if Gem::Version.new(MIN_IOS_OVERRIDE) > Gem::Version.new(min_ios_version_supported)
-      min_ios_version_supported = MIN_IOS_OVERRIDE
-  end
-  # existing code
-  platform :ios, min_ios_version_supported
-  ```
-- Set the deployment target to 13.0 in XCode, and then pull `IPHONEOS_DEPLOYMENT_TARGET` from the XCode project:
-  ```ruby
-  #######
-  # Read min iOS version from Xcode project and set as min iOS version for Podfile
-  require 'xcodeproj'
-
-  project_path = './YOUR_XCODE_PROJECT.xcodeproj'
-  project = Xcodeproj::Project.open(project_path)
-  min_ios_version_supported = project.build_configurations.first.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
-  ######
-
-  platform :ios, min_ios_version_supported
-  ```
-
 ## Initialization
+
 The SDK must be initialized with the short alphanumeric
 [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID. Initialization is done in the native layer, and must occur before
 any other SDK methods can be invoked. Follow the native SDK instructions for initialization, and refer to the
 [example app](./example) in this repository for guidance:
+
 - [Android SDK instructions](https://github.com/klaviyo/klaviyo-android-sdk#Initialization), and
   [example app `MainApplication.kt`](./example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainApplication.kt#L39)
 - [iOS SDK instructions](https://github.com/klaviyo/klaviyo-swift-sdk#Initialization), and
   [example app `AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm#L14)
 
 ## Identifying a Profile
+The SDK provides methods to identify profiles via the
+[Create Client Profile API](https://developers.klaviyo.com/en/reference/create_client_profile).
+A profile can be identified by any combination of the following:
+
 The SDK provides methods to identify profiles via the
 [Create Client Profile API](https://developers.klaviyo.com/en/reference/create_client_profile).
 A profile can be identified by any combination of the following:
@@ -160,6 +195,7 @@ Klaviyo.setProfileAttribute(ProfilePropertyKey.FIRST_NAME, 'Kermit');
 Either way, the native SDKs will group and batch API calls to improve performance.
 
 ### Reset Profile
+
 To start a _new_ profile altogether (e.g. if a user logs out), either call `Klaviyo.resetProfile()`
 to clear the currently tracked profile identifiers (e.g. on logout), or use `Klaviyo.setProfile(profile)`
 to overwrite it with a new profile object.
@@ -171,11 +207,13 @@ Klaviyo.resetProfile();
 ```
 
 ### Anonymous Tracking
+
 Klaviyo will track unidentified users with an autogenerated ID whenever a push token is set or an event is created.
 That way, you can collect push tokens and track events prior to collecting profile identifiers such as email or
 phone number. When an identifier is provided, Klaviyo will merge the anonymous user with an identified user.
 
 ## Event Tracking
+
 The SDK also provides tools for tracking analytics events via the
 [Create Client Event API](https://developers.klaviyo.com/en/reference/create_client_event).
 A list of common Klaviyo-defined event metrics is provided in [`MetricName`](https://github.com/klaviyo/klaviyo-react-native-sdk/blob/master/src/Event.ts),
@@ -208,54 +246,68 @@ Klaviyo.createEvent({
 ## Push Notifications
 
 ### Prerequisites
+
 Integrating push notifications is highly platform-specific. Begin by thoroughly reviewing the setup
 instructions for Push Notifications in the README from each native Klaviyo SDK:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications)
 
 ### Setup
+
 Refer to the following README sections on push setup:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Setup)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Setup)
 
 ### Collecting Push Tokens
+
 Push tokens must be collected in the native layer. Follow the platform-specific instructions below:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Collecting-Push-Tokens)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Collecting-Push-Tokens)
 
 #### Notification Permission
+
 Requesting user permission to display notifications can be managed in the native layer as instructed in our native SDK
 documentation, or with a third party library that provides cross-platform permissions APIs. If you opt for a
 cross-platform permission solution, you will still need to provide the Klaviyo SDK with the push token from the
 native layer after a permission change.
 
 ### Receiving Push Notifications
+
 You can send test notifications to a specific token using the
 [push notification preview](https://help.klaviyo.com/hc/en-us/articles/18011985278875)
 feature in order to test your integration.
 
 #### Rich Push
+
 [Rich Push](https://help.klaviyo.com/hc/en-us/articles/16917302437275) is the ability to add images to
 push notification messages. On iOS, you will need to implement an extension service to attach images to notifications.
 No additional setup is needed to support rich push on Android.
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Rich-Push)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
 #### Tracking Open Events
+
 Klaviyo tracks push opens events with a specially formatted event `Opened Push` that includes message tracking
 parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
 
 #### Deep Linking
+
 [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
 page within your app in response to the user opening a notification. Familiarize yourself with the
 [React Native Guide](https://reactnative.dev/docs/linking) to deep linking, then read through the platform-specific
 instructions below.
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
   As shown in the native SDK documentation, you can follow option 1 or 2.
-  
+
   With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
   you call the linking code block above similar to what you would do with option 1.
 
@@ -281,7 +333,13 @@ Linking.getInitialURL().then((url) => {
 });
 ```
 
+## Troubleshooting
+
+Use the [troubleshooting guide](Troubeshooting.md) to resolve common issues with the Klaviyo React Native SDK.
+If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK, please file an issue in our repository.
+
 ## Contributing
+
 Refer to the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the Klaviyo React Native SDK.
 We welcome your feedback in the [discussion](https://github.com/klaviyo/klaviyo-react-native-sdk/discussions)
 and [issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) sections of our public GitHub repository.
@@ -289,5 +347,8 @@ and [issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) section
 ## License
 The Klaviyo React Native SDK is available under the terms of the MIT license. See [LICENSE](./LICENSE) for more info.
 
+The Klaviyo React Native SDK is available under the terms of the MIT license. See [LICENSE](./LICENSE) for more info.
+
 ## Code Documentation
+
 Browse complete autogenerated code documentation [here](https://klaviyo.github.io/klaviyo-react-native-sdk/).
