@@ -46,6 +46,11 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     }
 
     @ReactMethod
+    override fun initialize(apiKey: String) {
+      Klaviyo.initialize(apiKey, context)
+    }
+
+    @ReactMethod
     override fun setProfile(profile: ReadableMap) {
       val parsedProfile = Profile()
 
@@ -57,6 +62,7 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
                 parsedProfile[key] = value
               }
             }
+
           else ->
             if (value is Serializable) {
               parsedProfile[key] = value
@@ -108,6 +114,16 @@ class KlaviyoReactNativeSdkModule internal constructor(private val context: Reac
     @ReactMethod
     override fun resetProfile() {
       Klaviyo.resetProfile()
+    }
+
+    @ReactMethod
+    override fun setPushToken(token: String) {
+      Klaviyo.setPushToken(token)
+    }
+
+    @ReactMethod
+    override fun getPushToken(callback: Callback) {
+      callback.invoke(Klaviyo.getPushToken())
     }
 
     @ReactMethod

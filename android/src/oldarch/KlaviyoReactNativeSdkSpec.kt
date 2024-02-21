@@ -7,6 +7,8 @@ import com.facebook.react.bridge.ReadableMap
 
 abstract class KlaviyoReactNativeSdkSpec internal constructor(context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
+    abstract fun initialize(apiKey: String)
+
     abstract fun setProfile(profile: ReadableMap)
 
     abstract fun setExternalId(externalId: String)
@@ -27,6 +29,10 @@ abstract class KlaviyoReactNativeSdkSpec internal constructor(context: ReactAppl
     )
 
     abstract fun resetProfile()
+
+    abstract fun setPushToken(token: String)
+
+    abstract fun getPushToken(callback: Callback)
 
     abstract fun createEvent(event: ReadableMap)
   }

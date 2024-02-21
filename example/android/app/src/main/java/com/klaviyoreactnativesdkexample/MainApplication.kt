@@ -14,6 +14,10 @@ import com.facebook.soloader.SoLoader
 import com.klaviyo.analytics.Klaviyo
 
 class MainApplication : Application(), ReactApplication {
+  companion object {
+    const val USE_NATIVE_IMPLEMENTATION = true
+  }
+
   override val reactNativeHost: ReactNativeHost =
     object : DefaultReactNativeHost(this) {
       override fun getPackages(): List<ReactPackage> {
@@ -36,8 +40,11 @@ class MainApplication : Application(), ReactApplication {
   override fun onCreate() {
     super.onCreate()
     SoLoader.init(this, false)
-    Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
-    registerActivityLifecycleCallbacks(Klaviyo.lifecycleCallbacks)
+
+    if (USE_NATIVE_IMPLEMENTATION) {
+      // If initializing from the native layer:
+      Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
+    }
 
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

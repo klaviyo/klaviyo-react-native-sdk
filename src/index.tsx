@@ -11,6 +11,9 @@ import type { Event } from './Event';
  * Implementation of the {@link KlaviyoInterface}
  */
 export const Klaviyo: Spec = {
+  initialize(apiKey: String): void {
+    KlaviyoReactNativeSdk.initialize(apiKey);
+  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
@@ -37,6 +40,12 @@ export const Klaviyo: Spec = {
   },
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();
+  },
+  setPushToken(token: String) {
+    KlaviyoReactNativeSdk.setPushToken(token);
+  },
+  getPushToken(callback: Function | undefined): String | null {
+    return KlaviyoReactNativeSdk.getPushToken(callback);
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
