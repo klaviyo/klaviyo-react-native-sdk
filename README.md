@@ -133,14 +133,11 @@ The SDK must be initialized with the short alphanumeric
 [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID.
 
-Initialization can either be done from your app's React native or native code, and must occur before
-any other SDK methods can be invoked so that Klaviyo SDK can track profiles, events and push tokens
-towards your company.
+Initialize *must* be called prior to invoking any other SDK methods so that Klaviyo SDK can track profiles, events and push tokens toward the correct Klaviyo account. Any SDK operations invoked before initialize will be dropped, and result in a logged error.
 
-The decision to initialize the SDK from the React Native or the native code depends on your app's architecture.
-
-Finally, the SDK initialization needs to be done just once either in your react native or native code.
-It's not required to initialize the SDK in both places.
+You can call `initialize` from your app's React Native layer or from the platform-specific native code. 
+This decision is dependent only upon your app's architecture. It is not required to initialize the SDK in both places!
+Note: It is safe to re-initialize, e.g. if your app can connect to more than one Klaviyo account. 
 
 ### React Native Initialization
 
@@ -279,14 +276,14 @@ Refer to the following README sections on push setup:
 
 ### Collecting Push Tokens
 
-Push tokens must be collected both in your app's react native code or in the native code. Below sections discuss both approaches, and
+Push tokens can be collected either from your app's react native code or in the native code. Below sections discuss both approaches, and
 you are free to pick one that best suits your app's architecture. Note that doing this in one location is sufficient.
 
 #### React Native Token Collection
 
-In order to collect the APNs push token in your React Native code you need to,
+In order to collect the APNs push token in your React Native code you need to:
 
-1.  Import libraries such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
+1.  Import a library such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
 2.  Import Firebase iOS SDK to your iOS project. Setup instructions can be found [here](https://firebase.google.com/docs/ios/setup).
 3.  In order for the Klaviyo SDK to handle push opens via the notification center delegate methods, we need to disable
     method swizzling for the Firebase SDK. For more information on this,
@@ -342,7 +339,7 @@ Follow the platform-specific instructions below:
 
 #### Notification Permission
 
-Requesting user permission to display notifications can be managed in,
+Requesting user permission to display notifications can be managed in:
 
 1. The native layer as instructed in our native SDK documentation,
 
