@@ -121,20 +121,21 @@ The SDK must be initialized with the short alphanumeric
 [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID.
 
-Initialization can either be done from your app's React native code or native code, and must occur before
+Initialization can either be done from your app's React native or native code, and must occur before
 any other SDK methods can be invoked so that Klaviyo SDK can track profiles, events and push tokens
 towards your company.
 
-The decision to initialize the SDK from the React Native code or the native code depends on your app's architecture and familiarity with
-native code.
+The decision to initialize the SDK from the React Native or the native code depends on your app's architecture.
 
 Finally, the SDK initialization needs to be done just once either in your react native or native code.
 It's not required to initialize the SDK in both places.
 
 ### React Native Initialization
 
-> ℹ️ One caveat to initializing the SDK from React Native is that this call should happen before another call to Klaviyo SDKs
-> either from your react native or native code.
+> ℹ️ A caveat to initializing the SDK from React Native is that this call should happen before any another calls to Klaviyo SDKs
+> either from your React native or native code.
+
+Below is an example of how to initialize the SDK from your React Native code:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -275,9 +276,9 @@ In order to collect the APNs push token in your React Native code you need to,
 
 1.  Import libraries such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
 2.  Import Firebase iOS SDK to your iOS project. Setup instructions can be found [here](https://firebase.google.com/docs/ios/setup).
-3.  Please note that on iOS these libraries perform method swizzling, which may cause issues with other libraries that also perform method swizzling. For more information on this,
-    please refer to the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/ios/client). In order for the Klaviyo SDK to handle push opens, we need to disable
-    method swizzling for the Firebase SDK. This can be done by adding the following to your `Info.plist`:
+3.  In order for the Klaviyo SDK to handle push opens via the notification center delegate methods, we need to disable
+    method swizzling for the Firebase SDK. For more information on this,
+    please refer to the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/ios/client). Disabling method swizzling be done by adding the following to your `Info.plist`:
 
 ```xml
 <key>FirebaseAppDelegateProxyEnabled</key>
