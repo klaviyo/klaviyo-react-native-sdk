@@ -9,6 +9,8 @@
 // Change to NO if you don't want debug alerts or logs.
 BOOL isDebug = YES;
 
+// Change to NO if you prefer to initialize and handle push tokens in the React Native layer
+BOOL useNativeImplementation = YES;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -18,20 +20,34 @@ BOOL isDebug = YES;
   // Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  // Installation Step 3: Initilize the SDK with public key. 
-  [PushNotificationsHelper initializeSDK: @"YOUR_COMPANY_API_KEY_HERE"];
-  
-  // Installation Step 4: Request push permission from the user
-  [PushNotificationsHelper requestPushPermission];
+  // Installation Step 2: Set the UNUserNotificationCenter delegate to self
+  [UNUserNotificationCenter currentNotificationCenter].delegate = self;
+
+  if (useNativeImplementation) {
+    // Installation Step 3: Initialize the SDK with public key.
+    // Exclude if initializing from react native layer
+    [PushNotificationsHelper initializeSDK: @"YOUR_PUBLIC_KLAVIYO_API_KEY"];
+
+    // Installation Step 4: Request push permission from the user
+    // Exclude if handling permissions from react native layer
+    [PushNotificationsHelper requestPushPermission];
+  } else {
+    // Initialize cross-platform push library, e.g. Firebase
+  }
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
 // Installation Step 6: Implement this delegate to receive and set the push token
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-  // Installation Step 7: set the push token to Klaviyo SDK
-  [PushNotificationsHelper setPushTokenWithToken:deviceToken];
-  
+  if (useNativeImplementation) {
+    // Installation Step 7: set the push token to Klaviyo SDK
+    // Exclude if handling push tokens from react native layer
+    [PushNotificationsHelper setPushTokenWithToken:deviceToken];
+  } else {
+    // Provide token to cross-platform push library, e.g. firebase
+  }
+
   if (isDebug) {
       NSString *token = [self stringFromDeviceToken:deviceToken];
       NSLog(@"Device Token: %@", token);
@@ -49,20 +65,20 @@ BOOL isDebug = YES;
 // when the app is in the background
 // NOTE: this delegate will NOT be called if Installation Step 2 is not done.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
-  // Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments. Note that handleReceivingPushWithResponse calls our SDK and is
-  // something that has to be implemented in your app as well.
-  // furthur, if you want to intercept urls instead of them being routed to the system and system calling `application:openURL:options:` you can implement the `deepLinkHandler` below
+  // Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments.
+  // Note that handleReceivingPushWithResponse calls our SDK and is something that has to be implemented in your app as well.
+  // Further, if you want to intercept urls instead of them being routed to the system and system calling `application:openURL:options:` you can implement the `deepLinkHandler` below
   [PushNotificationsHelper handleReceivingPushWithResponse:response completionHandler:completionHandler deepLinkHandler:^(NSURL * _Nonnull url) {
     NSLog(@"URL is %@", url);
     [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   }];
-  
+
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
                                 alertControllerWithTitle:@"Push Notification"
                                 message:@"handled background notifications"
                                 preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction 
+    [alert addAction:[UIAlertAction
                       actionWithTitle:@"OK"
                       style:UIAlertActionStyleDefault
                       handler:nil]];
@@ -91,6 +107,13 @@ BOOL isDebug = YES;
 
   // Installation Step 12: call the completion handler with presentation options here, such as showing a banner or playing a sound.
   completionHandler(UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound);
+}
+
+// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
+// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
+// Calling `RCTLinkingManager` is required for your react native listeners to be called
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+  return [RCTLinkingManager application:app openURL:url options:options];
 }
 
 // Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
