@@ -15,7 +15,7 @@ import com.klaviyo.analytics.Klaviyo
 
 class MainApplication : Application(), ReactApplication {
   companion object {
-    const val useNativeImplementation = true
+    const val USE_NATIVE_IMPLEMENTATION = true
   }
 
   override val reactNativeHost: ReactNativeHost =
@@ -41,7 +41,7 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     SoLoader.init(this, false)
 
-    if (useNativeImplementation) {
+    if (USE_NATIVE_IMPLEMENTATION) {
       // If initializing from the native layer:
       Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
     }
