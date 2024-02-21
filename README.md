@@ -27,6 +27,8 @@
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
     - [Collecting Push Tokens](#collecting-push-tokens)
+      - [React Native Token Collection](#react-native-token-collection)
+      - [Native Token Collection](#native-token-collection)
     - [Receiving Push Notifications](#receiving-push-notifications)
     - [Rich Push](#rich-push)
     - [Tracking Open Events](#tracking-open-events)
@@ -84,9 +86,11 @@ yarn add klaviyo-react-native-sdk
 ```
 
 ### Example App
+
 We have included a bare-bones example app in this repository for reference of how to integrate with our SDK.
 It is primarily intended to give code samples such as how and where to `initialize` or how to implement notification
 delegate methods on iOS. To actually run the example app:
+
 - Clone this repository
 - From the root directory, run `yarn example-setup`. This is an alias that will do the following:
   - Run `yarn install --immutable` from the root directory
@@ -129,20 +133,17 @@ pod install
 
 ## Initialization
 
-The SDK must be initialized with the short alphanumeric
-[public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
+The SDK must be initialized with the short alphanumeric [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID.
 
-Initialize *must* be called prior to invoking any other SDK methods so that Klaviyo SDK can track profiles, events and push tokens toward the correct Klaviyo account. Any SDK operations invoked before initialize will be dropped, and result in a logged error.
+Initialize _must_ be called prior to invoking any other SDK methods so that Klaviyo SDK can track profiles, events and push tokens toward the correct Klaviyo account.
+Any SDK operations invoked before initialize will be dropped, and result in a logged error.
 
-You can call `initialize` from your app's React Native layer or from the platform-specific native code. 
-This decision is dependent only upon your app's architecture. It is not required to initialize the SDK in both places!
-Note: It is safe to re-initialize, e.g. if your app can connect to more than one Klaviyo account. 
+You can call `initialize` from your app's React Native layer or from the platform-specific native code.
+This decision is dependent on your app's architecture. It is not required to initialize the SDK in both places!
+Note: It is safe to re-initialize, e.g. if your app needs to connect to more than one Klaviyo account.
 
 ### React Native Initialization
-
-> ℹ️ A caveat to initializing the SDK from React Native is that this call should happen before any another calls to Klaviyo SDKs
-> either from your React native or native code.
 
 Below is an example of how to initialize the SDK from your React Native code:
 
