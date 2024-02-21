@@ -46,12 +46,16 @@ yarn add klaviyo-react-native-sdk
 ```
 
 ### Example App
-We have included a bare-bones example app in this repository for reference. To run the example app:
-- Make a local clone of this repository
-- Run `yarn install --immutable` from the root directory
-- Navigate to the `example` directory and run `bundle install`
-- Navigate to the `example/ios` directory and run `bundle exec pod install`
-- Run `yarn start` from the root directory
+We have included a bare-bones example app in this repository for reference of how to integrate with our SDK.
+It is primarily intended to give code samples such as how and where to `initialize` or how to implement notification
+delegate methods on iOS. To actually run the example app:
+- Clone this repository
+- From the root directory, run `yarn example-setup`. This is an alias that will to the following:
+  - Run `yarn install --immutable` from the root directory
+  - Navigate to the `example` directory and run `bundle install`
+  - Navigate to the `example/ios` directory and run `bundle exec pod install`
+- From the project's root directory, run `yarn example start` to start the example application. Follow the
+  metro instructions from here, i.e. press `i` to run on iOS or `a` to run on Android.
 
 ### Android
 Android installation requirements may vary depending upon your project configuration and other dependencies.
