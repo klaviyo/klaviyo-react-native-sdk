@@ -72,7 +72,7 @@ PODS:
   - hermes-engine (0.73.1):
     - hermes-engine/Pre-built (= 0.73.1)
   - hermes-engine/Pre-built (0.73.1)
-  - klaviyo-react-native-sdk (0.1.2):
+  - klaviyo-react-native-sdk (0.2.0):
     - KlaviyoSwift (= 3.0.3)
     - React-Core
   - KlaviyoSwift (3.0.3):
@@ -1333,7 +1333,7 @@ SPEC CHECKSUMS:
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
   glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
   hermes-engine: 34df9d5034e90bd9bf1505e1ca198760373935af
-  klaviyo-react-native-sdk: 2f9cd36e7fed062a0d76484a383f4a5dc3472183
+  klaviyo-react-native-sdk: aee5d61742ec539582786c12e6667f6c228f2266
   KlaviyoSwift: 9318efaa92f5435d63aa093e3e9d49af947b7685
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   OpenSSL-Universal: ebc357f1e6bc71fa463ccb2fe676756aff50e88c
