@@ -12,6 +12,7 @@ runs:
     - name: Cache dependencies
       id: yarn-cache
       uses: actions/cache@v4
+      if: github.run_attempt == 1
       with:
         path: |
           **/node_modules
@@ -22,6 +23,6 @@ runs:
           ${{ runner.os }}-yarn-
 
     - name: Install dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true' || ${{ github.run_attempt > 1 }}
+      if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: yarn install --immutable
       shell: bash

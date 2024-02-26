@@ -46,7 +46,7 @@ jobs:
           fi
 
       - name: Cache cocoapods
-        if: env.turbo_cache_hit != 1
+        if: env.turbo_cache_hit != 1 && github.run_attempt == 1
         id: cocoapods-cache
         uses: actions/cache@v4
         with:
