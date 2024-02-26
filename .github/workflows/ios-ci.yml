@@ -37,6 +37,7 @@ jobs:
             ${{ runner.os }}-turborepo-ios-
 
       - name: Check turborepo cache for iOS
+        if: github.run_attempt == 1
         run: |
           TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
 
