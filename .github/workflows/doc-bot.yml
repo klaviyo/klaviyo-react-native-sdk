@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
+      - ecm/doc-bot-push
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
 
@@ -38,6 +38,7 @@ jobs:
       - name: Generate docs
         run: |
           yarn generate-docs
+          date > docs/generated.txt
 
       - name: Commit and push docs
         run: |
