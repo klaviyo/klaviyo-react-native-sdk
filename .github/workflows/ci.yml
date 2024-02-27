@@ -29,6 +29,13 @@ jobs:
       - name: Typecheck files
         run: yarn typecheck
 
+      - name: Prevent package-lock.json file
+        run: |
+          if [ -f "package-lock.json" ];
+            then echo "package-lock.json is not allowed";
+            exit 1;
+          fi
+
   test:
     runs-on: ubuntu-22.04
     steps:
