@@ -5,7 +5,8 @@ Thank you for considering contributing to the Klaviyo SDK!
 We welcome your contributions and strive to respond in a timely manner. In return, we ask that you do your
 **due diligence** to answer your own questions using public resources, and check for related issues (including
 closed ones) before posting. This helps keep the discussion focused on the most important topics. Issues deemed
-off-topic or out of scope for the SDK will be closed.
+off-topic or out of scope for the SDK will be closed. Likewise, please keep comments on-topic and productive. If
+you have a different question, please open a new issue rather than commenting on an unrelated issue.
 
 Before contributing, please read the [code of conduct](./CODE_OF_CONDUCT.md). We want this community to be friendly
 and respectful to each other. Please follow it in all your interactions with the project.
@@ -27,7 +28,9 @@ If you suspect a bug or have a feature request, please open an issue, following 
   - Detailed steps to reproduce the issue
   - A code snippet or a minimal example that reproduces the issue.
 
-> ⚠️ Answer all questions in the issue template. Incomplete issues will be de-prioritized or closed. ⚠️
+> Answer all questions in the issue template, it is designed to help you follow all the above guidelines.
+>
+> ⚠️ Incomplete issues will be de-prioritized or closed. ⚠️
 
 ## Development workflow
 
