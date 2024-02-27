@@ -40,7 +40,7 @@ jobs:
       - name: Generate docs
         run: |
           yarn generate-docs
-          date > docs/generated.txt
+          rm -f docs/generated.txt
 
       - name: Commit and push docs
         run: |
