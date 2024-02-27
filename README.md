@@ -455,7 +455,7 @@ please file an [issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issue
 ## Contributing
 
 Refer to the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the Klaviyo React Native SDK.
-We welcome your feedback, feature requests or other ideas in the
+We welcome your feedback in the
 [issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) section of our public GitHub repository.
 
 ## License
