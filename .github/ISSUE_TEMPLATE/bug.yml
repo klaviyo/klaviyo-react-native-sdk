@@ -7,10 +7,10 @@ body:
       value: |
         Thank you for contributing to the Klaviyo React Native SDK!
 
-        Before you submit your issue, please read our [contributing guidelines](./CONTRIBUTING.md) and complete each
-        text area below with the relevant details for your bug.
+        Before you submit your issue, please read our [contributing guidelines](https://github.com/klaviyo/klaviyo-react-native-sdk/blob/master/.github/CONTRIBUTING.md)
+        and answer each question below with the relevant details for your bug.
 
-        Note: incomplete issues may be de-prioritized or closed.
+        > Note: incomplete issues may be de-prioritized or closed.
 
         We welcome your input! If you have any code suggestions regarding your issue, feel free to
         [submit a pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls) after creating an issue.
@@ -18,13 +18,13 @@ body:
     attributes:
       label: Checklist
       options:
-        - label: I have read the [contributing guidelines](./CONTRIBUTING.md)
+        - label: I have read the [contributing guidelines](https://github.com/klaviyo/klaviyo-react-native-sdk/blob/master/.github/CONTRIBUTING.md)
           required: true
         - label: I have determined whether this bug is also reproducible in a vanilla project, such as the example app in this repository.
           required: false
         - label: If possible, I've reproduced the issue using the `master` branch or latest release of this package.
           required: false
-        - label: This issue hasn't been addressed in an [existing GitHub issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) or [pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls).
+        - label: This issue hasn't been addressed in an [existing issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) or [pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls)
           required: true
   - type: textarea
     attributes:
