@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for considering contributing to the Klaviyo SDK!
+Thank you for considering contributing to the Klaviyo React Native SDK!
 
 We welcome your contributions and strive to respond in a timely manner. In return, we ask that you do your
 **due diligence** to answer your own questions using public resources, and check for related issues (including
@@ -63,7 +63,7 @@ If you want to use Android Studio or XCode to edit the native code, you can open
 directories respectively in those editors. To edit the Objective-C or Swift files, open `example/ios/KlaviyoReactNativeSdkExample.xcworkspace`
 in XCode and find the source files at `Pods > Development Pods > klaviyo-react-native-sdk`.
 
-To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `klaviyo-react-native-sdk` under `Android`.
+To edit the Java or Kotlin files, open `example/android` in Android Studio and find the source files at `klaviyo-react-native-sdk` under `Android`.
 
 You can use various commands from the root directory to work with the project.
 
