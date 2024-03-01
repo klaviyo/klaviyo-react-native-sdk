@@ -14,6 +14,18 @@ body:
 
         We welcome your input! If you have any code suggestions regarding your issue, feel free to
         [submit a pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls) after creating an issue.
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have read the [contributing guidelines](./CONTRIBUTING.md)
+          required: true
+        - label: I have determined whether this bug is also reproducible in a vanilla project, such as the example app in this repository.
+          required: false
+        - label: If possible, I've reproduced the issue using the `master` branch or latest release of this package.
+          required: false
+        - label: This issue hasn't been addressed in an [existing GitHub issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) or [pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls).
+          required: true
   - type: textarea
     attributes:
       label: Description
@@ -25,16 +37,6 @@ body:
         If possible, include the last version that the behavior was correct in addition to your current version.
     validations:
       required: true
-  - type: checkboxes
-    attributes:
-      label: Checklist
-      options:
-        - label: I have determined whether this bug is also reproducible in a vanilla project, such as the example app in this repository.
-          required: false
-        - label: If possible, I've reproduced the issue using the `master` branch or latest release of this package.
-          required: false
-        - label: This issue hasn't been addressed in an [existing GitHub issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) or [pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls).
-          required: true
   - type: textarea
     attributes:
       label: Expected behavior

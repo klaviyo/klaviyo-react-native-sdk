@@ -12,6 +12,12 @@ body:
 
         We welcome your input! If you have any code suggestions regarding your issue, feel free to
         [submit a pull request](https://github.com/klaviyo/klaviyo-react-native-sdk/pulls) after creating an issue.
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have read the [contributing guidelines](./CONTRIBUTING.md)
+          required: true
   - type: textarea
     attributes:
       label: Description
