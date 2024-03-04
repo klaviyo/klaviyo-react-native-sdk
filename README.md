@@ -308,6 +308,7 @@ In order to collect the APNs push token in your React Native code you need to:
    FIRMessaging.messaging.APNSToken = deviceToken;
    ```
 5. Finally, in your React Native code, you can collect & set the push token as follows:
+
    ```typescript
    import messaging from '@react-native-firebase/messaging';
    import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -381,8 +382,10 @@ native code. Note that either of these approaches is sufficient to inform the Kl
      }
    };
    ```
+
 2. **Native Notification Permission**:
    Follow instructions from our native SDK documentation to request permission from native code:
+
    - [Android](https://github.com/klaviyo/klaviyo-android-sdk#collecting-push-tokens)
    - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#request-push-notification-permission)
 
@@ -451,13 +454,14 @@ Linking.getInitialURL().then((url) => {
 ## Troubleshooting
 
 Use the [troubleshooting guide](Troubleshooting.md) to resolve common issues with the Klaviyo React Native SDK.
-If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK, please file an issue in our repository.
+If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK,
+please file an [issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) in our repository.
 
 ## Contributing
 
 Refer to the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the Klaviyo React Native SDK.
-We welcome your feedback in the [discussion](https://github.com/klaviyo/klaviyo-react-native-sdk/discussions)
-and [issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) sections of our public GitHub repository.
+We welcome your feedback in the
+[issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) section of our public GitHub repository.
 
 ## License
 The Klaviyo React Native SDK is available under the terms of the MIT license. See [LICENSE](./LICENSE) for more info.
