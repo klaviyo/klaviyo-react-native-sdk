@@ -17,10 +17,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        token: ${{ secrets.GH_ACTION_ACCESS_TOKEN }}
         with:
           ref: documentation
           fetch-depth: 0
+          token: ${{ secrets.GH_ACTION_ACCESS_TOKEN }}
 
       - name: Configure git
         run: |
