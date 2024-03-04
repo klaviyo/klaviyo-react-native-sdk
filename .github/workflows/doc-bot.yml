@@ -21,6 +21,7 @@ jobs:
         with:
           ref: documentation
           fetch-depth: 0
+          token: ${{ secrets.GH_ACTION_ACCESS_TOKEN }}
 
       - name: Configure git
         run: |
