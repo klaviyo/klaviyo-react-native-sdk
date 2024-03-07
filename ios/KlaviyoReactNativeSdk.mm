@@ -22,6 +22,11 @@ RCT_EXPORT_METHOD(initialize: (NSString *)apiKey)
     [KlaviyoBridge initialize: apiKey];
 }
 
+RCT_EXPORT_METHOD(setProfileAttribute: (NSString *)key value:(NSString *)value)
+{
+    [KlaviyoBridge setProfileAttribute:key value:value];
+}
+
 RCT_EXPORT_METHOD(setProfile: (NSDictionary *)profileDict)
 {
     [KlaviyoBridge setProfile:profileDict];
