@@ -7,14 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		00549431A7D5F157E6AB628A /* libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 386FD59BCCCB2CECC1AB23C9 /* libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a */; };
 		00E356F31AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests.m */; };
-		0EF727E03F7C384A058DFDE7 /* libPods-KlaviyoReactNativeSdkExample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FC72FD458D5D420EC3AC0EE /* libPods-KlaviyoReactNativeSdkExample.a */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		1BE92CB23FB415E631030426 /* Pods_KlaviyoReactNativeSdkExample.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */; };
 		34B0B3D92B3F29C200CC8ADE /* PushNotificationsHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B0B3D82B3F29C200CC8ADE /* PushNotificationsHelper.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		858546827EE31BCF954B5894 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,15 +39,15 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = KlaviyoReactNativeSdkExample/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = KlaviyoReactNativeSdkExample/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = KlaviyoReactNativeSdkExample/main.m; sourceTree = "<group>"; };
+		2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		33194555397E4856F9F69CC6 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig"; sourceTree = "<group>"; };
 		34B0B3D72B3F29C100CC8ADE /* KlaviyoReactNativeSdkExample-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "KlaviyoReactNativeSdkExample-Bridging-Header.h"; sourceTree = "<group>"; };
 		34B0B3D82B3F29C200CC8ADE /* PushNotificationsHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PushNotificationsHelper.swift; path = KlaviyoReactNativeSdkExample/PushNotificationsHelper.swift; sourceTree = "<group>"; };
 		34B0B3DA2B3F2DD200CC8ADE /* KlaviyoReactNativeSdkExample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = KlaviyoReactNativeSdkExample.entitlements; path = KlaviyoReactNativeSdkExample/KlaviyoReactNativeSdkExample.entitlements; sourceTree = "<group>"; };
-		386FD59BCCCB2CECC1AB23C9 /* libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4DD606F64FB41EF3C28C59B7 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = KlaviyoReactNativeSdkExample/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9FC72FD458D5D420EC3AC0EE /* libPods-KlaviyoReactNativeSdkExample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-KlaviyoReactNativeSdkExample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,7 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00549431A7D5F157E6AB628A /* libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a in Frameworks */,
+				858546827EE31BCF954B5894 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,7 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0EF727E03F7C384A058DFDE7 /* libPods-KlaviyoReactNativeSdkExample.a in Frameworks */,
+				1BE92CB23FB415E631030426 /* Pods_KlaviyoReactNativeSdkExample.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -107,8 +107,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				9FC72FD458D5D420EC3AC0EE /* libPods-KlaviyoReactNativeSdkExample.a */,
-				386FD59BCCCB2CECC1AB23C9 /* libPods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.a */,
+				EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */,
+				2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -167,7 +167,7 @@
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
 				27FF43EFFC2803AEB3B764FD /* [CP] Embed Pods Frameworks */,
-				3270EAB41AEE06402923E570 /* [CP] Copy Pods Resources */,
+				551BA99CEC6966F77067ABDF /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -189,7 +189,7 @@
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				A260871868A35189A3B97761 /* [CP] Embed Pods Frameworks */,
-				BDAFE687827A7F0B5F7D4402 /* [CP] Copy Pods Resources */,
+				DBD42BC54BB1697FCE7A4F8A /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -289,7 +289,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		3270EAB41AEE06402923E570 /* [CP] Copy Pods Resources */ = {
+		551BA99CEC6966F77067ABDF /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -367,7 +367,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExample/Pods-KlaviyoReactNativeSdkExample-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		BDAFE687827A7F0B5F7D4402 /* [CP] Copy Pods Resources */ = {
+		DBD42BC54BB1697FCE7A4F8A /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -576,6 +576,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
@@ -649,6 +660,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,

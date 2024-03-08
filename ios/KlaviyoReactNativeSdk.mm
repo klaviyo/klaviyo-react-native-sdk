@@ -1,5 +1,10 @@
 #import "KlaviyoReactNativeSdk.h"
-#import <klaviyo_react_native_sdk-Swift.h>
+#if __has_include(<klaviyo_react_native_sdk/klaviyo_react_native_sdk-Swift.h>)
+#import <klaviyo_react_native_sdk/klaviyo_react_native_sdk-Swift.h>
+#else
+#import "klaviyo_react_native_sdk-Swift.h"
+#endif
+
 
 @implementation KlaviyoReactNativeSdk
 RCT_EXPORT_MODULE()
