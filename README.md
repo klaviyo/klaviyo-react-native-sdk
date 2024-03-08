@@ -313,9 +313,11 @@ In order to collect the APNs push token in your React Native code you need to:
      try {
        let deviceToken: string | null = null;
        if (Platform.OS === 'android') {
+         // For Android, Klaviyo requires the FCM token
          deviceToken = await messaging().getToken();
          console.log('FCM Token:', deviceToken);
-       } else {
+       } else if (Platform.OS === 'ios') {
+         // For iOS, Klaviyo requires the APNs token
          deviceToken = await messaging().getAPNSToken();
          console.log('APNs Token:', deviceToken);
        }
