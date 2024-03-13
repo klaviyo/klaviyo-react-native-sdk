@@ -84,7 +84,6 @@ public class KlaviyoBridge: NSObject {
 
   @objc
   public static func setProfileAttribute(_ key: String, value: String) {
-      print("setting key =  \(getProfileKey(key)) and value \(value)")
       KlaviyoSDK().set(profileAttribute: getProfileKey(key), value: value)
   }
 
