@@ -98,6 +98,7 @@ export const setPushToken = async () => {
 export const setProfileAttribute = async () => {
   try {
     Klaviyo.setProfileAttribute(ProfileProperty.CITY, generateRandomName(5));
+    Klaviyo.setProfileAttribute(ProfileProperty.IMAGE, generateRandomName(5));
   } catch (e: any) {
     console.log(e.message, e.code);
   }
