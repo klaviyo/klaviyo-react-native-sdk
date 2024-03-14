@@ -107,16 +107,17 @@ so you can import Android Klaviyo SDK references from your Kotlin/Java files wit
 
 #### React Native 0.73.x
 
-There are no additional installation requirements. Android support is fully tested and verified,
-including `minSdkVersion=23`.
+There are no additional installation requirements. Android support is fully tested and verified.
 
 #### React Native 0.68.x - 0.72.x
 
 We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
 with the following modifications to the `android/build.gradle` file:
 
-- Set `compileSdkVersion=34`
 - Set `minSdkVersion=23`
+- Set `compileSdkVersion=34`
+
+See [Android Troubleshooting](Troubleshooting.md#android-troubleshooting) for possible exceptions.
 
 #### React Native <= 0.67.x
 
@@ -136,12 +137,13 @@ pod install
 The SDK must be initialized with the short alphanumeric [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
 for your Klaviyo account, also known as your Site ID.
 
-Initialize _must_ be called prior to invoking any other SDK methods so that Klaviyo SDK can track profiles, events and push tokens toward the correct Klaviyo account.
-Any SDK operations invoked before initialize will be dropped, and result in a logged error.
+Initialize _must_ be called prior to invoking any other SDK methods so that Klaviyo SDK can track profiles, events and
+push tokens toward the correct Klaviyo account. Any SDK operations invoked before initialize will be dropped,
+and result in a logged error.
 
 You can call `initialize` from your app's React Native layer or from the platform-specific native code.
 This decision is dependent on your app's architecture. It is not required to initialize the SDK in both places!
-Note: It is safe to re-initialize, e.g. if your app needs to connect to more than one Klaviyo account.
+Note: It is safe to re-initialize, e.g. if your app needs to switch between more than one Klaviyo account.
 
 ### React Native Initialization
 
@@ -149,7 +151,7 @@ Below is an example of how to initialize the SDK from your React Native code:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
-Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
+Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
 ```
 
 ### Native Initialization
@@ -277,58 +279,59 @@ Refer to the following README sections on push setup:
 
 ### Collecting Push Tokens
 
-Push tokens can be collected either from your app's react native code or in the native code. Below sections discuss both approaches, and
-you are free to pick one that best suits your app's architecture. Note that doing this in one location is sufficient.
+Push tokens can be collected either from your app's react native code or in the native code.
+Below sections discuss both approaches, and you are free to pick one that best suits your app's architecture.
+Note that doing this in one location is sufficient.
 
 #### React Native Token Collection
 
 In order to collect the APNs push token in your React Native code you need to:
 
-1.  Import a library such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
-2.  Import Firebase iOS SDK to your iOS project. Setup instructions can be found [here](https://firebase.google.com/docs/ios/setup).
-3.  In order for the `UNUserNotificationCenter` delegate methods to be called in `AppDelegate`, method swizzling should be disabled for the Firebase SDK. For more information on this,
-    please refer to the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/ios/client). Disabling method swizzling be done by adding the following to your `Info.plist`:
-
-```xml
-<key>FirebaseAppDelegateProxyEnabled</key>
-<false/>
-```
-
+1. Import a library such as [`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging)
+   to your react native project. The below instructions are specific for `@react-native-firebase/messaging` library.
+2. Import Firebase iOS SDK to your iOS project. Setup instructions can be found [here](https://firebase.google.com/docs/ios/setup).
+3. In order for the `UNUserNotificationCenter` delegate methods to be called in `AppDelegate`, method swizzling must be
+   disabled for the Firebase SDK. For more information on this, please refer to the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/ios/client).
+   Disable method swizzling by adding the following to your `Info.plist`:
+   ```xml
+   <key>FirebaseAppDelegateProxyEnabled</key>
+   <false/>
+   ```
 4. In `application:didRegisterForRemoteNotificationsWithDeviceToken:` method in your `AppDelegate.m` file, you can add the following code to set the push token to the firebase SDK:
-
-```objective-c
-// since we disbaled swizzling, we have to manually set this
-FIRMessaging.messaging.APNSToken = deviceToken;
-```
-
+   ```objective-c
+   // since we disbaled swizzling, we have to manually set this
+   FIRMessaging.messaging.APNSToken = deviceToken;
+   ```
 5. Finally, in your React Native code, you can collect & set the push token as follows:
 
-```typescript
-import messaging from '@react-native-firebase/messaging';
-import { Klaviyo } from 'klaviyo-react-native-sdk';
-import { Platform } from 'react-native';
+   ```typescript
+   import messaging from '@react-native-firebase/messaging';
+   import { Klaviyo } from 'klaviyo-react-native-sdk';
+   import { Platform } from 'react-native';
 
-const fetchAndSetPushToken = async () => {
-  try {
-    let deviceToken: string | null = null;
-    if (Platform.OS === 'android') {
-      deviceToken = await messaging().getToken();
-      console.log('FCM Token:', deviceToken);
-    } else {
-      deviceToken = await messaging().getAPNSToken();
-      console.log('APNs Token:', deviceToken);
-    }
+   const fetchAndSetPushToken = async () => {
+     try {
+       let deviceToken: string | null = null;
+       if (Platform.OS === 'android') {
+         // For Android, Klaviyo requires the FCM token
+         deviceToken = await messaging().getToken();
+         console.log('FCM Token:', deviceToken);
+       } else if (Platform.OS === 'ios') {
+         // For iOS, Klaviyo requires the APNs token
+         deviceToken = await messaging().getAPNSToken();
+         console.log('APNs Token:', deviceToken);
+       }
 
-    if (deviceToken != null && deviceToken.length > 0) {
-      Klaviyo.setPushToken(deviceToken!);
-    }
-  } catch (error) {
-    console.error('Error in fetchAndSetPushToken:', error);
-  }
-};
-```
+       if (deviceToken != null && deviceToken.length > 0) {
+         Klaviyo.setPushToken(deviceToken!);
+       }
+     } catch (error) {
+       console.error('Error in fetchAndSetPushToken:', error);
+     }
+   };
+   ```
 
-For android token collection, there isn't any additional setup required on the native side. The above code should work as is.
+For Android token collection, there isn't any additional setup required on the native side. The above code should work as is.
 
 #### Native Token Collection
 
@@ -339,49 +342,52 @@ Follow the platform-specific instructions below:
 
 #### Notification Permission
 
-Requesting user permission to display notifications can be managed in:
+Requesting user permission to display notifications can be managed from the React Native code, or from platform-specific
+native code. Note that either of these approaches is sufficient to inform the Klaviyo SDK of the permission change.
 
-1. The native layer as instructed in our native SDK documentation,
+1. **React Native Notification Permission**:
+   You can leverage a third party library that provides cross-platform permissions APIs like firebase [`react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging).
+   If you opt for a cross-platform permission solution, call the Klaviyo React Native SDK's `setToken` method to refresh
+   the token's enablement status.
+
+   Below is an example of how to use `@react-native-firebase/messaging` to request permission and set the token:
+
+   ```typescript
+   import messaging from '@react-native-firebase/messaging';
+
+   const requestUserPermission = async () => {
+     let isAuthorized = false;
+
+     if (Platform.OS === 'android') {
+       const androidAuthStatus = await PermissionsAndroid.request(
+         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+       );
+       isAuthorized = androidAuthStatus === 'granted';
+     } else if (Platform.OS === 'ios') {
+       const iOsAuthStatus = await messaging().requestPermission();
+       isAuthorized =
+         iOsAuthStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+         iOsAuthStatus === messaging.AuthorizationStatus.PROVISIONAL;
+     }
+
+     // refer the `fetchAndSetPushToken` method from the previous section for how to get and set the push token
+
+     if (isAuthorized) {
+       console.log('User has notification permissions enabled.');
+     } else {
+       console.log('User has notification permissions disabled');
+     }
+   };
+   ```
+
+2. **Native Notification Permission**:
+   Follow instructions from our native SDK documentation to request permission from native code:
 
    - [Android](https://github.com/klaviyo/klaviyo-android-sdk#collecting-push-tokens)
    - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#request-push-notification-permission)
 
-   If you requested permission using native code then continue using Klaviyo's native platform SDKs `setToken` method to inform the SDK of permission change.
-
-2. Leveraging a third party library that provides cross-platform permissions APIs like firebase [`react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging). If you opt for a
-   cross-platform permission solution, you can now call the Klaviyo's react native SDK's `setToken` method to refresh the token's enablement status.
-
-   Below is an example of how to use `@react-native-firebase/messaging` to request permission and set the token:
-
-```typescript
-import messaging from '@react-native-firebase/messaging';
-
-const requestUserPermission = async () => {
-  let isAuthorized = false;
-
-  if (Platform.OS === 'android') {
-    const androidAuthStatus = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-    );
-    isAuthorized = androidAuthStatus === 'granted';
-  } else if (Platform.OS === 'ios') {
-    const iOsAuthStatus = await messaging().requestPermission();
-    isAuthorized =
-      iOsAuthStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      iOsAuthStatus === messaging.AuthorizationStatus.PROVISIONAL;
-  }
-
-  // refer the `fetchAndSetPushToken` method from the previous section for how to get and set the push token
-
-  if (isAuthorized) {
-    console.log('User has notification permissions enabled.');
-  } else {
-    console.log('User has notification permissions disabled');
-  }
-};
-```
-
-Note that either one of the above approaches is sufficient to inform the Klaviyo SDK of the permission change.
+   If you requested permission using native code then continue using Klaviyo's native platform SDKs `setToken`
+   method to inform the SDK of permission change.
 
 ### Receiving Push Notifications
 
@@ -444,14 +450,15 @@ Linking.getInitialURL().then((url) => {
 
 ## Troubleshooting
 
-Use the [troubleshooting guide](Troubeshooting.md) to resolve common issues with the Klaviyo React Native SDK.
-If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK, please file an issue in our repository.
+Use the [troubleshooting guide](Troubleshooting.md) to resolve common issues with the Klaviyo React Native SDK.
+If the issues you are facing isn't in the troubleshooting guide, and you believe it's a bug in the SDK,
+please file an [issue](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) in our repository.
 
 ## Contributing
 
 Refer to the [contributing guide](.github/CONTRIBUTING.md) to learn how to contribute to the Klaviyo React Native SDK.
-We welcome your feedback in the [discussion](https://github.com/klaviyo/klaviyo-react-native-sdk/discussions)
-and [issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) sections of our public GitHub repository.
+We welcome your feedback in the
+[issues](https://github.com/klaviyo/klaviyo-react-native-sdk/issues) section of our public GitHub repository.
 
 ## License
 
