@@ -83,6 +83,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func setProfileAttribute(_ key: String, value: String) {
+      KlaviyoSDK().set(profileAttribute: getProfileKey(key), value: value)
+  }
+
+  @objc
   public static func setExternalId(_ value: String) {
     KlaviyoSDK().set(externalId: value)
   }
@@ -152,6 +157,39 @@ public class KlaviyoBridge: NSObject {
         return .OpenedAppMetric
     default:
         return .CustomEvent(str)
+    }
+  }
+
+  static func getProfileKey(_ str: String) -> Profile.ProfileKey {
+    switch str {
+    case ProfileProperty.firstName.rawValue:
+        return Profile.ProfileKey.firstName
+    case ProfileProperty.lastName.rawValue:
+        return Profile.ProfileKey.lastName
+    case ProfileProperty.address1.rawValue:
+        return Profile.ProfileKey.address1
+    case ProfileProperty.address2.rawValue:
+        return Profile.ProfileKey.address2
+    case ProfileProperty.title.rawValue:
+        return Profile.ProfileKey.title
+    case ProfileProperty.organization.rawValue:
+        return Profile.ProfileKey.organization
+    case ProfileProperty.city.rawValue:
+        return Profile.ProfileKey.city
+    case ProfileProperty.region.rawValue:
+        return Profile.ProfileKey.region
+    case ProfileProperty.country.rawValue:
+        return Profile.ProfileKey.country
+    case ProfileProperty.zip.rawValue:
+        return Profile.ProfileKey.zip
+    case ProfileProperty.image.rawValue:
+        return Profile.ProfileKey.image
+    case ProfileProperty.latitude.rawValue:
+        return Profile.ProfileKey.latitude
+    case ProfileProperty.longitude.rawValue:
+        return Profile.ProfileKey.longitude
+    default:
+        return Profile.ProfileKey.custom(customKey: str)
     }
   }
 }

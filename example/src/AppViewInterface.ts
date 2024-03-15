@@ -31,7 +31,7 @@ export const appViews: AppViewInterface[] = [
     onPress: setProfile,
   },
   {
-    title: 'Click to set custom profile attribute',
+    title: 'Click to set some profile attributes',
     color: '#841584',
     onPress: setProfileAttribute,
   },

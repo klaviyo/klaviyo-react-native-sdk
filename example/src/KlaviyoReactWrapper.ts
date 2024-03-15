@@ -1,9 +1,9 @@
 import {
+  type Event,
   Klaviyo,
+  type Location,
   type Profile,
   ProfileProperty,
-  type Event,
-  type Location,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -97,7 +97,9 @@ export const setPushToken = async () => {
 
 export const setProfileAttribute = async () => {
   try {
-    Klaviyo.setProfileAttribute('CUSTOM', generateRandomName(12));
+    Klaviyo.setProfileAttribute(ProfileProperty.CITY, generateRandomName(5));
+    Klaviyo.setProfileAttribute(ProfileProperty.IMAGE, generateRandomName(5));
+    Klaviyo.setProfileAttribute('MY_CUSTOM_PROPERTY', generateRandomName(5));
   } catch (e: any) {
     console.log(e.message, e.code);
   }
