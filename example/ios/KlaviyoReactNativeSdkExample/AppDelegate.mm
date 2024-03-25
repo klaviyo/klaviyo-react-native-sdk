@@ -69,7 +69,9 @@ BOOL useNativeImplementation = YES;
     NSLog(@"URL is %@", url);
     [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   }];
-
+  
+  [PushNotificationsHelper decrementBadgeCount];
+  
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
                                 alertControllerWithTitle:@"Push Notification"

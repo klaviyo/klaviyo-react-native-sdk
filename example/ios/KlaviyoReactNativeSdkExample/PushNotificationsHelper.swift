@@ -28,6 +28,15 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
+  static func decrementBadgeCount() {
+    if #available(iOS 16.0, *) {
+        UNUserNotificationCenter.current().setBadgeCount(UIApplication.shared.applicationIconBadgeNumber - 1)
+    } else {
+        UIApplication.shared.applicationIconBadgeNumber -= 1
+    }
+  }
+
+  @objc
   static func setPushToken(token: Data) {
     KlaviyoSDK().set(pushToken: token)
   }
