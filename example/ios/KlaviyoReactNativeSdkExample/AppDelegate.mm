@@ -70,7 +70,9 @@ BOOL useNativeImplementation = YES;
     [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   }];
   
-  [PushNotificationsHelper decrementBadgeCount];
+  // Installation Step 9a: update the app count to current badge number - 1. You can also set this to 0 if you
+  // no longer want the badge to show.
+  [PushNotificationsHelper updateBadgeCount: [UIApplication sharedApplication].applicationIconBadgeNumber - 1];
   
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
@@ -113,6 +115,13 @@ BOOL useNativeImplementation = YES;
 // Calling `RCTLinkingManager` is required for your react native listeners to be called
 - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
   return [RCTLinkingManager application:app openURL:url options:options];
+}
+
+// Installation Step 14: if you want to reset the app badge count whenever the app becomes active implement this
+// delegate method and set the badge count to 0. Note that this may sometimes mean that the user would miss the
+// notification.
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+  [PushNotificationsHelper updateBadgeCount:0];
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge

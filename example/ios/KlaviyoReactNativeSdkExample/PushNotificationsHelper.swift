@@ -28,11 +28,11 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
-  static func decrementBadgeCount() {
+  static func updateBadgeCount(_ count: Int) {
     if #available(iOS 16.0, *) {
-        UNUserNotificationCenter.current().setBadgeCount(UIApplication.shared.applicationIconBadgeNumber - 1)
+        UNUserNotificationCenter.current().setBadgeCount(count)
     } else {
-        UIApplication.shared.applicationIconBadgeNumber -= 1
+        UIApplication.shared.applicationIconBadgeNumber = count
     }
   }
 
