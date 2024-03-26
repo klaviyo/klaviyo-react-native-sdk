@@ -72,7 +72,11 @@ BOOL useNativeImplementation = YES;
     NSLog(@"URL is %@", url);
     [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   }];
-
+  
+  // Installation Step 9a: update the app count to current badge number - 1. You can also set this to 0 if you
+  // no longer want the badge to show.
+  [PushNotificationsHelper updateBadgeCount: [UIApplication sharedApplication].applicationIconBadgeNumber - 1];
+  
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
                                 alertControllerWithTitle:@"Push Notification"
@@ -116,55 +120,12 @@ BOOL useNativeImplementation = YES;
   return [RCTLinkingManager application:app openURL:url options:options];
 }
 
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
+// Installation Step 14: if you want to reset the app badge count whenever the app becomes active implement this
+// delegate method and set the badge count to 0. Note that this may sometimes mean that the user would miss the
+// notification.
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+  [PushNotificationsHelper updateBadgeCount:0];
 }
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
-}
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
-}
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
-}
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
-}
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// Calling `RCTLinkingManager` is required for your react native listeners to be called
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [RCTLinkingManager application:app openURL:url options:options];
-}
-
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
-// https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-// additionally routing to the right screen in the app based on the url is also something that should be handled
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [PushNotificationsHelper handleDeepLinksWithUrl:url];
-}
-
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
 {
