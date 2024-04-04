@@ -67,16 +67,19 @@ export interface KlaviyoProfileApi {
 export enum ProfileProperty {
   /**
    * A unique identifier used by customers to associate Klaviyo profiles with profiles in an external system, such as a point-of-sale system. Format varies based on the external system.
+   * @deprecated Setting identifiers via setProfileAttribute is deprecated, and this enum will be removed in an upcoming release. Use the corresponding setter function instead.
    */
   EXTERNAL_ID = PROFILE_KEYS.EXTERNAL_ID ?? 'external_id',
 
   /**
    * Individual's email address
+   * @deprecated Setting identifiers via setProfileAttribute is deprecated, and this enum will be removed in an upcoming release. Use the corresponding setter function instead.
    */
   EMAIL = PROFILE_KEYS.EMAIL ?? 'email',
 
   /**
    * Individual's phone number in E.164 format
+   * @deprecated Setting identifiers via setProfileAttribute is deprecated, and this enum will be removed in an upcoming release. Use the corresponding setter function instead.
    */
   PHONE_NUMBER = PROFILE_KEYS.PHONE_NUMBER ?? 'phone_number',
 
