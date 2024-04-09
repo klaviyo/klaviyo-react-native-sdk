@@ -12,9 +12,12 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		1BE92CB23FB415E631030426 /* Pods_KlaviyoReactNativeSdkExample.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */; };
+		346E4F992BC59CB200CBCFC1 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346E4F982BC59CB200CBCFC1 /* NotificationService.swift */; };
+		346E4F9D2BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 346E4F962BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		34B0B3D92B3F29C200CC8ADE /* PushNotificationsHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B0B3D82B3F29C200CC8ADE /* PushNotificationsHelper.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		858546827EE31BCF954B5894 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */; };
+		DECD2DBA06E2DAA45E7CDF3E /* Pods_KlaviyoReactNativeSdkExampleExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17427A3A2BF01B069BB68B44 /* Pods_KlaviyoReactNativeSdkExampleExtension.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,7 +28,28 @@
 			remoteGlobalIDString = 13B07F861A680F5B00A75B9A;
 			remoteInfo = KlaviyoReactNativeSdkExample;
 		};
+		346E4F9B2BC59CB200CBCFC1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 346E4F952BC59CB200CBCFC1;
+			remoteInfo = KlaviyoReactNativeSdkExampleExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		346E4F9E2BC59CB200CBCFC1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				346E4F9D2BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		00E356EE1AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KlaviyoReactNativeSdkExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -39,13 +63,19 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = KlaviyoReactNativeSdkExample/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = KlaviyoReactNativeSdkExample/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = KlaviyoReactNativeSdkExample/main.m; sourceTree = "<group>"; };
+		17427A3A2BF01B069BB68B44 /* Pods_KlaviyoReactNativeSdkExampleExtension.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExampleExtension.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		33194555397E4856F9F69CC6 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig"; sourceTree = "<group>"; };
+		346E4F962BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KlaviyoReactNativeSdkExampleExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		346E4F982BC59CB200CBCFC1 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		346E4F9A2BC59CB200CBCFC1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		34B0B3D72B3F29C100CC8ADE /* KlaviyoReactNativeSdkExample-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "KlaviyoReactNativeSdkExample-Bridging-Header.h"; sourceTree = "<group>"; };
 		34B0B3D82B3F29C200CC8ADE /* PushNotificationsHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PushNotificationsHelper.swift; path = KlaviyoReactNativeSdkExample/PushNotificationsHelper.swift; sourceTree = "<group>"; };
 		34B0B3DA2B3F2DD200CC8ADE /* KlaviyoReactNativeSdkExample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = KlaviyoReactNativeSdkExample.entitlements; path = KlaviyoReactNativeSdkExample/KlaviyoReactNativeSdkExample.entitlements; sourceTree = "<group>"; };
 		4DD606F64FB41EF3C28C59B7 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig"; sourceTree = "<group>"; };
+		747BE9545244EC1B09BC2C18 /* Pods-KlaviyoReactNativeSdkExampleExtension.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExampleExtension.debug.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension.debug.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = KlaviyoReactNativeSdkExample/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		974C3532D83C254EB74322A0 /* Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -64,6 +94,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1BE92CB23FB415E631030426 /* Pods_KlaviyoReactNativeSdkExample.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		346E4F932BC59CB200CBCFC1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DECD2DBA06E2DAA45E7CDF3E /* Pods_KlaviyoReactNativeSdkExampleExtension.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,8 +147,18 @@
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */,
 				2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */,
+				17427A3A2BF01B069BB68B44 /* Pods_KlaviyoReactNativeSdkExampleExtension.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		346E4F972BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension */ = {
+			isa = PBXGroup;
+			children = (
+				346E4F982BC59CB200CBCFC1 /* NotificationService.swift */,
+				346E4F9A2BC59CB200CBCFC1 /* Info.plist */,
+			);
+			path = KlaviyoReactNativeSdkExampleExtension;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -126,6 +174,7 @@
 				13B07FAE1A68108700A75B9A /* KlaviyoReactNativeSdkExample */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				00E356EF1AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests */,
+				346E4F972BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
@@ -140,6 +189,7 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* KlaviyoReactNativeSdkExample.app */,
 				00E356EE1AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests.xctest */,
+				346E4F962BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -151,6 +201,8 @@
 				0ECD08CB82CD21CD0799D483 /* Pods-KlaviyoReactNativeSdkExample.release.xcconfig */,
 				4DD606F64FB41EF3C28C59B7 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.debug.xcconfig */,
 				33194555397E4856F9F69CC6 /* Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests.release.xcconfig */,
+				747BE9545244EC1B09BC2C18 /* Pods-KlaviyoReactNativeSdkExampleExtension.debug.xcconfig */,
+				974C3532D83C254EB74322A0 /* Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -190,15 +242,35 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				A260871868A35189A3B97761 /* [CP] Embed Pods Frameworks */,
 				DBD42BC54BB1697FCE7A4F8A /* [CP] Copy Pods Resources */,
+				346E4F9E2BC59CB200CBCFC1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				346E4F9C2BC59CB200CBCFC1 /* PBXTargetDependency */,
 			);
 			name = KlaviyoReactNativeSdkExample;
 			productName = KlaviyoReactNativeSdkExample;
 			productReference = 13B07F961A680F5B00A75B9A /* KlaviyoReactNativeSdkExample.app */;
 			productType = "com.apple.product-type.application";
+		};
+		346E4F952BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 346E4FA12BC59CB200CBCFC1 /* Build configuration list for PBXNativeTarget "KlaviyoReactNativeSdkExampleExtension" */;
+			buildPhases = (
+				303E9B95BB6348BABE624B03 /* [CP] Check Pods Manifest.lock */,
+				346E4F922BC59CB200CBCFC1 /* Sources */,
+				346E4F932BC59CB200CBCFC1 /* Frameworks */,
+				346E4F942BC59CB200CBCFC1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KlaviyoReactNativeSdkExampleExtension;
+			productName = KlaviyoReactNativeSdkExampleExtension;
+			productReference = 346E4F962BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -206,6 +278,7 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1210;
 				TargetAttributes = {
 					00E356ED1AD99517003FC87E = {
@@ -214,6 +287,9 @@
 					};
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1500;
+					};
+					346E4F952BC59CB200CBCFC1 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -232,6 +308,7 @@
 			targets = (
 				13B07F861A680F5B00A75B9A /* KlaviyoReactNativeSdkExample */,
 				00E356ED1AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests */,
+				346E4F952BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -250,6 +327,13 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		346E4F942BC59CB200CBCFC1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,6 +371,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests/Pods-KlaviyoReactNativeSdkExample-KlaviyoReactNativeSdkExampleTests-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		303E9B95BB6348BABE624B03 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-KlaviyoReactNativeSdkExampleExtension-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 		551BA99CEC6966F77067ABDF /* [CP] Copy Pods Resources */ = {
@@ -405,6 +511,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		346E4F922BC59CB200CBCFC1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				346E4F992BC59CB200CBCFC1 /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -412,6 +526,11 @@
 			isa = PBXTargetDependency;
 			target = 13B07F861A680F5B00A75B9A /* KlaviyoReactNativeSdkExample */;
 			targetProxy = 00E356F41AD99517003FC87E /* PBXContainerItemProxy */;
+		};
+		346E4F9C2BC59CB200CBCFC1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 346E4F952BC59CB200CBCFC1 /* KlaviyoReactNativeSdkExampleExtension */;
+			targetProxy = 346E4F9B2BC59CB200CBCFC1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -473,6 +592,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 02D376B6B2241AD5D0F0527E /* Pods-KlaviyoReactNativeSdkExample.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = KlaviyoReactNativeSdkExample/KlaviyoReactNativeSdkExample.entitlements;
@@ -503,6 +623,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 0ECD08CB82CD21CD0799D483 /* Pods-KlaviyoReactNativeSdkExample.release.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = KlaviyoReactNativeSdkExample/KlaviyoReactNativeSdkExample.entitlements;
@@ -524,6 +645,89 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "KlaviyoReactNativeSdkExample-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		346E4F9F2BC59CB200CBCFC1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 747BE9545244EC1B09BC2C18 /* Pods-KlaviyoReactNativeSdkExampleExtension.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = G3793W2RJ2;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KlaviyoReactNativeSdkExampleExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KlaviyoReactNativeSdkExampleExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.KlaviyoReactNativeSdkExample.KlaviyoReactNativeSdkExampleExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		346E4FA02BC59CB200CBCFC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 974C3532D83C254EB74322A0 /* Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = G3793W2RJ2;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KlaviyoReactNativeSdkExampleExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KlaviyoReactNativeSdkExampleExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.KlaviyoReactNativeSdkExample.KlaviyoReactNativeSdkExampleExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -719,6 +923,15 @@
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
 				13B07F951A680F5B00A75B9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		346E4FA12BC59CB200CBCFC1 /* Build configuration list for PBXNativeTarget "KlaviyoReactNativeSdkExampleExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				346E4F9F2BC59CB200CBCFC1 /* Debug */,
+				346E4FA02BC59CB200CBCFC1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
