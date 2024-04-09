@@ -8,7 +8,6 @@ import KlaviyoSwift
 class PushNotificationsHelper: NSObject {
   @objc
   static func initializeSDK(_ apiKey: String) {
-    // Installation Step 4: Set your company's public api key here
     KlaviyoSDK().initialize(with: apiKey)
   }
 
