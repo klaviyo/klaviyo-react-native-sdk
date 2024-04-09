@@ -12,7 +12,7 @@ import UserNotifications
 // MARK: notification service extension implementation.
 
 /// When push payload is marked as there being mutable-content this service
-/// (more specifically the `didReceiveNotificationRequest` ) is called to perform
+/// (more specifically `didReceiveNotificationRequest` ) is called to perform
 /// tasks such as downloading images and attaching it to the notification before it's displayed to the user.
 ///
 /// There is a limited time before which `didReceiveNotificationRequest`  needs to wrap up it's operations
