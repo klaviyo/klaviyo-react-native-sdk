@@ -84,7 +84,16 @@ public class KlaviyoBridge: NSObject {
 
   @objc
   public static func setProfileAttribute(_ key: String, value: String) {
-      KlaviyoSDK().set(profileAttribute: getProfileKey(key), value: value)
+      switch key {
+      case "external_id":
+          setExternalId(value)
+      case "email":
+          setEmail(value)
+      case "phone_number":
+          setPhoneNumber(value)
+      default:
+          KlaviyoSDK().set(profileAttribute: getProfileKey(key), value: value)
+      }
   }
 
   @objc
