@@ -55,3 +55,8 @@ target 'KlaviyoReactNativeSdkExample' do
     )
   end
 end
+
+target 'KlaviyoReactNativeSdkExampleExtension' do
+  use_frameworks! :linkage => :static
+  pod 'KlaviyoSwiftExtension'
+end

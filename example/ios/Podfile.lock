@@ -20,6 +20,7 @@ PODS:
     - React-Core
   - KlaviyoSwift (3.0.4):
     - AnyCodable-FlightSchool
+  - KlaviyoSwiftExtension (3.0.4)
   - libevent (2.1.12)
   - RCT-Folly (2022.05.16.00):
     - boost
@@ -1070,6 +1071,7 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
+  - KlaviyoSwiftExtension
   - libevent (~> 2.1.12)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -1121,6 +1123,7 @@ SPEC REPOS:
     - AnyCodable-FlightSchool
     - fmt
     - KlaviyoSwift
+    - KlaviyoSwiftExtension
     - libevent
     - SocketRocket
 
@@ -1236,6 +1239,7 @@ SPEC CHECKSUMS:
   hermes-engine: 34df9d5034e90bd9bf1505e1ca198760373935af
   klaviyo-react-native-sdk: 878dada99cf8a2e39542d938831d3c8b11d5d9de
   KlaviyoSwift: 47540deeab5070db86346bf1fdcb9b8e4c5e0c09
+  KlaviyoSwiftExtension: 921c458ab489bebc1034df4666263d534260cbea
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   RCT-Folly: 7169b2b1c44399c76a47b5deaaba715eeeb476c0
   RCTRequired: 6dda55e483f75d2b43781d8ad5bd7df276a50981
@@ -1279,8 +1283,8 @@ SPEC CHECKSUMS:
   React-utils: fefa27e6d4a5b733f5e76cf8802ccf023ff8cc94
   ReactCommon: 73242ec9768e71688f35ad97ae3d0709a0f66435
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
-  Yoga: 2b33a7ac96c58cdaa7b810948fc6a2a76ed2d108
+  Yoga: 4f53dc50008d626fa679c7a1cb4bed898f8c0bde
 
-PODFILE CHECKSUM: 8551fc99e362b9a5d9f471b52ed693a80cd33445
+PODFILE CHECKSUM: bd4bf6f2889a5907a9bf31c6a541ff32873bd6a8
 
 COCOAPODS: 1.15.2
