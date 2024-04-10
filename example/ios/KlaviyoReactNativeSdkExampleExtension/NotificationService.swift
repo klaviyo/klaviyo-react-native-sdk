@@ -5,20 +5,11 @@
 //  Created by Ajay Subramanya on 4/9/24.
 //
 
+// Installation Step 15: Create this notification service extension using the steps outlined here - https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push
 import KlaviyoSwiftExtension
 import UIKit
 import UserNotifications
 
-// MARK: notification service extension implementation.
-
-/// When push payload is marked as there being mutable-content this service
-/// (more specifically `didReceiveNotificationRequest` ) is called to perform
-/// tasks such as downloading images and attaching it to the notification before it's displayed to the user.
-///
-/// There is a limited time before which `didReceiveNotificationRequest`  needs to wrap up it's operations
-/// else the notification is displayed as received.
-///
-/// Any property from `UNMutableNotificationContent` can be mutated here before presenting the notification.
 class NotificationService: UNNotificationServiceExtension {
     var request: UNNotificationRequest!
     var contentHandler: ((UNNotificationContent) -> Void)?
