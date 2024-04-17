@@ -51,3 +51,59 @@ there are two possible reasons for this:
 2. Firebase iOS SDK also swizzles AppDelegate methods when configured on your iOS app. If after disabling notifee,
    if the delegates are still not called, this may be the reason. Method swizzling can be turned off by following
    [Firebase's documentation](https://firebase.google.com/docs/cloud-messaging/ios/client).
+
+### Deep links in push notifications not getting sent over to React Native layer when the iOS app is terminated
+
+When the iOS app is terminated (killed from the app switcher by swiping up), there is a bug in React Native that 
+prevents the native layer from calling the listeners set up in React Native to listen to incoming deep links. 
+The listener in question here is `Linking.getInitialURL()` which is expected to be called when a deep link is 
+available while the app is terminated.
+
+You can find the open issue describing this problem on React Native's GitHub repository [Here](https://github.com/facebook/react-native/issues/32350). 
+There are many workarounds suggested in this issue's thread and a few other similar issues. 
+However, the workaround that worked for us involves intercepting the launch arguments in the app delegate and adding 
+a key `UIApplicationLaunchOptionsURLKey`, which React Native expects to be present when calling the `Linking.getInitialURL()` listener.
+
+
+Here's a method to implement this workaround:
+
+
+```swift 
+- (NSMutableDictionary *)getLaunchOptionsWithURL:(NSDictionary * _Nullable)launchOptions {
+  NSMutableDictionary *launchOptionsWithURL = [NSMutableDictionary dictionaryWithDictionary:launchOptions];
+  if (launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey]) {
+    NSDictionary *remoteNotification = launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey];
+    
+    if (remoteNotification[@"url"]) {
+      NSString *initialURL = remoteNotification[@"url"];
+      if (!launchOptions[UIApplicationLaunchOptionsURLKey]) {
+        launchOptionsWithURL[UIApplicationLaunchOptionsURLKey] = [NSURL URLWithString:initialURL];
+      }
+    }
+  }
+  return launchOptionsWithURL;
+}
+```
+
+Ensure that this method is called from `application:didFinishLaunchingWithOptions:` before calling the superclass method with the 
+modified launch arguments, like so:
+
+
+```swift
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+  self.moduleName = @"KlaviyoReactNativeSdkExample";
+  self.initialProps = @{};
+
+  // some more code ...
+    
+  NSMutableDictionary * launchOptionsWithURL = [self getLaunchOptionsWithURL:launchOptions];
+
+  return [super application:application didFinishLaunchingWithOptions:launchOptionsWithURL];
+}
+
+```
+
+This implementation is included in the example app in this repo and can be used for testing. 
+Make sure to use the URL scheme (rntest://) of the example app when testing.
+

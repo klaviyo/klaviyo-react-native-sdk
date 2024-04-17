@@ -34,8 +34,11 @@ BOOL useNativeImplementation = YES;
   } else {
     // Initialize cross-platform push library, e.g. Firebase
   }
+  
+  // refer to installation step 16 below
+  NSMutableDictionary * launchOptionsWithURL = [self getLaunchOptionsWithURL:launchOptions];
 
-  return [super application:application didFinishLaunchingWithOptions:launchOptions];
+  return [super application:application didFinishLaunchingWithOptions:launchOptionsWithURL];
 }
 
 // Installation Step 6: Implement this delegate to receive and set the push token
@@ -125,6 +128,26 @@ BOOL useNativeImplementation = YES;
 // notification.
 - (void)applicationDidBecomeActive:(UIApplication *)application {
   [PushNotificationsHelper updateBadgeCount:0];
+}
+
+
+// Installation Step 16: call this method from `application:didFinishLaunchingWithOptions:` before calling the super class method with
+// the launch arguments. This is a workaround for a react issue where if the app is terminated the deep link isn't sent to the react native layer
+// when it is coming from a remote notification.
+// https://github.com/facebook/react-native/issues/32350
+- (NSMutableDictionary *)getLaunchOptionsWithURL:(NSDictionary * _Nullable)launchOptions {
+  NSMutableDictionary *launchOptionsWithURL = [NSMutableDictionary dictionaryWithDictionary:launchOptions];
+  if (launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey]) {
+    NSDictionary *remoteNotification = launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey];
+    
+    if (remoteNotification[@"url"]) {
+      NSString *initialURL = remoteNotification[@"url"];
+      if (!launchOptions[UIApplicationLaunchOptionsURLKey]) {
+        launchOptionsWithURL[UIApplicationLaunchOptionsURLKey] = [NSURL URLWithString:initialURL];
+      }
+    }
+  }
+  return launchOptionsWithURL;
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
