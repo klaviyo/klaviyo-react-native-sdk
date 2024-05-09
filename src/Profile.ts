@@ -16,44 +16,44 @@ export interface KlaviyoProfileApi {
    * Update a profile's external ID.
    * @param externalId - The external ID to set
    */
-  setExternalId(externalId: String): void;
+  setExternalId(externalId: string): void;
 
   /**
    * Retrieve a profile's external ID.
    * @param callback - The callback function to handle the response
    */
-  getExternalId(callback: Function | undefined): String | null;
+  getExternalId(callback: Function | undefined): string | null;
 
   /**
    * Update a profile's email address.
    * @param email - The email address to set
    */
-  setEmail(email: String): void;
+  setEmail(email: string): void;
 
   /**
    * Retrieve a profile's email address.
    * @param callback - The callback function to handle the response
    */
-  getEmail(callback: Function | undefined): String | null;
+  getEmail(callback: Function | undefined): string | null;
 
   /**
    * Update a profile's phone number.
    * @param phoneNumber - The phone number to set
    */
-  setPhoneNumber(phoneNumber: String): void;
+  setPhoneNumber(phoneNumber: string): void;
 
   /**
    * Retrieve a profile's phone number.
    * @param callback - The callback function to handle the response
    */
-  getPhoneNumber(callback: Function | undefined): String | null;
+  getPhoneNumber(callback: Function | undefined): string | null;
 
   /**
    * Update a profile's properties.
    * @param propertyKey - The property key to set
    * @param value - The property value to set
    */
-  setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void;
+  setProfileAttribute(propertyKey: ProfilePropertyKey, value: string): void;
 
   /**
    * Clear the current profile and set it to a new anonymous profile
