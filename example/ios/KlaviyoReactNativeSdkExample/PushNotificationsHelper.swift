@@ -12,13 +12,13 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
-  static func requestPushPermission() {
+  static func requestNotificationPermission() {
     let center = UNUserNotificationCenter.current()
     center.requestAuthorization(options: [.alert, .sound, .badge]) { _, error in
         if let error = error {
           print("AuthError", "error while trying to authorize push", error)
         } else {
-          // Installation Step 5: register for remote notifications after requesting permission on the main thread
+          // iOS Installation Step 5: register for remote notifications after requesting permission on the main thread
           DispatchQueue.main.async {
             UIApplication.shared.registerForRemoteNotifications()
           }

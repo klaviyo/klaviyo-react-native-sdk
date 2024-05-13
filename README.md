@@ -87,9 +87,12 @@ yarn add klaviyo-react-native-sdk
 
 ### Example App
 
-We have included a bare-bones example app in this repository for reference of how to integrate with our SDK.
-It is primarily intended to give code samples such as how and where to `initialize` or how to implement notification
-delegate methods on iOS. To actually run the example app:
+We have included an example app in this repository for reference of how to integrate with our SDK.
+It is primarily intended to give code samples such as how and where to `initialize`, implement notification
+delegate methods on iOS, and handle an opened notification intent on Android. We've commented the sample app
+code to call out key setup steps, search for `iOS Installation Step` and `Android Installation Step`.
+
+To run the example app:
 
 - Clone this repository
 - From the root directory, run `yarn example-setup`. This is an alias that will do the following:
@@ -407,7 +410,9 @@ No additional setup is needed to support rich push on Android.
 #### Tracking Open Events
 
 Klaviyo tracks push opens events with a specially formatted event `Opened Push` that includes message tracking
-parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:
+parameters in the event properties. To track push opens, you will need to follow platform-specific instructions.
+Currently, tracking push open events must be done from the native code due to platform differences that prevent
+us from bridging this functionality into the React Native SDK code.
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
