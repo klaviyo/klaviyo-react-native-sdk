@@ -11,40 +11,40 @@ import type { Event } from './Event';
  * Implementation of the {@link KlaviyoInterface}
  */
 export const Klaviyo: Spec = {
-  initialize(apiKey: String): void {
+  initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
-  setExternalId(externalId: String): void {
+  setExternalId(externalId: string): void {
     KlaviyoReactNativeSdk.setExternalId(externalId);
   },
-  getExternalId(callback: Function | undefined): String | null {
+  getExternalId(callback: Function | undefined): string | null {
     return KlaviyoReactNativeSdk.getExternalId(callback);
   },
-  setEmail(email: String): void {
+  setEmail(email: string): void {
     KlaviyoReactNativeSdk.setEmail(email);
   },
-  getEmail(callback: Function | undefined): String | null {
+  getEmail(callback: Function | undefined): string | null {
     return KlaviyoReactNativeSdk.getEmail(callback);
   },
-  setPhoneNumber(phoneNumber: String): void {
+  setPhoneNumber(phoneNumber: string): void {
     KlaviyoReactNativeSdk.setPhoneNumber(phoneNumber);
   },
-  getPhoneNumber(callback: Function | undefined): String | null {
+  getPhoneNumber(callback: Function | undefined): string | null {
     return KlaviyoReactNativeSdk.getPhoneNumber(callback);
   },
-  setProfileAttribute(propertyKey: ProfilePropertyKey, value: String): void {
+  setProfileAttribute(propertyKey: ProfilePropertyKey, value: string): void {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();
   },
-  setPushToken(token: String) {
+  setPushToken(token: string) {
     KlaviyoReactNativeSdk.setPushToken(token);
   },
-  getPushToken(callback: Function | undefined): String | null {
+  getPushToken(callback: Function | undefined): string | null {
     return KlaviyoReactNativeSdk.getPushToken(callback);
   },
   createEvent(event: Event): void {
