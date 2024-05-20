@@ -176,10 +176,5 @@
         }
       ]
     ]
-  },
-  "codegenConfig": {
-    "name": "RNKlaviyoReactNativeSdkSpec",
-    "type": "modules",
-    "jsSrcsDir": "src"
   }
 }
