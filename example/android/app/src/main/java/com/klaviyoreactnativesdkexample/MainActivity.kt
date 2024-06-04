@@ -43,13 +43,13 @@ class MainActivity : ReactActivity() {
     ) { isGranted: Boolean ->
       // This is called with the result of the permission request
       val verb = if (isGranted) "granted" else "denied"
-      Log.d("KlaviyoTestModule", "Permission $verb")
+      Log.d("KlaviyoSampleApp", "Notification permission $verb")
 
       // Android Installation Step 4c: After permission is granted, call setPushToken to update permission state
       if (isGranted) {
         if (BuildConfig.USE_NATIVE_FIREBASE) {
           FirebaseMessaging.getInstance().token.addOnSuccessListener {
-            Log.d("KlaviyoMainApplication", "Push token set: $it")
+            Log.d("KlaviyoSampleApp", "Push token set: $it")
             Klaviyo.setPushToken(it)
             Toast.makeText(
               this,
@@ -74,6 +74,7 @@ class MainActivity : ReactActivity() {
     }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    Log.v("KlaviyoSampleApp", "MainActivity.onCreate()")
     super.onCreate(savedInstanceState)
 
     // Android Installation Step 4b: Request notification permission from the user, if handling push tokens natively
@@ -82,7 +83,7 @@ class MainActivity : ReactActivity() {
       when {
         NotificationManagerCompat.from(this).areNotificationsEnabled() -> {
           // We have already notification permission
-          return
+          Log.v("KlaviyoSampleApp", "Notification permission is granted")
         }
 
         ActivityCompat.shouldShowRequestPermissionRationale(
@@ -91,18 +92,21 @@ class MainActivity : ReactActivity() {
         ) -> {
           // Reachable on API level >= 33
           // If a permission prompt was previously denied, display an educational UI and request permission again
+          Log.v("KlaviyoSampleApp", "Requesting notification permission with rationale")
           requestPermissionWithRationale()
         }
 
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
           // Reachable on API Level >= 33
           // We can request the permission
+          Log.v("KlaviyoSampleApp", "Requesting notification permission")
           requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         else -> {
           // Reachable on API Level < 33
           // DENIED - Notifications were turned off by the user in system settings
+          Log.v("KlaviyoSampleApp", "Notification permission is denied and won't be requested")
           alertPermissionDenied()
         }
       }
@@ -115,6 +119,8 @@ class MainActivity : ReactActivity() {
   }
 
   override fun onNewIntent(intent: Intent?) {
+    Log.v("KlaviyoSampleApp", "MainActivity.onNewIntent()")
+    Log.v("KlaviyoSampleApp", "Launch Intent: " + intent.toString())
     super.onNewIntent(intent)
 
     // Android Installation Step 5: Call handlePush when a push notification is tapped

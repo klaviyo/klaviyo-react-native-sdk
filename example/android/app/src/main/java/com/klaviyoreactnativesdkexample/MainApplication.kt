@@ -52,7 +52,7 @@ class MainApplication : Application(), ReactApplication {
       if (BuildConfig.USE_NATIVE_FIREBASE) {
         // Android Installation Step 4a: Collect push token and pass it to Klaviyo, if handling push tokens natively
         FirebaseMessaging.getInstance().token.addOnSuccessListener {
-          Log.d("KlaviyoMainApplication", "Push token set: $it")
+          Log.d("KlaviyoSampleApp", "Push token set: $it")
           Klaviyo.setPushToken(it)
         }
       }
