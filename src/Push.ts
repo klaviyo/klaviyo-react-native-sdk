@@ -7,12 +7,12 @@ export interface KlaviyoPushApi {
    *
    * @param token
    */
-  setPushToken(token: String): void;
+  setPushToken(token: string): void;
 
   /**
    * Get the push token for the current profile from the SDK
    *
    * @param callback
    */
-  getPushToken(callback: Function | undefined): String | null;
+  getPushToken(callback: Function | undefined): string | null;
 }
