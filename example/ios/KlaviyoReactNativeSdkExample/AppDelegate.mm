@@ -23,7 +23,7 @@ BOOL useNativeImplementation = NO;
   if (useNativeImplementation) {
     // iOS Installation Step 3: Initialize the SDK with public key, if initializing from native code
     // Exclude if initializing from react native layer
-    [PushNotificationsHelper initializeSDK: @"YOUR_PUBLIC_KLAVIYO_API_KEY"];
+    [PushNotificationsHelper initializeSDK: @"YOUR_KLAVIYO_PUBLIC_API_KEY"];
 
     // iOS Installation Step 4: Request notification permission from the user
     // Exclude if handling permissions from react native layer

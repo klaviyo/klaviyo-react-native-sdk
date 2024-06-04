@@ -19,7 +19,7 @@ export const initialize = async () => {
     // Alternate Android Installation Step 3
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
-    Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
+    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
   } catch (e: any) {
     console.log(e.message, e.code);
   }

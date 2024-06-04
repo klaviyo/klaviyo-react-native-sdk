@@ -8,7 +8,7 @@
 initializeKlaviyoFromNative=true
 
 # Set your public Klaviyo API key
-publicApiKey=YOUR_PUBLIC_KLAVIYO_API_KEY
+publicApiKey=YOUR_KLAVIYO_PUBLIC_API_KEY
 
 # Enable Firebase in the example app. You must add your google-services.json file to the project,
 # and update the applicationId in build.gradle, else the app will crash on launch

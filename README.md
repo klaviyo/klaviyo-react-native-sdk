@@ -161,7 +161,7 @@ Below is an example of how to initialize the SDK from your React Native code:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
-Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
+Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
 ```
 
 ### Native Initialization

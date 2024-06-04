@@ -64,6 +64,12 @@ class MainActivity : ReactActivity() {
             Toast.LENGTH_SHORT,
           ).show()
         }
+      } else {
+        Toast.makeText(
+          this,
+          "Permission denied",
+          Toast.LENGTH_SHORT,
+        ).show()
       }
     }
 
@@ -120,7 +126,7 @@ class MainActivity : ReactActivity() {
     // Android Installation Step 6: Deep linking from native layer (uncommon)
     // Read deep link data from intent, open the appropriate page
     val action: String? = intent?.action // e.g. ACTION_VIEW
-    val deepLink: Uri? = intent?.data // e.g. klaviyosample://link
+    val deepLink: Uri? = intent?.data // e.g. klaviyoreactnativesdkexample://link
   }
 
   @SuppressLint("InlinedApi") // It is safe to use Manifest.permission.POST_NOTIFICATIONS, ActivityCompat handles API level differences
