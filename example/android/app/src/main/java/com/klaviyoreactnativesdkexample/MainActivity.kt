@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -46,8 +47,22 @@ class MainActivity : ReactActivity() {
 
       // Android Installation Step 4c: After permission is granted, call setPushToken to update permission state
       if (isGranted) {
-        FirebaseMessaging.getInstance().token.addOnSuccessListener {
-          Klaviyo.setPushToken(it)
+        if (BuildConfig.USE_NATIVE_FIREBASE) {
+          FirebaseMessaging.getInstance().token.addOnSuccessListener {
+            Log.d("KlaviyoMainApplication", "Push token set: $it")
+            Klaviyo.setPushToken(it)
+            Toast.makeText(
+              this,
+              "Permission granted! Push token set.",
+              Toast.LENGTH_SHORT,
+            ).show()
+          }
+        } else {
+          Toast.makeText(
+            this,
+            "Permission granted! Push token not set, because Firebase is not initialized natively.",
+            Toast.LENGTH_SHORT,
+          ).show()
         }
       }
     }
@@ -56,7 +71,7 @@ class MainActivity : ReactActivity() {
     super.onCreate(savedInstanceState)
 
     // Android Installation Step 4b: Request notification permission from the user, if handling push tokens natively
-    if (MainApplication.USE_NATIVE_IMPLEMENTATION) {
+    if (BuildConfig.INITIALIZE_KLAVIYO_FROM_NATIVE) {
       // Note: it is not usually advised to prompt for permissions immediately upon app launch. This is just a sample.
       when {
         NotificationManagerCompat.from(this).areNotificationsEnabled() -> {

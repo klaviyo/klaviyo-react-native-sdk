@@ -99,6 +99,13 @@ To run the example app:
   - Run `yarn install --immutable` from the root directory
   - Navigate to the `example` directory and run `bundle install`
   - Navigate to the `example/ios` directory and run `bundle exec pod install`
+- Android configuration:
+  - To initialize Klaviyo from the native layer, open `example/android/gradle.properties` and follow the
+    instructions to set your `publicApiKey` and verify `initializeKlaviyoFromNative` is enabled.
+  - If you wish to run the Android example app with push/firebase, you'll need to copy a `google-services.json`
+    file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
+    Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
+    This is disabled by default because the app will crash on launch without a `google-services.json` file.
 - From the project's root directory, run `yarn example start` to start the example application. Follow the
   metro instructions from here, i.e. press `i` to run on iOS or `a` to run on Android.
 

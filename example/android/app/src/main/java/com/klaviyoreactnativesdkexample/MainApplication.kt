@@ -45,21 +45,17 @@ class MainApplication : Application(), ReactApplication {
     }
     ReactNativeFlipper.initializeFlipper(this, reactNativeHost.reactInstanceManager)
 
-    if (USE_NATIVE_IMPLEMENTATION) {
+    if (BuildConfig.INITIALIZE_KLAVIYO_FROM_NATIVE) {
       // Android Installation Step 3: Initialize the SDK with public key and context, if initializing from native code
       Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
 
-      // Android Installation Step 4a: Collect push token and pass it to Klaviyo, if handling push tokens natively
-      FirebaseMessaging.getInstance().token.addOnSuccessListener {
-        Log.d("KlaviyoMainApplication", "FCM registration token: $it")
-        Klaviyo.setPushToken(it)
+      if (BuildConfig.USE_NATIVE_FIREBASE) {
+        // Android Installation Step 4a: Collect push token and pass it to Klaviyo, if handling push tokens natively
+        FirebaseMessaging.getInstance().token.addOnSuccessListener {
+          Log.d("KlaviyoMainApplication", "Push token set: $it")
+          Klaviyo.setPushToken(it)
+        }
       }
     }
-  }
-
-  companion object {
-    // Set this to true if you initialize Klaviyo from native (java/kotlin) code
-    // or false if you initialize from React Native (javascript/typescript) code
-    const val USE_NATIVE_IMPLEMENTATION = true
   }
 }

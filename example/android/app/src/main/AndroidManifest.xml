@@ -23,7 +23,7 @@
         </intent-filter>
 
         <!-- Android Installation Step 2a: Configure deep links, if your push notifications will contain them -->
-        <intent-filter android:label="@string/deep_link_handler">
+        <intent-filter android:label="deep_link_filter">
           <action android:name="android.intent.action.VIEW"/>
 
           <category android:name="android.intent.category.DEFAULT"/>

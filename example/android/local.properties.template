@@ -4,4 +4,12 @@
 # Only the base template should be checked in to VCS.
 # Copy this file to `local.properties` to set your local overrides
 
+# Configures whether Klaviyo.initialize() is called from native java/kotlin layer, or javascript/typescript layer
+initializeKlaviyoFromNative=true
+
+# Set your public Klaviyo API key
 publicApiKey=YOUR_PUBLIC_KLAVIYO_API_KEY
+
+# Enable Firebase in the example app. You must add your google-services.json file to the project,
+# and update the applicationId in build.gradle, else the app will crash on launch
+useNativeFirebase=false

@@ -74,7 +74,11 @@ android {
     if (rootProject.file("local.properties").canRead()) {
         localProperties.load(new FileInputStream(rootProject.file("local.properties")))
     }
+
+    //Local properties that will be declared as build config fields:
     def apiKey = localProperties['publicApiKey'] ?: publicApiKey
+    def initializeKlaviyoFromNative = localProperties['initializeKlaviyoFromNative'] ?: initializeKlaviyoFromNative
+    def useNativeFirebase = localProperties['useNativeFirebase'] ?: useNativeFirebase
 
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -82,7 +86,9 @@ android {
 
     namespace "com.klaviyoreactnativesdkexample"
     defaultConfig {
-        applicationId "com.klaviyoreactnativesdkexample"
+        // Optional Android Installation Step: Set the applicationId if you want to run this sample app with
+        // firebase enabled. It must match an applicationId in your google-services.json file
+        applicationId "com.klaviyorntestapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -100,6 +106,8 @@ android {
         debug {
             signingConfig signingConfigs.debug
             buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
+            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
+            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -108,6 +116,8 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
+            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
+            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
     }
 }
@@ -126,3 +136,9 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+if (useNativeFirebase) {
+  // Note: this auto-initializes firebase from your google-services.json file.
+  // You'll need to set applicationId to match your firebase project, see above
+  apply plugin: "com.google.gms.google-services"
+}
