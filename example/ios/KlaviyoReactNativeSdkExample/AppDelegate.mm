@@ -10,7 +10,7 @@
 BOOL isDebug = YES;
 
 // Change to NO if you prefer to initialize and handle push tokens in the React Native layer
-BOOL useNativeImplementation = NO;
+BOOL useNativeImplementation = YES;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {

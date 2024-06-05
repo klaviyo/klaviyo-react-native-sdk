@@ -88,7 +88,7 @@ android {
     defaultConfig {
         // Optional Android Installation Step: Set the applicationId if you want to run this sample app with
         // firebase enabled. It must match an applicationId in your google-services.json file
-        applicationId "com.klaviyorntestapp"
+        applicationId "com.klaviyoreactnativesdkexample"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -126,6 +126,8 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:flipper-integration")
+
+    // Android Installation Step 1b - add firebase dependency if using push
     implementation 'com.google.firebase:firebase-messaging-ktx:24.0.0'
 
     if (hermesEnabled.toBoolean()) {
