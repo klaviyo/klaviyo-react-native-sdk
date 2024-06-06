@@ -55,7 +55,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Requirements
 
-For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73).
+For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73+).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 
 ### React Native
@@ -118,6 +118,10 @@ To run the example app:
 Android installation requirements may vary depending upon your project configuration and other dependencies.
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
+
+#### React Native 0.74.x
+
+There are no additional installation requirements.
 
 #### React Native 0.73.x
 
