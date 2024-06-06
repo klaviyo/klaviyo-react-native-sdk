@@ -5,7 +5,7 @@
 //  Created by Ajay Subramanya on 4/9/24.
 //
 
-// Installation Step 15: Create this notification service extension using the steps outlined here - https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push
+// iOS Installation Step 15: Create this notification service extension using the steps outlined here - https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push
 import KlaviyoSwiftExtension
 import UIKit
 import UserNotifications

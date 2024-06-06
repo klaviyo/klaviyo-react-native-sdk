@@ -87,15 +87,25 @@ yarn add klaviyo-react-native-sdk
 
 ### Example App
 
-We have included a bare-bones example app in this repository for reference of how to integrate with our SDK.
-It is primarily intended to give code samples such as how and where to `initialize` or how to implement notification
-delegate methods on iOS. To actually run the example app:
+We have included an example app in this repository for reference of how to integrate with our SDK.
+It is primarily intended to give code samples such as how and where to `initialize`, implement notification
+delegate methods on iOS, and handle an opened notification intent on Android. We've commented the sample app
+code to call out key setup steps, search for `iOS Installation Step` and `Android Installation Step`.
+
+To run the example app:
 
 - Clone this repository
 - From the root directory, run `yarn example-setup`. This is an alias that will do the following:
   - Run `yarn install --immutable` from the root directory
   - Navigate to the `example` directory and run `bundle install`
   - Navigate to the `example/ios` directory and run `bundle exec pod install`
+- Android configuration:
+  - To initialize Klaviyo from the native layer, open `example/android/gradle.properties` and follow the
+    instructions to set your `publicApiKey` and verify `initializeKlaviyoFromNative` is enabled.
+  - If you wish to run the Android example app with push/firebase, you'll need to copy a `google-services.json`
+    file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
+    Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
+    This is disabled by default because the app will crash on launch without a `google-services.json` file.
 - From the project's root directory, run `yarn example start` to start the example application. Follow the
   metro instructions from here, i.e. press `i` to run on iOS or `a` to run on Android.
 
@@ -151,7 +161,7 @@ Below is an example of how to initialize the SDK from your React Native code:
 
 ```typescript
 import { Klaviyo } from 'klaviyo-react-native-sdk';
-Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
+Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
 ```
 
 ### Native Initialization
@@ -407,10 +417,16 @@ No additional setup is needed to support rich push on Android.
 #### Tracking Open Events
 
 Klaviyo tracks push opens events with a specially formatted event `Opened Push` that includes message tracking
-parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:
+parameters in the event properties. To track push opens, you will need to follow platform-specific instructions.
+Currently, tracking push open events must be done from the native code due to platform differences that prevent
+us from bridging this functionality into the React Native SDK code.
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
+
+> Note: If you initialize Klaviyo from React Native code, be aware that on both platforms the timing of when
+> an `Opened Push` event gets triggered can sometimes occur before your React Native code to initialize our SDK
+> can execute. To mitigate this, our SDK holds the request in memory until initialization occurs.
 
 #### Deep Linking
 
