@@ -426,7 +426,7 @@ us from bridging this functionality into the React Native SDK code.
 
 > Note: If you initialize Klaviyo from React Native code, be aware that on both platforms the timing of when
 > an `Opened Push` event gets triggered can sometimes occur before your React Native code to initialize our SDK
-> can execute. To mitigate this, our SDK holds the `handlePush` operation in memory until initialization occurs.
+> can execute. To mitigate this, our SDK holds the request in memory until initialization occurs.
 
 #### Deep Linking
 
