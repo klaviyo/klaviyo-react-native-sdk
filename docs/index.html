@@ -81,15 +81,26 @@ repositories. This repo also contains a basic <a href="./example">React Native s
 run the following from your project&#39;s root directory:</p>
 <pre><code class="language-sh"><span class="hl-0"># Using npm</span><br/><span class="hl-1">npm</span><span class="hl-2"> </span><span class="hl-3">install</span><span class="hl-2"> </span><span class="hl-3">klaviyo-react-native-sdk</span><br/><br/><span class="hl-0"># Using yarn</span><br/><span class="hl-1">yarn</span><span class="hl-2"> </span><span class="hl-3">add</span><span class="hl-2"> </span><span class="hl-3">klaviyo-react-native-sdk</span>
 </code><button>Copy</button></pre>
-<a id="md:example-app" class="tsd-anchor"></a><h3><a href="#md:example-app">Example App</a></h3><p>We have included a bare-bones example app in this repository for reference of how to integrate with our SDK.
-It is primarily intended to give code samples such as how and where to <code>initialize</code> or how to implement notification
-delegate methods on iOS. To actually run the example app:</p>
+<a id="md:example-app" class="tsd-anchor"></a><h3><a href="#md:example-app">Example App</a></h3><p>We have included an example app in this repository for reference of how to integrate with our SDK.
+It is primarily intended to give code samples such as how and where to <code>initialize</code>, implement notification
+delegate methods on iOS, and handle an opened notification intent on Android. We&#39;ve commented the sample app
+code to call out key setup steps, search for <code>iOS Installation Step</code> and <code>Android Installation Step</code>.</p>
+<p>To run the example app:</p>
 <ul>
 <li>Clone this repository</li>
 <li>From the root directory, run <code>yarn example-setup</code>. This is an alias that will do the following:<ul>
 <li>Run <code>yarn install --immutable</code> from the root directory</li>
 <li>Navigate to the <code>example</code> directory and run <code>bundle install</code></li>
 <li>Navigate to the <code>example/ios</code> directory and run <code>bundle exec pod install</code></li>
+</ul>
+</li>
+<li>Android configuration:<ul>
+<li>To initialize Klaviyo from the native layer, open <code>example/android/gradle.properties</code> and follow the
+instructions to set your <code>publicApiKey</code> and verify <code>initializeKlaviyoFromNative</code> is enabled.</li>
+<li>If you wish to run the Android example app with push/firebase, you&#39;ll need to copy a <code>google-services.json</code>
+file into <code>example/android/app/src</code> and update the <code>applicationId</code> in <code>app/build.gradle</code> to match your application ID.
+Then, open <code>example/android/gradle.properties</code> and follow the instructions to enable <code>useNativeFirebase</code>.
+This is disabled by default because the app will crash on launch without a <code>google-services.json</code> file.</li>
 </ul>
 </li>
 <li>From the project&#39;s root directory, run <code>yarn example start</code> to start the example application. Follow the
@@ -118,7 +129,7 @@ and result in a logged error.</p>
 This decision is dependent on your app&#39;s architecture. It is not required to initialize the SDK in both places!
 Note: It is safe to re-initialize, e.g. if your app needs to switch between more than one Klaviyo account.</p>
 <a id="md:react-native-initialization" class="tsd-anchor"></a><h3><a href="#md:react-native-initialization">React Native Initialization</a></h3><p>Below is an example of how to initialize the SDK from your React Native code:</p>
-<pre><code class="language-typescript"><span class="hl-4">import</span><span class="hl-2"> { </span><span class="hl-5">Klaviyo</span><span class="hl-2"> } </span><span class="hl-4">from</span><span class="hl-2"> </span><span class="hl-3">&#39;klaviyo-react-native-sdk&#39;</span><span class="hl-2">;</span><br/><span class="hl-5">Klaviyo</span><span class="hl-2">.</span><span class="hl-1">initialize</span><span class="hl-2">(</span><span class="hl-3">&#39;YOUR_PUBLIC_KLAVIYO_API_KEY&#39;</span><span class="hl-2">);</span>
+<pre><code class="language-typescript"><span class="hl-4">import</span><span class="hl-2"> { </span><span class="hl-5">Klaviyo</span><span class="hl-2"> } </span><span class="hl-4">from</span><span class="hl-2"> </span><span class="hl-3">&#39;klaviyo-react-native-sdk&#39;</span><span class="hl-2">;</span><br/><span class="hl-5">Klaviyo</span><span class="hl-2">.</span><span class="hl-1">initialize</span><span class="hl-2">(</span><span class="hl-3">&#39;YOUR_KLAVIYO_PUBLIC_API_KEY&#39;</span><span class="hl-2">);</span>
 </code><button>Copy</button></pre>
 <a id="md:native-initialization" class="tsd-anchor"></a><h3><a href="#md:native-initialization">Native Initialization</a></h3><p>Follow the native SDK instructions for initialization, and refer to the
 <a href="./example">example app</a> in this repository for guidance:</p>
@@ -240,11 +251,18 @@ No additional setup is needed to support rich push on Android.</p>
 <li><a href="https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push">iOS</a></li>
 </ul>
 <a id="md:tracking-open-events" class="tsd-anchor"></a><h4><a href="#md:tracking-open-events">Tracking Open Events</a></h4><p>Klaviyo tracks push opens events with a specially formatted event <code>Opened Push</code> that includes message tracking
-parameters in the event properties. To track push opens, you will need to follow platform-specific instructions:</p>
+parameters in the event properties. To track push opens, you will need to follow platform-specific instructions.
+Currently, tracking push open events must be done from the native code due to platform differences that prevent
+us from bridging this functionality into the React Native SDK code.</p>
 <ul>
 <li><a href="https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events">Android</a></li>
 <li><a href="https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events">iOS</a></li>
 </ul>
+<blockquote>
+<p>Note: If you initialize Klaviyo from React Native code, be aware that on both platforms the timing of when
+an <code>Opened Push</code> event gets triggered can sometimes occur before your React Native code to initialize our SDK
+can execute. To mitigate this, our SDK holds the request in memory until initialization occurs.</p>
+</blockquote>
 <a id="md:deep-linking" class="tsd-anchor"></a><h4><a href="#md:deep-linking">Deep Linking</a></h4><p><a href="https://help.klaviyo.com/hc/en-us/articles/14750403974043">Deep Links</a> allow you to navigate to a particular
 page within your app in response to the user opening a notification. Familiarize yourself with the
 <a href="https://reactnative.dev/docs/linking">React Native Guide</a> to deep linking, then read through the platform-specific
