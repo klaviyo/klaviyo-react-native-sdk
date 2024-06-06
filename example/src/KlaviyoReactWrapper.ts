@@ -16,8 +16,10 @@ import {
 
 export const initialize = async () => {
   try {
-    // If initializing from RN Layer: (replace with your public key)
-    Klaviyo.initialize('YOUR_PUBLIC_KLAVIYO_API_KEY');
+    // Alternate Android Installation Step 3
+    // Alternate iOS Installation Step 3
+    // Initialize the SDK with public key, if initializing from React Native
+    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -50,7 +52,7 @@ export const setExternalId = async () => {
 export const getEmail = async () => {
   try {
     Klaviyo.getEmail((value: string) => {
-      console.log('email is =', value);
+      console.log('email = ', value);
     });
   } catch (e: any) {
     console.log(e.message, e.code);
@@ -60,7 +62,7 @@ export const getEmail = async () => {
 export const getPhoneNumber = async () => {
   try {
     Klaviyo.getPhoneNumber((phoneNumber: string) => {
-      console.log('phone number is = ', phoneNumber);
+      console.log('phone number = ', phoneNumber);
     });
   } catch (e: any) {
     console.log(e.message, e.code);

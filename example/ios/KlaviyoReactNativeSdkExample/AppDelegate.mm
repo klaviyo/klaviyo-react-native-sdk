@@ -20,31 +20,31 @@ BOOL useNativeImplementation = YES;
   // Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  // Installation Step 2: Set the UNUserNotificationCenter delegate to self
+  // iOS Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
   if (useNativeImplementation) {
-    // Installation Step 3: Initialize the SDK with public key.
+    // iOS Installation Step 3: Initialize the SDK with public key, if initializing from native code
     // Exclude if initializing from react native layer
-    [PushNotificationsHelper initializeSDK: @"YOUR_PUBLIC_KLAVIYO_API_KEY"];
+    [PushNotificationsHelper initializeSDK: @"YOUR_KLAVIYO_PUBLIC_API_KEY"];
 
-    // Installation Step 4: Request push permission from the user
+    // iOS Installation Step 4: Request notification permission from the user
     // Exclude if handling permissions from react native layer
-    [PushNotificationsHelper requestPushPermission];
+    [PushNotificationsHelper requestNotificationPermission];
   } else {
     // Initialize cross-platform push library, e.g. Firebase
   }
-  
+
   // refer to installation step 16 below
   NSMutableDictionary * launchOptionsWithURL = [self getLaunchOptionsWithURL:launchOptions];
 
   return [super application:application didFinishLaunchingWithOptions:launchOptionsWithURL];
 }
 
-// Installation Step 6: Implement this delegate to receive and set the push token
+// iOS Installation Step 6: Implement this delegate to receive and set the push token
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
   if (useNativeImplementation) {
-    // Installation Step 7: set the push token to Klaviyo SDK
+    // iOS Installation Step 7: set the push token to Klaviyo SDK
     // Exclude if handling push tokens from react native layer
     [PushNotificationsHelper setPushTokenWithToken:deviceToken];
   } else {
@@ -57,29 +57,29 @@ BOOL useNativeImplementation = YES;
   }
 }
 
-// Installation Step 8: [Optional] Implement this if registering with APNs fails
+// iOS Installation Step 8: [Optional] Implement this if registering with APNs fails
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
   if (isDebug) {
     NSLog(@"Failed to register for remote notifications: %@", error);
   }
 }
 
-// Installation Step 9: Implement the delegate didReceiveNotificationResponse to response to user actions (tapping on push) push notifications
+// iOS Installation Step 9: Implement the delegate didReceiveNotificationResponse to response to user actions (tapping on push) push notifications
 // when the app is in the background
-// NOTE: this delegate will NOT be called if Installation Step 2 is not done.
+// NOTE: this delegate will NOT be called if iOS Installation Step 2 is not done.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
-  // Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments.
+  // iOS Installation Step 10: call `handleReceivingPushWithResponse` method and pass in the below arguments.
   // Note that handleReceivingPushWithResponse calls our SDK and is something that has to be implemented in your app as well.
   // Further, if you want to intercept urls instead of them being routed to the system and system calling `application:openURL:options:` you can implement the `deepLinkHandler` below
   [PushNotificationsHelper handleReceivingPushWithResponse:response completionHandler:completionHandler deepLinkHandler:^(NSURL * _Nonnull url) {
     NSLog(@"URL is %@", url);
     [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
   }];
-  
-  // Installation Step 9a: update the app count to current badge number - 1. You can also set this to 0 if you
+
+  // iOS Installation Step 9a: update the app count to current badge number - 1. You can also set this to 0 if you
   // no longer want the badge to show.
   [PushNotificationsHelper updateBadgeCount: [UIApplication sharedApplication].applicationIconBadgeNumber - 1];
-  
+
   if (isDebug) {
     UIAlertController *alert = [UIAlertController
                                 alertControllerWithTitle:@"Push Notification"
@@ -93,8 +93,8 @@ BOOL useNativeImplementation = YES;
   }
 }
 
-// Installation Step 11: Implement the delegate willPresentNotification to handle push notifications when the app is in the foreground
-// NOTE: this delegate will NOT be called if Installation Step 2 is not done.
+// iOS Installation Step 11: Implement the delegate willPresentNotification to handle push notifications when the app is in the foreground
+// NOTE: this delegate will NOT be called if iOS Installation Step 2 is not done.
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler {
@@ -112,18 +112,18 @@ BOOL useNativeImplementation = YES;
     [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
   }
 
-  // Installation Step 12: call the completion handler with presentation options here, such as showing a banner or playing a sound.
+  // iOS Installation Step 12: call the completion handler with presentation options here, such as showing a banner or playing a sound.
   completionHandler(UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound);
 }
 
-// Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
+// iOS Installation Step 13: Implement this method to receive deep link. There are some addition setup steps needed as mentioned in the readme here -
 // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
 // Calling `RCTLinkingManager` is required for your react native listeners to be called
 - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
   return [RCTLinkingManager application:app openURL:url options:options];
 }
 
-// Installation Step 14: if you want to reset the app badge count whenever the app becomes active implement this
+// iOS Installation Step 14: if you want to reset the app badge count whenever the app becomes active implement this
 // delegate method and set the badge count to 0. Note that this may sometimes mean that the user would miss the
 // notification.
 - (void)applicationDidBecomeActive:(UIApplication *)application {
@@ -131,7 +131,7 @@ BOOL useNativeImplementation = YES;
 }
 
 
-// Installation Step 16: call this method from `application:didFinishLaunchingWithOptions:` before calling the super class method with
+// iOS Installation Step 16: call this method from `application:didFinishLaunchingWithOptions:` before calling the super class method with
 // the launch arguments. This is a workaround for a react issue where if the app is terminated the deep link isn't sent to the react native layer
 // when it is coming from a remote notification.
 // https://github.com/facebook/react-native/issues/32350
@@ -139,7 +139,7 @@ BOOL useNativeImplementation = YES;
   NSMutableDictionary *launchOptionsWithURL = [NSMutableDictionary dictionaryWithDictionary:launchOptions];
   if (launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey]) {
     NSDictionary *remoteNotification = launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey];
-    
+
     if (remoteNotification[@"url"]) {
       NSString *initialURL = remoteNotification[@"url"];
       if (!launchOptions[UIApplicationLaunchOptionsURLKey]) {
