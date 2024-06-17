@@ -203,7 +203,7 @@ import { Klaviyo, Profile } from 'klaviyo-react-native-sdk';
 
 const profile: Profile = {
   email: 'kermit@example.com',
-  phone: '+15555555555',
+  phoneNumber: '+15555555555',
   externalId: '12345',
   firstName: 'Kermit',
   lastName: 'The Frog',
