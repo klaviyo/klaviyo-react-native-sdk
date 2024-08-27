@@ -205,8 +205,12 @@ const profile: Profile = {
   title: 'CEO',
   organization: 'Muppets, Inc.',
   location: {
-    latitude: 42.3601,
-    longitude: 71.0589,
+    address1: '122 Main St',
+    address2: 'Apt 123',
+    city: 'Boston',
+    country: 'USA',
+    region: 'MA',
+    zip: '02120',
   },
 };
 Klaviyo.setProfile(profile);
