@@ -1,4 +1,5 @@
 import KlaviyoSwift
+@_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
 public class KlaviyoBridge: NSObject {
@@ -45,6 +46,7 @@ public class KlaviyoBridge: NSObject {
   @objc
   public static func initialize(_ apiKey: String) {
       KlaviyoSDK().initialize(with: apiKey)
+      KlaviyoCore.overrideSDKDefaults(name: "react_native", version: "9.9.9")
   }
 
   @objc
