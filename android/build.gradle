@@ -126,8 +126,9 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
   // Klaviyo Android SDK
-  api "com.github.klaviyo.klaviyo-android-sdk:analytics:as/chnl-4402-rn-sdk-name-version-SNAPSHOT"
-  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:as/chnl-4402-rn-sdk-name-version-SNAPSHOT"
+  implementation "com.github.klaviyo.klaviyo-android-sdk:core:$klaviyoAndroidSdkVersion"
+  api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
+  api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
 
   // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
   implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
