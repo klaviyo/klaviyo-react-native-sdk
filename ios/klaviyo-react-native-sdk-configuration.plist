@@ -5,13 +5,13 @@
    Pods
 
    Created by Ajay Subramanya on 9/18/24.
-   Copyright (c) 2024 ___ORGANIZATIONNAME___. All rights reserved.
+   Copyright (c) 2024 Klaviyo. All rights reserved.
 -->
 <plist version="1.0">
 <dict>
-    <key>sdk_version</key>
-    <string>9.8.8</string>
-    <key>sdk_name</key>
+    <key>react_native_sdk_name</key>
     <string>react_native</string>
+    <key>react_native_sdk_version</key>
+    <string>9.8.8</string>
 </dict>
 </plist>

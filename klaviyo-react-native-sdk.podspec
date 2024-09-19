@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "13.0" }
   s.source       = { :git => "https://github.com/klaviyo/klaviyo-react-native-sdk.git", :tag => "#{s.version}" }
   s.source_files = "ios/**/*.{h,m,mm,swift}"
-  s.resources    = ["ios/klaviyo-sdk-configuration.plist"]
+  s.resources    = ["ios/klaviyo-react-native-sdk-configuration.plist"]
 
   s.pod_target_xcconfig = { "DEFINES_MODULE" => "YES" }
 
