@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+   config.plist
+   Pods
+
+   Created by Ajay Subramanya on 9/18/24.
+   Copyright (c) 2024 ___ORGANIZATIONNAME___. All rights reserved.
+-->
+<plist version="1.0">
+<dict>
+    <key>sdk_version</key>
+    <string>9.8.8</string>
+    <key>sdk_name</key>
+    <string>react_native</string>
+</dict>
+</plist>
