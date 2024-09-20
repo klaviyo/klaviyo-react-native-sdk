@@ -3,8 +3,6 @@
 [![Android](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml)
 [![iOS](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml)
 
-> ⚠️ This repository is in beta development ⚠️
-
 ## Contents
 
 - [klaviyo-react-native-sdk](#klaviyo-react-native-sdk)
@@ -55,7 +53,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Requirements
 
-For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73+).
+The SDK was developed and tested against the latest minor release of React Native (0.73+).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 
 ### React Native
