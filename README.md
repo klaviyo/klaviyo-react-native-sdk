@@ -351,6 +351,11 @@ In order to collect the APNs push token in your React Native code you need to:
 
 For Android token collection, there isn't any additional setup required on the native side. The above code should work as is.
 
+##### iOS APNS Token Troubleshooting
+There is an open issue with [`@react-native-firebase/messaging`](https://github.com/invertase/react-native-firebase/issues/8022) where the SDK will uppercase any APNS token returned using `messaging().getAPNSToken()`.
+You can verify this by adding a log the `AppDelegate.m` file that prints the deviceToken (you will need to convert to a hex string).
+APNS Services is case-insensitive, so be sure you are not registering the same device token twice.
+
 #### Native Token Collection
 
 Follow the platform-specific instructions below:
