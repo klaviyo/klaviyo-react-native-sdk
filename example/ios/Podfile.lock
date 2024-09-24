@@ -11,11 +11,8 @@ PODS:
   - klaviyo-react-native-sdk (0.4.2):
     - KlaviyoSwift (= 3.2.0)
     - React-Core
-  - KlaviyoCore (0.1.0):
-    - AnyCodable-FlightSchool
   - KlaviyoSwift (3.2.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 0.1.0)
   - KlaviyoSwiftExtension (3.2.0)
   - RCT-Folly (2024.01.01.00):
     - boost
@@ -1184,7 +1181,6 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoSwift (from `../../../klaviyo-swift-sdk/`)
   - KlaviyoSwiftExtension
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -1240,7 +1236,7 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - AnyCodable-FlightSchool
-    - KlaviyoCore
+    - KlaviyoSwift
     - KlaviyoSwiftExtension
     - SocketRocket
 
@@ -1260,8 +1256,6 @@ EXTERNAL SOURCES:
     :tag: hermes-2024-02-20-RNv0.74.0-999cfd9979b5f57b1269119679ab8cdf60897de9
   klaviyo-react-native-sdk:
     :path: "../.."
-  KlaviyoSwift:
-    :path: "../../../klaviyo-swift-sdk/"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -1368,8 +1362,7 @@ SPEC CHECKSUMS:
   glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
   hermes-engine: 6eae7edb2f563ee41d7c1f91f4f2e57c26d8a5c3
   klaviyo-react-native-sdk: edf2b7ad63175da7c9819811649018e2b10dd2be
-  KlaviyoCore: a1c8bce61e3bf059e2122c68de67c0848ab18691
-  KlaviyoSwift: ae14ca3ab291d212e62ce6a7f75b7f98c117476a
+  KlaviyoSwift: 1f1630117681a5fad023eb3f4f745736cc8db642
   KlaviyoSwiftExtension: ac856517fec2e18f4fb3ff1dc3faa7335865a78b
   RCT-Folly: 045d6ecaa59d826c5736dfba0b2f4083ff8d79df
   RCTDeprecation: 3ca8b6c36bfb302e1895b72cfe7db0de0c92cd47
@@ -1421,6 +1414,6 @@ SPEC CHECKSUMS:
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   Yoga: 3f9165051bbc60b66f6a88c5eeafd9e9faa29500
 
-PODFILE CHECKSUM: 4955ffece2ede6a951b3c0a2bb7adaad84461971
+PODFILE CHECKSUM: fb4c6f946002a62b798ca073d975abf271898252
 
 COCOAPODS: 1.15.2
