@@ -61,6 +61,8 @@ jobs:
         run: |
           yarn example-setup
           rm -f example/ios/.xcode.env.local
+        env:
+          NO_FLIPPER: 1
 
       - name: Build example for iOS
         run: |
