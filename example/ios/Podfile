@@ -25,9 +25,6 @@ target 'KlaviyoReactNativeSdkExample' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  #TODO: remove this once iOS modularization release is made and the podspec is updated
-  pod 'KlaviyoSwift', :path => '../../../klaviyo-swift-sdk/'
-
   target 'KlaviyoReactNativeSdkExampleTests' do
     inherit! :complete
     # Pods for testing
