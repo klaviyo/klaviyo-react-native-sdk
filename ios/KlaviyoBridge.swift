@@ -160,7 +160,7 @@ public class KlaviyoBridge: NSObject {
     case Event.EventName.viewedProductMetric.value:
         return .viewedProductMetric
     case Event.EventName.startedCheckoutMetric.value:
-        return .viewedProductMetric
+        return .startedCheckoutMetric
     case Event.EventName.addedToCartMetric.value:
         return .addedToCartMetric
     case Event.EventName.openedAppMetric.value:
