@@ -1,4 +1,5 @@
 import KlaviyoSwift
+@_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
 public class KlaviyoBridge: NSObject {
