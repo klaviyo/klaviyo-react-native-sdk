@@ -110,5 +110,5 @@ Make sure to use the URL scheme (rntest://) of the example app when testing.
 ### iOS APNS Token Troubleshooting
 There is an open issue with [`@react-native-firebase/messaging`](https://github.com/invertase/react-native-firebase/issues/8022) where the SDK will uppercase any APNS token returned using `messaging().getAPNSToken()`.
 You can verify this by adding a log the `AppDelegate.m` file that prints the deviceToken (you will need to convert to a hex string).
-APNS Services is case-insensitive, so be sure you are not registering the same device token twice.
+This might have no impact on your use case, but is something to consider when designing.
 
