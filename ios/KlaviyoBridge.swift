@@ -30,10 +30,10 @@ public class KlaviyoBridge: NSObject {
   @objc
   public static var getEventTypesKeys: [String: String] {
       [
-        "VIEWED_PRODUCT": Event.EventName.ViewedProductMetric.value,
-        "STARTED_CHECKOUT": Event.EventName.StartedCheckoutMetric.value,
-        "OPENED_APP": Event.EventName.OpenedAppMetric.value,
-        "ADDED_TO_CART": Event.EventName.AddedToCartMetric.value
+        "VIEWED_PRODUCT": Event.EventName.viewedProductMetric.value,
+        "STARTED_CHECKOUT": Event.EventName.startedCheckoutMetric.value,
+        "OPENED_APP": Event.EventName.openedAppMetric.value,
+        "ADDED_TO_CART": Event.EventName.addedToCartMetric.value
       ]
   }
 
@@ -156,16 +156,16 @@ public class KlaviyoBridge: NSObject {
 
   static func getEventMetricsName(_ str: String) -> Event.EventName? {
     switch str {
-    case Event.EventName.ViewedProductMetric.value:
-        return .ViewedProductMetric
-    case Event.EventName.StartedCheckoutMetric.value:
-        return .StartedCheckoutMetric
-    case Event.EventName.AddedToCartMetric.value:
-        return .AddedToCartMetric
-    case Event.EventName.OpenedAppMetric.value:
-        return .OpenedAppMetric
+    case Event.EventName.viewedProductMetric.value:
+        return .viewedProductMetric
+    case Event.EventName.startedCheckoutMetric.value:
+        return .startedCheckoutMetric
+    case Event.EventName.addedToCartMetric.value:
+        return .addedToCartMetric
+    case Event.EventName.openedAppMetric.value:
+        return .openedAppMetric
     default:
-        return .CustomEvent(str)
+        return .customEvent(str)
     }
   }
 
