@@ -3,8 +3,6 @@
 [![Android](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml)
 [![iOS](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push)](https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml)
 
-> ⚠️ This repository is in beta development ⚠️
-
 ## Contents
 
 - [klaviyo-react-native-sdk](#klaviyo-react-native-sdk)
@@ -40,6 +38,8 @@
 
 ## Introduction
 
+> We currently don't have support for expo. This is something we are looking in to and should be available in the future.
+
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
 Klaviyo iOS and Android SDKs. For more information on the native SDKs, please see the
@@ -55,7 +55,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Requirements
 
-For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73+).
+This SDK was developed and tested against the latest minor release of React Native (0.73+).
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 
 ### React Native
