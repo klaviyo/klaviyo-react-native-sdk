@@ -143,7 +143,7 @@ export enum ProfileProperty {
   /**
    * An object containing key/value pairs for any custom properties assigned to this profile
    */
-  PROPERTIES = PROFILE_KEYS.TIMEZONE ?? 'properties',
+  PROPERTIES = PROFILE_KEYS.PROPERTIES ?? 'properties',
 }
 
 /**
