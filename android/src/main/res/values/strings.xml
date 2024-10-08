@@ -1,0 +1,4 @@
+<resources>
+  <string name="klaviyo_react_native_sdk_version">1.0.0</string>
+  <string name="klaviyo_react_native_sdk_name">react_native</string>
+</resources>
