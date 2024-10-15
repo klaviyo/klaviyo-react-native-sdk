@@ -38,7 +38,7 @@
 
 ## Introduction
 
-> We currently don't have support for expo. This is something we are looking in to and should be available in the future.
+> We currently don't have support for expo. This is something we are looking into and should be available in the future.
 
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
