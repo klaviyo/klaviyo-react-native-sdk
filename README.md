@@ -55,7 +55,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Requirements
 
-This SDK was developed and tested against the latest minor release of React Native (0.73+).
+This SDK was developed and tested against React Native 0.73.
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
 
 ### React Native
