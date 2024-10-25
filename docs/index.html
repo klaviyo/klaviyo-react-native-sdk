@@ -1,8 +1,5 @@
 <!DOCTYPE html><html class="default" lang="en"><head><meta charSet="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>klaviyo-react-native-sdk</title><meta name="description" content="Documentation for klaviyo-react-native-sdk"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><div class="table-cell" id="tsd-search" data-base="."><div class="field"><label for="tsd-search-field" class="tsd-widget tsd-toolbar-icon search no-caption"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><use href="assets/icons.svg#icon-search"></use></svg></label><input type="text" id="tsd-search-field" aria-label="Search"/></div><div class="field"><div id="tsd-toolbar-links"></div></div><ul class="results"><li class="state loading">Preparing search index...</li><li class="state failure">The search index is not available</li></ul><a href="index.html" class="title">klaviyo-react-native-sdk</a></div><div class="table-cell" id="tsd-widgets"><a href="#" class="tsd-widget tsd-toolbar-icon menu no-caption" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h2>klaviyo-react-native-sdk</h2></div><div class="tsd-panel tsd-typography"><a id="md:klaviyo-react-native-sdk" class="tsd-anchor"></a><h1><a href="#md:klaviyo-react-native-sdk">klaviyo-react-native-sdk</a></h1><p><a href="https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml"><img src="https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/android-ci.yml/badge.svg?branch=master&event=push" alt="Android"></a>
 <a href="https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml"><img src="https://github.com/klaviyo/klaviyo-react-native-sdk/actions/workflows/ios-ci.yml/badge.svg?branch=master&event=push" alt="iOS"></a></p>
-<blockquote>
-<p>⚠️ This repository is in beta development ⚠️</p>
-</blockquote>
 <a id="md:contents" class="tsd-anchor"></a><h2><a href="#md:contents">Contents</a></h2><ul>
 <li><a href="#md:klaviyo-react-native-sdk">klaviyo-react-native-sdk</a><ul>
 <li><a href="#md:introduction">Introduction</a></li>
@@ -49,7 +46,10 @@
 </ul>
 </li>
 </ul>
-<a id="md:introduction" class="tsd-anchor"></a><h2><a href="#md:introduction">Introduction</a></h2><p>The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
+<a id="md:introduction" class="tsd-anchor"></a><h2><a href="#md:introduction">Introduction</a></h2><blockquote>
+<p>We currently don&#39;t have support for expo. This is something we are looking into and should be available in the future.</p>
+</blockquote>
+<p>The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
 Klaviyo iOS and Android SDKs. For more information on the native SDKs, please see the
 <a href="https://github.com/klaviyo/klaviyo-swift-sdk">iOS</a> and <a href="https://github.com/klaviyo/klaviyo-android-sdk">Android</a>.
@@ -59,7 +59,7 @@ To reduce performance overhead, API requests are queued and sent in batches. The
 so that data is not lost if the device is offline or the app is terminated.</p>
 <p>Once integrated, your marketing team will be able to better understand your app users&#39; needs and send them timely
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).</p>
-<a id="md:requirements" class="tsd-anchor"></a><h2><a href="#md:requirements">Requirements</a></h2><p>For initial beta release, the SDK was developed and tested against the latest minor release of React Native (0.73+).
+<a id="md:requirements" class="tsd-anchor"></a><h2><a href="#md:requirements">Requirements</a></h2><p>This SDK was developed and tested against React Native 0.73.
 We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.</p>
 <a id="md:react-native" class="tsd-anchor"></a><h3><a href="#md:react-native">React Native</a></h3><ul>
 <li><code>0.68.7+</code> - We have successfully compiled this SDK on a bare React Native template app down to <code>0.68.7</code>.
