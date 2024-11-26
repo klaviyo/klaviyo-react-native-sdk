@@ -224,12 +224,12 @@ Klaviyo.setProfile(profile);
 or individually:
 
 ```typescript
-import { ProfilePropertyKey, Klaviyo } from 'klaviyo-react-native-sdk';
+import { ProfileProperty, Klaviyo } from 'klaviyo-react-native-sdk';
 
 Klaviyo.setEmail('kermit@example.com');
 Klaviyo.setPhone('+15555555555');
 Klaviyo.setExternalId('12345');
-Klaviyo.setProfileAttribute(ProfilePropertyKey.FIRST_NAME, 'Kermit');
+Klaviyo.setProfileAttribute(ProfileProperty.FIRST_NAME, 'Kermit');
 ```
 
 Either way, the native SDKs will group and batch API calls to improve performance.
