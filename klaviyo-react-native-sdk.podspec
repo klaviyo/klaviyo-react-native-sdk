@@ -19,4 +19,11 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   s.dependency "KlaviyoSwift", "4.1.1"
+
+  # Without this line, Cocoapods will download and install all of the subspecs and their dependencies.
+  s.default_subspecs = :none
+
+  s.subspec 'UI' do |ss|
+    ss.dependency "KlaviyoUI", "0.1.0"
+  end
 end
