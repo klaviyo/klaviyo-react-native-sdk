@@ -20,6 +20,9 @@ target 'KlaviyoReactNativeSdkExample' do
 
   use_frameworks! :linkage => :static
 
+  # Manually override how the `klaviyo-react-native-sdk` is linked
+  pod 'KlaviyoUI', :path => '../../../klaviyo-swift-sdk' # point to local Swift KlaviyoUI native library during development.         TODO: Revert this before release
+
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."
