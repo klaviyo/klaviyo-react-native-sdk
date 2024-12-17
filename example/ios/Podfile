@@ -22,6 +22,7 @@ target 'KlaviyoReactNativeSdkExample' do
 
   # Manually override how the `klaviyo-react-native-sdk` is linked
   pod 'KlaviyoUI', :path => '../../../klaviyo-swift-sdk' # point to local Swift KlaviyoUI native library during development.         TODO: Revert this before release
+  pod 'klaviyo-react-native-sdk/UI', :path => '../..'    # point to local React Native KlaviyoUI wrapper library during development. TODO: Revert this before release
 
   use_react_native!(
     :path => config[:reactNativePath],
