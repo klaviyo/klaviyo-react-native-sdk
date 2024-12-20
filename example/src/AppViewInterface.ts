@@ -24,6 +24,11 @@ export interface AppViewInterface {
 
 export const appViews: AppViewInterface[] = [
   {
+    title: 'KlaviyoUI - Hello World!',
+    color: '#235fce',
+    onPress: helloWorld,
+  },
+  {
     title: 'Click to initialize',
     color: '#841584',
     onPress: initialize,
