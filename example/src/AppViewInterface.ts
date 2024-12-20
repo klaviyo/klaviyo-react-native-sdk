@@ -14,6 +14,8 @@ import {
   setBadgeCount,
 } from './KlaviyoReactWrapper';
 
+import { helloWorld } from './KlaviyoUIWrapper';
+
 export interface AppViewInterface {
   title: string;
   color: string;
