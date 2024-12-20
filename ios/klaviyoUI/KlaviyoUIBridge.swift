@@ -1,6 +1,12 @@
 // KlaviyoUIBridge.swift
+import KlaviyoUI
 
 @objc(KlaviyoUIBridge)
 class KlaviyoUIBridge: NSObject {
-    // TODO: add Objective-C wrappers around KlaviyoUI methods
+
+    @objc(helloWorld)
+    func helloWorld() {
+        KlaviyoUI.helloWorld()
+    }
+
 }
