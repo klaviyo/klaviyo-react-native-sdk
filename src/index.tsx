@@ -7,6 +7,8 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 
+export * from './ui';
+
 /**
  * Implementation of the {@link KlaviyoInterface}
  */
