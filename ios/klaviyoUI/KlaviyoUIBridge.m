@@ -3,4 +3,8 @@
 
 @interface RCT_EXTERN_MODULE(KlaviyoUIBridge, NSObject)
 
++ (BOOL)requiresMainQueueSetup {
+    return YES;
+}
+
 @end
