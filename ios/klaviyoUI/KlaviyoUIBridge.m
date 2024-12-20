@@ -7,4 +7,6 @@
     return YES;
 }
 
+RCT_EXTERN_METHOD(helloWorld)
+
 @end
