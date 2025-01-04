@@ -12,6 +12,18 @@ class KlaviyoUIReactNativeModule internal constructor(private val context: React
     const val NAME = "KlaviyoUIBridge"
   }
 
+  @ReactMethod
+  fun helloWorld() {
+    val activity = context.currentActivity
+    if (activity != null) {
+      runOnUiThread {
+        InAppMessaging.triggerInAppMessage(activity)
+      }
+    } else {
+      throw IllegalStateException("Activity is not available")
+    }
+  }
+
   override fun getName(): String {
     return NAME
   }
