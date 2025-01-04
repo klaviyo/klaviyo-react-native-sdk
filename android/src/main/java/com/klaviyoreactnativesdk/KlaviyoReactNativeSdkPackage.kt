@@ -5,6 +5,7 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
+import com.klaviyoreactnativesdk.ui.KlaviyoUIReactNativeModule
 import java.util.HashMap
 
 class KlaviyoReactNativeSdkPackage : TurboReactPackage() {
