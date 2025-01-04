@@ -13,10 +13,10 @@ class KlaviyoReactNativeSdkPackage : TurboReactPackage() {
     name: String,
     reactContext: ReactApplicationContext,
   ): NativeModule? {
-    return if (name == KlaviyoReactNativeSdkModule.NAME) {
-      KlaviyoReactNativeSdkModule(reactContext)
-    } else {
-      null
+    return when (name) {
+      KlaviyoReactNativeSdkModule.NAME -> KlaviyoReactNativeSdkModule(reactContext)
+      KlaviyoUIReactNativeModule.NAME -> KlaviyoUIReactNativeModule(reactContext)
+      else -> null
     }
   }
 
