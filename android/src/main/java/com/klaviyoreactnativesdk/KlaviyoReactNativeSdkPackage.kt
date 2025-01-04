@@ -24,6 +24,8 @@ class KlaviyoReactNativeSdkPackage : TurboReactPackage() {
     return ReactModuleInfoProvider {
       val moduleInfos: MutableMap<String, ReactModuleInfo> = HashMap()
       val isTurboModule: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+
+      // Add KlaviyoReactNativeSdkModule info
       moduleInfos[KlaviyoReactNativeSdkModule.NAME] =
         ReactModuleInfo(
           KlaviyoReactNativeSdkModule.NAME,
@@ -34,6 +36,19 @@ class KlaviyoReactNativeSdkPackage : TurboReactPackage() {
           false,
           isTurboModule,
         )
+
+      // Add KlaviyoUIReactNativeModule info
+      moduleInfos[KlaviyoUIReactNativeModule.NAME] =
+        ReactModuleInfo(
+          KlaviyoUIReactNativeModule.NAME,
+          KlaviyoUIReactNativeModule.NAME,
+          false,
+          false,
+          true,
+          false,
+          isTurboModule,
+        )
+
       moduleInfos
     }
   }
