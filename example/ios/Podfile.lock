@@ -18,12 +18,18 @@ PODS:
   - klaviyo-react-native-sdk (1.1.0):
     - KlaviyoSwift (= 4.1.1)
     - React-Core
+  - klaviyo-react-native-sdk/UI (1.0.0):
+    - KlaviyoSwift (= 4.0.0)
+    - KlaviyoUI (= 0.1.0)
+    - React-Core
   - KlaviyoCore (4.1.1):
     - AnyCodable-FlightSchool
   - KlaviyoSwift (4.1.1):
     - AnyCodable-FlightSchool
     - KlaviyoCore (~> 4.1.1)
   - KlaviyoSwiftExtension (4.1.0)
+  - KlaviyoUI (0.1.0):
+    - KlaviyoSwift (~> 4.0.0)
   - libevent (2.1.12)
   - RCT-Folly (2022.05.16.00):
     - boost
@@ -1074,7 +1080,9 @@ DEPENDENCIES:
   - glog (from `../../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
+  - klaviyo-react-native-sdk/UI (from `../..`)
   - KlaviyoSwiftExtension
+  - KlaviyoUI (from `../../../klaviyo-swift-sdk`)
   - libevent (~> 2.1.12)
   - RCT-Folly (from `../../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -1147,6 +1155,8 @@ EXTERNAL SOURCES:
     :tag: hermes-2023-11-17-RNv0.73.0-21043a3fc062be445e56a2c10ecd8be028dd9cc5
   klaviyo-react-native-sdk:
     :path: "../.."
+  KlaviyoUI:
+    :path: "../../../klaviyo-swift-sdk"
   RCT-Folly:
     :podspec: "../../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTRequired:
@@ -1245,6 +1255,7 @@ SPEC CHECKSUMS:
   KlaviyoCore: fbf11b8d4595b3b15acc7c9eae95270f8c29fece
   KlaviyoSwift: 1d9d755148113e4bfa55d77dafe8fe93d2e04653
   KlaviyoSwiftExtension: 7b227c3c1632bad403502f5803a1b6c57f187ebb
+  KlaviyoUI: fa5bc11a4e322eca11cb0026292a8d6ed3dbb821
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   RCT-Folly: cd21f1661364f975ae76b3308167ad66b09f53f5
   RCTRequired: 6dda55e483f75d2b43781d8ad5bd7df276a50981
@@ -1290,6 +1301,6 @@ SPEC CHECKSUMS:
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   Yoga: 4f53dc50008d626fa679c7a1cb4bed898f8c0bde
 
-PODFILE CHECKSUM: fb4c6f946002a62b798ca073d975abf271898252
+PODFILE CHECKSUM: c025a9d32db696d7dec8dc02cda1b25551b5deb5
 
 COCOAPODS: 1.16.2
