@@ -25,6 +25,7 @@ target 'KlaviyoReactNativeSdkExample' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  pod "KlaviyoSwift", :path => "~/Mobile-Push/klaviyo-swift-sdk"
   target 'KlaviyoReactNativeSdkExampleTests' do
     inherit! :complete
     # Pods for testing
