@@ -39,7 +39,11 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
   setBadgeCount(count: number): void {
-    KlaviyoReactNativeSdk.setBadgeCount(count);
+    if (KlaviyoReactNativeSdk.setBadgeCount) {
+      KlaviyoReactNativeSdk.setBadgeCount(count);
+    } else {
+      console.log('setBadgeCount is not available on this platform');
+    }
   },
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();

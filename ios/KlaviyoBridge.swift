@@ -134,7 +134,6 @@ public class KlaviyoBridge: NSObject {
 
   @objc
   public static func setBadgeCount(_ value: Int) {
-    print("setting badege count \(value)")
     KlaviyoSDK().setBadgeCount(value)
   }
 
