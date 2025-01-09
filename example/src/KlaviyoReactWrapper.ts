@@ -49,6 +49,15 @@ export const setExternalId = async () => {
   }
 };
 
+export const setBadgeCount = async () => {
+  try {
+    const getRandomDigit = () => Math.floor(Math.random() * 10);
+    Klaviyo.setBadgeCount(getRandomDigit());
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const getEmail = async () => {
   try {
     Klaviyo.getEmail((value: string) => {

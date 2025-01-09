@@ -38,6 +38,9 @@ export const Klaviyo: Spec = {
   setProfileAttribute(propertyKey: ProfilePropertyKey, value: string): void {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
+  setBadgeCount(count: number): void {
+    KlaviyoReactNativeSdk.setBadgeCount(count);
+  },
   resetProfile(): void {
     KlaviyoReactNativeSdk.resetProfile();
   },
