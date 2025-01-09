@@ -39,6 +39,8 @@ export const Klaviyo: Spec = {
     KlaviyoReactNativeSdk.setProfileAttribute(propertyKey, value);
   },
   setBadgeCount(count: number): void {
+    // checking if method exists since this is iOS only and don't want a
+    // runtime error on android
     if (KlaviyoReactNativeSdk.setBadgeCount) {
       KlaviyoReactNativeSdk.setBadgeCount(count);
     } else {
