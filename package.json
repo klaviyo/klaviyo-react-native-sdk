@@ -1,6 +1,6 @@
 {
   "name": "klaviyo-react-native-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Official Klaviyo React Native SDK",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
