@@ -72,6 +72,11 @@ RCT_EXPORT_METHOD(setPushToken: (NSString *)pushToken)
     [KlaviyoBridge setPushToken: pushToken];
 }
 
+RCT_EXPORT_METHOD(setBadgeCount: (nonnull NSNumber *)count)
+{
+  [KlaviyoBridge setBadgeCount: count.intValue];
+}
+
 RCT_EXPORT_METHOD(resetProfile)
 {
     [KlaviyoBridge resetProfile];
