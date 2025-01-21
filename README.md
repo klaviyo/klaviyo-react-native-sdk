@@ -29,6 +29,7 @@
       - [Native Token Collection](#native-token-collection)
     - [Receiving Push Notifications](#receiving-push-notifications)
     - [Rich Push](#rich-push)
+    - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
   - [Troubleshooting](#troubleshooting)
