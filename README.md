@@ -422,6 +422,13 @@ No additional setup is needed to support rich push on Android.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Rich-Push)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
+#### Badge Count
+
+Klaviyo supports setting or incrementing the badge count when you send a push notification. On iOS, you will 
+need to implement an extension service and app group as detailed in the [native SDK installation instructions](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#installation). 
+See the [badge count documentation](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#badge-count) for more details. 
+No additional setup is needed to support badge count on Android.
+
 #### Tracking Open Events
 
 Klaviyo tracks push opens events with a specially formatted event `Opened Push` that includes message tracking
