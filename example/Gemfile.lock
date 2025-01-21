@@ -5,11 +5,12 @@ GEM
       base64
       nkf
       rexml
-    activesupport (7.0.8.6)
+    activesupport (6.1.7.10)
       concurrent-ruby (~> 1.0, >= 1.0.2)
       i18n (>= 1.6, < 2)
       minitest (>= 5.1)
       tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
     addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
     algoliasearch (1.27.5)
@@ -88,6 +89,7 @@ GEM
       colored2 (~> 3.1)
       nanaimo (~> 0.3.0)
       rexml (>= 3.3.6, < 4.0)
+    zeitwerk (2.6.18)
 
 PLATFORMS
   ruby
@@ -100,4 +102,4 @@ RUBY VERSION
    ruby 3.3.5p100
 
 BUNDLED WITH
-   2.5.22
+   2.4.22

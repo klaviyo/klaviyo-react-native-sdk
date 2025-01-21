@@ -133,6 +133,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func setBadgeCount(_ value: Int) {
+    KlaviyoSDK().setBadgeCount(value)
+  }
+
+  @objc
   public static func resetProfile() {
     KlaviyoSDK().resetProfile()
   }
