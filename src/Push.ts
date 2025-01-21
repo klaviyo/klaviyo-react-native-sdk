@@ -15,4 +15,11 @@ export interface KlaviyoPushApi {
    * @param callback
    */
   getPushToken(callback: Function | undefined): string | null;
+
+  /**
+   * Set the badge count for the app icon
+   *
+   * @param count
+   */
+  setBadgeCount(count: number): void;
 }

@@ -11,6 +11,7 @@ import {
   setPhoneNumber,
   setProfileAttribute,
   setProfile,
+  setBadgeCount,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -49,6 +50,11 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to set external id',
     color: '#841584',
     onPress: setExternalId,
+  },
+  {
+    title: 'Click to set badge count',
+    color: '#841584',
+    onPress: setBadgeCount,
   },
   {
     title: 'Click to RESET the full profile',
