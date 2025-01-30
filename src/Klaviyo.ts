@@ -1,5 +1,3 @@
-import { TurboModuleRegistry } from 'react-native';
-import type { TurboModule } from 'react-native';
 import type { KlaviyoEventAPI } from './Event';
 import type { KlaviyoProfileApi } from './Profile';
 import type { KlaviyoPushApi } from './Push';
@@ -21,7 +19,3 @@ export interface KlaviyoInterface
    */
   initialize(apiKey: string): void;
 }
-
-export interface Spec extends TurboModule, KlaviyoInterface {}
-
-export default TurboModuleRegistry.getEnforcing<Spec>('KlaviyoReactNativeSdk');

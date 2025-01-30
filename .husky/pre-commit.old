@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+yarn lint-staged
+
+if [ -f "package-lock.json" ];
+  then echo "package-lock.json is not allowed";
+  exit 1;
+fi
