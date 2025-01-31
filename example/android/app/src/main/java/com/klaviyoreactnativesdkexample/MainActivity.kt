@@ -51,25 +51,28 @@ class MainActivity : ReactActivity() {
           FirebaseMessaging.getInstance().token.addOnSuccessListener {
             Log.d("KlaviyoSampleApp", "Push token set: $it")
             Klaviyo.setPushToken(it)
-            Toast.makeText(
-              this,
-              "Permission granted! Push token set.",
-              Toast.LENGTH_SHORT,
-            ).show()
+            Toast
+              .makeText(
+                this,
+                "Permission granted! Push token set.",
+                Toast.LENGTH_SHORT,
+              ).show()
           }
         } else {
-          Toast.makeText(
-            this,
-            "Permission granted! Push token not set, because Firebase is not initialized natively.",
-            Toast.LENGTH_SHORT,
-          ).show()
+          Toast
+            .makeText(
+              this,
+              "Permission granted! Push token not set, because Firebase is not initialized natively.",
+              Toast.LENGTH_SHORT,
+            ).show()
         }
       } else {
-        Toast.makeText(
-          this,
-          "Permission denied",
-          Toast.LENGTH_SHORT,
-        ).show()
+        Toast
+          .makeText(
+            this,
+            "Permission denied",
+            Toast.LENGTH_SHORT,
+          ).show()
       }
     }
 
@@ -137,7 +140,8 @@ class MainActivity : ReactActivity() {
 
   @SuppressLint("InlinedApi") // It is safe to use Manifest.permission.POST_NOTIFICATIONS, ActivityCompat handles API level differences
   private fun requestPermissionWithRationale() =
-    AlertDialog.Builder(this)
+    AlertDialog
+      .Builder(this)
       .setTitle("Notifications Permission")
       .setMessage("Permission must be granted in order to receive push notifications in the system tray.")
       .setCancelable(true)
@@ -145,12 +149,12 @@ class MainActivity : ReactActivity() {
         // You can directly ask for the permission.
         // The registered ActivityResultCallback gets the result of this request.
         requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-      }
-      .setNegativeButton("Cancel") { _, _ -> }
+      }.setNegativeButton("Cancel") { _, _ -> }
       .show()
 
   private fun alertPermissionDenied(): AlertDialog =
-    AlertDialog.Builder(this)
+    AlertDialog
+      .Builder(this)
       .setTitle("Notifications Disabled")
       .setMessage("Permission is denied and can only be changed from notification settings.")
       .setCancelable(true)

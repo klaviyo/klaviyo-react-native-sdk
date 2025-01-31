@@ -15,7 +15,9 @@ import com.facebook.soloader.SoLoader
 import com.google.firebase.messaging.FirebaseMessaging
 import com.klaviyo.analytics.Klaviyo
 
-class MainApplication : Application(), ReactApplication {
+class MainApplication :
+  Application(),
+  ReactApplication {
   override val reactNativeHost: ReactNativeHost =
     object : DefaultReactNativeHost(this) {
       override fun getPackages(): List<ReactPackage> =
