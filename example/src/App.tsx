@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import { useEffect } from 'react';
 
 import { Button, View } from 'react-native';

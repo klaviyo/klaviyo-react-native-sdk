@@ -6,15 +6,8 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-// @ts-expect-error
-const isTurboModuleEnabled = global.__turboModuleProxy != null;
-
-const KlaviyoReactNativeSdkModule = isTurboModuleEnabled
-  ? require('./NativeKlaviyoReactNativeSdk').default
-  : NativeModules.KlaviyoReactNativeSdk;
-
-export const KlaviyoReactNativeSdk = KlaviyoReactNativeSdkModule
-  ? KlaviyoReactNativeSdkModule
+export const KlaviyoReactNativeSdk = NativeModules.KlaviyoReactNativeSdk
+  ? NativeModules.KlaviyoReactNativeSdk
   : new Proxy(
       {},
       {
