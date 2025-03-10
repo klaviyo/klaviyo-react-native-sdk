@@ -70,3 +70,4 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
+export { KlaviyoForms } from './forms';

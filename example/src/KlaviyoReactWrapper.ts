@@ -1,6 +1,7 @@
 import {
   type Event,
   Klaviyo,
+  KlaviyoForms,
   type Location,
   type Profile,
   ProfileProperty,
@@ -91,6 +92,14 @@ export const getExternalId = async () => {
 export const resetProfile = async () => {
   try {
     Klaviyo.resetProfile();
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const registerForInAppForms = async () => {
+  try {
+    KlaviyoForms.registerForInAppForms();
   } catch (e: any) {
     console.log(e.message, e.code);
   }
