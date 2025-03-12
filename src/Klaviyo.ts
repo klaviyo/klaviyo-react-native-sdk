@@ -18,4 +18,9 @@ export interface KlaviyoInterface
    * @param apiKey Your public API key
    */
   initialize(apiKey: string): void;
+
+  /**
+   * [ANDROID] used to track lifecycle interactions before the sdk is initialized
+   */
+  registerLifecycleCallbacks(): void;
 }

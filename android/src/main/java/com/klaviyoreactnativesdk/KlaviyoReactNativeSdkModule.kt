@@ -54,6 +54,11 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun registerLifecycleCallbacks() {
+    Klaviyo.registerLifecycleCallbacks(reactContext)
+  }
+
+  @ReactMethod
   fun setProfile(profile: ReadableMap) {
     val parsedProfile = Profile()
 

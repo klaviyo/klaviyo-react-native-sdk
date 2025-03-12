@@ -14,6 +14,9 @@ export const Klaviyo: KlaviyoInterface = {
   initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
+  registerLifecycleCallbacks(): void {
+    KlaviyoReactNativeSdk.registerLifecycleCallbacks();
+  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
