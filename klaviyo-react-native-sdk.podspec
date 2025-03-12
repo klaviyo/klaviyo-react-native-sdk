@@ -19,11 +19,8 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   s.dependency "KlaviyoSwift", "4.2.0"
+  s.dependency "KlaviyoForms", "4.2.0"
 
   s.default_subspecs = :none
-
-  s.subspec 'KlaviyoForms' do |ss|
-    ss.dependency "KlaviyoForms", "4.2.0" # <- point to correct release version of Forms
-  end
 
 end

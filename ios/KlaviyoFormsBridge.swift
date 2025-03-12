@@ -1,12 +1,13 @@
 // KlaviyoFormsBridge.swift
-import KlaviyoUI
+import KlaviyoForms
+import KlaviyoSwift
 
-@objc(KlaviyoFormsBridge)
-class KlaviyoFormsBridge: NSObject {
+@objc
+public class KlaviyoFormsBridge: NSObject {
 
-    @objc(registerForInAppForms)
-    func registerForInAppForms() {
-        KlaviyoFormsBridge.registerForInAppForms()
+    @MainActor @objc
+    public static func registerForInAppForms() {
+        KlaviyoSDK().registerForInAppForms()
     }
 
 }
