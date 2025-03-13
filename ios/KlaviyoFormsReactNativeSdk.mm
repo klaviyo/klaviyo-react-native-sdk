@@ -12,9 +12,7 @@ RCT_EXPORT_MODULE()
 }
 
 RCT_EXPORT_METHOD(registerForInAppForms) {
-    
     [KlaviyoFormsBridge registerForInAppForms];
-    NSLog(@"registerForInAppForms");
 }
 
 @end
