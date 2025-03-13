@@ -55,7 +55,7 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun registerLifecycleCallbacks() {
-    Klaviyo.registerLifecycleCallbacks(reactContext)
+    Klaviyo.registerForLifecycleCallbacks(reactContext)
   }
 
   @ReactMethod
