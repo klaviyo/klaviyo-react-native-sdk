@@ -5,4 +5,4 @@
 
 ## Used for local SDK development, so that gradle can locate the
 # correct RN version outside the context of an application
-reactNativeAndroidVersion=0.77.0
+reactNativeAndroidVersion=0.78.0
