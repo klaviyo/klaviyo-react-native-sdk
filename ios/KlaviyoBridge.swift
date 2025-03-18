@@ -49,6 +49,11 @@ public class KlaviyoBridge: NSObject {
   }
 
   @objc
+  public static func helloWorld() {
+      KlaviyoFoo.helloWorld()
+  }
+
+  @objc
   public static func setProfile(
       _ profileDict: [String: AnyObject]
   ) {

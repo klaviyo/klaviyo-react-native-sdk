@@ -7,6 +7,11 @@ const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
  */
 export interface KlaviyoProfileApi {
   /**
+   * Print `hello world`
+   */
+  helloWorld(): void;
+
+  /**
    * Create and update properties about a profile without tracking an associated event.
    * @param profile - The profile object to set
    */

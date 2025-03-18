@@ -14,6 +14,9 @@ export const Klaviyo: KlaviyoInterface = {
   initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
+  helloWorld(): void {
+    KlaviyoReactNativeSdk.helloWorld();
+  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
