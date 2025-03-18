@@ -106,6 +106,16 @@ export const setPushToken = async () => {
   }
 };
 
+export const getPushToken = async () => {
+  try {
+    Klaviyo.getPushToken((asyncPushToken: string) => {
+      console.log(`getPushToken asynchronously returned ${asyncPushToken}`);
+    });
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const setProfileAttribute = async () => {
   try {
     Klaviyo.setProfileAttribute(ProfileProperty.CITY, generateRandomName(5));

@@ -6,6 +6,7 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
+import type { Callback } from './Callback';
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -20,19 +21,19 @@ export const Klaviyo: KlaviyoInterface = {
   setExternalId(externalId: string): void {
     KlaviyoReactNativeSdk.setExternalId(externalId);
   },
-  getExternalId(callback: Function | undefined): string | null {
+  getExternalId(callback: Callback<string>): void {
     return KlaviyoReactNativeSdk.getExternalId(callback);
   },
   setEmail(email: string): void {
     KlaviyoReactNativeSdk.setEmail(email);
   },
-  getEmail(callback: Function | undefined): string | null {
+  getEmail(callback: Callback<string>): void {
     return KlaviyoReactNativeSdk.getEmail(callback);
   },
   setPhoneNumber(phoneNumber: string): void {
     KlaviyoReactNativeSdk.setPhoneNumber(phoneNumber);
   },
-  getPhoneNumber(callback: Function | undefined): string | null {
+  getPhoneNumber(callback: Callback<string>): void {
     return KlaviyoReactNativeSdk.getPhoneNumber(callback);
   },
   setProfileAttribute(propertyKey: ProfilePropertyKey, value: string): void {
@@ -53,7 +54,7 @@ export const Klaviyo: KlaviyoInterface = {
   setPushToken(token: string) {
     KlaviyoReactNativeSdk.setPushToken(token);
   },
-  getPushToken(callback: Function | undefined): string | null {
+  getPushToken(callback: Callback<string>): void {
     return KlaviyoReactNativeSdk.getPushToken(callback);
   },
   createEvent(event: Event): void {

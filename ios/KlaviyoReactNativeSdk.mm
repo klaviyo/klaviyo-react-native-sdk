@@ -72,9 +72,14 @@ RCT_EXPORT_METHOD(setPushToken: (NSString *)pushToken)
     [KlaviyoBridge setPushToken: pushToken];
 }
 
+RCT_EXPORT_METHOD(getPushToken: (RCTResponseSenderBlock)callback) {
+    NSString *pushToken = [KlaviyoBridge getPushToken];
+    callback(@[pushToken]);
+}
+
 RCT_EXPORT_METHOD(setBadgeCount: (nonnull NSNumber *)count)
 {
-  [KlaviyoBridge setBadgeCount: count.intValue];
+    [KlaviyoBridge setBadgeCount: count.intValue];
 }
 
 RCT_EXPORT_METHOD(resetProfile)
@@ -90,7 +95,7 @@ RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
-    (const facebook::react::ObjCTurboModule::InitParams &)params
+(const facebook::react::ObjCTurboModule::InitParams &)params
 {
     return std::make_shared<facebook::react::NativeKlaviyoReactNativeSdkSpecJSI>(params);
 }

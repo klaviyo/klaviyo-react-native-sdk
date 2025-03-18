@@ -1,4 +1,5 @@
 import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
+import type { Callback } from './Callback';
 
 const { PROFILE_KEYS } = KlaviyoReactNativeSdk.getConstants();
 
@@ -22,7 +23,7 @@ export interface KlaviyoProfileApi {
    * Retrieve a profile's external ID.
    * @param callback - The callback function to handle the response
    */
-  getExternalId(callback: Function | undefined): string | null;
+  getExternalId(callback: Callback<string>): void;
 
   /**
    * Update a profile's email address.
@@ -34,7 +35,7 @@ export interface KlaviyoProfileApi {
    * Retrieve a profile's email address.
    * @param callback - The callback function to handle the response
    */
-  getEmail(callback: Function | undefined): string | null;
+  getEmail(callback: Callback<string>): void;
 
   /**
    * Update a profile's phone number.
@@ -46,7 +47,7 @@ export interface KlaviyoProfileApi {
    * Retrieve a profile's phone number.
    * @param callback - The callback function to handle the response
    */
-  getPhoneNumber(callback: Function | undefined): string | null;
+  getPhoneNumber(callback: Callback<string>): void;
 
   /**
    * Update a profile's properties.
