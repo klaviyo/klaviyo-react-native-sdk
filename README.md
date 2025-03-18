@@ -499,7 +499,7 @@ Linking.getInitialURL().then((url) => {
 To display in-app forms, add the following code to your application
 
 ```
-import { KlaviyoForms } from "../klaviyo-react-native-sdk";
+import { KlaviyoForms } from "klaviyo-react-native-sdk";
 ...
 
 // call this any time after initializing your public API key
