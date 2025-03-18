@@ -1,6 +1,5 @@
 package com.klaviyoreactnativesdk
 
-import android.util.Log
 import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -13,10 +12,8 @@ import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
-import com.klaviyo.forms.registerForInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
-import com.facebook.react.bridge.UiThreadUtil
 
 class KlaviyoReactNativeSdkModule(
   private val reactContext: ReactApplicationContext,
