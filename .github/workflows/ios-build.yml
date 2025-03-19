@@ -1,0 +1,67 @@
+name: iOS Build
+
+on:
+  workflow_call:
+    inputs:
+      new-architecture:
+        required: true
+        type: number
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    runs-on: macos-15-xlarge
+    env:
+      TURBO_CACHE_DIR: .turbo/ios
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.6.10'
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Cache turborepo for iOS
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TURBO_CACHE_DIR }}
+          key: ${{ runner.os }}-turborepo-ios-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-turborepo-ios-
+
+      - name: Check turborepo cache for iOS
+        if: github.run_attempt == 1
+        run: |
+          TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
+
+          if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
+            echo "turbo_cache_hit=1" >> $GITHUB_ENV
+          fi
+
+      - name: Cache cocoapods
+        if: env.turbo_cache_hit != 1 && github.run_attempt == 1
+        id: cocoapods-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/ios/Pods
+          key: ${{ runner.os }}-cocoapods-${{ inputs.new-architecture }}-${{ hashFiles('example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-${{ inputs.new-architecture }}-
+
+      - name: Install cocoapods
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        run: |
+          export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
+          yarn example-setup
+          rm -f example/ios/.xcode.env.local
+
+      - name: Build example for iOS
+        run: |
+          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
