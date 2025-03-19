@@ -1,7 +1,6 @@
 import {
   type Event,
   Klaviyo,
-  KlaviyoForms,
   type Location,
   type Profile,
   ProfileProperty,
@@ -20,7 +19,7 @@ export const initialize = async () => {
     // Alternate Android Installation Step 3
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
-    Klaviyo.initialize('UHZ3zG');
+    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -99,7 +98,7 @@ export const resetProfile = async () => {
 
 export const registerForInAppForms = async () => {
   try {
-    KlaviyoForms.registerForInAppForms();
+    Klaviyo.registerForInAppForms();
   } catch (e: any) {
     console.log(e.message, e.code);
   }

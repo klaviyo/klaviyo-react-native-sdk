@@ -92,6 +92,12 @@ RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
     [KlaviyoBridge createEventWithEvent:event];
 }
 
+RCT_EXPORT_METHOD(registerForInAppForms) {
+
+    [KlaviyoFormsBridge registerForInAppForms];
+
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

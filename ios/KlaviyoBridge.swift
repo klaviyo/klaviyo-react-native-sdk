@@ -48,6 +48,12 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().initialize(with: apiKey)
     }
 
+    @MainActor
+    @objc
+    public static func registerForInAppForms() {
+        KlaviyoSDK().registerForInAppForms()
+    }
+
     @objc
     public static func setProfile(
         _ profileDict: [String: AnyObject]
