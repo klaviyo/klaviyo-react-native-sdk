@@ -1,13 +1,10 @@
 buildscript {
     ext {
         // Android Installation Step 1a: Set compatible minSdkVersion and compileSdkVersion
-        minSdkVersion = 23 // Minimum supported by Klaviyo Android SDK
-        targetSdkVersion = 33 // Typically minSdkVersion <= targetSdkVersion <= compileSdkVersion
-        compileSdkVersion = 34 // Klaviyo Android SDK is compiled against 34
+        minSdkVersion = 24 // Minimum supported by Klaviyo Android SDK
+        targetSdkVersion = 35 // Typically minSdkVersion <= targetSdkVersion <= compileSdkVersion
+        compileSdkVersion = 35 // Klaviyo Android SDK is compiled against 35
         buildToolsVersion = "35.0.0"
-        minSdkVersion = 24
-        compileSdkVersion = 35
-        targetSdkVersion = 34
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.0.21"
     }
