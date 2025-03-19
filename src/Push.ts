@@ -1,5 +1,3 @@
-import type { Callback } from './Callback';
-
 /**
  * Interface for the Klaviyo Push API
  */
@@ -16,7 +14,7 @@ export interface KlaviyoPushApi {
    *
    * @param callback
    */
-  getPushToken(callback: Callback<string>): void;
+  getPushToken(callback: Function | undefined): string | null;
 
   /**
    * Set the badge count for the app icon
