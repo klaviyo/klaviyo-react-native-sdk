@@ -4,13 +4,13 @@ on:
   pull_request:
 
 jobs:
-  compile-ios-new-arch:
+  compile-android-new-arch:
     uses: ./.github/workflows/android-build.yml
     secrets: inherit
     with:
       new-architecture: 'true'
 
-  compile-ios-old-arch:
+  compile-android-old-arch:
     uses: ./.github/workflows/android-build.yml
     secrets: inherit
     with:
