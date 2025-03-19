@@ -38,7 +38,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example-setup": "(yarn install --immutable && cd example && bundle install && cd ios)",
+    "example-setup": "(yarn install --immutable && cd example && bundle install && cd ios && bundle exec pod install)",
     "example": "yarn workspace klaviyo-react-native-sdk-example",
     "test": "jest",
     "typecheck": "tsc",
