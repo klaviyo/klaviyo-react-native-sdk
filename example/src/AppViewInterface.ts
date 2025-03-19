@@ -95,7 +95,7 @@ export const appViews: AppViewInterface[] = [
   },
   {
     title: 'Click to show a form',
-    color: '#841584',
+    color: '#d3ab10',
     onPress: registerForInAppForms,
   },
 ];
