@@ -492,18 +492,18 @@ Linking.getInitialURL().then((url) => {
 ### Prerequisites
 
 - Using Version 1.2.0 and higher
-- Import the KlaviyoForms module
+- Import the Klaviyo module
 
 ### Setup
 
 To display in-app forms, add the following code to your application
 
 ```
-import { KlaviyoForms } from "klaviyo-react-native-sdk";
+import { Klaviyo } from "klaviyo-react-native-sdk";
 ...
 
 // call this any time after initializing your public API key
-KlaviyoForms.registerForInAppForms();
+Klaviyo.registerForInAppForms();
 ```
 
 ### Behavior
@@ -516,8 +516,8 @@ Consider how often you want to register for forms. For example, registering from
 
 | Callback                                                                                                  | Description                                                             |
 | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `const handleAppStateChange = async (nextAppState: string) => {  KlaviyoForms.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
-| `function App(): JSX.Element { useEffect(() => {  KlaviyoForms.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
+| `const handleAppStateChange = async (nextAppState: string) => {  Klaviyo.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
+| `function App(): JSX.Element { useEffect(() => {  Klaviyo.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
 
 **Note**: At this time, when device orientation changes any currently visible form is closed and will not be re-displayed automatically.
 
