@@ -1,4 +1,5 @@
 import KlaviyoSwift
+import KlaviyoForms
 @_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
