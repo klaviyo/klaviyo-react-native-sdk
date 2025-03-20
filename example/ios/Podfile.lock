@@ -10,13 +10,16 @@ PODS:
     - hermes-engine/Pre-built (= 0.78.0)
   - hermes-engine/Pre-built (0.78.0)
   - klaviyo-react-native-sdk (1.2.0-alpha.1):
-    - KlaviyoSwift (= 4.1.1)
+    - KlaviyoForms (= 4.2.0)
+    - KlaviyoSwift (= 4.2.0)
     - React-Core
-  - KlaviyoCore (4.1.1):
+  - KlaviyoCore (4.2.0):
     - AnyCodable-FlightSchool
-  - KlaviyoSwift (4.1.1):
+  - KlaviyoForms (4.2.0):
+    - KlaviyoSwift (~> 4.2.0)
+  - KlaviyoSwift (4.2.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 4.1.1)
+    - KlaviyoCore (~> 4.2.0)
   - KlaviyoSwiftExtension (4.2.0)
   - RCT-Folly (2024.11.18.00):
     - boost
@@ -1614,6 +1617,7 @@ SPEC REPOS:
   trunk:
     - AnyCodable-FlightSchool
     - KlaviyoCore
+    - KlaviyoForms
     - KlaviyoSwift
     - KlaviyoSwiftExtension
     - SocketRocket
@@ -1764,9 +1768,10 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: b417d2b2aee3b89b58e63e23a51e02be91dc876d
-  klaviyo-react-native-sdk: beaadfb65e66043b6268b152b6ead8e7bebb2f73
-  KlaviyoCore: fbf11b8d4595b3b15acc7c9eae95270f8c29fece
-  KlaviyoSwift: 1d9d755148113e4bfa55d77dafe8fe93d2e04653
+  klaviyo-react-native-sdk: a1c313251343c1af603ffd611c2974be83c91a64
+  KlaviyoCore: 43090c2d23e90831a1ce763c354bd608f61f038d
+  KlaviyoForms: 6d7e672d1b2deba7be19c217a39f50aefb9ae549
+  KlaviyoSwift: 3c56a14a703520d9a495ecc9f1de9e79d6cb4277
   KlaviyoSwiftExtension: 796ed9d62fd943072baea993a3cb5208444ba011
   RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
