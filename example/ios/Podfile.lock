@@ -17,7 +17,7 @@ PODS:
   - KlaviyoSwift (4.1.1):
     - AnyCodable-FlightSchool
     - KlaviyoCore (~> 4.1.1)
-  - KlaviyoSwiftExtension (4.1.0)
+  - KlaviyoSwiftExtension (4.2.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1767,7 +1767,7 @@ SPEC CHECKSUMS:
   klaviyo-react-native-sdk: beaadfb65e66043b6268b152b6ead8e7bebb2f73
   KlaviyoCore: fbf11b8d4595b3b15acc7c9eae95270f8c29fece
   KlaviyoSwift: 1d9d755148113e4bfa55d77dafe8fe93d2e04653
-  KlaviyoSwiftExtension: 7b227c3c1632bad403502f5803a1b6c57f187ebb
+  KlaviyoSwiftExtension: 796ed9d62fd943072baea993a3cb5208444ba011
   RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
   RCTRequired: 78522de7dc73b81f3ed7890d145fa341f5bb32ea
@@ -1827,7 +1827,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 299e99fc57c93edc7c5396ef1a39a3a4d494f25d
   ReactCommon: c8fdbc582b98a07daf201cd95c1da75dd029f3ee
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Yoga: be02ca501b03c79d7027a6bbbd0a8db985034f11
+  Yoga: d89d04d86b5af18317f481166dccc48213d26927
 
 PODFILE CHECKSUM: fb4c6f946002a62b798ca073d975abf271898252
 
