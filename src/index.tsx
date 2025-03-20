@@ -59,6 +59,9 @@ export const Klaviyo: KlaviyoInterface = {
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
   },
+  registerForInAppForms(): void {
+    KlaviyoReactNativeSdk.registerForInAppForms();
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';

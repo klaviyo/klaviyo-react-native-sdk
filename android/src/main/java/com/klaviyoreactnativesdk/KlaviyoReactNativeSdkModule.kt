@@ -5,6 +5,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.UiThreadUtil
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
@@ -12,6 +13,8 @@ import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
+import com.klaviyo.core.Registry
+import com.klaviyo.forms.registerForInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 
@@ -48,6 +51,17 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun initialize(apiKey: String) {
     Klaviyo.initialize(apiKey, reactContext)
+  }
+
+  @ReactMethod
+  fun registerForInAppForms() {
+    UiThreadUtil.runOnUiThread {
+      try {
+        Klaviyo.registerForInAppForms()
+      } catch (e: Exception) {
+        Registry.log.error("Android unable to register for in app forms on main thread", e)
+      }
+    }
   }
 
   @ReactMethod

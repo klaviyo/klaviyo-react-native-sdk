@@ -96,6 +96,14 @@ export const resetProfile = async () => {
   }
 };
 
+export const registerForInAppForms = async () => {
+  try {
+    Klaviyo.registerForInAppForms();
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const setPushToken = async () => {
   try {
     // If handling push tokens from the react native layer

@@ -13,6 +13,7 @@ import {
   setProfile,
   setBadgeCount,
   getPushToken,
+  registerForInAppForms,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -91,5 +92,10 @@ export const appViews: AppViewInterface[] = [
     title: 'Click to RESET the full profile',
     color: '#932322',
     onPress: resetProfile,
+  },
+  {
+    title: 'Click to show a form',
+    color: '#d3ab10',
+    onPress: registerForInAppForms,
   },
 ];

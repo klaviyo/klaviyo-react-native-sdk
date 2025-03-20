@@ -1,4 +1,5 @@
 import KlaviyoSwift
+import KlaviyoForms
 @_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
@@ -46,6 +47,12 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func initialize(_ apiKey: String) {
         KlaviyoSDK().initialize(with: apiKey)
+    }
+
+    @MainActor
+    @objc
+    public static func registerForInAppForms() {
+        KlaviyoSDK().registerForInAppForms()
     }
 
     @objc
