@@ -12,6 +12,8 @@ import {
   setProfileAttribute,
   setProfile,
   setBadgeCount,
+  getPushToken,
+  registerForInAppForms,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -52,38 +54,48 @@ export const appViews: AppViewInterface[] = [
     onPress: setExternalId,
   },
   {
+    title: 'Click to set a FAKE push token',
+    color: '#841584',
+    onPress: setPushToken,
+  },
+  {
     title: 'Click to set badge count',
     color: '#841584',
     onPress: setBadgeCount,
   },
   {
-    title: 'Click to RESET the full profile',
-    color: '#ffcccb',
-    onPress: resetProfile,
-  },
-  {
-    title: 'Click to set a FAKE push token',
-    color: '#ffcccb',
-    onPress: setPushToken,
-  },
-  {
     title: 'Click to get current email',
-    color: '#841584',
+    color: '#65935e',
     onPress: getEmail,
   },
   {
     title: 'Click to get phone number',
-    color: '#841584',
+    color: '#65935e',
     onPress: getPhoneNumber,
   },
   {
     title: 'Click to get external id',
-    color: '#841584',
+    color: '#65935e',
     onPress: getExternalId,
   },
   {
+    title: 'Click to get push token',
+    color: '#65935e',
+    onPress: getPushToken,
+  },
+  {
     title: 'Click to send event with random metric',
-    color: '#841584',
+    color: '#0009b9',
     onPress: sendRandomEvent,
+  },
+  {
+    title: 'Click to RESET the full profile',
+    color: '#932322',
+    onPress: resetProfile,
+  },
+  {
+    title: 'Click to show a form',
+    color: '#d3ab10',
+    onPress: registerForInAppForms,
   },
 ];

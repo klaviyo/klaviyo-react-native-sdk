@@ -96,11 +96,29 @@ export const resetProfile = async () => {
   }
 };
 
+export const registerForInAppForms = async () => {
+  try {
+    Klaviyo.registerForInAppForms();
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const setPushToken = async () => {
   try {
     // If handling push tokens from the react native layer
     // You would need a cross-platform push library to fetch the device token, e.g. firebase
     Klaviyo.setPushToken('FAKE_PUSH_TOKEN');
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const getPushToken = async () => {
+  try {
+    Klaviyo.getPushToken((asyncPushToken: string) => {
+      console.log(`getPushToken asynchronously returned ${asyncPushToken}`);
+    });
   } catch (e: any) {
     console.log(e.message, e.code);
   }
