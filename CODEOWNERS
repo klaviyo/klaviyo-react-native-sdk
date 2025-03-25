@@ -2,6 +2,12 @@
 *   @klaviyo/mobile-app-growth
 
 # Push related files
-src/Push.ts                  @klaviyo/mobile-app-growth @klaviyo/push-team
-src/NativeKlaviyoReactNativeSdk.ts       @klaviyo/mobile-app-growth @klaviyo/push-team
-src/index.tsx                 @klaviyo/mobile-app-growth @klaviyo/push-team
+src/Push.ts                              @klaviyo/mobile-app-growth @klaviyo/mobile-push-team
+src/NativeKlaviyoReactNativeSdk.ts       @klaviyo/mobile-app-growth @klaviyo/mobile-push-team
+src/index.tsx                            @klaviyo/mobile-app-growth @klaviyo/mobile-push-team
+
+# iOS related files
+ios/
+
+# Android related files
+android/
