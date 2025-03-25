@@ -494,6 +494,28 @@ Linking.getInitialURL().then((url) => {
 - Using Version 1.2.0 and higher
 - Import the Klaviyo module
 
+#### Android
+
+In your Application class you **must** call `Klaviyo.registerForLifecycleCallbacks(applicationContext)`, due to timing issues, this cannot be achieved from the RN layer at this time.
+
+```kotlin
+// Application subclass
+import android.app.Application
+import com.klaviyo.analytics.Klaviyo
+class YourApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        /* ... */
+
+        // Initialize is required before invoking any other Klaviyo SDK functionality
+        Klaviyo.initialize("KLAVIYO_PUBLIC_API_KEY", applicationContext)
+
+        // If unable to call initialize, you must at least register lifecycle listeners:
+        Klaviyo.registerForLifecycleCallbacks(applicationContext)
+    }
+}
+```
+
 ### Setup
 
 To display in-app forms, add the following code to your application
@@ -514,8 +536,8 @@ You can call `registerForInAppForms()` any time after initializing with your pub
 
 Consider how often you want to register for forms. For example, registering from a lifecycle event is advisable so that the user has multiple opportunities to see your messaging if they are browsing your app for a prolonged period. However, be advised the form will be shown as soon as it is ready, so you may still need to condition this based on the user's context within your application. Future versions of this product will provide more control in this regard.
 
-| Callback                                                                                                  | Description                                                             |
-| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Callback                                                                                             | Description                                                             |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `const handleAppStateChange = async (nextAppState: string) => {  Klaviyo.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
 | `function App(): JSX.Element { useEffect(() => {  Klaviyo.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
 
