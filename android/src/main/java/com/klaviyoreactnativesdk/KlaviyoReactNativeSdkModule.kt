@@ -14,6 +14,7 @@ import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
+import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.registerForInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
@@ -49,7 +50,12 @@ class KlaviyoReactNativeSdkModule(
       }
 
   @ReactMethod
+  @OptIn(AdvancedAPI::class)
   fun initialize(apiKey: String) {
+    // Since initialize is being called after Application.onCreate,
+    // we must hand over a reference to the current activity.
+    // The native SDK will track Activity changes internally from here on.
+    currentActivity?.let(Registry.lifecycleMonitor::assignCurrentActivity)
     Klaviyo.initialize(apiKey, reactContext)
   }
 
