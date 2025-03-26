@@ -32,6 +32,10 @@
     - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
+  - [In-App Forms](#in-app-forms)
+    - [Prerequisites](#prerequisites-1)
+    - [Setup](#setup-1)
+    - [Behavior](#behavior)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -424,10 +428,11 @@ No additional setup is needed to support rich push on Android.
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
 #### Badge Count
-Klaviyo supports setting or incrementing the badge count on iOS when you send a push notification. 
+
+Klaviyo supports setting or incrementing the badge count on iOS when you send a push notification.
 To enable this functionality, you will need to implement a notification service extension and app group
-as detailed in the [Swift SDK installation instructions](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#installation). 
-See the [badge count documentation](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#badge-count)  for more details. 
+as detailed in the [Swift SDK installation instructions](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#installation).
+See the [badge count documentation](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#badge-count) for more details.
 Android automatically handles badge counts, and no additional setup is needed.
 
 #### Tracking Open Events
@@ -479,6 +484,42 @@ Linking.getInitialURL().then((url) => {
   console.log('Initial Url: url', url);
 });
 ```
+
+## In-App Forms
+
+[In-app forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new in-app forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
+
+### Prerequisites
+
+- Using Version 1.2.0 and higher
+- Import the Klaviyo module
+
+### Setup
+
+To display in-app forms, add the following code to your application
+
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
+...
+
+// call this any time after initializing your public API key
+Klaviyo.registerForInAppForms();
+```
+
+### Behavior
+
+Once `registerForInAppForms()` is called, the SDK will load form data for your account and display no more than one form within 15 seconds, based on form targeting and behavior settings.
+
+You can call `registerForInAppForms()` any time after initializing with your public API key to control when and where in your app's UI a form can appear. It is safe to register multiple times per application session. The SDK will internally prevent multiple forms appearing at once.
+
+Consider how often you want to register for forms. For example, registering from a lifecycle event is advisable so that the user has multiple opportunities to see your messaging if they are browsing your app for a prolonged period. However, be advised the form will be shown as soon as it is ready, so you may still need to condition this based on the user's context within your application. Future versions of this product will provide more control in this regard.
+
+| Callback                                                                                             | Description                                                             |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `const handleAppStateChange = async (nextAppState: string) => {  Klaviyo.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
+| `function App(): JSX.Element { useEffect(() => {  Klaviyo.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
+
+**Note**: At this time, when device orientation changes any currently visible form is closed and will not be re-displayed automatically.
 
 ## Troubleshooting
 
