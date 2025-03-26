@@ -494,28 +494,6 @@ Linking.getInitialURL().then((url) => {
 - Using Version 1.2.0 and higher
 - Import the Klaviyo module
 
-#### Android
-
-In your Application class you **must** call `Klaviyo.registerForLifecycleCallbacks(applicationContext)`, due to timing issues, this cannot be achieved from the RN layer at this time.
-
-```kotlin
-// Application subclass
-import android.app.Application
-import com.klaviyo.analytics.Klaviyo
-class YourApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        /* ... */
-
-        // Initialize is required before invoking any other Klaviyo SDK functionality
-        Klaviyo.initialize("KLAVIYO_PUBLIC_API_KEY", applicationContext)
-
-        // If unable to call initialize, you must at least register lifecycle listeners:
-        Klaviyo.registerForLifecycleCallbacks(applicationContext)
-    }
-}
-```
-
 ### Setup
 
 To display in-app forms, add the following code to your application
