@@ -151,6 +151,8 @@ Install [Cocoapods](https://cocoapods.org/) if you have not already.
 pod install
 ```
 
+You may also need to run `pod update` after updating your SDK version.
+
 ## Initialization
 
 The SDK must be initialized with the short alphanumeric [public API key](https://help.klaviyo.com/hc/en-us/articles/115005062267#difference-between-public-and-private-api-keys1)
