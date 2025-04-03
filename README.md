@@ -151,7 +151,7 @@ Install [Cocoapods](https://cocoapods.org/) if you have not already.
 pod install
 ```
 
-You may also need to run `pod update` after updating your SDK version.
+You may also need to run `pod update` or `pod install --repo-update` after updating your SDK version.
 
 ## Initialization
 
