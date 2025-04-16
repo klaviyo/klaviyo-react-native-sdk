@@ -32,6 +32,8 @@
     - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
+    - [Silent Push Notifications](#silent-push-notifications)
+    - [Custom Data](#custom-data)
   - [In-App Forms](#in-app-forms)
     - [Prerequisites](#prerequisites-1)
     - [Setup](#setup-1)
