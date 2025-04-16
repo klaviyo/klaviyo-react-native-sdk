@@ -487,6 +487,17 @@ Linking.getInitialURL().then((url) => {
 });
 ```
 
+#### Silent Push Notifications
+Silent push notifications (also known as background pushes) allow your app to receive payloads from Klaviyo without displaying a visible alert to the user. These are typically used to trigger background behavior, such as displaying content, personalizing the app interface, or downloading new information from a server. To receive silent push notifications, follow the platform-specific instructions below:
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Silent-Push-Notifications)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Silent-Push-Notifications)
+
+#### Custom Data
+Klaviyo messages can also include key-value pairs (custom data) for both standard and silent push notifications. To receive custom data, follow the platform-specific instructions below:
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Custom-Data)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Custom-Data)
+
+
 ## In-App Forms
 
 [In-app forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new in-app forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
