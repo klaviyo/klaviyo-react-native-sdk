@@ -162,13 +162,13 @@ public class KlaviyoBridge: NSObject {
             return
         }
 
+        let fixedProperties = fixNSNumberTypes(event["properties"] as Any)
         let event = Event(
             name: eventType,
-            properties: event["properties"] as? [String: Any],
+            properties: fixedProperties as? [String: Any],
             value: event["value"] as? Double,
             uniqueId: event["uniqueId"] as? String
         )
-
         KlaviyoSDK().create(event: event)
     }
 
@@ -218,6 +218,29 @@ public class KlaviyoBridge: NSObject {
         default:
             return Profile.ProfileKey.custom(customKey: str)
         }
+    }
+
+    static func fixNSNumberTypes(_ value: Any) -> Any {
+        // Handle NSNumber (Bool or Number)
+        if let num = value as? NSNumber {
+            if CFGetTypeID(num) == CFBooleanGetTypeID() {
+                return num.boolValue
+            }
+            return num.intValue
+        }
+
+        // Handle Dictionary
+        if let dict = value as? [String: Any] {
+            return dict.mapValues { fixNSNumberTypes($0) }
+        }
+
+        // Handle Array
+        if let arr = value as? [Any] {
+            return arr.map { fixNSNumberTypes($0) }
+        }
+
+        // Fallback: return as-is
+        return value
     }
 }
 
