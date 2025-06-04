@@ -94,7 +94,7 @@ export const appViews: AppViewInterface[] = [
     onPress: resetProfile,
   },
   {
-    title: 'Click to show a form',
+    title: 'Click to show a form (10 seconds timeout)',
     color: '#d3ab10',
     onPress: registerForInAppForms,
   },

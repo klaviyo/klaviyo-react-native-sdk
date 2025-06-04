@@ -16,6 +16,9 @@ if linkage != nil
 end
 
 target 'KlaviyoReactNativeSdkExample' do
+  pod 'KlaviyoSwift', :path => '../../../klaviyo-swift-sdk'
+  pod 'KlaviyoForms', :path => '../../../klaviyo-swift-sdk'
+  pod 'KlaviyoCore', :path => '../../../klaviyo-swift-sdk'
   config = use_native_modules!
 
   use_frameworks! :linkage => :static

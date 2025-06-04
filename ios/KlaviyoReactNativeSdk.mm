@@ -92,8 +92,8 @@ RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
     [KlaviyoBridge createEventWithEvent:event];
 }
 
-RCT_EXPORT_METHOD(registerForInAppForms) {
-    [KlaviyoBridge registerForInAppForms];
+RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
+    [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration];
 }
 
 // Don't compile this code when we build for the old architecture.

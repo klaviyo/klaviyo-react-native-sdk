@@ -19,7 +19,7 @@ export const initialize = async () => {
     // Alternate Android Installation Step 3
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
-    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
+    Klaviyo.initialize('XNhKEQ');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -98,7 +98,9 @@ export const resetProfile = async () => {
 
 export const registerForInAppForms = async () => {
   try {
-    Klaviyo.registerForInAppForms();
+    Klaviyo.registerForInAppForms({
+      sessionTimeoutDuration: 10, // 10 seconds
+    });
   } catch (e: any) {
     console.log(e.message, e.code);
   }
