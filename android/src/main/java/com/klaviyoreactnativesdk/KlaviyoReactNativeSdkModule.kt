@@ -16,6 +16,7 @@ import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.registerForInAppForms
+import com.klaviyo.forms.unregisterFromInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 
@@ -68,6 +69,13 @@ class KlaviyoReactNativeSdkModule(
       } catch (e: Exception) {
         Registry.log.error("Android unable to register for in app forms on main thread", e)
       }
+    }
+  }
+
+  @ReactMethod
+  fun unregisterFromInAppForms() {
+    UiThreadUtil.runOnUiThread {
+      Klaviyo.unregisterFromInAppForms()
     }
   }
 

@@ -59,6 +59,12 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().registerForInAppForms(configuration: IAFConfiguration(sessionTimeoutDuration: configurationLength))
     }
 
+    @MainActor
+    @objc
+    public static func unregisterFromInAppForms() {
+        KlaviyoSDK().unregisterFromInAppForms()
+    }
+
     @objc
     public static func setProfile(
         _ profileDict: [String: AnyObject]

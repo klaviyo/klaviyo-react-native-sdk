@@ -8,6 +8,11 @@ export interface KlaviyoFormsApi {
    * @param configuration Optional configuration for the form session. Defaults to 60 minutes timeout.
    */
   registerForInAppForms(configuration?: FormConfiguration): void;
+
+  /**
+   * Unregister from in-app forms
+   */
+  unregisterFromInAppForms(): void;
 }
 
 /**

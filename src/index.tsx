@@ -63,6 +63,9 @@ export const Klaviyo: KlaviyoInterface = {
   registerForInAppForms(configuration?: FormConfiguration): void {
     KlaviyoReactNativeSdk.registerForInAppForms(configuration);
   },
+  unregisterFromInAppForms: () => {
+    KlaviyoReactNativeSdk.unregisterFromInAppForms();
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -73,4 +76,5 @@ export {
   type Location,
   ProfileProperty,
 } from './Profile';
+export { type FormConfiguration } from './Forms';
 export type { KlaviyoInterface } from './Klaviyo';
