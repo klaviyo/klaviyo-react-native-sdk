@@ -62,13 +62,12 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Requirements
 
-This SDK was developed and tested against React Native 0.73.
-We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
+This SDK was developed and tested against React Native 0.78, as a new-architecture compatible native module.
 
 ### React Native
 
-- `0.68.7+` - We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
-  Testing is ongoing to verify on older versions.
+We support all maintained [React Native versions](https://reactnative.dev/versions), 0.70+.
+We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
 
 ### Android
 
@@ -113,8 +112,10 @@ To run the example app:
     file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
     Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
     This is disabled by default because the app will crash on launch without a `google-services.json` file.
-- From the project's root directory, run `yarn example start` to start the example application. Follow the
-  metro instructions from here, i.e. press `i` to run on iOS or `a` to run on Android.
+- From the project's root directory, use the following commands start a metro server and run the example app.
+  - `yarn example start` - to start the metro server
+  - `yarn example android` - to run the example app on an Android emulator or device
+  - `yarn example ios` - to run the example app on an iOS simulator
 
 ### Android
 
@@ -122,11 +123,7 @@ Android installation requirements may vary depending upon your project configura
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
-#### React Native 0.74.x
-
-There are no additional installation requirements.
-
-#### React Native 0.73.x
+#### React Native 0.74+
 
 There are no additional installation requirements. Android support is fully tested and verified.
 
@@ -139,10 +136,6 @@ with the following modifications to the `android/build.gradle` file:
 - Set `compileSdkVersion=34`
 
 See [Android Troubleshooting](Troubleshooting.md#android-troubleshooting) for possible exceptions.
-
-#### React Native <= 0.67.x
-
-We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
 
 ### iOS
 
@@ -490,15 +483,18 @@ Linking.getInitialURL().then((url) => {
 ```
 
 #### Silent Push Notifications
+
 Silent push notifications (also known as background pushes) allow your app to receive payloads from Klaviyo without displaying a visible alert to the user. These are typically used to trigger background behavior, such as displaying content, personalizing the app interface, or downloading new information from a server. To receive silent push notifications, follow the platform-specific instructions below:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Silent-Push-Notifications)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Silent-Push-Notifications)
 
 #### Custom Data
+
 Klaviyo messages can also include key-value pairs (custom data) for both standard and silent push notifications. To receive custom data, follow the platform-specific instructions below:
+
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Custom-Data)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Custom-Data)
-
 
 ## In-App Forms
 
