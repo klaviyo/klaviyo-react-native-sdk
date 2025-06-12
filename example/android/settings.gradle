@@ -6,6 +6,14 @@ include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
 
 // Substitute the jitpack SDK dependency for your local instance of the project
+// Enabling here allows you to build the example app against a local android SDK
+def localProperties = new Properties()
+if (file("local.properties").canRead()) {
+    localProperties.load(new FileInputStream(file("local.properties")))
+    localCompositeBuild=localProperties["localCompositeBuild"] ?: localCompositeBuild
+    localSdkPath = localProperties["localSdkPath"] ?: localSdkPath
+}
+
 if (localCompositeBuild == "true") {
   def sdkDirectory = new File(localSdkPath)
 
