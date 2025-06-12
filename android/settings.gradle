@@ -1,5 +1,5 @@
 // Substitute the jitpack SDK dependency for your local instance of the project
-if (localCompositeBuild) {
+if (localCompositeBuild == "true") {
   def sdkDirectory = new File(localSdkPath)
 
   if (!sdkDirectory.exists()) {
