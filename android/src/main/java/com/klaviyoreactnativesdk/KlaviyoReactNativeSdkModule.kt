@@ -15,8 +15,9 @@ import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
-import com.klaviyo.forms.unregisterFromInAppForms
+import com.klaviyo.forms.unregisterInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 
@@ -64,9 +65,9 @@ class KlaviyoReactNativeSdkModule(
   fun registerForInAppForms(configuration: ReadableMap?) {
     UiThreadUtil.runOnUiThread {
       try {
-        val sessionTimeoutDuration = configuration?.getDouble("sessionTimeoutDuration")
+        val sessionTimeoutDuration = configuration?.getLong("sessionTimeoutDuration")
         if (sessionTimeoutDuration != null) {
-          Klaviyo.registerForInAppForms(com.klaviyo.forms.IAFConfiguration(sessionTimeoutDuration = sessionTimeoutDuration))
+          Klaviyo.registerForInAppForms(InAppFormsConfig(sessionTimeoutDuration = sessionTimeoutDuration))
         } else {
           Klaviyo.registerForInAppForms()
         }
@@ -79,7 +80,7 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun unregisterFromInAppForms() {
     UiThreadUtil.runOnUiThread {
-      Klaviyo.unregisterFromInAppForms()
+      Klaviyo.unregisterInAppForms()
     }
   }
 
