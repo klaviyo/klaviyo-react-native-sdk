@@ -3,10 +3,6 @@
 # Only the base template should be checked in to VCS.
 # Copy this file to `local.properties` to set your local overrides
 
-## Used for local SDK development, so that gradle can locate the
-# correct RN version outside the context of an application
-reactNativeAndroidVersion=0.78.0
-
 # For local SDK development: set to true in your local.properties file
 # you must set separately for the example app and the library
 localCompositeBuild=false
