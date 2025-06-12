@@ -94,14 +94,26 @@ repositories {
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 def kotlin_version = getExtOrDefault("kotlinVersion")
+def localProperties = new Properties()
+if (rootProject.file("local.properties").canRead()) {
+  localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+}
+def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
+
 
 dependencies {
-  // Production build / once embedded in a react-native app,
-  // the react-native version gets loaded in from the application dependencies.
-  // For < 0.71, this will be from the local maven repo
-  // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
-  //noinspection GradleDynamicVersion
-  implementation "com.facebook.react:react-native:+"
+  if (reactNativeAndroidVersion) {
+    // For local development of the SDK code, specify the react-android version to use
+    // So that the SDK can be built and .kt files are linted against a real version of react-native
+    implementation "com.facebook.react:react-android:$reactNativeAndroidVersion"
+  } else {
+    // Production build / once embedded in a react-native app,
+    // the react-native version gets loaded in from the application dependencies.
+    // For < 0.71, this will be from the local maven repo
+    // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
+    //noinspection GradleDynamicVersion
+    implementation "com.facebook.react:react-native:+"
+  }
 
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
