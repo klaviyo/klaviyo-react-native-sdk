@@ -1,10 +1,3 @@
-pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
-plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
-rootProject.name = 'KlaviyoReactNativeSdkExample'
-include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
-
 // Substitute the jitpack SDK dependency for your local instance of the project
 if (localCompositeBuild) {
   def sdkDirectory = new File(localSdkPath)
@@ -12,7 +5,7 @@ if (localCompositeBuild) {
   if (!sdkDirectory.exists()) {
     throw new GradleException("Local Klaviyo Android SDK directory does not exist: " + sdkDirectory.getAbsolutePath())
   } else {
-    print("Configuring composite project with local Klaviyo Android SDK for example app.")
+    print("Configuring composite project with local Klaviyo Android SDK for library.")
   }
 
   includeBuild(sdkDirectory) {
