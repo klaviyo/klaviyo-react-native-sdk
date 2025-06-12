@@ -51,18 +51,8 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
-        if let configurationLength = configuration?["sessionTimeoutDuration"] as? TimeInterval {
-            KlaviyoSDK().registerForInAppForms(configuration: IAFConfiguration(sessionTimeoutDuration: configurationLength))
-        } else {
-            KlaviyoSDK().registerForInAppForms()
-        }
-    }
-
-    @MainActor
-    @objc
-    public static func unregisterFromInAppForms() {
-        KlaviyoSDK().unregisterFromInAppForms()
+    public static func registerForInAppForms() {
+        KlaviyoSDK().registerForInAppForms()
     }
 
     @objc
