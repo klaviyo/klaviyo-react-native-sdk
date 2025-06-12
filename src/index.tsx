@@ -6,7 +6,6 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
-import type { FormConfiguration } from './Forms';
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -60,11 +59,8 @@ export const Klaviyo: KlaviyoInterface = {
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
   },
-  registerForInAppForms(configuration?: FormConfiguration): void {
-    KlaviyoReactNativeSdk.registerForInAppForms(configuration);
-  },
-  unregisterFromInAppForms: () => {
-    KlaviyoReactNativeSdk.unregisterFromInAppForms();
+  registerForInAppForms(): void {
+    KlaviyoReactNativeSdk.registerForInAppForms();
   },
 };
 

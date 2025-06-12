@@ -98,17 +98,7 @@ export const resetProfile = async () => {
 
 export const registerForInAppForms = async () => {
   try {
-    Klaviyo.registerForInAppForms({
-      sessionTimeoutDuration: 10, // 10 seconds
-    });
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
-export const unregisterFromInAppForms = async () => {
-  try {
-    Klaviyo.unregisterFromInAppForms();
+    Klaviyo.registerForInAppForms();
   } catch (e: any) {
     console.log(e.message, e.code);
   }
