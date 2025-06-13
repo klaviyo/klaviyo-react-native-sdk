@@ -39,22 +39,60 @@ function configure_local_properties() {
       echo "Updated localSdkPath to $sdk_path in $local_properties_file"
     fi
   fi
+  echo
 }
 
 # Configure local SDK for both directories
-function configure_local_sdk() {
+function configure_local_android_sdk() {
   local default_sdk_path="../../klaviyo-android-sdk"
   read -rp "Enter the relative path to klaviyo-android-sdk (default: $default_sdk_path): " sdk_path
   sdk_path=${sdk_path:-$default_sdk_path}
+  echo
 
   configure_local_properties "./android" "true" "$sdk_path"
   configure_local_properties "./example/android" "true" "../$sdk_path"
+}
 
-  # TODO configure local Swift SDK
+function configure_local_swift_sdk() {
+  local original_dir
+  original_dir=$(pwd) # Save the original working directory
+  cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
+
+  local swift_sdk_path="../../../klaviyo-swift-sdk"
+
+  read -rp "Enter the relative path to klaviyo-swift-sdk (default: $swift_sdk_path): " sdk_path
+  sdk_path=${sdk_path:-$swift_sdk_path}
+  echo
+
+  # Ensure the path exists
+  if [[ ! -d "$sdk_path" ]]; then
+    echo "Error: Directory $sdk_path does not exist."
+    exit 1
+  fi
+
+  # Configure local properties for Swift SDK
+  local podfile="./Podfile"
+  if [[ ! -f "$podfile" ]]; then
+    echo "Error: Podfile not found in ./example/ios."
+    exit 1
+  fi
+
+  # Add or update the klaviyo-swift-sdk dependency in Podfile
+  if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
+    sed -i '' "s/pod 'KlaviyoSwift'.*/pod 'KlaviyoSwift', :path => '$sdk_path'/" "$podfile"
+    echo "Updated klaviyo-swift-sdk path in $podfile to $sdk_path"
+  else
+    echo "pod 'KlaviyoSwift', :path => '$sdk_path'" >> "$podfile"
+    echo "Added klaviyo-swift-sdk dependency to $podfile with path $sdk_path"
+  fi
+
+  echo "Swift SDK configured successfully."
+
+  cd "$original_dir" || exit 1 # Return to the original working directory
 }
 
 # Handle remote SDK configuration
-function configure_remote_sdk() {
+function configure_remote_android_sdk() {
   configure_local_properties "./android" "false"
   configure_local_properties "./example/android" "false"
 
@@ -99,8 +137,41 @@ function configure_remote_sdk() {
   echo "Now targeting SDK version: $sdkVersion."
   echo "You should clean/sync gradle now."
   echo
+}
 
-  # TODO configure remote Swift SDK
+function configure_remote_swift_sdk() {
+  local podfile="./example/ios/Podfile"
+
+  read -rp "Enter the swift SDK version, branch, or commit hash [return] to use podspec: " swift_sdk_version
+  swift_sdk_version=${swift_sdk_version:-podspec}
+  sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
+
+  if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
+    echo "Skipping Swift SDK version update."
+    if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
+      sed -i '' "s/pod 'KlaviyoSwift'.*/$podfile_entry"
+      echo "Updated klaviyo-swift-sdk path in $podfile to $podfile_entry"
+    fi
+    return
+  fi
+
+  # Validate and format Swift SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
+  if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+    podfile_entry="pod 'KlaviyoSwift', '$swift_sdk_version'"
+  elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+    podfile_entry="pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
+  else
+    podfile_entry="pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
+  fi
+
+  # Add or update the klaviyo-swift-sdk dependency in Podfile
+  if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
+    sed -i '' "s/pod 'KlaviyoSwift'.*/$podfile_entry"
+    echo "Updated klaviyo-swift-sdk path in $podfile to $podfile_entry"
+  else
+    echo "$podfile_entry" >> "$podfile"
+    echo "Added klaviyo-swift-sdk dependency to $podfile"
+  fi
 }
 
 function choose_from_menu() {
@@ -172,7 +243,20 @@ choose_from_menu "Select an option using arrow keys and press Enter:" selected_c
 
 # Handle selection
 if [[ "$selected_choice" == "Local SDKs" ]]; then
-  configure_local_sdk
+  configure_local_android_sdk
+  configure_local_swift_sdk
+
 elif [[ "$selected_choice" == "Remote (JitPack)" ]]; then
-  configure_remote_sdk
+  configure_remote_android_sdk
+  configure_remote_swift_sdk
+fi
+
+read -rp "Do you want to run 'pod install'? (Y/n): " response
+response=${response:-y}
+if [[ "$response" == "y" || "$response" == "" ]]; then
+  cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
+  bundle exec pod install
+  echo "'pod install' completed successfully."
+else
+  echo "Skipped 'pod install'."
 fi
