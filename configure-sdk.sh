@@ -144,34 +144,36 @@ function configure_remote_swift_sdk() {
 
   read -rp "Enter the swift SDK version, branch, or commit hash [return] to use podspec: " swift_sdk_version
   swift_sdk_version=${swift_sdk_version:-podspec}
+  # Delete the overridden dependencies first
+  sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
 
   if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
     echo "Skipping Swift SDK version update."
-    if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
-      sed -i '' "s/pod 'KlaviyoSwift'.*/$podfile_entry"
-      echo "Updated klaviyo-swift-sdk path in $podfile to $podfile_entry"
-    fi
     return
   fi
 
-  # Validate and format Swift SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
-  if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
-    podfile_entry="pod 'KlaviyoSwift', '$swift_sdk_version'"
-  elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
-    podfile_entry="pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
-  else
-    podfile_entry="pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
-  fi
+  # List of dependencies
+  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
 
-  # Add or update the klaviyo-swift-sdk dependency in Podfile
-  if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
-    sed -i '' "s/pod 'KlaviyoSwift'.*/$podfile_entry"
-    echo "Updated klaviyo-swift-sdk path in $podfile to $podfile_entry"
-  else
-    echo "$podfile_entry" >> "$podfile"
-    echo "Added klaviyo-swift-sdk dependency to $podfile"
-  fi
+  # Find the line number of the target block
+  target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
+
+  for dependency in "${dependencies[@]}"; do
+    if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+      podfile_entry="pod '$dependency', '$swift_sdk_version'"
+    elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
+    else
+      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
+    fi
+
+    nl=$'\n'
+    sed -i '' "${target_line}a\\${nl}  $podfile_entry${nl}" "$podfile"
+    echo "Added $dependency dependency to $podfile"
+    target_line=$((target_line + 1)) # Increment target line for next insertion
+  done
 }
 
 function choose_from_menu() {
@@ -229,7 +231,7 @@ function choose_from_menu() {
 declare -a selections
 selections=(
     "Local SDKs"
-    "Remote (JitPack)"
+    "Remote (semantic version or git branch/commit)"
     "Exit"
 )
 
@@ -246,14 +248,14 @@ if [[ "$selected_choice" == "Local SDKs" ]]; then
   configure_local_android_sdk
   configure_local_swift_sdk
 
-elif [[ "$selected_choice" == "Remote (JitPack)" ]]; then
+elif [[ "$selected_choice" == "Remote (semantic version or git branch/commit)" ]]; then
   configure_remote_android_sdk
   configure_remote_swift_sdk
 fi
 
 read -rp "Do you want to run 'pod install'? (Y/n): " response
 response=${response:-y}
-if [[ "$response" == "y" || "$response" == "" ]]; then
+if [[ "$response" =~ ^[yY]$ ]]; then
   cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
   bundle exec pod install
   echo "'pod install' completed successfully."

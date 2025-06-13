@@ -14,6 +14,7 @@ import {
   setBadgeCount,
   getPushToken,
   registerForInAppForms,
+  unregisterFromInAppForms,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -94,8 +95,13 @@ export const appViews: AppViewInterface[] = [
     onPress: resetProfile,
   },
   {
-    title: 'Click to show a form',
+    title: 'Click to show a form (10 seconds timeout)',
     color: '#d3ab10',
     onPress: registerForInAppForms,
+  },
+  {
+    title: 'Click to unregister from forms',
+    color: '#d3ab10',
+    onPress: unregisterFromInAppForms,
   },
 ];
