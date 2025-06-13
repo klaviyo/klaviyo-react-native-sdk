@@ -17,7 +17,7 @@ import com.klaviyo.core.Registry
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
-import com.klaviyo.forms.unregisterInAppForms
+import com.klaviyo.forms.unregisterFromInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 
@@ -80,7 +80,7 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun unregisterFromInAppForms() {
     UiThreadUtil.runOnUiThread {
-      Klaviyo.unregisterInAppForms()
+      Klaviyo.unregisterFromInAppForms()
     }
   }
 

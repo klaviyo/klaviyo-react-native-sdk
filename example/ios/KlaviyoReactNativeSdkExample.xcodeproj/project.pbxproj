@@ -267,6 +267,7 @@
 				346E4F922BC59CB200CBCFC1 /* Sources */,
 				346E4F932BC59CB200CBCFC1 /* Frameworks */,
 				346E4F942BC59CB200CBCFC1 /* Resources */,
+				1C20EB291B6BD0AB4F7D2225 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -361,6 +362,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"../node_modules/react-native/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"../node_modules/react-native/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+		};
+		1C20EB291B6BD0AB4F7D2225 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		27FF43EFFC2803AEB3B764FD /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
