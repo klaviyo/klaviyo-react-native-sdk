@@ -157,8 +157,10 @@ function configure_remote_swift_sdk() {
   # List of dependencies
   dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
 
+  # Find the line number of the target block
+  target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
+
   for dependency in "${dependencies[@]}"; do
-    # Validate and format SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
     if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
       podfile_entry="pod '$dependency', '$swift_sdk_version'"
     elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
@@ -167,14 +169,10 @@ function configure_remote_swift_sdk() {
       podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
     fi
 
-    # Add or update the dependency in Podfile
-    if grep -q "pod '$dependency'" "$podfile"; then
-      sed -i '' "s|pod '$dependency'.*|$podfile_entry|" "$podfile"
-      echo "Updated $dependency path in $podfile to $podfile_entry"
-    else
-      echo "$podfile_entry" >> "$podfile"
-      echo "Added $dependency dependency to $podfile"
-    fi
+    nl=$'\n'
+    sed -i '' "${target_line}a\\${nl}  $podfile_entry${nl}" "$podfile"
+    echo "Added $dependency dependency to $podfile"
+    target_line=$((target_line + 1)) # Increment target line for next insertion
   done
 }
 
