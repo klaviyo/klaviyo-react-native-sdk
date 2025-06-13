@@ -4,3 +4,32 @@ extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autoli
 rootProject.name = 'KlaviyoReactNativeSdkExample'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// Substitute the jitpack SDK dependency for your local instance of the project
+// Enabling here allows you to build the example app against a local android SDK
+def localProperties = new Properties()
+if (file("local.properties").canRead()) {
+    localProperties.load(new FileInputStream(file("local.properties")))
+    localCompositeBuild=localProperties["localCompositeBuild"] ?: localCompositeBuild
+    localSdkPath = localProperties["localSdkPath"] ?: localSdkPath
+}
+
+if (localCompositeBuild == "true") {
+  def sdkDirectory = new File(localSdkPath)
+
+  if (!sdkDirectory.exists()) {
+    throw new GradleException("Local Klaviyo Android SDK directory does not exist: " + sdkDirectory.getAbsolutePath())
+  } else {
+    print("Configuring composite project with local Klaviyo Android SDK for example app.")
+  }
+
+  includeBuild(sdkDirectory) {
+    dependencySubstitution {
+      // substitute remote dependency with local module
+      substitute module("com.github.klaviyo.klaviyo-android-sdk:core") using project(":sdk:core")
+      substitute module("com.github.klaviyo.klaviyo-android-sdk:analytics") using project(":sdk:analytics")
+      substitute module("com.github.klaviyo.klaviyo-android-sdk:forms") using project(":sdk:forms")
+      substitute module("com.github.klaviyo.klaviyo-android-sdk:push-fcm") using project(":sdk:push-fcm")
+    }
+  }
+}
