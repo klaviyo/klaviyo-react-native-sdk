@@ -44,3 +44,4 @@ target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   pod 'KlaviyoSwiftExtension'
 end
+pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '34013c9'

@@ -229,7 +229,7 @@ function choose_from_menu() {
 declare -a selections
 selections=(
     "Local SDKs"
-    "Remote (JitPack)"
+    "Remote (semantic version or git branch/commit)"
     "Exit"
 )
 
@@ -246,14 +246,14 @@ if [[ "$selected_choice" == "Local SDKs" ]]; then
   configure_local_android_sdk
   configure_local_swift_sdk
 
-elif [[ "$selected_choice" == "Remote (JitPack)" ]]; then
+elif [[ "$selected_choice" == "Remote (semantic version or git branch/commit)" ]]; then
   configure_remote_android_sdk
   configure_remote_swift_sdk
 fi
 
 read -rp "Do you want to run 'pod install'? (Y/n): " response
 response=${response:-y}
-if [[ "$response" == "y" || "$response" == "" ]]; then
+if [[ "$response" =~ ^[yY]$ ]]; then
   cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
   bundle exec pod install
   echo "'pod install' completed successfully."
