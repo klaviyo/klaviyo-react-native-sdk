@@ -42,6 +42,48 @@ function configure_local_properties() {
   echo
 }
 
+function configure_podfile() {
+  local podfile="./example/ios/Podfile"
+  swift_sdk_version="$1"
+
+  # Delete the overridden dependencies first
+  sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
+
+  if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
+    echo "Skipping Swift SDK version update."
+    return
+  fi
+
+  # List of dependencies
+  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
+
+  # Find the line number of the target block
+  target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
+
+  for dependency in "${dependencies[@]}"; do
+    if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+      #Semantic version
+      podfile_entry="pod '$dependency', '$swift_sdk_version'"
+    elif [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
+      # Relative file path
+      podfile_entry="pod '$dependency', :path => '$swift_sdk_version'"
+    elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+      # Commit hash
+      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
+    else
+      # Assume a git branch name
+      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
+    fi
+
+    nl=$'\n'
+    sed -i '' "${target_line}a\\${nl}  $podfile_entry${nl}" "$podfile"
+    echo "Added $dependency dependency to $podfile"
+    target_line=$((target_line + 1)) # Increment target line for next insertion
+  done
+}
+
 # Configure local SDK for both directories
 function configure_local_android_sdk() {
   local default_sdk_path="../../klaviyo-android-sdk"
@@ -56,7 +98,6 @@ function configure_local_android_sdk() {
 function configure_local_swift_sdk() {
   local original_dir
   original_dir=$(pwd) # Save the original working directory
-  cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
 
   local swift_sdk_path="../../../klaviyo-swift-sdk"
 
@@ -65,28 +106,12 @@ function configure_local_swift_sdk() {
   echo
 
   # Ensure the path exists
-  if [[ ! -d "$sdk_path" ]]; then
+  if [[ ! -d "./example/ios/$sdk_path" ]]; then
     echo "Error: Directory $sdk_path does not exist."
     exit 1
   fi
 
-  # Configure local properties for Swift SDK
-  local podfile="./Podfile"
-  if [[ ! -f "$podfile" ]]; then
-    echo "Error: Podfile not found in ./example/ios."
-    exit 1
-  fi
-
-  # Add or update the klaviyo-swift-sdk dependency in Podfile
-  if grep -q "pod 'KlaviyoSwift'" "$podfile"; then
-    sed -i '' "s/pod 'KlaviyoSwift'.*/pod 'KlaviyoSwift', :path => '$sdk_path'/" "$podfile"
-    echo "Updated klaviyo-swift-sdk path in $podfile to $sdk_path"
-  else
-    echo "pod 'KlaviyoSwift', :path => '$sdk_path'" >> "$podfile"
-    echo "Added klaviyo-swift-sdk dependency to $podfile with path $sdk_path"
-  fi
-
-  echo "Swift SDK configured successfully."
+  configure_podfile "$sdk_path"
 
   cd "$original_dir" || exit 1 # Return to the original working directory
 }
@@ -140,40 +165,10 @@ function configure_remote_android_sdk() {
 }
 
 function configure_remote_swift_sdk() {
-  local podfile="./example/ios/Podfile"
-
   read -rp "Enter the swift SDK version, branch, or commit hash [return] to use podspec: " swift_sdk_version
   swift_sdk_version=${swift_sdk_version:-podspec}
-  # Delete the overridden dependencies first
-  sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
-  sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
-  sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
 
-  if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
-    echo "Skipping Swift SDK version update."
-    return
-  fi
-
-  # List of dependencies
-  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
-
-  # Find the line number of the target block
-  target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
-
-  for dependency in "${dependencies[@]}"; do
-    if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
-      podfile_entry="pod '$dependency', '$swift_sdk_version'"
-    elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
-      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
-    else
-      podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
-    fi
-
-    nl=$'\n'
-    sed -i '' "${target_line}a\\${nl}  $podfile_entry${nl}" "$podfile"
-    echo "Added $dependency dependency to $podfile"
-    target_line=$((target_line + 1)) # Increment target line for next insertion
-  done
+  configure_podfile "$swift_sdk_version"
 }
 
 function choose_from_menu() {
