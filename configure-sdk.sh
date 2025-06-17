@@ -64,12 +64,16 @@ function configure_podfile() {
 
   for dependency in "${dependencies[@]}"; do
     if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+      #Semantic version
       podfile_entry="pod '$dependency', '$swift_sdk_version'"
     elif [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
+      # Relative file path
       podfile_entry="pod '$dependency', :path => '$swift_sdk_version'"
     elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+      # Commit hash
       podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
     else
+      # Assume a git branch name
       podfile_entry="pod '$dependency', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
     fi
 
