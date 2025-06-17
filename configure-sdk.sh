@@ -25,7 +25,7 @@ function configure_local_properties() {
     echo "localCompositeBuild=$enabled" >> "$local_properties_file"
     echo "Added localCompositeBuild=$enabled to $local_properties_file"
   else
-    sed -i '' 's/^localCompositeBuild=.*/localCompositeBuild=true/' "$local_properties_file"
+    sed -i '' "s/^localCompositeBuild=.*/localCompositeBuild=$enabled/" "$local_properties_file"
     echo "Updated localCompositeBuild to $enabled in $local_properties_file"
   fi
 
