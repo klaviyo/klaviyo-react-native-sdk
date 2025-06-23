@@ -47,7 +47,7 @@ class KlaviyoReactNativeSdkModule(
     T::class
       .nestedClasses
       .filter {
-        it.visibility == KVisibility.PUBLIC && it.objectInstance != null
+        it.visibility == KVisibility.PUBLIC && it.objectInstance is T
       }.associate {
         it.simpleName.toString() to (it.objectInstance as T).name
       }
