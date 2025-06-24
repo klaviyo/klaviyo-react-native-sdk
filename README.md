@@ -37,6 +37,9 @@
   - [In-App Forms](#in-app-forms)
     - [Prerequisites](#prerequisites-1)
     - [Setup](#setup-1)
+      - [Registering for in-app forms](#registering-for-in-app-forms)
+      - [App Session configuration](#app-session-configuration)
+      - [Unregistering from in-app forms](#unregistering-from-in-app-forms)
     - [Behavior](#behavior)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
@@ -500,6 +503,8 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 
 [In-app forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new in-app forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
 
+Beginning with version 1.3.0, in-app forms support advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude a specific list or segment, and the form will be displayed to (or hidden from) profiles included in the specified list or segment.
+
 ### Prerequisites
 
 - Using Version 1.2.0 and higher
@@ -507,7 +512,9 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 
 ### Setup
 
-To display in-app forms, add the following code to your application
+#### Registering for in-app forms
+
+To configure your app to display in-app forms, add the following code to your application:
 
 ```
 import { Klaviyo } from "klaviyo-react-native-sdk";
@@ -517,20 +524,56 @@ import { Klaviyo } from "klaviyo-react-native-sdk";
 Klaviyo.registerForInAppForms();
 ```
 
+After registering, the SDK will be ready to display any form(s) targeted to the current user's profile. See the Behavior section below for more details.
+
+Note that the in-app forms will automatically respond if/when the API key and/or the profile data changes. You do not need to re-register.
+
+##### App Session configuration
+
+An "app session" is considered to be a logical unit of user engagement with the app, defined as a series of foreground interactions that occur within a continuous or near-continuous time window. This is an important concept regarding in-app forms, as we want to ensure that a user will not see a form multiple times within the same app session.
+
+An app session will timeout after a specified period of inactivity. When a user launches the app, if the time between the previous interaction with the app and the current one exceeds the specified timeout, we will consider this to be a new app session.
+
+This timeout has a default value of 3600 seconds (1 hour), but it can be customized. To do so, create a new `FormConfiguration` object:
+
+```
+let config: FormConfiguration = { sessionTimeoutDuration: 1800 }
+```
+
+then pass this into the SDK when calling `registerForInAppForms()`:
+
+```
+Klaviyo.registerForInAppForms(config);
+```
+
+#### Unregistering from in-app forms
+
+If at any point you need to prevent the SDK from displaying in-app forms, you may call:
+
+```
+Klaviyo.unregisterFromInAppForms();
+```
+
+Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new app session by the SDK.
+
 ### Behavior
 
-Once `registerForInAppForms()` is called, the SDK will load form data for your account and display no more than one form within 15 seconds, based on form targeting and behavior settings.
+Once `registerForInAppForms()` is called, the SDK will begin persistently listening for any in-app forms targeted to the current user. You only need to call this once. The SDK will handle presenting forms to the appropriate profiles at the appropriate times, as specified within the forms editor in the Klaviyo dashboard.
 
-You can call `registerForInAppForms()` any time after initializing with your public API key to control when and where in your app's UI a form can appear. It is safe to register multiple times per application session. The SDK will internally prevent multiple forms appearing at once.
+By calling `registerForInAppForms()` in your top level App's `useEffect`:
 
-Consider how often you want to register for forms. For example, registering from a lifecycle event is advisable so that the user has multiple opportunities to see your messaging if they are browsing your app for a prolonged period. However, be advised the form will be shown as soon as it is ready, so you may still need to condition this based on the user's context within your application. Future versions of this product will provide more control in this regard.
+```
+function App():
+   JSX.Element {
+    useEffect(() => {
+      Klaviyo.registerForInAppForms();
+    }
+  };
+```
 
-| Callback                                                                                             | Description                                                             |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `const handleAppStateChange = async (nextAppState: string) => {  Klaviyo.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
-| `function App(): JSX.Element { useEffect(() => {  Klaviyo.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
+you'll ensure that your app is ready to display forms at any point within your app's lifecycle.
 
-**Note**: At this time, when device orientation changes any currently visible form is closed and will not be re-displayed automatically.
+You may also call `registerForInAppForms()` at an appropriate place within your app's logic, but note that until you call `unregisterFromInAppForms()` the SDK will listen persistently for eligible forms regardless of whatever screen is currently displayed. This means that even if you call `registerForInAppForms()` from within a specific Component or Screen, the SDK will not be restricted to displaying the form only within that view.
 
 ## Troubleshooting
 
