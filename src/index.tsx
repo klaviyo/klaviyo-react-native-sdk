@@ -77,3 +77,4 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
+export type { FormConfiguration } from './Forms';

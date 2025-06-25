@@ -4,6 +4,7 @@ import {
   type Location,
   type Profile,
   ProfileProperty,
+  type FormConfiguration,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -98,9 +99,8 @@ export const resetProfile = async () => {
 
 export const registerForInAppForms = async () => {
   try {
-    Klaviyo.registerForInAppForms({
-      sessionTimeoutDuration: 10, // 10 seconds
-    });
+    let config: FormConfiguration = { sessionTimeoutDuration: 10 }; // 10 seconds
+    Klaviyo.registerForInAppForms(config);
   } catch (e: any) {
     console.log(e.message, e.code);
   }
