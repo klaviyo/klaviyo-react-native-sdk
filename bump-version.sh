@@ -5,7 +5,7 @@ read -rp "Enter the new React SDK version: " new_version
 
 # Update SDK version in package.json
 if [[ -f "package.json" ]]; then
-  sed -i '' "0,/\"version\": \".*\"/s//\"version\": \"$new_version\"/" package.json
+  jq --arg newVersion "$new_version" '.version = $newVersion' package.json > tmp.json && mv tmp.json package.json
   echo "Updated SDK version in package.json."
 else
   echo "Error: package.json not found."
@@ -52,7 +52,8 @@ read -rp "Enter the Swift SDK version: " swift_version
 podspec_file="klaviyo-react-native-sdk.podspec"
 if [[ -f "$podspec_file" ]]; then
   sed -i '' "s/\"KlaviyoSwift\", \".*\"/\"KlaviyoSwift\", \"$swift_version\"/" "$podspec_file"
-  echo "Updated KlaviyoSwift version in $podspec_file."
+  sed -i '' "s/\"KlaviyoForms\", \".*\"/\"KlaviyoForms\", \"$swift_version\"/" "$podspec_file"
+  echo "Updated KlaviyoSwift and KlaviyoForms version in $podspec_file."
 else
   echo "Error: $podspec_file not found."
   exit 1
