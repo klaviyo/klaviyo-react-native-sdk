@@ -137,7 +137,7 @@ function configure_remote_android_sdk() {
     exit 1
   fi
 
-  echo "Enter SDK version, branch, or commit hash [return] to skip"
+  echo "Enter the android SDK version, branch, or commit hash [return] to skip"
   echo "(current: $property_value)"
   read -r sdkVersion
   sdkVersion=${sdkVersion:-current}

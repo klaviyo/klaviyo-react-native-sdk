@@ -11,9 +11,9 @@
 -->
 <plist version="1.0">
 <dict>
-    <key>klaviyo_sdk_name</key>
-    <string>react_native</string>
-    <key>klaviyo_sdk_version</key>
-    <string>1.3.0</string>
+	<key>klaviyo_sdk_name</key>
+	<string>react_native</string>
+	<key>klaviyo_sdk_version</key>
+	<string>2.0.0</string>
 </dict>
 </plist>
