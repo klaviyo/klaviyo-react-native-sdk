@@ -37,7 +37,8 @@
   - [In-App Forms](#in-app-forms)
     - [Prerequisites](#prerequisites-1)
     - [Setup](#setup-1)
-    - [Behavior](#behavior)
+      - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
+    - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -498,16 +499,28 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 
 ## In-App Forms
 
-[In-app forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new in-app forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
+[In-App Forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new In-App Forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
+
+Beginning with version 2.0.0, In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific lists or segments, and the form will only be shown to users matching those criteria, based on their profile identifiers set via the Klaviyo SDK API.
 
 ### Prerequisites
 
 - Using Version 1.2.0 and higher
 - Import the Klaviyo module
+- We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
+- Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
+
+| Feature            | Minimum SDK Version |
+| ------------------ | ------------------- |
+| Basic In-App Forms | 1.2.0+              |
+| Time Delay         | 2.0.0               |
+| Audience Targeting | 2.0.0               |
 
 ### Setup
 
-To display in-app forms, add the following code to your application
+To configure your app to display In-App Forms, call `Klaviyo.registerForInAppForms()` after initializing the SDK with your public API key. Once registered, the SDK may launch an overlay view at any time to present a form according to its targeting and behavior settings configured in your Klaviyo account.
+
+For the best user experience, we recommend registering after any splash screen or loading animations have completed. Depending on your app's architecture, this might be in a particular Screen's useEffect.
 
 ```
 import { Klaviyo } from "klaviyo-react-native-sdk";
@@ -517,20 +530,32 @@ import { Klaviyo } from "klaviyo-react-native-sdk";
 Klaviyo.registerForInAppForms();
 ```
 
-### Behavior
+#### In-App Forms Session Configuration
 
-Once `registerForInAppForms()` is called, the SDK will load form data for your account and display no more than one form within 15 seconds, based on form targeting and behavior settings.
+A "session" is considered to be a logical unit of user engagement with the app, defined as a series of foreground interactions that occur within a continuous or near-continuous time window. This is an important concept for In-App Forms, as we want to ensure that a user will not see a form multiple times within a single session.
 
-You can call `registerForInAppForms()` any time after initializing with your public API key to control when and where in your app's UI a form can appear. It is safe to register multiple times per application session. The SDK will internally prevent multiple forms appearing at once.
+A session will time out after a specified period of inactivity. When a user launches the app, if the time between the previous interaction with the app and the current one exceeds the specified timeout, we will consider this a new session.
 
-Consider how often you want to register for forms. For example, registering from a lifecycle event is advisable so that the user has multiple opportunities to see your messaging if they are browsing your app for a prolonged period. However, be advised the form will be shown as soon as it is ready, so you may still need to condition this based on the user's context within your application. Future versions of this product will provide more control in this regard.
+This timeout has a default value of 3600 seconds (1 hour), but it can be customized. To do so, pass an `FormConfiguration` object to the `registerForInAppForms()` method. For example, to set a session timeout of 30 minutes:
 
-| Callback                                                                                             | Description                                                             |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `const handleAppStateChange = async (nextAppState: string) => {  Klaviyo.registerForInAppForms(); }` | Anytime the app is foregrounded, check for forms and show if available. |
-| `function App(): JSX.Element { useEffect(() => {  Klaviyo.registerForInAppForms(); }};`              | Show a form upon initial app launch.                                    |
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
 
-**Note**: At this time, when device orientation changes any currently visible form is closed and will not be re-displayed automatically.
+let config: FormConfiguration = { sessionTimeoutDuration: 1800 }
+Klaviyo.registerForInAppForms(config);
+```
+
+### Unregistering from In-App Forms
+
+If at any point you need to prevent the SDK from displaying In-App Forms, e.g. when the user logs out, you may call:
+
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
+
+Klaviyo.unregisterFromInAppForms(config);
+```
+
+Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
 
 ## Troubleshooting
 

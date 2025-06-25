@@ -18,8 +18,8 @@ Pod::Spec.new do |s|
   s.pod_target_xcconfig = { "DEFINES_MODULE" => "YES" }
 
   s.dependency "React-Core"
-  s.dependency "KlaviyoSwift", "4.2.1"
-  s.dependency "KlaviyoForms", "4.2.1"
+  s.dependency "KlaviyoSwift", "5.0.0"
+  s.dependency "KlaviyoForms", "5.0.0"
 
   s.default_subspecs = :none
 

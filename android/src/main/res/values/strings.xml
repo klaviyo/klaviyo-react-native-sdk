@@ -1,4 +1,4 @@
 <resources>
-  <string name="klaviyo_sdk_version_override">1.2.0</string>
+  <string name="klaviyo_sdk_version_override">2.0.0</string>
   <string name="klaviyo_sdk_name_override">react_native</string>
 </resources>
