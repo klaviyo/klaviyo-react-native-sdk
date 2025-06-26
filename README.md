@@ -62,7 +62,8 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Klaviyo Expo Plugin
 
-If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
+If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. 
+See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
 
 ## Requirements
 
