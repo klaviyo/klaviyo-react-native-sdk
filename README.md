@@ -7,6 +7,7 @@
 
 - [klaviyo-react-native-sdk](#klaviyo-react-native-sdk)
   - [Introduction](#introduction)
+  - [Klaviyo Expo Plugin](#klaviyo-expo-plugin)
   - [Requirements](#requirements)
     - [React Native](#react-native)
     - [Android](#android)
@@ -46,8 +47,6 @@
 
 ## Introduction
 
-> We currently don't have support for expo. This is something we are looking into and should be available in the future.
-
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
 Klaviyo iOS and Android SDKs. For more information on the native SDKs, please see the
@@ -60,6 +59,11 @@ so that data is not lost if the device is offline or the app is terminated.
 
 Once integrated, your marketing team will be able to better understand your app users' needs and send them timely
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).
+
+## Klaviyo Expo Plugin
+
+If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. 
+See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
 
 ## Requirements
 
