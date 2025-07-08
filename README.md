@@ -204,7 +204,7 @@ Profile attributes can be set all at once:
 import { Klaviyo, Profile } from 'klaviyo-react-native-sdk';
 
 const profile: Profile = {
-  email: 'kermit@example.com',
+  email: 'kermit@klaviyo-demo.com',
   phoneNumber: '+15555555555',
   externalId: '12345',
   firstName: 'Kermit',
@@ -228,7 +228,7 @@ or individually:
 ```typescript
 import { ProfileProperty, Klaviyo } from 'klaviyo-react-native-sdk';
 
-Klaviyo.setEmail('kermit@example.com');
+Klaviyo.setEmail('kermit@klaviyo-demo.com');
 Klaviyo.setPhone('+15555555555');
 Klaviyo.setExternalId('12345');
 Klaviyo.setProfileAttribute(ProfileProperty.FIRST_NAME, 'Kermit');
