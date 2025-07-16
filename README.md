@@ -7,6 +7,7 @@
 
 - [klaviyo-react-native-sdk](#klaviyo-react-native-sdk)
   - [Introduction](#introduction)
+  - [Klaviyo Expo Plugin](#klaviyo-expo-plugin)
   - [Requirements](#requirements)
     - [React Native](#react-native)
     - [Android](#android)
@@ -32,14 +33,19 @@
     - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
+    - [Silent Push Notifications](#silent-push-notifications)
+    - [Custom Data](#custom-data)
+  - [In-App Forms](#in-app-forms)
+    - [Prerequisites](#prerequisites-1)
+    - [Setup](#setup-1)
+      - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
+    - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
   - [Code Documentation](#code-documentation)
 
 ## Introduction
-
-> We currently don't have support for expo. This is something we are looking into and should be available in the future.
 
 The Klaviyo React Native SDK allows developers to incorporate Klaviyo analytics and push notification functionality in
 their React Native applications for Android and iOS. It is a Typescript wrapper (native module bridge) around the native
@@ -54,15 +60,19 @@ so that data is not lost if the device is offline or the app is terminated.
 Once integrated, your marketing team will be able to better understand your app users' needs and send them timely
 push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notification Service).
 
+## Klaviyo Expo Plugin
+
+If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. 
+See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
+
 ## Requirements
 
-This SDK was developed and tested against React Native 0.73.
-We are actively testing and expanding support to the latest patch releases of recent minor versions of React Native.
+This SDK was developed and tested against React Native 0.78, as a new-architecture compatible native module.
 
 ### React Native
 
-- `0.68.7+` - We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
-  Testing is ongoing to verify on older versions.
+We support all maintained [React Native versions](https://reactnative.dev/versions), 0.70+.
+We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
 
 ### Android
 
@@ -111,8 +121,10 @@ To run the example app:
     file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
     Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
     This is disabled by default because the app will crash on launch without a `google-services.json` file.
-- From the project's root directory, run `yarn example start` to start the example application. Follow the
-  metro instructions from here, i.e. press `i` to run on iOS or `a` to run on Android.
+- From the project's root directory, use the following commands start a metro server and run the example app.
+  - `yarn example start` - to start the metro server
+  - `yarn example android` - to run the example app on an Android emulator or device
+  - `yarn example ios` - to run the example app on an iOS simulator
 
 ### Android
 
@@ -120,11 +132,7 @@ Android installation requirements may vary depending upon your project configura
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
-#### React Native 0.74.x
-
-There are no additional installation requirements.
-
-#### React Native 0.73.x
+#### React Native 0.74+
 
 There are no additional installation requirements. Android support is fully tested and verified.
 
@@ -138,16 +146,14 @@ with the following modifications to the `android/build.gradle` file:
 
 See [Android Troubleshooting](Troubleshooting.md#android-troubleshooting) for possible exceptions.
 
-#### React Native <= 0.67.x
-
-We are actively working to verify compatibility with these versions. If you encounter issues, please file an issue.
-
 ### iOS
 
 After installing the npm package, run the following command in the `ios` directory of your React Native project.
 Install [Cocoapods](https://cocoapods.org/) if you have not already.
 
 ### React Native
+
+You may also need to run `pod update` or `pod install --repo-update` after updating your SDK version.
 
 ## Initialization
 
@@ -203,7 +209,7 @@ Profile attributes can be set all at once:
 import { Klaviyo, Profile } from 'klaviyo-react-native-sdk';
 
 const profile: Profile = {
-  email: 'kermit@example.com',
+  email: 'kermit@klaviyo-demo.com',
   phoneNumber: '+15555555555',
   externalId: '12345',
   firstName: 'Kermit',
@@ -227,7 +233,7 @@ or individually:
 ```typescript
 import { ProfileProperty, Klaviyo } from 'klaviyo-react-native-sdk';
 
-Klaviyo.setEmail('kermit@example.com');
+Klaviyo.setEmail('kermit@klaviyo-demo.com');
 Klaviyo.setPhone('+15555555555');
 Klaviyo.setExternalId('12345');
 Klaviyo.setProfileAttribute(ProfileProperty.FIRST_NAME, 'Kermit');
@@ -429,10 +435,11 @@ No additional setup is needed to support rich push on Android.
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
 #### Badge Count
-Klaviyo supports setting or incrementing the badge count on iOS when you send a push notification. 
+
+Klaviyo supports setting or incrementing the badge count on iOS when you send a push notification.
 To enable this functionality, you will need to implement a notification service extension and app group
-as detailed in the [Swift SDK installation instructions](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#installation). 
-See the [badge count documentation](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#badge-count)  for more details. 
+as detailed in the [Swift SDK installation instructions](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#installation).
+See the [badge count documentation](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#badge-count) for more details and the example app for reference.
 Android automatically handles badge counts, and no additional setup is needed.
 
 #### Tracking Open Events
@@ -484,6 +491,80 @@ Linking.getInitialURL().then((url) => {
   console.log('Initial Url: url', url);
 });
 ```
+
+#### Silent Push Notifications
+
+Silent push notifications (also known as background pushes) allow your app to receive payloads from Klaviyo without displaying a visible alert to the user. These are typically used to trigger background behavior, such as displaying content, personalizing the app interface, or downloading new information from a server. To receive silent push notifications, follow the platform-specific instructions below:
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Silent-Push-Notifications)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Silent-Push-Notifications)
+
+#### Custom Data
+
+Klaviyo messages can also include key-value pairs (custom data) for both standard and silent push notifications. To receive custom data, follow the platform-specific instructions below:
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Custom-Data)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Custom-Data)
+
+## In-App Forms
+
+[In-App Forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new In-App Forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
+
+Beginning with version 2.0.0, In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific lists or segments, and the form will only be shown to users matching those criteria, based on their profile identifiers set via the Klaviyo SDK API.
+
+### Prerequisites
+
+- Using Version 1.2.0 and higher
+- Import the Klaviyo module
+- We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
+- Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
+
+| Feature            | Minimum SDK Version |
+| ------------------ | ------------------- |
+| Basic In-App Forms | 1.2.0+              |
+| Time Delay         | 2.0.0               |
+| Audience Targeting | 2.0.0               |
+
+### Setup
+
+To configure your app to display In-App Forms, call `Klaviyo.registerForInAppForms()` after initializing the SDK with your public API key. Once registered, the SDK may launch an overlay view at any time to present a form according to its targeting and behavior settings configured in your Klaviyo account.
+
+For the best user experience, we recommend registering after any splash screen or loading animations have completed. Depending on your app's architecture, this might be in a particular Screen's useEffect.
+
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
+...
+
+// call this any time after initializing your public API key
+Klaviyo.registerForInAppForms();
+```
+
+#### In-App Forms Session Configuration
+
+A "session" is considered to be a logical unit of user engagement with the app, defined as a series of foreground interactions that occur within a continuous or near-continuous time window. This is an important concept for In-App Forms, as we want to ensure that a user will not see a form multiple times within a single session.
+
+A session will time out after a specified period of inactivity. When a user launches the app, if the time between the previous interaction with the app and the current one exceeds the specified timeout, we will consider this a new session.
+
+This timeout has a default value of 3600 seconds (1 hour), but it can be customized. To do so, pass an `FormConfiguration` object to the `registerForInAppForms()` method. For example, to set a session timeout of 30 minutes:
+
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
+
+let config: FormConfiguration = { sessionTimeoutDuration: 1800 }
+Klaviyo.registerForInAppForms(config);
+```
+
+### Unregistering from In-App Forms
+
+If at any point you need to prevent the SDK from displaying In-App Forms, e.g. when the user logs out, you may call:
+
+```
+import { Klaviyo } from "klaviyo-react-native-sdk";
+
+Klaviyo.unregisterFromInAppForms(config);
+```
+
+Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
 
 ## Troubleshooting
 

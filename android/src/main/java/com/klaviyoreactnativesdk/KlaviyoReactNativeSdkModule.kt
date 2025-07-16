@@ -14,9 +14,13 @@ import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
+import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
+import com.klaviyo.forms.unregisterFromInAppForms
 import java.io.Serializable
 import kotlin.reflect.KVisibility
+import kotlin.time.Duration.Companion.seconds
 
 class KlaviyoReactNativeSdkModule(
   private val reactContext: ReactApplicationContext,
@@ -43,24 +47,41 @@ class KlaviyoReactNativeSdkModule(
     T::class
       .nestedClasses
       .filter {
-        it.visibility == KVisibility.PUBLIC && it.objectInstance != null
+        it.visibility == KVisibility.PUBLIC && it.objectInstance is T
       }.associate {
         it.simpleName.toString() to (it.objectInstance as T).name
       }
 
   @ReactMethod
+  @OptIn(AdvancedAPI::class)
   fun initialize(apiKey: String) {
+    // Since initialize is being called after Application.onCreate,
+    // we must hand over a reference to the current activity.
+    // The native SDK will track Activity changes internally from here on.
+    currentActivity?.let(Registry.lifecycleMonitor::assignCurrentActivity)
     Klaviyo.initialize(apiKey, reactContext)
   }
 
   @ReactMethod
-  fun registerForInAppForms() {
+  fun registerForInAppForms(configuration: ReadableMap?) {
     UiThreadUtil.runOnUiThread {
       try {
-        Klaviyo.registerForInAppForms()
+        val timeout = configuration?.getDouble("sessionTimeoutDuration")?.seconds
+        Klaviyo.registerForInAppForms(
+          InAppFormsConfig(
+            sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
+          ),
+        )
       } catch (e: Exception) {
         Registry.log.error("Android unable to register for in app forms on main thread", e)
       }
+    }
+  }
+
+  @ReactMethod
+  fun unregisterFromInAppForms() {
+    UiThreadUtil.runOnUiThread {
+      Klaviyo.unregisterFromInAppForms()
     }
   }
 
