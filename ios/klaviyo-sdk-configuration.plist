@@ -1,19 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!--
-   config.plist
-   Pods
-
-   Created by Ajay Subramanya on 9/18/24.
-   Copyright (c) 2024 Klaviyo. All rights reserved.
-
-   DO NOT MODIFY THE KEYS IN THIS FILE. THEY ARE REFERENCED BY THE iOS SDK
--->
 <plist version="1.0">
 <dict>
 	<key>klaviyo_sdk_name</key>
 	<string>react_native</string>
 	<key>klaviyo_sdk_version</key>
-	<string>2.0.0</string>
+	<string>2.0.1</string>
 </dict>
 </plist>
