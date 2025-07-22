@@ -94,7 +94,7 @@ public class KlaviyoBridge: NSObject {
             title: profileDict[ProfileProperty.title.rawValue] as? String,
             image: profileDict[ProfileProperty.image.rawValue] as? String,
             location: location,
-            properties: profileDict[ProfileProperty.properties.rawValue] as? [String: Any]
+            properties: fixNSNumberTypes(profileDict[ProfileProperty.properties.rawValue] as Any) as? [String: Any]
         )
 
         KlaviyoSDK().set(profile: profile)
@@ -174,7 +174,7 @@ public class KlaviyoBridge: NSObject {
 
         let event = Event(
             name: eventType,
-            properties: event["properties"] as? [String: Any],
+            properties: fixNSNumberTypes(event["properties"] as Any) as? [String: Any],
             value: event["value"] as? Double,
             uniqueId: event["uniqueId"] as? String
         )
@@ -228,6 +228,23 @@ public class KlaviyoBridge: NSObject {
         default:
             return Profile.ProfileKey.custom(customKey: str)
         }
+    }
+
+    // check to ensure bools and numbers are preserved as their types between the RN/Swift layers
+    static func fixNSNumberTypes(_ value: Any) -> Any {
+        if let num = value as? NSNumber {
+            if CFGetTypeID(num) == CFBooleanGetTypeID() {
+                return num.boolValue
+            }
+            return num.intValue
+        }
+        if let dict = value as? [String: Any] {
+            return dict.mapValues { fixNSNumberTypes($0) }
+        }
+        if let arr = value as? [Any] {
+            return arr.map { fixNSNumberTypes($0) }
+        }
+        return value
     }
 }
 

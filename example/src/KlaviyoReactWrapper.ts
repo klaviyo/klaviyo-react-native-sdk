@@ -5,6 +5,7 @@ import {
   type Profile,
   ProfileProperty,
   type FormConfiguration,
+  EventName,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -202,6 +203,49 @@ export const sendRandomEvent = async () => {
       uniqueId: generateRandomName(5),
     };
     Klaviyo.createEvent(event);
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const sendTestEvent = async () => {
+  try {
+    Klaviyo.createEvent({
+      name: EventName.STARTED_CHECKOUT_METRIC,
+      value: 42,
+      properties: {
+        true: true,
+        false: false,
+        number0: 0,
+        number1: 1,
+      },
+    });
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const sendTestProfileWithBooleans = async () => {
+  try {
+    const myProfile: Profile = {
+      email: generateRandomEmails(),
+      phoneNumber: generateRandomPhoneNumber(),
+      externalId: generateRandomName(8),
+      firstName: 'Test',
+      lastName: generateRandomName(4),
+      organization: generateRandomName(5),
+      title: generateRandomName(6),
+      image: generateRandomName(5),
+      properties: {
+        // Test boolean properties in profile
+        isSubscribed: true,
+        hasConsented: false,
+        numberOfDogs: 0,
+        numberOfCats: 1,
+      },
+    };
+
+    Klaviyo.setProfile(myProfile);
   } catch (e: any) {
     console.log(e.message, e.code);
   }
