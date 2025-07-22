@@ -112,7 +112,7 @@ export const appViews: AppViewInterface[] = [
     onPress: sendTestEvent,
   },
   {
-    title: 'Click to send an profile property updatet with booleans and 0/1s',
+    title: 'Click to update a profile with booleans and 0/1s properties',
     color: '#d3ab10',
     onPress: sendTestProfileWithBooleans,
   },
