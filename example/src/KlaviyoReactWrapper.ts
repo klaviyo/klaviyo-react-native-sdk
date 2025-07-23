@@ -218,6 +218,7 @@ export const sendTestEvent = async () => {
         false: false,
         number0: 0,
         number1: 1,
+        complexNumber: 1.23456789,
       },
     });
   } catch (e: any) {

@@ -230,21 +230,33 @@ public class KlaviyoBridge: NSObject {
         }
     }
 
-    // check to ensure bools and numbers are preserved as their types between the RN/Swift layers
-    static func fixNSNumberTypes(_ value: Any) -> Any {
-        if let num = value as? NSNumber {
+    // Ensure bools and numbers are preserved as their types between the RN/Swift layers
+    static func fixNSNumberTypes(_ value: Any?) -> Any? {
+        guard let value = value, !(value is NSNull) else {
+            return nil
+        }
+
+        switch value {
+        case let num as NSNumber:
+            // Differentiate between a boolean and a number
             if CFGetTypeID(num) == CFBooleanGetTypeID() {
                 return num.boolValue
             }
-            return num.intValue
+            // Differentiate between integer and floating point numbers
+            let numberType = CFNumberGetType(num)
+            switch numberType {
+            case .float32Type, .float64Type, .floatType, .doubleType, .cgFloatType:
+                return num.doubleValue
+            default:
+                return num.int64Value
+            }
+        case let dict as [String: Any?]:
+            return dict.compactMapValues { fixNSNumberTypes($0) }
+        case let arr as [Any?]:
+            return arr.compactMap { fixNSNumberTypes($0) }
+        default:
+            return value
         }
-        if let dict = value as? [String: Any] {
-            return dict.mapValues { fixNSNumberTypes($0) }
-        }
-        if let arr = value as? [Any] {
-            return arr.map { fixNSNumberTypes($0) }
-        }
-        return value
     }
 }
 
