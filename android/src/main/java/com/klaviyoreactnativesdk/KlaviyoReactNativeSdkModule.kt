@@ -5,6 +5,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
@@ -163,21 +164,32 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun createEvent(event: ReadableMap) {
-    val klaviyoEvent =
-      Event(
-        metric = event.getString("name")!!.let { EventMetric.CUSTOM(it) },
-        properties =
-          event
-            .getMap("properties")
-            ?.toHashMap()
-            ?.map { entry -> EventKey.CUSTOM(entry.key) as EventKey to entry.value as Serializable }
-            ?.toMap(),
-      )
+    val metric = event.takeIf {
+      it.hasKey("name") && it.getType("name") == ReadableType.String
+    }?.getString("name") ?: run {
+      Registry.log.error("Klaviyo React Native SDK: Event name is required")
+      return
+    }
 
-    val value = if (event.hasKey("value")) event.getDouble("value") else null
+    val klaviyoEvent = Event(
+      metric = metric.let { EventMetric.CUSTOM(it) },
+      properties = event.getMap("properties")
+        ?.toHashMap()
+        ?.filter { entry -> (entry.value as? Serializable) != null }
+        ?.map { entry -> EventKey.CUSTOM(entry.key) to entry.value as Serializable }
+        ?.toMap(),
+    )
 
-    if (value != null) {
-      klaviyoEvent.setValue(value)
+    // Explicitly cast value to double if it exists
+    try {
+      event.takeIf { it.hasKey("value") && it.getType("value") == ReadableType.Number }
+        ?.getDouble("value")
+        .let { value ->
+          klaviyoEvent.setValue(value)
+        }
+    } catch (e: Exception) {
+      Registry.log.error("Klaviyo React Native SDK: Error setting event value", e)
+      return
     }
 
     Klaviyo.createEvent(event = klaviyoEvent)
