@@ -164,25 +164,31 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun createEvent(event: ReadableMap) {
-    val metric = event.takeIf {
-      it.hasKey("name") && it.getType("name") == ReadableType.String
-    }?.getString("name") ?: run {
-      Registry.log.error("Klaviyo React Native SDK: Event name is required")
-      return
-    }
+    val metric =
+      event
+        .takeIf {
+          it.hasKey("name") && it.getType("name") == ReadableType.String
+        }?.getString("name") ?: run {
+        Registry.log.error("Klaviyo React Native SDK: Event name is required")
+        return
+      }
 
-    val klaviyoEvent = Event(
-      metric = metric.let { EventMetric.CUSTOM(it) },
-      properties = event.getMap("properties")
-        ?.toHashMap()
-        ?.filter { entry -> (entry.value as? Serializable) != null }
-        ?.map { entry -> EventKey.CUSTOM(entry.key) to entry.value as Serializable }
-        ?.toMap(),
-    )
+    val klaviyoEvent =
+      Event(
+        metric = metric.let { EventMetric.CUSTOM(it) },
+        properties =
+          event
+            .getMap("properties")
+            ?.toHashMap()
+            ?.filter { entry -> (entry.value as? Serializable) != null }
+            ?.map { entry -> EventKey.CUSTOM(entry.key) to entry.value as Serializable }
+            ?.toMap(),
+      )
 
     // Explicitly cast value to double if it exists
     try {
-      event.takeIf { it.hasKey("value") && it.getType("value") == ReadableType.Number }
+      event
+        .takeIf { it.hasKey("value") && it.getType("value") == ReadableType.Number }
         ?.getDouble("value")
         .let { value ->
           klaviyoEvent.setValue(value)
