@@ -1,0 +1,11 @@
+diff --git a/node_modules/react-native/jest/mock.js b/node_modules/react-native/jest/mock.js
+index 67c5b69..15c9d36 100644
+--- a/node_modules/react-native/jest/mock.js
++++ b/node_modules/react-native/jest/mock.js
+@@ -35,5 +35,5 @@ export default function mock<TModuleRef: $Flow$ModuleRef<mixed>>(
+ 
+ function deref(ref: $Flow$ModuleRef<mixed>): string {
+   // $FlowIgnore[incompatible-cast]
+-  return (ref as string).substring(2);
++  return String(ref).substring(2);
+ }
