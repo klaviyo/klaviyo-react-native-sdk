@@ -9,7 +9,7 @@ buildscript {
 
   dependencies {
     // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version
-    classpath "com.android.tools.build:gradle:8.10.1"
+    classpath "com.android.tools.build:gradle:8.10.0"
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
   }
