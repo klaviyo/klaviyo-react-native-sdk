@@ -14,6 +14,11 @@ RCT_EXPORT_MODULE()
     return YES;
 }
 
+// For compatibility with future React Native versions
++ (BOOL)unstableRequiresMainQueueSetup {
+    return YES;
+}
+
 // The values here eventually should come from the iOS SDK once exposed there.
 - (NSDictionary *)constantsToExport {
     return @{
