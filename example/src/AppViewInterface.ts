@@ -15,8 +15,6 @@ import {
   getPushToken,
   registerForInAppForms,
   unregisterFromInAppForms,
-  sendTestEvent,
-  sendTestProfileWithBooleans,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -105,15 +103,5 @@ export const appViews: AppViewInterface[] = [
     title: 'Unregister from in-app forms',
     color: '#d3ab10',
     onPress: unregisterFromInAppForms,
-  },
-  {
-    title: 'Click to send an event with booleans and 0/1s',
-    color: '#d3ab10',
-    onPress: sendTestEvent,
-  },
-  {
-    title: 'Click to update a profile with booleans and 0/1s properties',
-    color: '#d3ab10',
-    onPress: sendTestProfileWithBooleans,
   },
 ];
