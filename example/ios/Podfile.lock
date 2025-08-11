@@ -1550,6 +1550,9 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
+  - KlaviyoCore (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoForms (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoSwift (from `../../../klaviyo-swift-sdk`)
   - KlaviyoSwiftExtension
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -1616,9 +1619,6 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - AnyCodable-FlightSchool
-    - KlaviyoCore
-    - KlaviyoForms
-    - KlaviyoSwift
     - KlaviyoSwiftExtension
     - SocketRocket
 
@@ -1640,6 +1640,12 @@ EXTERNAL SOURCES:
     :tag: hermes-2025-01-13-RNv0.78.0-a942ef374897d85da38e9c8904574f8376555388
   klaviyo-react-native-sdk:
     :path: "../.."
+  KlaviyoCore:
+    :path: "../../../klaviyo-swift-sdk"
+  KlaviyoForms:
+    :path: "../../../klaviyo-swift-sdk"
+  KlaviyoSwift:
+    :path: "../../../klaviyo-swift-sdk"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -1773,7 +1779,7 @@ SPEC CHECKSUMS:
   KlaviyoForms: 45ee344930d7520a093c4e7aecb9b6fd3c7552bc
   KlaviyoSwift: d57694d491562157ba60b741210dc6385d47de4d
   KlaviyoSwiftExtension: 15c4c9602fde1c007ce8c3c5c034ecc23548581d
-  RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
+  RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
   RCTRequired: 78522de7dc73b81f3ed7890d145fa341f5bb32ea
   RCTTypeSafety: c135dd2bf50402d87fd12884cbad5d5e64850edd
@@ -1834,6 +1840,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: d89d04d86b5af18317f481166dccc48213d26927
 
-PODFILE CHECKSUM: e20d7567686b77a54d5ef38de82fae4c1448f77a
+PODFILE CHECKSUM: c57e191278e819773676c54f9ce00503163518bb
 
 COCOAPODS: 1.15.2

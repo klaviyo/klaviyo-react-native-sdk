@@ -1,5 +1,5 @@
 {
-  "name": "@klaviyo/klaviyo-react-native-sdk",
+  "name": "klaviyo-react-native-sdk",
   "version": "2.0.1",
   "description": "Official Klaviyo React Native SDK",
   "source": "./src/index.tsx",
