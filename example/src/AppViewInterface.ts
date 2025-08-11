@@ -97,12 +97,12 @@ export const appViews: AppViewInterface[] = [
     onPress: resetProfile,
   },
   {
-    title: 'Click to show a form (10 seconds timeout)',
+    title: 'Register for in-app forms',
     color: '#d3ab10',
     onPress: registerForInAppForms,
   },
   {
-    title: 'Click to unregister from forms',
+    title: 'Unregister from in-app forms',
     color: '#d3ab10',
     onPress: unregisterFromInAppForms,
   },
