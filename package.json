@@ -1,20 +1,18 @@
 {
-  "name": "klaviyo-react-native-sdk",
+  "name": "@klaviyo/klaviyo-react-native-sdk",
   "version": "2.0.1",
   "description": "Official Klaviyo React Native SDK",
   "source": "./src/index.tsx",
-  "main": "./lib/commonjs/index.js",
-  "module": "./lib/module/index.js",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "react-native": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./lib/typescript/module/src/index.d.ts",
-        "default": "./lib/module/index.js"
-      },
-      "require": {
-        "types": "./lib/typescript/module/src/index.d.ts",
-        "default": "./lib/commonjs/index.js"
-      }
+      "types": "./lib/typescript/src/index.d.ts",
+      "react-native": "./lib/module/index.js",
+      "import": "./lib/module/index.js",
+      "require": "./lib/commonjs/index.js"
     }
   },
   "files": [
@@ -44,8 +42,6 @@
     "typecheck": "tsc",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
-    "postinstall": "node scripts/adjust-tsconfig.js",
-    "adjust-tsconfig": "node scripts/adjust-tsconfig.js",
     "release": "release-it",
     "lint": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' && swiftlint",
     "lint-fix": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --fix && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' -F && swiftlint --fix ",
@@ -189,8 +185,7 @@
       [
         "typescript",
         {
-          "project": "tsconfig.build.json",
-          "esm": true
+          "project": "tsconfig.build.json"
         }
       ]
     ]
