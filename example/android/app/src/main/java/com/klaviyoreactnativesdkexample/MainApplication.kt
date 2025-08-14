@@ -37,7 +37,7 @@ class MainApplication :
 
   override fun onCreate() {
     super.onCreate()
-    loadReactNative()
+    loadReactNative(this)
 
     if (BuildConfig.INITIALIZE_KLAVIYO_FROM_NATIVE) {
       // Android Installation Step 3: Initialize the SDK with public key and context, if initializing from native code
