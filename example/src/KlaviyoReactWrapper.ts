@@ -5,7 +5,6 @@ import {
   type Profile,
   ProfileProperty,
   type FormConfiguration,
-  EventName,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -185,7 +184,14 @@ export const setProfile = async () => {
       title: generateRandomName(6),
       image: generateRandomName(5),
       location: myLocation,
-      properties: myProperties,
+      properties: {
+        ...myProperties,
+        // Test boolean/number properties in profile
+        isSubscribed: true,
+        hasConsented: false,
+        numberOfDogs: 0,
+        numberOfCats: 1,
+      },
     };
 
     Klaviyo.setProfile(myProfile);
@@ -199,54 +205,18 @@ export const sendRandomEvent = async () => {
     const event: Event = {
       name: getRandomMetric(),
       value: Math.floor(Math.random() * 100),
-      properties: { testKey: generateRandomName(3) },
-      uniqueId: generateRandomName(5),
-    };
-    Klaviyo.createEvent(event);
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
-export const sendTestEvent = async () => {
-  try {
-    Klaviyo.createEvent({
-      name: EventName.STARTED_CHECKOUT_METRIC,
-      value: 42,
       properties: {
+        testKey: generateRandomName(3),
+        // Test boolean/number properties in event
         true: true,
         false: false,
         number0: 0,
         number1: 1,
-        complexNumber: 1.23456789,
+        decimal: 1.23456789,
       },
-    });
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
-export const sendTestProfileWithBooleans = async () => {
-  try {
-    const myProfile: Profile = {
-      email: generateRandomEmails(),
-      phoneNumber: generateRandomPhoneNumber(),
-      externalId: generateRandomName(8),
-      firstName: 'Test',
-      lastName: generateRandomName(4),
-      organization: generateRandomName(5),
-      title: generateRandomName(6),
-      image: generateRandomName(5),
-      properties: {
-        // Test boolean properties in profile
-        isSubscribed: true,
-        hasConsented: false,
-        numberOfDogs: 0,
-        numberOfCats: 1,
-      },
+      uniqueId: generateRandomName(5),
     };
-
-    Klaviyo.setProfile(myProfile);
+    Klaviyo.createEvent(event);
   } catch (e: any) {
     console.log(e.message, e.code);
   }
