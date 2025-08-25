@@ -51,8 +51,18 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerForInAppForms() {
-        KlaviyoSDK().registerForInAppForms()
+    public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
+        if let configurationLength = configuration?["sessionTimeoutDuration"] as? TimeInterval {
+            KlaviyoSDK().registerForInAppForms(configuration: InAppFormsConfig(sessionTimeoutDuration: configurationLength))
+        } else {
+            KlaviyoSDK().registerForInAppForms()
+        }
+    }
+
+    @MainActor
+    @objc
+    public static func unregisterFromInAppForms() {
+        KlaviyoSDK().unregisterFromInAppForms()
     }
 
     @objc
@@ -84,7 +94,7 @@ public class KlaviyoBridge: NSObject {
             title: profileDict[ProfileProperty.title.rawValue] as? String,
             image: profileDict[ProfileProperty.image.rawValue] as? String,
             location: location,
-            properties: profileDict[ProfileProperty.properties.rawValue] as? [String: Any]
+            properties: fixNSNumberTypes(profileDict[ProfileProperty.properties.rawValue] as Any) as? [String: Any]
         )
 
         KlaviyoSDK().set(profile: profile)
@@ -164,7 +174,7 @@ public class KlaviyoBridge: NSObject {
 
         let event = Event(
             name: eventType,
-            properties: event["properties"] as? [String: Any],
+            properties: fixNSNumberTypes(event["properties"] as Any) as? [String: Any],
             value: event["value"] as? Double,
             uniqueId: event["uniqueId"] as? String
         )
@@ -217,6 +227,35 @@ public class KlaviyoBridge: NSObject {
             return Profile.ProfileKey.longitude
         default:
             return Profile.ProfileKey.custom(customKey: str)
+        }
+    }
+
+    // Ensure bools and numbers are preserved as their types between the RN/Swift layers
+    static func fixNSNumberTypes(_ value: Any?) -> Any? {
+        guard let value = value, !(value is NSNull) else {
+            return nil
+        }
+
+        switch value {
+        case let num as NSNumber:
+            // Differentiate between a boolean and a number
+            if CFGetTypeID(num) == CFBooleanGetTypeID() {
+                return num.boolValue
+            }
+            // Differentiate between integer and floating point numbers
+            let numberType = CFNumberGetType(num)
+            switch numberType {
+            case .float32Type, .float64Type, .floatType, .doubleType, .cgFloatType:
+                return num.doubleValue
+            default:
+                return num.int64Value
+            }
+        case let dict as [String: Any?]:
+            return dict.compactMapValues { fixNSNumberTypes($0) }
+        case let arr as [Any?]:
+            return arr.compactMap { fixNSNumberTypes($0) }
+        default:
+            return value
         }
     }
 }

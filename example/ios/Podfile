@@ -20,6 +20,8 @@ target 'KlaviyoReactNativeSdkExample' do
 
   use_frameworks! :linkage => :static
 
+  # Insert override klaviyo-swift-sdk pods below this line when needed
+
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."
@@ -44,3 +46,4 @@ target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   pod 'KlaviyoSwiftExtension'
 end
+

@@ -2,9 +2,9 @@ buildscript {
     ext {
         // Android Installation Step 1a: Set compatible minSdkVersion and compileSdkVersion
         minSdkVersion = 24
-        targetSdkVersion = 35 // Typically minSdkVersion <= targetSdkVersion <= compileSdkVersion
-        compileSdkVersion = 35
-        buildToolsVersion = "35.0.0"
+        targetSdkVersion = 36 // Typically minSdkVersion <= targetSdkVersion <= compileSdkVersion
+        compileSdkVersion = 36
+        buildToolsVersion = "36.0.0"
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.0.21"
     }

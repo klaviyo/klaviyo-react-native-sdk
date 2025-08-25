@@ -8,7 +8,8 @@ buildscript {
   }
 
   dependencies {
-    classpath "com.android.tools.build:gradle:7.3.1"
+    // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version
+    classpath "com.android.tools.build:gradle:8.10.1"
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
   }
@@ -95,7 +96,7 @@ def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 def kotlin_version = getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
-    localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+  localProperties.load(new FileInputStream(rootProject.file("local.properties")))
 }
 def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
 
@@ -113,6 +114,7 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-native:+"
   }
+
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
   // Klaviyo Android SDK

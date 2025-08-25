@@ -14,6 +14,9 @@ import {
   setBadgeCount,
   getPushToken,
   registerForInAppForms,
+  unregisterFromInAppForms,
+  sendTestEvent,
+  sendTestProfileWithBooleans,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -94,8 +97,23 @@ export const appViews: AppViewInterface[] = [
     onPress: resetProfile,
   },
   {
-    title: 'Click to show a form',
+    title: 'Click to show a form (10 seconds timeout)',
     color: '#d3ab10',
     onPress: registerForInAppForms,
+  },
+  {
+    title: 'Click to unregister from forms',
+    color: '#d3ab10',
+    onPress: unregisterFromInAppForms,
+  },
+  {
+    title: 'Click to send an event with booleans and 0/1s',
+    color: '#d3ab10',
+    onPress: sendTestEvent,
+  },
+  {
+    title: 'Click to update a profile with booleans and 0/1s properties',
+    color: '#d3ab10',
+    onPress: sendTestProfileWithBooleans,
   },
 ];
