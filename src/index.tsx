@@ -66,6 +66,9 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms: () => {
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  handleUniversalTrackingLink(urlStr: string) {
+    KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
