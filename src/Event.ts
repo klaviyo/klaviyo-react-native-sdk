@@ -75,4 +75,11 @@ export interface KlaviyoEventAPI {
    * @param event - The event to track
    */
   createEvent(event: Event): void;
+
+  /**
+   * Resolves a Klaviyo tracking link to a Universal Link URL,
+   * then handles navigation to the resolved URL.
+   * @param trackingLink - The tracking link to be handled
+   */
+  handleUniversalTrackingLink(trackingLink: string): void;
 }

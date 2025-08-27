@@ -87,6 +87,11 @@ RCT_EXPORT_METHOD(resetProfile)
     [KlaviyoBridge resetProfile];
 }
 
+RCT_EXPORT_METHOD(handleUniversalTrackingLink: (nonnull NSURL *)trackingLink)
+{
+    [KlaviyoBridge handleUniversalTrackingLink:trackingLink];
+}
+
 RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
 {
     [KlaviyoBridge createEventWithEvent:event];
