@@ -72,6 +72,10 @@ export const Klaviyo: KlaviyoInterface = {
    * @param urlStr - The tracking link to be handled
    */
   handleUniversalTrackingLink(urlStr: string) {
+    if (!urlStr || urlStr.trim() === '') {
+      console.error('[Klaviyo] Error: Empty tracking link provided');
+      return;
+    }
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
   },
 };
