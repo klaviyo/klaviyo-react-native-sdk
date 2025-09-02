@@ -20,6 +20,7 @@ Pod::Spec.new do |s|
   s.dependency "React-Core"
   s.dependency "KlaviyoSwift", "5.0.2"
   s.dependency "KlaviyoForms", "5.0.2"
+  s.dependency "KlaviyoLocation", "5.0.2"
 
   s.default_subspecs = :none
 

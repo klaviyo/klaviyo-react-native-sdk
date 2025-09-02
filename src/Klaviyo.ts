@@ -2,6 +2,7 @@ import type { KlaviyoEventAPI } from './Event';
 import type { KlaviyoProfileApi } from './Profile';
 import type { KlaviyoPushApi } from './Push';
 import type { KlaviyoFormsApi } from './Forms';
+import type { KlaviyoGeofencingApi } from './Geofencing';
 
 /**
  * The Klaviyo React Native SDK Interface
@@ -13,6 +14,7 @@ export interface KlaviyoInterface
   extends KlaviyoEventAPI,
     KlaviyoProfileApi,
     KlaviyoPushApi,
+    KlaviyoGeofencingApi,
     KlaviyoFormsApi {
   /**
    * Initializes the Klaviyo SDK with the given API key.

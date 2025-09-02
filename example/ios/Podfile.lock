@@ -11,11 +11,14 @@ PODS:
   - hermes-engine/Pre-built (0.78.0)
   - klaviyo-react-native-sdk (2.0.2):
     - KlaviyoForms (= 5.0.2)
+    - KlaviyoLocation (= 5.0.2)
     - KlaviyoSwift (= 5.0.2)
     - React-Core
   - KlaviyoCore (5.0.2):
     - AnyCodable-FlightSchool
   - KlaviyoForms (5.0.2):
+    - KlaviyoSwift (~> 5.0.2)
+  - KlaviyoLocation (5.0.2):
     - KlaviyoSwift (~> 5.0.2)
   - KlaviyoSwift (5.0.2):
     - AnyCodable-FlightSchool
@@ -1573,6 +1576,10 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
+  - KlaviyoCore (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoForms (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoLocation (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoSwift (from `../../../klaviyo-swift-sdk`)
   - KlaviyoSwiftExtension
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -1641,9 +1648,6 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - AnyCodable-FlightSchool
-    - KlaviyoCore
-    - KlaviyoForms
-    - KlaviyoSwift
     - KlaviyoSwiftExtension
     - SocketRocket
 
@@ -1665,6 +1669,14 @@ EXTERNAL SOURCES:
     :tag: hermes-2025-01-13-RNv0.78.0-a942ef374897d85da38e9c8904574f8376555388
   klaviyo-react-native-sdk:
     :path: "../.."
+  KlaviyoCore:
+    :path: "../../../klaviyo-swift-sdk"
+  KlaviyoForms:
+    :path: "../../../klaviyo-swift-sdk"
+  KlaviyoLocation:
+    :path: "../../../klaviyo-swift-sdk"
+  KlaviyoSwift:
+    :path: "../../../klaviyo-swift-sdk"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -1797,10 +1809,11 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: b417d2b2aee3b89b58e63e23a51e02be91dc876d
-  klaviyo-react-native-sdk: 25787506822141b431feb3de033a783adbfd287d
-  KlaviyoCore: b5756601aa1a36d9c52a2482129678ea12fb6fd8
+  klaviyo-react-native-sdk: c11f72dd86bb0fc91158fc28e3e86474124abed9
+  KlaviyoCore: 198afe296ac277491b60c124b6ee9f0ab081c814
   KlaviyoForms: 8bd518b140115b1ddd5e892b7b12844fe1ce245e
-  KlaviyoSwift: 995930ec8a87596950ff2cfc6340ac66e626e913
+  KlaviyoLocation: 09d8375201afdaa50e8138f0a83dc90d4fa194dd
+  KlaviyoSwift: e972b43901270e84cc45ec92d85eafcd7808b76f
   KlaviyoSwiftExtension: 3ba7570f45e9cc2873de73e79e27b4af46ed6553
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
@@ -1865,6 +1878,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: be02ca501b03c79d7027a6bbbd0a8db985034f11
 
-PODFILE CHECKSUM: e20d7567686b77a54d5ef38de82fae4c1448f77a
+PODFILE CHECKSUM: 3b283b428640c18a3af8ea2ac09ec7b7ddf1d741
 
 COCOAPODS: 1.16.2

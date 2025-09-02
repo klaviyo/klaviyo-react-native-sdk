@@ -1,5 +1,6 @@
 import KlaviyoSwift
 import KlaviyoForms
+import KlaviyoLocation
 @_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
@@ -63,6 +64,12 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func unregisterFromInAppForms() {
         KlaviyoSDK().unregisterFromInAppForms()
+    }
+
+    @MainActor
+    @objc
+    public static func registerForGeofences() {
+        KlaviyoSDK().registerForGeofences()
     }
 
     @objc

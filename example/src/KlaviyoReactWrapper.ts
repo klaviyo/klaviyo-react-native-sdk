@@ -114,6 +114,14 @@ export const unregisterFromInAppForms = async () => {
   }
 };
 
+export const registerForGeofences = async () => {
+  try {
+    Klaviyo.registerForGeofences();
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
 export const setPushToken = async () => {
   try {
     // If handling push tokens from the react native layer

@@ -100,6 +100,10 @@ RCT_EXPORT_METHOD(unregisterFromInAppForms) {
     [KlaviyoBridge unregisterFromInAppForms];
 }
 
+RCT_EXPORT_METHOD(registerForGeofences) {
+    [KlaviyoBridge registerForGeofences];
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

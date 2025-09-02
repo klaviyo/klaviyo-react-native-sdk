@@ -15,21 +15,8 @@ import {
   getPushToken,
   registerForInAppForms,
   unregisterFromInAppForms,
+  registerForGeofences,
 } from './KlaviyoReactWrapper';
-import {
-  initializeGeofencing,
-  addDefaultGeofences,
-  startGeofencing,
-  stopGeofencing,
-  removeAllGeofences,
-  getCurrentGeofences,
-  checkGeofencingStatus,
-  simulateGeofenceEnter,
-  simulateGeofenceExit,
-  setupGeofenceListeners,
-  addCustomGeofence,
-  checkLocationPermission,
-} from './GeofencingWrapper';
 
 export interface AppViewInterface {
   title: string;
@@ -118,65 +105,9 @@ export const appViews: AppViewInterface[] = [
     color: '#d3ab10',
     onPress: unregisterFromInAppForms,
   },
-  // Geofencing functionality
   {
     title: 'Initialize Geofencing',
     color: '#4CAF50',
-    onPress: initializeGeofencing,
-  },
-  {
-    title: 'Add Default Geofences',
-    color: '#4CAF50',
-    onPress: addDefaultGeofences,
-  },
-  {
-    title: 'Start Geofencing',
-    color: '#4CAF50',
-    onPress: startGeofencing,
-  },
-  {
-    title: 'Stop Geofencing',
-    color: '#FF5722',
-    onPress: stopGeofencing,
-  },
-  {
-    title: 'Setup Geofence Listeners',
-    color: '#2196F3',
-    onPress: setupGeofenceListeners,
-  },
-  {
-    title: 'Get Current Geofences',
-    color: '#2196F3',
-    onPress: getCurrentGeofences,
-  },
-  {
-    title: 'Check Geofencing Status',
-    color: '#2196F3',
-    onPress: checkGeofencingStatus,
-  },
-  {
-    title: 'Check Location Permission',
-    color: '#2196F3',
-    onPress: checkLocationPermission,
-  },
-  {
-    title: 'Add Custom Geofence',
-    color: '#9C27B0',
-    onPress: addCustomGeofence,
-  },
-  {
-    title: 'Simulate Geofence Enter',
-    color: '#FF9800',
-    onPress: simulateGeofenceEnter,
-  },
-  {
-    title: 'Simulate Geofence Exit',
-    color: '#FF9800',
-    onPress: simulateGeofenceExit,
-  },
-  {
-    title: 'Remove All Geofences',
-    color: '#F44336',
-    onPress: removeAllGeofences,
+    onPress: registerForGeofences,
   },
 ];

@@ -66,6 +66,9 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms: () => {
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  registerForGeofences(): void {
+    KlaviyoReactNativeSdk.registerForGeofences();
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
