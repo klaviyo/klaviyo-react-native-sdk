@@ -66,6 +66,18 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms: () => {
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  /**
+   * Resolves a Klaviyo tracking link to a Universal Link URL,
+   * then handles navigation to the resolved URL.
+   * @param urlStr - The tracking link to be handled
+   */
+  handleUniversalTrackingLink(urlStr: string) {
+    if (!urlStr || urlStr.trim() === '') {
+      console.error('[Klaviyo] Error: Empty tracking link provided');
+      return;
+    }
+    KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';

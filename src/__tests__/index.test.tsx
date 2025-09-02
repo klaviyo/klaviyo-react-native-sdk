@@ -24,6 +24,7 @@ jest.mock('react-native', () => {
         createEvent: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        handleUniversalTrackingLink: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
             FIRST_NAME: 'first_name',
@@ -261,6 +262,55 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('tracking links', () => {
+    it('should call the native handleUniversalTrackingLink method with a valid URL', () => {
+      const trackingLink = 'https://example.com/tracking/abc123';
+
+      Klaviyo.handleUniversalTrackingLink(trackingLink);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).toHaveBeenCalledWith(trackingLink);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with an empty URL', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.handleUniversalTrackingLink('');
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Empty tracking link provided'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a null URL', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // @ts-ignore - intentionally testing invalid input
+      Klaviyo.handleUniversalTrackingLink(null);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Empty tracking link provided'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
     });
   });
 });

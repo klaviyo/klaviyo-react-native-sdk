@@ -163,6 +163,18 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun handleUniversalTrackingLink(urlStr: String) {
+    Registry.log.debug("[Klaviyo React Native SDK] handleUniversalTrackingLink called with url string: $urlStr")
+
+    if (urlStr.isEmpty()) {
+      Registry.log.warning("[Klaviyo React Native SDK] Empty tracking link provided")
+      return
+    }
+
+    Klaviyo.handleUniversalTrackingLink(urlStr)
+  }
+
+  @ReactMethod
   fun createEvent(event: ReadableMap) {
     val metric =
       event
