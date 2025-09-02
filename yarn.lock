@@ -8042,7 +8042,6 @@ __metadata:
     react-native: 0.78.0
     react-native-builder-bob: ^0.36.0
     react-native-geolocation-service: ^5.3.1
-    react-native-permissions: ^5.4.2
   languageName: unknown
   linkType: soft
 
@@ -8069,7 +8068,6 @@ __metadata:
     react-native: 0.78.0
     react-native-builder-bob: ^0.36.0
     react-native-geolocation-service: ^5.3.1
-    react-native-permissions: ^5.4.2
     release-it: ^17.10.0
     turbo: ^1.10.7
     typedoc: ^0.25.7
@@ -10274,20 +10272,6 @@ __metadata:
   version: 5.3.1
   resolution: "react-native-geolocation-service@npm:5.3.1"
   checksum: 9a625c9f87811933491055fd8cbd1ef46f97fbbe0262714ad1d9aa969a8900dcb4abc47e58fe162400a81bcdee79324dfcc8e631862df9a22d59ac84af9acfde
-  languageName: node
-  linkType: hard
-
-"react-native-permissions@npm:^5.4.2":
-  version: 5.4.2
-  resolution: "react-native-permissions@npm:5.4.2"
-  peerDependencies:
-    react: ">=18.1.0"
-    react-native: ">=0.70.0"
-    react-native-windows: ">=0.70.0"
-  peerDependenciesMeta:
-    react-native-windows:
-      optional: true
-  checksum: fac680b7d85fb979806156d6c9f90dee9c8299b83eb9d2d82bee50aec4baa71b0f5d3cf79e8bf02345e67f77d6cb0fbfbe7e54d02b6822de0ae2e0d9323a6614
   languageName: node
   linkType: hard
 
