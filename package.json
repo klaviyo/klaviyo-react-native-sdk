@@ -104,6 +104,10 @@
     "react": "*",
     "react-native": "*"
   },
+  "dependencies": {
+    "react-native-geolocation-service": "^5.3.1",
+    "react-native-permissions": "^5.4.2"
+  },
   "workspaces": [
     "example"
   ],
