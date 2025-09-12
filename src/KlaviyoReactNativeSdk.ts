@@ -16,3 +16,15 @@ export const KlaviyoReactNativeSdk = NativeModules.KlaviyoReactNativeSdk
         },
       }
     );
+
+export const KlaviyoDeepLinkEventEmitter =
+  NativeModules.KlaviyoDeepLinkEventEmitter
+    ? NativeModules.KlaviyoDeepLinkEventEmitter
+    : new Proxy(
+        {},
+        {
+          get() {
+            throw new Error(LINKING_ERROR);
+          },
+        }
+      );
