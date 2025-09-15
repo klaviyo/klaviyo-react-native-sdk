@@ -266,10 +266,11 @@ describe('Klaviyo SDK', () => {
   });
 
   describe('tracking links', () => {
-    it('should call the native handleUniversalTrackingLink method with a valid URL', () => {
-      const trackingLink = 'https://example.com/tracking/abc123';
+    it('should call the native handleUniversalTrackingLink method with a valid Klaviyo universal tracking link', () => {
+      const trackingLink = 'https://klaviyo.com/u/abc123';
 
-      Klaviyo.handleUniversalTrackingLink(trackingLink);
+      const result = Klaviyo.handleUniversalTrackingLink(trackingLink);
+      expect(result).toBe(true);
       expect(
         NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
       ).toHaveBeenCalledWith(trackingLink);
@@ -282,8 +283,8 @@ describe('Klaviyo SDK', () => {
       // Create spy on console.error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      Klaviyo.handleUniversalTrackingLink('');
-
+      const result = Klaviyo.handleUniversalTrackingLink('');
+      expect(result).toBe(false);
       expect(
         NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
       ).not.toHaveBeenCalled();
@@ -300,13 +301,68 @@ describe('Klaviyo SDK', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       // @ts-ignore - intentionally testing invalid input
-      Klaviyo.handleUniversalTrackingLink(null);
-
+      const result = Klaviyo.handleUniversalTrackingLink(null);
+      expect(result).toBe(false);
       expect(
         NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
       ).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '[Klaviyo] Error: Empty tracking link provided'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with an invalid URL format', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink('not-a-valid-url');
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Invalid URL format'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a non-HTTPS URL', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink(
+        'http://klaviyo.com/u/abc123'
+      );
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Invalid Klaviyo universal tracking link format'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a URL that does not have a /u/ path', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink(
+        'https://klaviyo.com/track/abc123'
+      );
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Invalid Klaviyo universal tracking link format'
       );
 
       // Restore console.error
