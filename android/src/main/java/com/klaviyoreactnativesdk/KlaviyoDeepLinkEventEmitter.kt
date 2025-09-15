@@ -13,13 +13,6 @@ class KlaviyoDeepLinkEventEmitter(
   companion object {
     const val NAME = "KlaviyoDeepLinkEventEmitter"
     private const val DEEP_LINK_EVENT = "klaviyoDeepLink"
-    private var sharedInstance: KlaviyoDeepLinkEventEmitter? = null
-
-    fun getSharedInstance(): KlaviyoDeepLinkEventEmitter? = sharedInstance
-  }
-
-  init {
-    sharedInstance = this
   }
 
   override fun getName(): String = NAME

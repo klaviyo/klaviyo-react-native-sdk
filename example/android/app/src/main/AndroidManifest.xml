@@ -32,6 +32,18 @@
           <!-- Accepts URIs that begin with "klaviyosample://” -->
           <data android:scheme="klaviyosample"/>
         </intent-filter>
+
+        <!-- Android Installation Step 2b: Configure verified app links for Universal Link Click Tracking -->
+        <intent-filter android:label="app_link_handler" android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="http" />
+          <data android:scheme="https" />
+          <data android:host="trk.your.domain.com" />
+          <data android:pathPrefix="/u/" />
+        </intent-filter>
+
       </activity>
 
       <!-- Android Installation Step 2b: Register KlaviyoPushService to receive MESSAGING_EVENT intents. -->
