@@ -18,7 +18,7 @@ export interface KlaviyoDeepLinkAPI {
    * @param trackingLink - The tracking link to be handled
    * @returns {boolean} - Whether the link was handled successfully
    */
-  handleUniversalTrackingLink(trackingLink: string): boolean;
+  handleUniversalTrackingLink(trackingLink: string | null): boolean;
 
   /**
    * Registers a deep link handler that will be called when a deep link is received.

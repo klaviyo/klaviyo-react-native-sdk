@@ -80,7 +80,7 @@ export const Klaviyo: KlaviyoInterface = {
    * then handles navigation to the resolved URL.
    * @param urlStr - The tracking link to be handled
    */
-  handleUniversalTrackingLink(urlStr: string): boolean {
+  handleUniversalTrackingLink(urlStr: string | null): boolean {
     if (!urlStr || urlStr.trim() === '') {
       console.error('[Klaviyo] Error: Empty tracking link provided');
       return false;
