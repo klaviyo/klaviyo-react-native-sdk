@@ -80,12 +80,29 @@ export const Klaviyo: KlaviyoInterface = {
    * then handles navigation to the resolved URL.
    * @param urlStr - The tracking link to be handled
    */
-  handleUniversalTrackingLink(urlStr: string) {
+  handleUniversalTrackingLink(urlStr: string | null): boolean {
     if (!urlStr || urlStr.trim() === '') {
       console.error('[Klaviyo] Error: Empty tracking link provided');
-      return;
+      return false;
     }
-    KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+
+    // Validate that the URL is a Klaviyo universal tracking link
+    try {
+      const url = new URL(urlStr);
+      const isValidScheme = url.protocol === 'https:';
+      const isValidPath = url.pathname.startsWith('/u/');
+
+      if (!isValidScheme || !isValidPath) {
+        console.warn('[Klaviyo] Warning: Not a Klaviyo tracking link');
+        return false;
+      }
+
+      KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+      return true;
+    } catch (error) {
+      console.error('[Klaviyo] Error: Invalid URL format');
+      return false;
+    }
   },
   registerDeepLinkHandler(handler: DeepLinkHandler): void {
     // Initialize the event emitter if not already done

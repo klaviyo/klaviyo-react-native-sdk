@@ -9,6 +9,18 @@ export type DeepLinkHandler = (url: string) => void;
  */
 export interface KlaviyoDeepLinkAPI {
   /**
+   * Resolves a Klaviyo tracking link to a Universal Link URL,
+   * then handles navigation to the resolved URL.
+   * The link must be a valid Klaviyo universal tracking link:
+   * - Uses HTTPS protocol
+   * - Path starts with '/u/'
+   *
+   * @param trackingLink - The tracking link to be handled
+   * @returns {boolean} - Whether the link was handled successfully
+   */
+  handleUniversalTrackingLink(trackingLink: string | null): boolean;
+
+  /**
    * Registers a deep link handler that will be called when a deep link is received.
    * The handler will be invoked with the deep link URL as a string parameter.
    *
