@@ -9,18 +9,18 @@ PODS:
   - hermes-engine (0.78.0):
     - hermes-engine/Pre-built (= 0.78.0)
   - hermes-engine/Pre-built (0.78.0)
-  - klaviyo-react-native-sdk (2.0.2):
-    - KlaviyoForms (= 5.0.2)
-    - KlaviyoSwift (= 5.0.2)
+  - klaviyo-react-native-sdk (2.0.3):
+    - KlaviyoForms (= 5.0.3)
+    - KlaviyoSwift (= 5.0.3)
     - React-Core
-  - KlaviyoCore (5.0.2):
+  - KlaviyoCore (5.0.3):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.0.2):
-    - KlaviyoSwift (~> 5.0.2)
-  - KlaviyoSwift (5.0.2):
+  - KlaviyoForms (5.0.3):
+    - KlaviyoSwift (~> 5.0.3)
+  - KlaviyoSwift (5.0.3):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.0.2)
-  - KlaviyoSwiftExtension (5.0.2)
+    - KlaviyoCore (~> 5.0.3)
+  - KlaviyoSwiftExtension (5.0.3)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1768,11 +1768,11 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: b417d2b2aee3b89b58e63e23a51e02be91dc876d
-  klaviyo-react-native-sdk: bd5cb9cf23d06851b762c4e50c471e8186f4efb1
-  KlaviyoCore: b5756601aa1a36d9c52a2482129678ea12fb6fd8
-  KlaviyoForms: 8bd518b140115b1ddd5e892b7b12844fe1ce245e
-  KlaviyoSwift: 995930ec8a87596950ff2cfc6340ac66e626e913
-  KlaviyoSwiftExtension: 3ba7570f45e9cc2873de73e79e27b4af46ed6553
+  klaviyo-react-native-sdk: 6ec57c4319e2093ef177fd5b30d45ff610eda519
+  KlaviyoCore: a700d5e3a2c829beba5f8a7211f5b01cd7a993fc
+  KlaviyoForms: 8f0081135848e91492fadc57da80d0c73688327a
+  KlaviyoSwift: 0ce884b48219aa830c93e2d4bed4d1552fcde5dd
+  KlaviyoSwiftExtension: 1b6d6c97ed62071a5b07873f34cef1b30f45c74e
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
   RCTRequired: 78522de7dc73b81f3ed7890d145fa341f5bb32ea
@@ -1832,7 +1832,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 299e99fc57c93edc7c5396ef1a39a3a4d494f25d
   ReactCommon: c8fdbc582b98a07daf201cd95c1da75dd029f3ee
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Yoga: d89d04d86b5af18317f481166dccc48213d26927
+  Yoga: be02ca501b03c79d7027a6bbbd0a8db985034f11
 
 PODFILE CHECKSUM: e20d7567686b77a54d5ef38de82fae4c1448f77a
 
