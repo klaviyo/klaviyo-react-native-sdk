@@ -24,10 +24,6 @@ export default function App() {
         console.log('Event Listener: url', url);
       }
     });
-    // Register handler to handle any deep links originating from Klaviyo
-    Klaviyo.registerDeepLinkHandler((url) => {
-      console.log('Klaviyo Deep Link: destination url', url);
-    });
   }, []);
 
   return (

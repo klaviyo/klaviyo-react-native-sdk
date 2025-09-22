@@ -170,17 +170,6 @@ public class KlaviyoBridge: NSObject {
     }
 
     @objc
-    public static func registerDeepLinkHandler() {
-        KlaviyoSDK().registerDeepLinkHandler { url in
-            DispatchQueue.main.async {
-                if let eventEmitter = KlaviyoDeepLinkEventEmitter.getSharedInstance() {
-                    eventEmitter.emitDeepLinkEvent(url)
-                }
-            }
-        }
-    }
-
-    @objc
     public static func createEvent(event: [String: AnyObject]) {
         guard let name = event["name"] as? String,
               !name.isEmpty,
