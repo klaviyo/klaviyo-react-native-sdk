@@ -77,23 +77,17 @@ export const Klaviyo: KlaviyoInterface = {
       return false;
     }
 
-    // Validate that the URL is a Klaviyo universal tracking link
-    try {
-      const url = new URL(urlStr);
-      const isValidScheme = url.protocol === 'https:';
-      const isValidPath = url.pathname.startsWith('/u/');
+    // Validate that the URL is a Klaviyo universal tracking link using regex
+    // Pattern: https://domain/u/path
+    const klaviyoTrackingLinkPattern = /^https:\/\/[^/]+\/u\/.*$/;
 
-      if (!isValidScheme || !isValidPath) {
-        console.warn('[Klaviyo] Warning: Not a Klaviyo tracking link');
-        return false;
-      }
-
-      KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
-      return true;
-    } catch (error) {
-      console.error('[Klaviyo] Error: Invalid URL format');
+    if (!klaviyoTrackingLinkPattern.test(urlStr)) {
+      console.warn('[Klaviyo] Warning: Not a Klaviyo tracking link');
       return false;
     }
+
+    KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+    return true;
   },
 };
 

@@ -315,20 +315,20 @@ describe('Klaviyo SDK', () => {
     });
 
     it('should not call the native handleUniversalTrackingLink method with an invalid URL format', () => {
-      // Create spy on console.error
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      // Create spy on console.warn since regex validation now uses warning instead of error
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       const result = Klaviyo.handleUniversalTrackingLink('not-a-valid-url');
       expect(result).toBe(false);
       expect(
         NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
       ).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[Klaviyo] Error: Invalid URL format'
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Warning: Not a Klaviyo tracking link'
       );
 
-      // Restore console.error
-      consoleErrorSpy.mockRestore();
+      // Restore console.warn
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not call the native handleUniversalTrackingLink method with a non-HTTPS URL', () => {
