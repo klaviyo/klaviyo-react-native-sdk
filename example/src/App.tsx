@@ -8,22 +8,27 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 export default function App() {
   useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (Klaviyo.handleUniversalTrackingLink(url)) {
+        // Klaviyo is handling a universal click tracking link
+        console.log('Event Listener: Klaviyo tracking link', url);
+        return;
+      }
+
+      // Handle a deep links into the app
+      console.log('Navigate to url', url);
+    };
+
     // Get initial URL, if app opened with a link
     Linking.getInitialURL().then((url) => {
-      if (Klaviyo.handleUniversalTrackingLink(url)) {
-        console.log('Initial Url: Klaviyo tracking link', url);
-      } else {
-        console.log('Initial Url: url', url);
-      }
+      handleUrl(url);
     });
+
     // Listen for deep link events now that the app is running
     Linking.addEventListener('url', ({ url }) => {
-      if (Klaviyo.handleUniversalTrackingLink(url)) {
-        console.log('Event Listener: Klaviyo tracking link', url);
-      } else {
-        console.log('Event Listener: url', url);
-      }
+      handleUrl(url);
     });
+
     // Register handler to handle any deep links originating from Klaviyo
     Klaviyo.registerDeepLinkHandler((url) => {
       console.log('Klaviyo Deep Link: destination url', url);
