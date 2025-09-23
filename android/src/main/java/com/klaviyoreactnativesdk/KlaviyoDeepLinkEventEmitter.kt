@@ -2,10 +2,8 @@ package com.klaviyoreactnativesdk
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import com.klaviyo.analytics.Klaviyo
 
 class KlaviyoDeepLinkEventEmitter(
   private val reactContext: ReactApplicationContext,
@@ -26,12 +24,5 @@ class KlaviyoDeepLinkEventEmitter(
     reactContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit(DEEP_LINK_EVENT, params)
-  }
-
-  @ReactMethod
-  fun registerDeepLinkHandler() {
-    Klaviyo.registerDeepLinkHandler { uri ->
-      emitDeepLinkEvent(uri.toString())
-    }
   }
 }

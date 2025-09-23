@@ -28,11 +28,6 @@ export default function App() {
     Linking.addEventListener('url', ({ url }) => {
       handleUrl(url);
     });
-
-    // Register handler to handle any deep links originating from Klaviyo
-    Klaviyo.registerDeepLinkHandler((url) => {
-      console.log('Klaviyo Deep Link: destination url', url);
-    });
   }, []);
 
   return (

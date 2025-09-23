@@ -1,8 +1,4 @@
-import { NativeEventEmitter } from 'react-native';
-import {
-  KlaviyoReactNativeSdk,
-  KlaviyoDeepLinkEventEmitter,
-} from './KlaviyoReactNativeSdk';
+import { KlaviyoReactNativeSdk } from './KlaviyoReactNativeSdk';
 import type { KlaviyoInterface } from './Klaviyo';
 import {
   type ProfilePropertyKey,
@@ -11,11 +7,6 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 import type { FormConfiguration } from './Forms';
-import type { DeepLinkHandler } from './KlaviyoDeepLinkAPI';
-
-// Deep link event management
-let deepLinkEventEmitter: NativeEventEmitter | null = null;
-let deepLinkSubscription: any = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -98,30 +89,6 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
     return true;
   },
-  registerDeepLinkHandler(handler: DeepLinkHandler): void {
-    // Initialize the event emitter if not already done
-    if (!deepLinkEventEmitter) {
-      deepLinkEventEmitter = new NativeEventEmitter(
-        KlaviyoDeepLinkEventEmitter
-      );
-    }
-
-    // Remove existing subscription if any
-    if (deepLinkSubscription) {
-      deepLinkSubscription.remove();
-    }
-
-    // Subscribe to deep link events
-    deepLinkSubscription = deepLinkEventEmitter.addListener(
-      'klaviyoDeepLink',
-      (event: { url: string }) => {
-        handler(event.url);
-      }
-    );
-
-    // Register the handler in the native layer
-    KlaviyoDeepLinkEventEmitter.registerDeepLinkHandler();
-  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -134,4 +101,4 @@ export {
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
 export type { FormConfiguration } from './Forms';
-export type { DeepLinkHandler, KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
+export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
