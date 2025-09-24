@@ -21,7 +21,9 @@ export default function App() {
 
     // Get initial URL, if app opened with a link
     Linking.getInitialURL().then((url) => {
+      console.log('Initial Url: url', url);
       handleUrl(url);
+    });
     });
 
     // Listen for deep link events now that the app is running
