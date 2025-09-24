@@ -24,7 +24,6 @@ export default function App() {
       console.log('Initial Url: url', url);
       handleUrl(url);
     });
-    });
 
     // Listen for deep link events now that the app is running
     Linking.addEventListener('url', ({ url }) => {
