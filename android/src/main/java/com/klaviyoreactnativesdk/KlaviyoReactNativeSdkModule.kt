@@ -205,7 +205,13 @@ class KlaviyoReactNativeSdkModule(
             ?.toMap(),
       )
 
-    klaviyoEvent.uniqueId = event.getString("uniqueId")
+    event
+      .takeIf {
+        it.hasKey("uniqueId") && it.getType("uniqueId") == ReadableType.String
+      }?.getString("uniqueId")
+      ?.let { uniqueId ->
+        klaviyoEvent.uniqueId = uniqueId
+      }
 
     // Explicitly cast value to double if it exists
     try {
