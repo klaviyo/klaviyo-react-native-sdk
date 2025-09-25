@@ -8,7 +8,7 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 export default function App() {
   useEffect(() => {
-    const handleUrl = (url: string | null) => {
+    const handleUrl = (url: string) => {
       if (Klaviyo.handleUniversalTrackingLink(url)) {
         // Klaviyo is handling a universal click tracking link
         console.log('Event Listener: Klaviyo tracking link', url);
@@ -22,7 +22,9 @@ export default function App() {
     // Get initial URL, if app opened with a link
     Linking.getInitialURL().then((url) => {
       console.log('Initial Url: url', url);
-      handleUrl(url);
+      if (url) {
+        handleUrl(url);
+      }
     });
 
     // Listen for deep link events now that the app is running
