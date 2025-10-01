@@ -62,7 +62,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Klaviyo Expo Plugin
 
-If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. 
+If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app.
 See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
 
 ## Requirements
@@ -454,38 +454,74 @@ us from bridging this functionality into the React Native SDK code.
 #### Deep Linking
 
 [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
-page within your app in response to the user opening a notification. Familiarize yourself with the
-[React Native Guide](https://reactnative.dev/docs/linking) to deep linking, then read through the platform-specific
-instructions below.
+page within your app in response to the user opening a notification. This includes both custom URL schemes
+(e.g., `myapp://`) and Universal Links (iOS) / App Links (Android) which use standard HTTPS URLs.
 
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
-  As shown in the native SDK documentation, you can follow option 1 or 2.
+Klaviyo uses universal links for click tracking in emails and SMS messages. When a user clicks a Klaviyo
+tracking link, the SDK can automatically resolve it to the destination URL and track the click event.
 
-  With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
-  you call the linking code block above similar to what you would do with option 1.
+##### Setup
 
-  With option 2, when you get the `deepLinkHandler`, you can handle it as follows:
+Familiarize yourself with the [React Native Linking Guide](https://reactnative.dev/docs/linking), then follow
+the platform-specific instructions for configuring both custom URL schemes and universal links:
 
-  ```objective-c
-    [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
-  ```
+- [iOS Deep Linking Setup](https://github.com/klaviyo/klaviyo-swift-sdk#deep-linking) - Configure custom URL schemes, Associated Domains for Universal Links, and implement the appropriate delegate methods in your AppDelegate
+- [Android Deep Linking Setup](https://github.com/klaviyo/klaviyo-android-sdk#deep-linking) - Configure intent filters for both custom schemes and App Links in your AndroidManifest.xml
 
-  For application, you can pass in an instance of `UIApplication` and since you won't have `options`, you can just pass in an empty dictionary for that parameter.
+##### React Native Code
 
-In your React Native code, you can handle the deep link as follows:
+In your React Native code, use the `Linking` API to handle both deep links and universal links. The example below
+shows how to integrate with Klaviyo's universal tracking link handling:
 
 ```typescript
+import { useEffect } from 'react';
 import { Linking } from 'react-native';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-Linking.addEventListener('url', (event) => {
-  console.log(event.url);
-});
+export default function App() {
+  useEffect(() => {
+    const handleUrl = (url: string) => {
+      // Check if this is a Klaviyo universal tracking link
+      if (Klaviyo.handleUniversalTrackingLink(url)) {
+        // Klaviyo SDK is handling the tracking link
+        console.log('Klaviyo tracking link:', url);
+        return;
+      }
 
-Linking.getInitialURL().then((url) => {
-  console.log('Initial Url: url', url);
-});
+      // Handle other deep links in your app (both custom schemes and universal links)
+      console.log('Navigate to:', url);
+      // Add your navigation logic here
+    };
+
+    // Handle the initial URL if the app was opened with a link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleUrl(url);
+      }
+    });
+
+    // Listen for deep link events while the app is running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleUrl(url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Rest of your app code
+}
 ```
+
+The `Klaviyo.handleUniversalTrackingLink()` method will:
+
+- Validate that the URL is a Klaviyo tracking link (format: `https://domain/u/...`)
+- Track the click event
+- Resolve the tracking link to its destination URL
+- Return `true` if it handled the link, `false` otherwise
+
+If the link is not a Klaviyo tracking link, you should handle it as a regular deep link in your app.
 
 #### Silent Push Notifications
 
