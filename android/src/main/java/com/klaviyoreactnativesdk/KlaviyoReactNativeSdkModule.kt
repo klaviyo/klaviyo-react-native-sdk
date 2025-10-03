@@ -15,6 +15,7 @@ import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
+import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
@@ -163,6 +164,25 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun handleUniversalTrackingLink(urlStr: String) {
+    Registry.log.debug("[Klaviyo React Native SDK] handleUniversalTrackingLink called with url string: $urlStr")
+
+    if (urlStr.isEmpty()) {
+      Registry.log.warning("[Klaviyo React Native SDK] Empty tracking link provided")
+      return
+    }
+
+    if (!Registry.isRegistered<Config>()) {
+      // If the SDK has not been initialized yet, we cannot handle the link without providing Context to Klaviyo SDK
+      reactApplicationContext.currentActivity?.let {
+        Klaviyo.registerForLifecycleCallbacks(it)
+      }
+    }
+
+    Klaviyo.handleUniversalTrackingLink(urlStr)
+  }
+
+  @ReactMethod
   fun createEvent(event: ReadableMap) {
     val metric =
       event
@@ -184,6 +204,14 @@ class KlaviyoReactNativeSdkModule(
             ?.map { entry -> EventKey.CUSTOM(entry.key) to entry.value as Serializable }
             ?.toMap(),
       )
+
+    event
+      .takeIf {
+        it.hasKey("uniqueId") && it.getType("uniqueId") == ReadableType.String
+      }?.getString("uniqueId")
+      ?.let { uniqueId ->
+        klaviyoEvent.uniqueId = uniqueId
+      }
 
     // Explicitly cast value to double if it exists
     try {

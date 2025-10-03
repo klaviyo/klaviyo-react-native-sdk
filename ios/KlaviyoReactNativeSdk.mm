@@ -87,6 +87,22 @@ RCT_EXPORT_METHOD(resetProfile)
     [KlaviyoBridge resetProfile];
 }
 
+RCT_EXPORT_METHOD(handleUniversalTrackingLink: (NSString *)trackingLinkString)
+{
+    if (trackingLinkString == nil || [trackingLinkString length] == 0) {
+        NSLog(@"[Klaviyo] Error: Empty or nil tracking link provided");
+        return;
+    }
+    
+    NSURL *trackingLink = [NSURL URLWithString:trackingLinkString];
+    if (trackingLink == nil) {
+        NSLog(@"[Klaviyo] Error: Invalid tracking link format: %@", trackingLinkString);
+        return;
+    }
+    
+    [KlaviyoBridge handleUniversalTrackingLink:trackingLink];
+}
+
 RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
 {
     [KlaviyoBridge createEventWithEvent:event];
