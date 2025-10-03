@@ -541,20 +541,14 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 
 [In-App Forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new In-App Forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
 
-Beginning with version 2.0.0, In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific lists or segments, and the form will only be shown to users matching those criteria, based on their profile identifiers set via the Klaviyo SDK API.
-
-### Prerequisites
-
-- Using Version 1.2.0 and higher
-- Import the Klaviyo module
-- We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
-- Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
+In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific segments of profiles and configure event-based triggers and delays. See the table below to understand available features by SDK version.
 
 | Feature            | Minimum SDK Version |
 | ------------------ | ------------------- |
 | Basic In-App Forms | 1.2.0+              |
 | Time Delay         | 2.0.0               |
 | Audience Targeting | 2.0.0               |
+| Event Triggers     | 2.1.0               |
 
 ### Setup
 
