@@ -453,12 +453,7 @@ us from bridging this functionality into the React Native SDK code.
 
 #### Deep Linking
 
-[Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
-page within your app in response to the user opening a notification. This includes both custom URL schemes
-(e.g., `myapp://`) and Universal Links (iOS) / App Links (Android) which use standard HTTPS URLs.
-
-Klaviyo uses universal links for click tracking in emails and SMS messages. When a user clicks a Klaviyo
-tracking link, the SDK can automatically resolve it to the destination URL and track the click event.
+Klaviyo [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular page within your app in response to the user opening a push notification, tapping on a link in an In-App Form, or by tapping on a Universal Link (aka Verified App Link on Android) from outside of the app. The Klaviyo Android SDK supports deep linking via custom URI schemes or Universal Links.
 
 ##### Setup
 
@@ -542,6 +537,12 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 [In-App Forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new In-App Forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
 
 In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific segments of profiles and configure event-based triggers and delays. See the table below to understand available features by SDK version.
+
+### Prerequisites
+
+- Import the Klaviyo module
+- We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
+- Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
 
 | Feature            | Minimum SDK Version |
 | ------------------ | ------------------- |
