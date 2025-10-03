@@ -21,6 +21,9 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
+  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'master'
+  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'master'
+  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'master'
 
   use_react_native!(
     :path => config[:reactNativePath],
