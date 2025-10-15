@@ -9,18 +9,18 @@ PODS:
   - hermes-engine (0.80.2):
     - hermes-engine/Pre-built (= 0.80.2)
   - hermes-engine/Pre-built (0.80.2)
-  - klaviyo-react-native-sdk (2.0.3):
-    - KlaviyoForms (= 5.0.3)
-    - KlaviyoSwift (= 5.0.3)
+  - klaviyo-react-native-sdk (2.1.0):
+    - KlaviyoForms (= 5.1.0)
+    - KlaviyoSwift (= 5.1.0)
     - React-Core
-  - KlaviyoCore (5.0.3):
+  - KlaviyoCore (5.1.0):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.0.3):
-    - KlaviyoSwift (~> 5.0.3)
-  - KlaviyoSwift (5.0.3):
+  - KlaviyoForms (5.1.0):
+    - KlaviyoSwift (~> 5.1.0)
+  - KlaviyoSwift (5.1.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.0.3)
-  - KlaviyoSwiftExtension (5.0.3)
+    - KlaviyoCore (~> 5.1.0)
+  - KlaviyoSwiftExtension (5.1.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -2147,9 +2147,6 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `master`)
-  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `master`)
-  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `master`)
   - KlaviyoSwiftExtension
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2222,6 +2219,9 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - AnyCodable-FlightSchool
+    - KlaviyoCore
+    - KlaviyoForms
+    - KlaviyoSwift
     - KlaviyoSwiftExtension
     - SocketRocket
 
@@ -2243,15 +2243,6 @@ EXTERNAL SOURCES:
     :tag: hermes-2025-07-24-RNv0.80.2-5c7dbc0a78cb2d2a8bc81c41c617c3abecf209ff
   klaviyo-react-native-sdk:
     :path: "../.."
-  KlaviyoCore:
-    :branch: master
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
-  KlaviyoForms:
-    :branch: master
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
-  KlaviyoSwift:
-    :branch: master
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -2383,17 +2374,6 @@ EXTERNAL SOURCES:
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
-CHECKOUT OPTIONS:
-  KlaviyoCore:
-    :commit: c9080c30560e4011aeb143d6d090bd2d56e242dc
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
-  KlaviyoForms:
-    :commit: c9080c30560e4011aeb143d6d090bd2d56e242dc
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
-  KlaviyoSwift:
-    :commit: c9080c30560e4011aeb143d6d090bd2d56e242dc
-    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
-
 SPEC CHECKSUMS:
   AnyCodable-FlightSchool: 261cbe76757802b17d471b9059b21e6fa5edf57b
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
@@ -2403,11 +2383,11 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: bbc1152da7d2d40f9e59c28acc6576fcf5d28e2a
-  klaviyo-react-native-sdk: 6ec57c4319e2093ef177fd5b30d45ff610eda519
-  KlaviyoCore: a700d5e3a2c829beba5f8a7211f5b01cd7a993fc
-  KlaviyoForms: 8f0081135848e91492fadc57da80d0c73688327a
-  KlaviyoSwift: 0ce884b48219aa830c93e2d4bed4d1552fcde5dd
-  KlaviyoSwiftExtension: 1b6d6c97ed62071a5b07873f34cef1b30f45c74e
+  klaviyo-react-native-sdk: 6ea8ee0a10a8061a65edc21491a5661afb7d277e
+  KlaviyoCore: 4e30c9dd50deae86c0067b4c0c752103a57f6746
+  KlaviyoForms: 1c8e9cc8c4276e421a6778198ecd0dc893aad223
+  KlaviyoSwift: 7c01fb7c08fae9185a8ef18ec3f0d8b18f326938
+  KlaviyoSwiftExtension: 0a497aa4c66f05aeff4fd2bb82f8e66080de4bfe
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: 300c5eb91114d4339b0bb39505d0f4824d7299b7
   RCTRequired: e0446b01093475b7082fbeee5d1ef4ad1fe20ac4
@@ -2475,6 +2455,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: 1e9b9a43e24807ab708430d5d1bf5e36a55a1c4d
 
-PODFILE CHECKSUM: 567d370896e89d96b15b1a9134fa8ff296c5a0a5
+PODFILE CHECKSUM: e20d7567686b77a54d5ef38de82fae4c1448f77a
 
 COCOAPODS: 1.15.2
