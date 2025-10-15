@@ -62,7 +62,7 @@ push notifications via FCM (Firebase Cloud Messaging) and APNs (Apple Push Notif
 
 ## Klaviyo Expo Plugin
 
-If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app. 
+If you have an Expo app, you can install our plugin to integrate the React Native SDK into your app.
 See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) for more details.
 
 ## Requirements
@@ -453,39 +453,70 @@ us from bridging this functionality into the React Native SDK code.
 
 #### Deep Linking
 
-[Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular
-page within your app in response to the user opening a notification. Familiarize yourself with the
-[React Native Guide](https://reactnative.dev/docs/linking) to deep linking, then read through the platform-specific
-instructions below.
+Klaviyo [Deep Links](https://help.klaviyo.com/hc/en-us/articles/14750403974043) allow you to navigate to a particular page within your app in response to the user opening a push notification, tapping on a link in an In-App Form, or by tapping on a Universal Link (aka Verified App Link on Android) from outside of the app. The Klaviyo Android SDK supports deep linking via custom URI schemes or Universal Links.
 
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Deep-Linking) instructions for handling intent filters
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Deep-Linking)
-  As shown in the native SDK documentation, you can follow option 1 or 2.
+##### Setup
 
-  With option 1, when you handle the open url (in [`application(_:open:options)`](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623112-application)),
-  you call the linking code block above similar to what you would do with option 1.
+Familiarize yourself with the [React Native Linking Guide](https://reactnative.dev/docs/linking), then follow
+the platform-specific instructions for configuring both custom URL schemes and universal links:
 
-  With option 2, when you get the `deepLinkHandler`, you can handle it as follows:
+- [iOS Deep Linking Setup](https://github.com/klaviyo/klaviyo-swift-sdk#deep-linking) - Configure custom URL schemes, Associated Domains for Universal Links, and implement the appropriate delegate methods in your AppDelegate
+- [Android Deep Linking Setup](https://github.com/klaviyo/klaviyo-android-sdk#deep-linking) - Configure intent filters for both custom schemes and App Links in your AndroidManifest.xml
 
-  ```objective-c
-    [RCTLinkingManager application:UIApplication.sharedApplication openURL: url options: @{}];
-  ```
+##### React Native Code
 
-  For application, you can pass in an instance of `UIApplication` and since you won't have `options`, you can just pass in an empty dictionary for that parameter.
-
-In your React Native code, you can handle the deep link as follows:
+In your React Native code, use the `Linking` API to handle both deep links and universal links. The example below
+shows how to integrate with Klaviyo's universal tracking link handling:
 
 ```typescript
+import { useEffect } from 'react';
 import { Linking } from 'react-native';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-Linking.addEventListener('url', (event) => {
-  console.log(event.url);
-});
+export default function App() {
+  useEffect(() => {
+    const handleUrl = (url: string) => {
+      // Check if this is a Klaviyo universal tracking link
+      if (Klaviyo.handleUniversalTrackingLink(url)) {
+        // Klaviyo SDK is handling the tracking link
+        console.log('Klaviyo tracking link:', url);
+        return;
+      }
 
-Linking.getInitialURL().then((url) => {
-  console.log('Initial Url: url', url);
-});
+      // Handle other deep links in your app (both custom schemes and universal links)
+      console.log('Navigate to:', url);
+      // Add your navigation logic here
+    };
+
+    // Handle the initial URL if the app was opened with a link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleUrl(url);
+      }
+    });
+
+    // Listen for deep link events while the app is running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleUrl(url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Rest of your app code
+}
 ```
+
+The `Klaviyo.handleUniversalTrackingLink()` method will:
+
+- Validate that the URL is a Klaviyo tracking link (format: `https://domain/u/...`)
+- Track the click event
+- Resolve the tracking link to its destination URL
+- Return `true` if it handled the link, `false` otherwise
+
+If the link is not a Klaviyo tracking link, you should handle it as a regular deep link in your app.
 
 #### Silent Push Notifications
 
@@ -505,11 +536,10 @@ Klaviyo messages can also include key-value pairs (custom data) for both standar
 
 [In-App Forms](https://help.klaviyo.com/hc/en-us/articles/34567685177883) are messages displayed to mobile app users while they are actively using an app. You can create new In-App Forms in a drag-and-drop editor in the Sign-Up Forms tab in Klaviyo. Follow the instructions in this section to integrate forms with your app. The SDK will display forms according to their targeting and behavior settings and collect delivery and engagement analytics automatically.
 
-Beginning with version 2.0.0, In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific lists or segments, and the form will only be shown to users matching those criteria, based on their profile identifiers set via the Klaviyo SDK API.
+In-App Forms supports advanced targeting and segmentation. In your Klaviyo account, you can configure forms to target or exclude specific segments of profiles and configure event-based triggers and delays. See the table below to understand available features by SDK version.
 
 ### Prerequisites
 
-- Using Version 1.2.0 and higher
 - Import the Klaviyo module
 - We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
 - Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
@@ -519,6 +549,7 @@ Beginning with version 2.0.0, In-App Forms supports advanced targeting and segme
 | Basic In-App Forms | 1.2.0+              |
 | Time Delay         | 2.0.0               |
 | Audience Targeting | 2.0.0               |
+| Event Triggers     | 2.1.0               |
 
 ### Setup
 
