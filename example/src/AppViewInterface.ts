@@ -16,6 +16,7 @@ import {
   registerForInAppForms,
   unregisterFromInAppForms,
   registerGeofencing,
+  unregisterGeofencing,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -109,5 +110,10 @@ export const appViews: AppViewInterface[] = [
     title: 'Register Geofencing',
     color: '#4CAF50',
     onPress: registerGeofencing,
+  },
+  {
+    title: 'Unregister Geofencing',
+    color: '#4CAF50',
+    onPress: unregisterGeofencing,
   },
 ];

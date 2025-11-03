@@ -72,6 +72,12 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().registerGeofencing()
     }
 
+    @MainActor
+    @objc
+    public static func unregisterGeofencing() {
+        KlaviyoSDK().unregisterGeofencing()
+    }
+
     @objc
     public static func setProfile(
         _ profileDict: [String: AnyObject]

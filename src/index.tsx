@@ -69,6 +69,9 @@ export const Klaviyo: KlaviyoInterface = {
   registerGeofencing(): void {
     KlaviyoReactNativeSdk.registerGeofencing();
   },
+  unregisterGeofencing(): void {
+    KlaviyoReactNativeSdk.unregisterGeofencing();
+  },
   /**
    * Resolves a Klaviyo tracking link to a Universal Link URL,
    * then handles navigation to the resolved URL.
