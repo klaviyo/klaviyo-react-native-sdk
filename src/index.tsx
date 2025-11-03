@@ -66,8 +66,8 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms: () => {
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
-  registerForGeofences(): void {
-    KlaviyoReactNativeSdk.registerForGeofences();
+  registerGeofencing(): void {
+    KlaviyoReactNativeSdk.registerGeofencing();
   },
   /**
    * Resolves a Klaviyo tracking link to a Universal Link URL,

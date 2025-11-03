@@ -114,9 +114,9 @@ export const unregisterFromInAppForms = async () => {
   }
 };
 
-export const registerForGeofences = async () => {
+export const registerGeofencing = async () => {
   try {
-    Klaviyo.registerForGeofences();
+    Klaviyo.registerGeofencing();
   } catch (e: any) {
     console.log(e.message, e.code);
   }

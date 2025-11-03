@@ -2398,7 +2398,7 @@ SPEC CHECKSUMS:
   klaviyo-react-native-sdk: 9dba0c8e6ad48f42945c11bf6b251af8022d1b68
   KlaviyoCore: a64cb9abf1ad3eadd09656b2ec790a8fd051a80d
   KlaviyoForms: 1c8e9cc8c4276e421a6778198ecd0dc893aad223
-  KlaviyoLocation: 10e2639c20b681a62dd442ea503637552ebb8e57
+  KlaviyoLocation: 678c63704bfee189d3e7500e366da44ca1994b29
   KlaviyoSwift: 19e312d7f757f3a42783a268e9521e11769717cb
   KlaviyoSwiftExtension: 0a497aa4c66f05aeff4fd2bb82f8e66080de4bfe
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669

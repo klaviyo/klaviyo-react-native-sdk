@@ -68,8 +68,8 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerForGeofences() {
-        KlaviyoSDK().registerForGeofences()
+    public static func registerGeofencing() {
+        KlaviyoSDK().registerGeofencing()
     }
 
     @objc

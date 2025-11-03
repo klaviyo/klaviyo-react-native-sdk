@@ -116,8 +116,8 @@ RCT_EXPORT_METHOD(unregisterFromInAppForms) {
     [KlaviyoBridge unregisterFromInAppForms];
 }
 
-RCT_EXPORT_METHOD(registerForGeofences) {
-    [KlaviyoBridge registerForGeofences];
+RCT_EXPORT_METHOD(registerGeofencing) {
+    [KlaviyoBridge registerGeofencing];
 }
 
 // Don't compile this code when we build for the old architecture.

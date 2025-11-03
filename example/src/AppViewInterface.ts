@@ -15,7 +15,7 @@ import {
   getPushToken,
   registerForInAppForms,
   unregisterFromInAppForms,
-  registerForGeofences,
+  registerGeofencing,
 } from './KlaviyoReactWrapper';
 
 export interface AppViewInterface {
@@ -106,8 +106,8 @@ export const appViews: AppViewInterface[] = [
     onPress: unregisterFromInAppForms,
   },
   {
-    title: 'Initialize Geofencing',
+    title: 'Register Geofencing',
     color: '#4CAF50',
-    onPress: registerForGeofences,
+    onPress: registerGeofencing,
   },
 ];
