@@ -24,6 +24,7 @@ jest.mock('react-native', () => {
         createEvent: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        handleUniversalTrackingLink: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
             FIRST_NAME: 'first_name',
@@ -261,6 +262,111 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('tracking links', () => {
+    it('should call the native handleUniversalTrackingLink method with a valid Klaviyo universal tracking link', () => {
+      const trackingLink = 'https://klaviyo.com/u/abc123';
+
+      const result = Klaviyo.handleUniversalTrackingLink(trackingLink);
+      expect(result).toBe(true);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).toHaveBeenCalledWith(trackingLink);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with an empty URL', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink('');
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Empty tracking link provided'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a null URL', () => {
+      // Create spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // @ts-ignore - intentionally testing invalid input
+      const result = Klaviyo.handleUniversalTrackingLink(null);
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Error: Empty tracking link provided'
+      );
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with an invalid URL format', () => {
+      // Create spy on console.warn since regex validation now uses warning instead of error
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink('not-a-valid-url');
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Warning: Not a Klaviyo tracking link'
+      );
+
+      // Restore console.warn
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a non-HTTPS URL', () => {
+      // Create spy on console.error
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink(
+        'http://klaviyo.com/u/abc123'
+      );
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Warning: Not a Klaviyo tracking link'
+      );
+
+      // Restore console.error
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not call the native handleUniversalTrackingLink method with a URL that does not have a /u/ path', () => {
+      // Create spy on console.error
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = Klaviyo.handleUniversalTrackingLink(
+        'https://klaviyo.com/track/abc123'
+      );
+      expect(result).toBe(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.handleUniversalTrackingLink
+      ).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[Klaviyo] Warning: Not a Klaviyo tracking link'
+      );
+
+      // Restore console.error
+      consoleWarnSpy.mockRestore();
     });
   });
 });

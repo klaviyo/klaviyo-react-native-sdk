@@ -172,6 +172,11 @@ public class KlaviyoBridge: NSObject {
     }
 
     @objc
+    public static func handleUniversalTrackingLink(_ url: URL) {
+        KlaviyoSDK().handleUniversalTrackingLink(url)
+    }
+
+    @objc
     public static func createEvent(event: [String: AnyObject]) {
         guard let name = event["name"] as? String,
               !name.isEmpty,

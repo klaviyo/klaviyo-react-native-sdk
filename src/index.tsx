@@ -69,6 +69,29 @@ export const Klaviyo: KlaviyoInterface = {
   registerForGeofences(): void {
     KlaviyoReactNativeSdk.registerForGeofences();
   },
+  /**
+   * Resolves a Klaviyo tracking link to a Universal Link URL,
+   * then handles navigation to the resolved URL.
+   * @param urlStr - The tracking link to be handled
+   */
+  handleUniversalTrackingLink(urlStr: string | null): boolean {
+    if (!urlStr || urlStr.trim() === '') {
+      console.error('[Klaviyo] Error: Empty tracking link provided');
+      return false;
+    }
+
+    // Validate that the URL is a Klaviyo universal tracking link using regex
+    // Pattern: https://domain/u/path
+    const klaviyoTrackingLinkPattern = /^https:\/\/[^/]+\/u\/.*$/;
+
+    if (!klaviyoTrackingLinkPattern.test(urlStr)) {
+      console.warn('[Klaviyo] Warning: Not a Klaviyo tracking link');
+      return false;
+    }
+
+    KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
+    return true;
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -81,3 +104,4 @@ export {
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
 export type { FormConfiguration } from './Forms';
+export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
