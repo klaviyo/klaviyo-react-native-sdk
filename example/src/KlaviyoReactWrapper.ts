@@ -131,14 +131,6 @@ export const registerGeofencing = async () => {
   }
 };
 
-export const monitorGeofencesFromBackground = async () => {
-  try {
-    Klaviyo.monitorGeofencesFromBackground();
-  } catch (e: any) {
-    console.log(e.message, e.code);
-  }
-};
-
 export const unregisterGeofencing = async () => {
   try {
     Klaviyo.unregisterGeofencing();

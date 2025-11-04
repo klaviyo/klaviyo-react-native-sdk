@@ -69,9 +69,6 @@ export const Klaviyo: KlaviyoInterface = {
   registerGeofencing(): void {
     KlaviyoReactNativeSdk.registerGeofencing();
   },
-  monitorGeofencesFromBackground(): void {
-    KlaviyoReactNativeSdk.monitorGeofencesFromBackground();
-  },
   unregisterGeofencing(): void {
     KlaviyoReactNativeSdk.unregisterGeofencing();
   },
