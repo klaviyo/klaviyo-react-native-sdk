@@ -74,6 +74,12 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
+    public static func monitorGeofencesFromBackground() {
+        KlaviyoSDK().monitorGeofencesFromBackground()
+    }
+
+    @MainActor
+    @objc
     public static func unregisterGeofencing() {
         KlaviyoSDK().unregisterGeofencing()
     }

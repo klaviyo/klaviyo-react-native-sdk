@@ -29,7 +29,7 @@ export const initialize = async () => {
     // Alternate Android Installation Step 3
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
-    Klaviyo.initialize('XNhKEQ');
+    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -126,6 +126,14 @@ export const unregisterFromInAppForms = async () => {
 export const registerGeofencing = async () => {
   try {
     Klaviyo.registerGeofencing();
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const monitorGeofencesFromBackground = async () => {
+  try {
+    Klaviyo.monitorGeofencesFromBackground();
   } catch (e: any) {
     console.log(e.message, e.code);
   }

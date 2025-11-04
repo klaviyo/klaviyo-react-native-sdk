@@ -120,6 +120,10 @@ RCT_EXPORT_METHOD(registerGeofencing) {
     [KlaviyoBridge registerGeofencing];
 }
 
+RCT_EXPORT_METHOD(monitorGeofencesFromBackground) {
+    [KlaviyoBridge monitorGeofencesFromBackground];
+}
+
 RCT_EXPORT_METHOD(unregisterGeofencing) {
     [KlaviyoBridge unregisterGeofencing];
 }
