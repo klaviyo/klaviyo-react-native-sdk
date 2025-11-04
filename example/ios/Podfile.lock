@@ -2138,7 +2138,7 @@ PODS:
     - React-perflogger (= 0.80.2)
     - React-utils (= 0.80.2)
     - SocketRocket
-  - RNPermissions (4.1.5):
+  - RNPermissions (5.4.4):
     - boost
     - DoubleConversion
     - fast_float
@@ -2179,10 +2179,10 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoCore (from `../../../klaviyo-swift-sdk`)
-  - KlaviyoForms (from `../../../klaviyo-swift-sdk`)
-  - KlaviyoLocation (from `../../../klaviyo-swift-sdk`)
-  - KlaviyoSwift (from `../../../klaviyo-swift-sdk`)
+  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/geofencing`)
+  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/geofencing`)
+  - KlaviyoLocation (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/geofencing`)
+  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/geofencing`)
   - KlaviyoSwiftExtension
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2278,13 +2278,17 @@ EXTERNAL SOURCES:
   klaviyo-react-native-sdk:
     :path: "../.."
   KlaviyoCore:
-    :path: "../../../klaviyo-swift-sdk"
+    :branch: feat/geofencing
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :path: "../../../klaviyo-swift-sdk"
+    :branch: feat/geofencing
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :path: "../../../klaviyo-swift-sdk"
+    :branch: feat/geofencing
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :path: "../../../klaviyo-swift-sdk"
+    :branch: feat/geofencing
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -2418,6 +2422,20 @@ EXTERNAL SOURCES:
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
+CHECKOUT OPTIONS:
+  KlaviyoCore:
+    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
+  KlaviyoForms:
+    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
+  KlaviyoLocation:
+    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
+  KlaviyoSwift:
+    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
+
 SPEC CHECKSUMS:
   AnyCodable-FlightSchool: 261cbe76757802b17d471b9059b21e6fa5edf57b
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
@@ -2497,10 +2515,10 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 8df342c127fd0c1e30e8b9f71ff814c22414a7c0
   ReactCodegen: 4928682e20747464165effacc170019a18da953c
   ReactCommon: ec1cdf708729338070f8c4ad746768a782fd9eb1
-  RNPermissions: db0611d79f920fc8d834568a933dd5c446399623
+  RNPermissions: 9775bc801150b14236c5d308d502a8070e623717
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: ce248fb32065c9b00451491b06607f1c25b2f1ed
 
-PODFILE CHECKSUM: bbebe3b73f7476bfcde832c93d7c8649afa1e140
+PODFILE CHECKSUM: 4ea14015bffc1f74b99ed508875c55d0afb01d1d
 
 COCOAPODS: 1.16.2
