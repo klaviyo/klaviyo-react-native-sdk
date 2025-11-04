@@ -15,12 +15,21 @@ import {
   getRandomMetric,
 } from './RandomGenerators';
 
+import { Alert, Platform } from 'react-native';
+import {
+  PERMISSIONS,
+  RESULTS,
+  check,
+  openSettings,
+  request,
+} from 'react-native-permissions';
+
 export const initialize = async () => {
   try {
     // Alternate Android Installation Step 3
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
-    Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
+    Klaviyo.initialize('XNhKEQ');
   } catch (e: any) {
     console.log(e.message, e.code);
   }
@@ -235,5 +244,175 @@ export const sendRandomEvent = async () => {
     Klaviyo.createEvent(event);
   } catch (e: any) {
     console.log(e.message, e.code);
+  }
+};
+
+const handleDeniedPermissionModal = () => {
+  Alert.alert(
+    'Permission Required',
+    'We need access to your location to provide accurate results and personalized services. Please enable location permissions in your device settings.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Open Settings',
+        onPress: () => openSettings(),
+      },
+    ]
+  );
+};
+
+export const requestLocationPermission = async () => {
+  try {
+    if (Platform.OS === 'ios') {
+      const whenInUseStatus = await check(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
+      if (
+        whenInUseStatus !== RESULTS.GRANTED &&
+        whenInUseStatus !== RESULTS.LIMITED
+      ) {
+        const whenInUseResult = await request(
+          PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
+        );
+        switch (whenInUseResult) {
+          case RESULTS.UNAVAILABLE:
+            console.log('Location permission is not available on this device.');
+            return;
+          case RESULTS.BLOCKED:
+          case RESULTS.DENIED:
+            console.log('Location permission was blocked or denied.');
+            handleDeniedPermissionModal();
+            return;
+          case RESULTS.GRANTED:
+          case RESULTS.LIMITED:
+            break;
+        }
+      }
+
+      const alwaysResult = await request(PERMISSIONS.IOS.LOCATION_ALWAYS);
+      switch (alwaysResult) {
+        case RESULTS.UNAVAILABLE:
+          console.log(
+            'Always location permission is not available on this device.'
+          );
+          break;
+        case RESULTS.DENIED:
+          console.log('Always location permission was denied by user.');
+          break;
+        case RESULTS.GRANTED:
+          console.log('Always location permission granted!');
+          break;
+        case RESULTS.BLOCKED:
+          console.log('Always location permission is blocked.');
+          console.log(
+            '💡 Tip: Go to Settings > Privacy & Security > Location Services to manually upgrade to "Always"'
+          );
+          handleDeniedPermissionModal();
+          break;
+        case RESULTS.LIMITED:
+          console.log('Always location permission is limited (iOS 14+).');
+          break;
+      }
+    } else if (Platform.OS === 'android') {
+      const fineLocationStatus = await check(
+        PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+      );
+      if (fineLocationStatus !== RESULTS.GRANTED) {
+        const fineLocationResult = await request(
+          PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+        );
+
+        switch (fineLocationResult) {
+          case RESULTS.UNAVAILABLE:
+            console.log('Location permission is not available on this device.');
+            return;
+          case RESULTS.BLOCKED:
+          case RESULTS.DENIED:
+            console.log('Location permission was blocked or denied.');
+            handleDeniedPermissionModal();
+            return;
+          case RESULTS.GRANTED:
+            console.log(
+              'Fine location permission granted! Click again to request background permission.'
+            );
+            return;
+        }
+      }
+
+      if (Platform.Version >= 29) {
+        const backgroundStatus = await check(
+          PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION
+        );
+        if (backgroundStatus !== RESULTS.GRANTED) {
+          const backgroundResult = await request(
+            PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION
+          );
+          switch (backgroundResult) {
+            case RESULTS.UNAVAILABLE:
+              console.log(
+                'Background location permission is not available on this device.'
+              );
+              break;
+            case RESULTS.DENIED:
+              console.log('Background location permission was denied by user.');
+              break;
+            case RESULTS.GRANTED:
+              console.log('Background location permission granted!');
+              break;
+            case RESULTS.BLOCKED:
+              console.log('Background location permission is blocked.');
+              handleDeniedPermissionModal();
+              break;
+          }
+        } else {
+          console.log('Background location permission already granted.');
+        }
+      }
+    }
+  } catch (e: any) {
+    console.log(
+      'Error requesting location permission:',
+      e.message,
+      e.code,
+      e.stack
+    );
+  }
+};
+
+export const getLocationAuthorizationStatus = async () => {
+  try {
+    const permission =
+      Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE
+        : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
+
+    const status = await check(permission);
+
+    switch (status) {
+      case RESULTS.UNAVAILABLE:
+        console.log('Location permission is unavailable on this device.');
+        break;
+      case RESULTS.DENIED:
+        console.log('Location permission is denied.');
+        break;
+      case RESULTS.GRANTED:
+        console.log('Location permission is granted.');
+        break;
+      case RESULTS.BLOCKED:
+        console.log(
+          'Location permission is blocked. User can enable it in settings.'
+        );
+        break;
+      case RESULTS.LIMITED:
+        console.log('Location permission is limited (iOS 14+).');
+        break;
+    }
+  } catch (e: any) {
+    console.log(
+      'Error checking location authorization status:',
+      e.message,
+      e.code
+    );
   }
 };

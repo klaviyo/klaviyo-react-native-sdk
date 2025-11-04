@@ -70,5 +70,11 @@
 	<false/>
 	<key>klaviyo_app_group</key>
 	<string>org.reactjs.native.example.KlaviyoReactNativeSdkExample.shared</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>We use your location to provide location-based features and geofencing.</string>
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>We need access to your location at all times to provide geofencing features, including when the app is in the background.</string>
+  <key>NSLocationAlwaysUsageDescription</key>
+  <string>We need access to your location at all times to provide geofencing features, including when the app is in the background.</string>
 </dict>
 </plist>
