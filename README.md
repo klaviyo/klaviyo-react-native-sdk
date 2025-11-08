@@ -407,7 +407,6 @@ native code. Note that either of these approaches is sufficient to inform the Kl
 
 2. **Native Notification Permission**:
    Follow instructions from our native SDK documentation to request permission from native code:
-
    - [Android](https://github.com/klaviyo/klaviyo-android-sdk#collecting-push-tokens)
    - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#request-push-notification-permission)
 
