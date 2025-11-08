@@ -35,6 +35,38 @@ export const initialize = async () => {
   }
 };
 
+// Profile setters that accept user input
+export const setEmailValue = (email: string) => {
+  try {
+    if (email.trim()) {
+      Klaviyo.setEmail(email);
+    }
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const setPhoneNumberValue = (phoneNumber: string) => {
+  try {
+    if (phoneNumber.trim()) {
+      Klaviyo.setPhoneNumber(phoneNumber);
+    }
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+export const setExternalIdValue = (externalId: string) => {
+  try {
+    if (externalId.trim()) {
+      Klaviyo.setExternalId(externalId);
+    }
+  } catch (e: any) {
+    console.log(e.message, e.code);
+  }
+};
+
+// Legacy random setters (kept for compatibility)
 export const setEmail = async () => {
   try {
     Klaviyo.setEmail(generateRandomEmails());
@@ -446,5 +478,27 @@ export const getLocationAuthorizationStatus = async () => {
       e.message,
       e.code
     );
+  }
+};
+
+export const sendViewedProductEvent = () => {
+  try {
+    const event: Event = {
+      name: 'Viewed Product',
+      properties: {
+        ProductName: 'Sample Product',
+        ProductID: 'SAMPLE-123',
+        SKU: 'SKU-SAMPLE-001',
+        Categories: ['Example', 'Demo'],
+        ImageURL: 'https://example.com/product.jpg',
+        URL: 'https://example.com/product/sample',
+        Brand: 'Klaviyo',
+        Price: 29.99,
+        CompareAtPrice: 39.99,
+      },
+    };
+    Klaviyo.createEvent(event);
+  } catch (e: any) {
+    console.log(e.message, e.code);
   }
 };
