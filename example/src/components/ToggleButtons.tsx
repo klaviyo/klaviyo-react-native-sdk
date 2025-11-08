@@ -8,6 +8,8 @@ interface ToggleButtonsProps {
   isLeftActive: boolean;
   onLeftPress: () => void;
   onRightPress: () => void;
+  leftDisabled?: boolean;
+  rightDisabled?: boolean;
 }
 
 /**
@@ -19,17 +21,25 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
   isLeftActive,
   onLeftPress,
   onRightPress,
+  leftDisabled = false,
+  rightDisabled = false,
 }) => {
   return (
     <View style={styles.toggleContainer}>
       <TouchableOpacity
-        style={[styles.toggleButton, isLeftActive && styles.toggleButtonActive]}
+        style={[
+          styles.toggleButton,
+          isLeftActive && styles.toggleButtonActive,
+          leftDisabled && styles.toggleButtonDisabled,
+        ]}
         onPress={onLeftPress}
+        disabled={leftDisabled}
       >
         <Text
           style={[
             styles.toggleButtonText,
             isLeftActive && styles.toggleButtonTextActive,
+            leftDisabled && styles.toggleButtonTextDisabled,
           ]}
         >
           {leftLabel}
@@ -39,13 +49,16 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
         style={[
           styles.toggleButton,
           !isLeftActive && styles.toggleButtonActive,
+          rightDisabled && styles.toggleButtonDisabled,
         ]}
         onPress={onRightPress}
+        disabled={rightDisabled}
       >
         <Text
           style={[
             styles.toggleButtonText,
             !isLeftActive && styles.toggleButtonTextActive,
+            rightDisabled && styles.toggleButtonTextDisabled,
           ]}
         >
           {rightLabel}

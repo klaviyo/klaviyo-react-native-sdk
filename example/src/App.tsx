@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -8,24 +8,22 @@ import {
   SafeAreaView,
   Text,
 } from 'react-native';
-import { Klaviyo } from 'klaviyo-react-native-sdk';
-import { styles } from './Styles';
 import {
-  initialize,
-  setEmailValue,
-  setPhoneNumberValue,
-  setExternalIdValue,
-  resetProfile,
-  sendRandomEvent,
-  sendViewedProductEvent,
-  registerForInAppForms,
-  unregisterFromInAppForms,
-  setBadgeCount,
-} from './KlaviyoReactWrapper';
+  Klaviyo,
+  type Event,
+  type FormConfiguration,
+} from 'klaviyo-react-native-sdk';
+import { styles } from './Styles';
+import { getRandomMetric } from './RandomGenerators';
 import { SectionHeader } from './components/SectionHeader';
 import { ProfileTextField } from './components/ProfileTextField';
 import { ActionButton } from './components/ActionButton';
 import { ToggleButtons } from './components/ToggleButtons';
+import {
+  requestLocationPermission,
+  checkLocationPermissionState,
+  type LocationPermissionState,
+} from './PermissionHelper';
 
 export default function App() {
   // Profile state
@@ -36,10 +34,20 @@ export default function App() {
   // Feature state
   const [pushToken, setPushToken] = useState('');
   const [formsRegistered, setFormsRegistered] = useState(false);
+  const [geofencingRegistered, setGeofencingRegistered] = useState(false);
+  const [locationPermission, setLocationPermission] =
+    useState<LocationPermissionState>('none');
+
+  // Helper to refresh location permission state
+  const refreshLocationPermission = async () => {
+    const state = await checkLocationPermissionState();
+    setLocationPermission(state);
+  };
 
   // Initialize SDK and load current state on mount
   useEffect(() => {
-    initialize();
+    // Initialize the SDK with public key
+    Klaviyo.initialize('TRJ3wp');
 
     // Load current profile values from SDK
     Klaviyo.getEmail((value: string) => {
@@ -56,6 +64,11 @@ export default function App() {
 
     Klaviyo.getPushToken((value: string) => {
       if (value) setPushToken(value);
+    });
+
+    // Check initial location permission state
+    refreshLocationPermission().then(() => {
+      console.log('Fetched initial location permission state');
     });
 
     // Set up deep linking handler
@@ -79,60 +92,28 @@ export default function App() {
     });
   }, []);
 
-  // Email validation helper
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   // Profile handlers
   const handleSetEmail = () => {
-    if (!isValidEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
-      return;
-    }
-    setEmailValue(email);
-    Alert.alert('Success', 'Email set successfully!');
+    Klaviyo.setEmail(email);
+    console.log('Email set successfully:', email);
   };
 
   const handleSetPhoneNumber = () => {
-    setPhoneNumberValue(phoneNumber);
-    Alert.alert('Success', 'Phone number set successfully!');
+    Klaviyo.setPhoneNumber(phoneNumber);
+    console.log('Phone number set successfully:', phoneNumber);
   };
 
   const handleSetExternalId = () => {
-    setExternalIdValue(externalId);
-    Alert.alert('Success', 'External ID set successfully!');
+    Klaviyo.setExternalId(externalId);
+    console.log('External ID set successfully:', externalId);
   };
 
   const handleSetProfile = () => {
     // Set all profile fields at once
-    let updated = false;
-
-    if (email.trim()) {
-      if (!isValidEmail(email)) {
-        Alert.alert('Invalid Email', 'Please enter a valid email address.');
-        return;
-      }
-      setEmailValue(email);
-      updated = true;
-    }
-
-    if (phoneNumber.trim()) {
-      setPhoneNumberValue(phoneNumber);
-      updated = true;
-    }
-
-    if (externalId.trim()) {
-      setExternalIdValue(externalId);
-      updated = true;
-    }
-
-    if (updated) {
-      Alert.alert('Success', 'Profile updated successfully!');
-    } else {
-      Alert.alert('No Changes', 'Please enter at least one profile field.');
-    }
+    Klaviyo.setEmail(email);
+    Klaviyo.setPhoneNumber(phoneNumber);
+    Klaviyo.setExternalId(externalId);
+    console.log('Profile updated successfully');
   };
 
   const handleResetProfile = () => {
@@ -148,11 +129,11 @@ export default function App() {
           text: 'Reset',
           style: 'destructive',
           onPress: () => {
-            resetProfile();
+            Klaviyo.resetProfile();
             setEmail('');
             setPhoneNumber('');
             setExternalId('');
-            Alert.alert('Success', 'Profile reset successfully!');
+            console.log('Profile reset successfully');
           },
         },
       ]
@@ -161,37 +142,137 @@ export default function App() {
 
   // Event handlers
   const handleCreateTestEvent = () => {
-    sendRandomEvent();
-    Alert.alert('Success', 'Test event created!');
+    const event: Event = {
+      name: getRandomMetric(),
+      value: Math.floor(Math.random() * 100),
+      properties: {
+        testKey: 'sample',
+        // Test boolean/number properties in event
+        booleanTrue: true,
+        booleanFalse: false,
+        numberZero: 0,
+        numberOne: 1,
+        decimal: 1.23456789,
+      },
+    };
+    Klaviyo.createEvent(event);
+    console.log('Test event created');
   };
 
   const handleViewedProduct = () => {
-    sendViewedProductEvent();
-    Alert.alert('Success', 'Viewed Product event created!');
+    Klaviyo.createEvent({
+      name: 'Viewed Product',
+      value: Math.floor(Math.random() * 100),
+      properties: {
+        ProductName: 'Sample Product',
+        ProductID: 'SAMPLE-123',
+        SKU: 'SKU-SAMPLE-001',
+        Categories: ['Example', 'Demo'],
+        Brand: 'Klaviyo',
+        Price: 29.99,
+        CompareAtPrice: 39.99,
+      },
+    });
+    console.log('Viewed Product event created');
   };
 
   // In-App Forms handlers
   const handleRegisterForms = () => {
-    registerForInAppForms();
+    // Optional: configure form session timeout, default 1 hour
+    const config: FormConfiguration = { sessionTimeoutDuration: 60 * 60 };
+    Klaviyo.registerForInAppForms(config);
     setFormsRegistered(true);
-    Alert.alert('Success', 'Registered for in-app forms!');
+    console.log('Registered for in-app forms');
   };
 
   const handleUnregisterForms = () => {
-    unregisterFromInAppForms();
+    Klaviyo.unregisterFromInAppForms();
     setFormsRegistered(false);
-    Alert.alert('Success', 'Unregistered from in-app forms!');
+    console.log('Unregistered from in-app forms');
   };
 
-  // Push notifications handler
+  // Geofencing handlers
+  const handleRegisterGeofencing = () => {
+    Klaviyo.registerGeofencing();
+    setGeofencingRegistered(true);
+    console.log('Registered for geofencing');
+  };
+
+  const handleUnregisterGeofencing = () => {
+    Klaviyo.unregisterGeofencing();
+    setGeofencingRegistered(false);
+    console.log('Unregistered from geofencing');
+  };
+
+  const handleGetCurrentGeofences = () => {
+    // Note: this @internal method is intended only for demonstration and debugging purposes
+    Klaviyo.getCurrentGeofences(
+      (result: {
+        geofences: Array<{
+          identifier: string;
+          latitude: number;
+          longitude: number;
+          radius: number;
+        }>;
+      }) => {
+        const { geofences } = result;
+        console.log('Current geofences:', JSON.stringify(geofences, null, 2));
+
+        if (geofences.length === 0) {
+          Alert.alert(
+            'Current Geofences',
+            'No geofences are currently being monitored.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          const geofencesList = geofences
+            .map(
+              (g, index) =>
+                `${index + 1}. ${g.identifier}\n   Center: (${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)})\n   Radius: ${g.radius.toFixed(2)}m`
+            )
+            .join('\n\n');
+
+          Alert.alert(
+            `Current Geofences (${geofences.length})`,
+            geofencesList,
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    );
+  };
+
+  const handleRequestLocationPermission = async () => {
+    await requestLocationPermission();
+    // Refresh permission state after requesting
+    await refreshLocationPermission();
+  };
+
+  // Push notifications handlers
+  const handleRequestPushPermission = () => {
+    // Note: This is a placeholder. In a real app, you would use a push notification
+    // library like @react-native-firebase/messaging or react-native-push-notification
+    // to request push permissions. The Klaviyo SDK will handle the token registration
+    // when you call setPushToken.
+    Alert.alert(
+      'Push Notifications',
+      'Push notification permission requests should be handled by your push notification library (e.g., Firebase). The SDK will automatically register the token when available.',
+      [{ text: 'OK' }]
+    );
+  };
+
   const handleSetBadgeCount = () => {
-    setBadgeCount();
-    Alert.alert('Success', 'Badge count updated!');
+    const randomBadgeCount = Math.floor(Math.random() * 10);
+    Klaviyo.setBadgeCount(randomBadgeCount);
+    console.log('Badge count updated:', randomBadgeCount);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Profile Section */}
         <View style={styles.section}>
           <SectionHeader title="Profile" />
@@ -218,23 +299,39 @@ export default function App() {
             placeholder="+1234567890"
             keyboardType="phone-pad"
           />
-          <ActionButton
-            title="Set Profile"
-            onPress={handleSetProfile}
-            disabled={!email.trim() && !phoneNumber.trim() && !externalId.trim()}
-          />
-          <ActionButton
-            title="Reset Profile"
-            onPress={handleResetProfile}
-            destructive
-          />
+          <View style={styles.actionButtonRow}>
+            <ActionButton
+              title="Set Profile"
+              onPress={handleSetProfile}
+              disabled={
+                !email.trim() && !phoneNumber.trim() && !externalId.trim()
+              }
+              inRow
+            />
+            <ActionButton
+              title="Reset Profile"
+              onPress={handleResetProfile}
+              destructive
+              inRow
+            />
+          </View>
         </View>
 
         {/* Events Section */}
         <View style={styles.section}>
           <SectionHeader title="Events" />
-          <ActionButton title="Create Test Event" onPress={handleCreateTestEvent} />
-          <ActionButton title="Viewed Product" onPress={handleViewedProduct} />
+          <View style={styles.actionButtonRow}>
+            <ActionButton
+              title="Test Event"
+              onPress={handleCreateTestEvent}
+              inRow
+            />
+            <ActionButton
+              title="Viewed Product"
+              onPress={handleViewedProduct}
+              inRow
+            />
+          </View>
         </View>
 
         {/* In-App Forms Section */}
@@ -246,20 +343,74 @@ export default function App() {
             isLeftActive={formsRegistered}
             onLeftPress={handleRegisterForms}
             onRightPress={handleUnregisterForms}
+            leftDisabled={formsRegistered}
+            rightDisabled={!formsRegistered}
           />
+        </View>
+
+        {/* Geofencing & Location Section */}
+        <View style={styles.section}>
+          <SectionHeader title="Geofencing & Location" />
+          {locationPermission === 'none' && (
+            <ActionButton
+              title="Request Location Permission"
+              onPress={handleRequestLocationPermission}
+            />
+          )}
+          {locationPermission === 'inUse' && (
+            <ActionButton
+              title="Request Background Permission"
+              onPress={handleRequestLocationPermission}
+            />
+          )}
+          {locationPermission === 'background' && (
+            <View style={styles.permissionGrantedContainer}>
+              <Text style={styles.permissionGrantedText}>
+                Background Permission Granted
+              </Text>
+            </View>
+          )}
+          <ToggleButtons
+            leftLabel="Register"
+            rightLabel="Unregister"
+            isLeftActive={geofencingRegistered}
+            onLeftPress={handleRegisterGeofencing}
+            onRightPress={handleUnregisterGeofencing}
+            leftDisabled={geofencingRegistered}
+            rightDisabled={!geofencingRegistered}
+          />
+          {geofencingRegistered && (
+            <ActionButton
+              title="Get Current Geofences"
+              onPress={handleGetCurrentGeofences}
+              withTopSpacing
+            />
+          )}
         </View>
 
         {/* Push Notifications Section */}
         <View style={styles.section}>
           <SectionHeader title="Push Notifications" />
+          <ActionButton
+            title="Request Push Permission"
+            onPress={handleRequestPushPermission}
+          />
           <View style={styles.pushTokenContainer}>
             <Text style={styles.pushTokenLabel}>Push Token</Text>
-            <Text style={[styles.pushTokenText, !pushToken && styles.pushTokenEmpty]}>
+            <Text
+              style={[
+                styles.pushTokenText,
+                !pushToken && styles.pushTokenEmpty,
+              ]}
+            >
               {pushToken || 'No push token available'}
             </Text>
           </View>
           {Platform.OS === 'ios' && (
-            <ActionButton title="Set Badge Count" onPress={handleSetBadgeCount} />
+            <ActionButton
+              title="Set Badge Count"
+              onPress={handleSetBadgeCount}
+            />
           )}
         </View>
       </ScrollView>

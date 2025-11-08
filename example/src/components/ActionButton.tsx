@@ -7,6 +7,8 @@ interface ActionButtonProps {
   onPress: () => void;
   disabled?: boolean;
   destructive?: boolean;
+  inRow?: boolean;
+  withTopSpacing?: boolean;
 }
 
 /**
@@ -17,13 +19,17 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
   disabled = false,
   destructive = false,
+  inRow = false,
+  withTopSpacing = false,
 }) => {
   return (
     <TouchableOpacity
       style={[
         styles.actionButton,
+        inRow && styles.actionButtonInRow,
         destructive && styles.actionButtonDestructive,
         disabled && styles.actionButtonDisabled,
+        withTopSpacing && styles.actionButtonWithTopSpacing,
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -32,6 +38,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         style={[
           styles.actionButtonText,
           destructive && styles.actionButtonTextDestructive,
+          disabled && styles.actionButtonTextDisabled,
         ]}
       >
         {title}

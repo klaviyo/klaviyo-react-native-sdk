@@ -27,6 +27,7 @@ export const colors = {
   // Button states
   buttonText: '#FFFFFF', // White text on buttons
   buttonBorder: '#007AFF', // Border for outlined buttons
+  activeButtonTint: '#E8F4FF', // Light blue tint for active toggle buttons
 };
 
 export const spacing = {
