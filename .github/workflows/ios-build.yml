@@ -59,7 +59,7 @@ jobs:
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
           export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
-          yarn example-setup
+          yarn example setup
           rm -f example/ios/.xcode.env.local
 
       - name: Build example for iOS

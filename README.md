@@ -106,7 +106,7 @@ code to call out key setup steps, search for `iOS Installation Step` and `Androi
 To run the example app:
 
 - Clone this repository
-- From the root directory, run `yarn example-setup`. This is an alias that will do the following:
+- From the root directory, run `yarn example setup`. This is an alias that will do the following:
   - Run `yarn install --immutable` from the root directory
   - Navigate to the `example` directory and run `bundle install`
   - Navigate to the `example/ios` directory and run `bundle exec pod install`

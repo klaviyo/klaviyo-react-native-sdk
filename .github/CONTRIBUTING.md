@@ -42,7 +42,7 @@ This project is a monorepo managed using [Yarn workspaces](https://yarnpkg.com/f
 To get started with the project, run the following in the root directory to install the required dependencies for each package:
 
 ```sh
-yarn example-setup
+yarn example setup
 ```
 
 And configure the pre-commit hooks with:
@@ -138,7 +138,7 @@ Our pre-commit hooks verify that the linter and tests pass when committing.
 The `package.json` file contains various scripts for common tasks:
 
 - `yarn`: setup project by installing dependencies.
-- `yarn example-setup`: install dependencies for the example app
+- `yarn example setup`: install dependencies for the example app
 - `yarn typecheck`: type-check files with TypeScript.
 - `yarn lint`: lint files with ESLint.
 - `yarn test`: run unit tests with Jest.
