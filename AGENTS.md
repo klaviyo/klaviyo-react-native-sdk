@@ -124,6 +124,12 @@ yarn example android
    Klaviyo.forms.register();
    ```
 
+## Pull Requests
+
+If prompted to create a pull request, favor starting it in draft unless asked otherwise.
+You **MUST** follow the pull request template used by this repository, including important details
+in the relevant subsections of the template.
+
 ## Common Issues & Solutions
 
 - **iOS Push Notification Issues**: Ensure proper entitlements and certificate configuration
