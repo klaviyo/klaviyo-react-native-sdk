@@ -22,13 +22,6 @@ This repository contains the Klaviyo React Native SDK, which provides a bridge b
 and the native Klaviyo SDKs for iOS (Swift) and Android (Kotlin). The SDK enables key Klaviyo functionality including
 analytics tracking, push notifications, and in-app forms in React Native applications.
 
-## Key Technical Context
-
-- **React Native Compatibility**: 0.70+
-- **Platform Support**:
-  - iOS 13.0+ (Swift SDK v5.0.1)
-  - Android API 23+ (Compile/Target SDK 36)
-
 ## Repository Structure
 
 - `/src/`: TypeScript implementation of the React Native SDK
@@ -90,49 +83,8 @@ yarn example ios
 yarn example android
 ```
 
-## Key API Concepts
-
-### Core SDK Components
-
-1. **Initialization**: Required before any other operations
-
-   ```typescript
-   Klaviyo.initialize('YOUR_API_KEY');
-   ```
-
-2. **Profile Management**: Identify and update user profiles
-
-   ```typescript
-   Klaviyo.setEmail('user@example.com');
-   Klaviyo.setExternalId('user-123');
-   ```
-
-3. **Event Tracking**: Track user activities
-
-   ```typescript
-   Klaviyo.createEvent(Klaviyo.EventName.VIEWED_PRODUCT, properties);
-   ```
-
-4. **Push Notifications**: Handle push tokens and notifications
-
-   ```typescript
-   Klaviyo.push.registerForPushNotifications();
-   ```
-
-5. **In-App Forms**: Display in-app messages
-   ```typescript
-   Klaviyo.forms.register();
-   ```
-
 ## Pull Requests
 
 If prompted to create a pull request, favor starting it in draft unless asked otherwise.
 You **MUST** follow the pull request template used by this repository, including important details
 in the relevant subsections of the template.
-
-## Common Issues & Solutions
-
-- **iOS Push Notification Issues**: Ensure proper entitlements and certificate configuration
-- **Android Build Issues**: Check Gradle version compatibility and ensure proper SDK versioning
-- **TypeScript Errors**: Run `yarn typecheck` to identify type issues
-- **Native Module Not Found**: Ensure proper linking and run `pod install` for iOS
