@@ -3,6 +3,7 @@
 ## Android Troubleshooting
 
 ### `minSdkVersion` Issues
+
 We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
 of `24`, despite the Klaviyo Android SDK supporting API 23+. If you encounter this, please file an issue in our
 repository and provide version numbers of your react-native dependencies.
@@ -13,7 +14,6 @@ repository and provide version numbers of your react-native dependencies.
 
 1. If you are seeing issues related to `minimum deployment target` when installing pods, you may need to update your
    minimum iOS version to 13.0 in your Podfile with one of the following strategies:
-
    - Specify iOS version directly in the `Podfile`:
      ```ruby
      MIN_IOS_OVERRIDE = '13.0'
@@ -24,6 +24,7 @@ repository and provide version numbers of your react-native dependencies.
      platform :ios, min_ios_version_supported
      ```
    - Set the deployment target to 13.0 in XCode, and then pull `IPHONEOS_DEPLOYMENT_TARGET` from the XCode project:
+
      ```ruby
      #######
      # Read min iOS version from Xcode project and set as min iOS version for Podfile
@@ -64,9 +65,7 @@ There are many workarounds suggested in this issue's thread and a few other simi
 However, the workaround that worked for us involves intercepting the launch arguments in the app delegate and adding
 a key `UIApplicationLaunchOptionsURLKey`, which React Native expects to be present when calling the `Linking.getInitialURL()` listener.
 
-
 Here's a method to implement this workaround:
-
 
 ```swift
 - (NSMutableDictionary *)getLaunchOptionsWithURL:(NSDictionary * _Nullable)launchOptions {
@@ -88,7 +87,6 @@ Here's a method to implement this workaround:
 Ensure that this method is called from `application:didFinishLaunchingWithOptions:` before calling the superclass method with the
 modified launch arguments, like so:
 
-
 ```swift
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -108,7 +106,7 @@ This implementation is included in the example app in this repo and can be used 
 Make sure to use the URL scheme (rntest://) of the example app when testing.
 
 ### iOS APNS Token Troubleshooting
+
 There is an open issue with [`@react-native-firebase/messaging`](https://github.com/invertase/react-native-firebase/issues/8022) where the SDK will uppercase any APNS token returned using `messaging().getAPNSToken()`.
 You can verify this by adding a log the `AppDelegate.m` file that prints the deviceToken (you will need to convert to a hex string).
 This might have no impact on your use case, but is something to consider when designing.
-
