@@ -109,19 +109,27 @@ RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
 }
 
 RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
-    [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration];
+    });
 }
 
 RCT_EXPORT_METHOD(unregisterFromInAppForms) {
-    [KlaviyoBridge unregisterFromInAppForms];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge unregisterFromInAppForms];
+    });
 }
 
 RCT_EXPORT_METHOD(registerGeofencing) {
-    [KlaviyoBridge registerGeofencing];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge registerGeofencing];
+    });
 }
 
 RCT_EXPORT_METHOD(unregisterGeofencing) {
-    [KlaviyoBridge unregisterGeofencing];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge unregisterGeofencing];
+    });
 }
 
 // Don't compile this code when we build for the old architecture.

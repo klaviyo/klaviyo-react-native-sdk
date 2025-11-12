@@ -2424,16 +2424,16 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :commit: 014c2864a61b9d97ec470acb29ead01634f19fd6
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :commit: 014c2864a61b9d97ec470acb29ead01634f19fd6
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :commit: 014c2864a61b9d97ec470acb29ead01634f19fd6
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: bed44a61666fcc378a7bb98afa5c1928bf0190fd
+    :commit: 014c2864a61b9d97ec470acb29ead01634f19fd6
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2519,6 +2519,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: ce248fb32065c9b00451491b06607f1c25b2f1ed
 
-PODFILE CHECKSUM: 4ea14015bffc1f74b99ed508875c55d0afb01d1d
+PODFILE CHECKSUM: 5b166543dbdc92a883a755d81e79c6f49641dba3
 
 COCOAPODS: 1.16.2
