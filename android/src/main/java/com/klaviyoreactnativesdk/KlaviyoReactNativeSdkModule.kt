@@ -20,6 +20,8 @@ import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.unregisterFromInAppForms
+import com.klaviyo.location.registerGeofencing
+import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
@@ -85,6 +87,16 @@ class KlaviyoReactNativeSdkModule(
     UiThreadUtil.runOnUiThread {
       Klaviyo.unregisterFromInAppForms()
     }
+  }
+
+  @ReactMethod
+  fun registerGeofencing() {
+    Klaviyo.registerGeofencing()
+  }
+
+  @ReactMethod
+  fun unregisterGeofencing() {
+    Klaviyo.unregisterGeofencing()
   }
 
   @ReactMethod

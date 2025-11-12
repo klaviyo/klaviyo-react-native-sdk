@@ -50,6 +50,7 @@ function configure_podfile() {
   sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoLocation'/d" "$podfile"
 
   if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
     echo "Skipping Swift SDK version update."
@@ -57,7 +58,7 @@ function configure_podfile() {
   fi
 
   # List of dependencies
-  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
+  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms" "KlaviyoLocation")
 
   # Find the line number of the target block
   target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
