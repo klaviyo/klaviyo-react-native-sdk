@@ -34,7 +34,9 @@ BOOL useNativeImplementation = YES;
   }
 
   // Start monitoring geofences from background
-  [KlaviyoBridge monitorGeofencesFromBackground];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [KlaviyoBridge monitorGeofencesFromBackground];
+  });
 
   // refer to installation step 16 below
   NSMutableDictionary *launchOptionsWithURL =
