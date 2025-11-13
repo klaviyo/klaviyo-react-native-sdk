@@ -17,44 +17,69 @@ OPTIONS:
       Show this help message and exit
 
   -l, --local
-      Configure local SDK dependencies (file paths to local SDK repositories)
-      If no platform flags provided, defaults to standard paths for both platforms
+      Convenience flag to configure both SDKs with default local paths
+      Can be combined with platform flags to override defaults
+      When used with short flags, makes them default to local paths
 
-  -r, --remote
-      Configure remote SDK dependencies (versions, branches, or commit hashes)
-
-  -a, --android=<value>
+  -a, --android[=<value>]
       Specify Android SDK configuration:
-        - For --local: relative path to klaviyo-android-sdk directory (default: ../../klaviyo-android-sdk)
-        - For --remote: version number, branch name, or commit hash (default: master)
-        - Use "skip" to skip Android configuration
-        - Implicitly skipped if --ios is provided without --android
+        - Path (starts with ../, ./, ~, /): Use local SDK at that path
+        - Branch/commit/version: Use remote SDK
+        - No value with -l: Use default local path (../../klaviyo-android-sdk)
+        - No value without -l: Use master branch
+        - "skip": Skip Android configuration
 
-  -i, --ios=<value>
+  -i, --ios[=<value>]
       Specify iOS/Swift SDK configuration:
-        - For --local: relative path to klaviyo-swift-sdk directory (default: ../../../klaviyo-swift-sdk)
-        - For --remote: version number, branch name, or commit hash (default: master)
-        - Use "skip" to skip iOS configuration
-        - Implicitly skipped if --android is provided without --ios
+        - Path (starts with ../, ./, ~, /): Use local SDK at that path
+        - Branch/commit/version: Use remote SDK
+        - No value with -l: Use default local path (../../../klaviyo-swift-sdk)
+        - No value without -l: Use master branch
+        - "skip": Skip iOS configuration
 
   --skip-pod-install
-      Skip running 'pod install' after configuration
+      Skip running 'pod install' after iOS configuration
 
 VALUE FORMATS:
-  Local paths (--local):
-    - Relative paths like: ../../klaviyo-android-sdk
-    - Example: --android=../../klaviyo-android-sdk
+  Local paths:
+    - Relative: ../../klaviyo-android-sdk, ../../../klaviyo-swift-sdk
+    - Absolute: ~/projects/klaviyo-android-sdk
+    - Auto-detected when value starts with ../, ./, ~, or /
 
-  Remote versions (--remote):
-    - Semantic version: 1.2.3
-    - Branch name: feat/new-feature
+  Remote references:
+    - Branch name: feat/new-feature, develop, master
     - Commit hash: a1b2c3d (7-40 characters)
+    - Semantic version: 1.2.3
+    - Auto-detected for all other values
+
+EXAMPLES:
+  # Use both local SDKs with default paths
+  ./configure-sdk.sh -l
+  ./configure-sdk.sh --local
+
+  # Use only local iOS SDK
+  ./configure-sdk.sh -l -i
+
+  # Use both SDKs on master branch
+  ./configure-sdk.sh -i -a
+
+  # Use custom local path for Android SDK
+  ./configure-sdk.sh --android=~/projects/klaviyo-android-sdk
+
+  # Use specific branches (auto-detected as remote)
+  ./configure-sdk.sh --android=feature/new-api --ios=develop
+
+  # Mixed: local iOS, remote Android
+  ./configure-sdk.sh --ios=../../../klaviyo-swift-sdk --android=develop
+
+  # Combined short flags for all local defaults
+  ./configure-sdk.sh -lia
 
 EOF
 }
 
 # Parse command line arguments
-MODE=""
+LOCAL_FLAG=false
 ANDROID_VALUE=""
 IOS_VALUE=""
 SKIP_POD_INSTALL=false
@@ -66,11 +91,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     -l|--local)
-      MODE="local"
-      shift
-      ;;
-    -r|--remote)
-      MODE="remote"
+      LOCAL_FLAG=true
       shift
       ;;
     -a|--android)
@@ -106,13 +127,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -*)
-      # Handle combined short flags (e.g., -la, -li, -lar)
+      # Handle combined short flags (e.g., -lia, -la, -li)
       if [[ ${#1} -gt 2 ]]; then
         flags="${1#-}"
         for ((i=0; i<${#flags}; i++)); do
           case "${flags:$i:1}" in
-            l) MODE="local" ;;
-            r) MODE="remote" ;;
+            l) LOCAL_FLAG=true ;;
             a) ANDROID_VALUE="default" ;;
             i) IOS_VALUE="default" ;;
             h) show_help; exit 0 ;;
@@ -138,20 +158,34 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Implicit skip logic and defaults for non-interactive mode
-if [[ -n "$MODE" ]]; then
-  # If one platform specified, other is implicitly skip
-  if [[ -n "$ANDROID_VALUE" && -z "$IOS_VALUE" ]]; then
-    IOS_VALUE="skip"
-  elif [[ -n "$IOS_VALUE" && -z "$ANDROID_VALUE" ]]; then
-    ANDROID_VALUE="skip"
-  fi
-
-  # For local mode, default to standard paths if neither platform specified
-  if [[ "$MODE" == "local" && -z "$ANDROID_VALUE" && -z "$IOS_VALUE" ]]; then
+# Process defaults based on context
+# "default" means local paths if -l flag specified, otherwise "master"
+if [[ "$ANDROID_VALUE" == "default" ]]; then
+  if [[ "$LOCAL_FLAG" == true ]]; then
     ANDROID_VALUE="../../klaviyo-android-sdk"
-    IOS_VALUE="../../../klaviyo-swift-sdk"
+  else
+    ANDROID_VALUE="master"
   fi
+fi
+
+if [[ "$IOS_VALUE" == "default" ]]; then
+  if [[ "$LOCAL_FLAG" == true ]]; then
+    IOS_VALUE="../../../klaviyo-swift-sdk"
+  else
+    IOS_VALUE="master"
+  fi
+fi
+
+# Implicit skip logic: if any platform specified, skip others
+if [[ -n "$ANDROID_VALUE" || -n "$IOS_VALUE" ]]; then
+  [[ -z "$ANDROID_VALUE" ]] && ANDROID_VALUE="skip"
+  [[ -z "$IOS_VALUE" ]] && IOS_VALUE="skip"
+fi
+
+# If -l flag with no platforms, default all to local
+if [[ "$LOCAL_FLAG" == true && "$ANDROID_VALUE" == "skip" && "$IOS_VALUE" == "skip" ]]; then
+  ANDROID_VALUE="../../klaviyo-android-sdk"
+  IOS_VALUE="../../../klaviyo-swift-sdk"
 fi
 
 # Handle local SDK configuration
@@ -454,42 +488,43 @@ function choose_from_menu() {
 }
 
 
-# Main execution - handle interactive mode if MODE not specified
-if [[ -z "$MODE" ]]; then
-  # Interactive mode: show menu to select mode
-  declare -a selections
-  selections=(
-      "Local SDKs"
-      "Remote (semantic version or git branch/commit)"
-      "Exit"
-  )
-
-  # Display header
+# Main execution - handle interactive mode if no values specified
+INTERACTIVE_MODE=false
+if [[ -z "$ANDROID_VALUE" && -z "$IOS_VALUE" ]]; then
+  INTERACTIVE_MODE=true
+  # Interactive mode: show menu (simplified, just to proceed)
   tput clear
   echo "This script will help you configure the Klaviyo Android and Swift SDK dependencies"
   echo
+  echo "Press Enter to continue or Ctrl+C to exit..."
+  read -r
+fi
 
-  # Call menu function
-  choose_from_menu "Select an option using arrow keys and press Enter:" selected_choice "${selections[@]}"
-
-  # Set MODE from selection
-  if [[ "$selected_choice" == "Local SDKs" ]]; then
-    MODE="local"
-  elif [[ "$selected_choice" == "Remote (semantic version or git branch/commit)" ]]; then
-    MODE="remote"
-  elif [[ "$selected_choice" == "Exit" ]]; then
-    echo "Exiting..."
-    exit 0
+# Execute configuration based on values or interactive mode
+if [[ "$ANDROID_VALUE" != "skip" || "$INTERACTIVE_MODE" == true ]]; then
+  if [[ "$INTERACTIVE_MODE" == true || -z "$ANDROID_VALUE" ]]; then
+    # Interactive: call with no args to prompt
+    configure_local_android_sdk
+  elif [[ "$ANDROID_VALUE" =~ ^(\.\./|\./|~|/) ]]; then
+    # Local path detected
+    configure_local_android_sdk "$ANDROID_VALUE"
+  else
+    # Remote branch/version
+    configure_remote_android_sdk "$ANDROID_VALUE"
   fi
 fi
 
-# Execute configuration based on mode
-if [[ "$MODE" == "local" ]]; then
-  configure_local_android_sdk
-  configure_local_swift_sdk
-elif [[ "$MODE" == "remote" ]]; then
-  configure_remote_android_sdk
-  configure_remote_swift_sdk
+if [[ "$IOS_VALUE" != "skip" || "$INTERACTIVE_MODE" == true ]]; then
+  if [[ "$INTERACTIVE_MODE" == true || -z "$IOS_VALUE" ]]; then
+    # Interactive: call with no args to prompt
+    configure_local_swift_sdk
+  elif [[ "$IOS_VALUE" =~ ^(\.\./|\./|~|/) ]]; then
+    # Local path detected
+    configure_local_swift_sdk "$IOS_VALUE"
+  else
+    # Remote branch/version
+    configure_remote_swift_sdk "$IOS_VALUE"
+  fi
 fi
 
 # Handle pod install
