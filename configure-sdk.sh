@@ -275,7 +275,6 @@ function configure_android_gradle() {
       android_sdk_version="${android_sdk_version//\//~}-SNAPSHOT"
     fi
 
-    sed -i '' "s|^$property_key=.*|$property_key=$android_sdk_version|" "$property_file"
     echo "Targeting Android SDK version: $android_sdk_version"
   fi
 
