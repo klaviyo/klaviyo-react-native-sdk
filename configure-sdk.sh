@@ -6,11 +6,8 @@ function show_help() {
 Klaviyo SDK Configuration Script
 
 This script configures the Klaviyo Android and Swift SDK dependencies for the
-React Native SDK. It can be run interactively or with command-line arguments.
-
-USAGE:
-  ./configure-sdk.sh
-  Without options, the script runs in interactive mode with a menu interface.
+React Native SDK. It can be run with command line arguments, outlined below.
+Or, without options the script runs in interactive mode with a menu interface.
 
 OPTIONS:
   -h, --help
@@ -19,50 +16,27 @@ OPTIONS:
   -l, --local
       Convenience flag to configure both SDKs with default local paths
       Can be combined with platform flags to override defaults
-      When used with short flags, makes them default to local paths
 
   -a, --android[=<value>]
       Specify Android SDK configuration:
-        - Path (starts with ../, ./, ~, /): Use local SDK at that path
-        - Branch/commit/version: Use remote SDK
-        - No value with -l: Use default local path (../../klaviyo-android-sdk)
-        - No value without -l: Use master branch
-        - "skip": Skip Android configuration
+        - Version, branch, commit hash or filepath to local SDK
+        - Default: If --local, ../../klaviyo-android-sdk, else cached version in gradle.properties
 
   -i, --ios[=<value>]
       Specify iOS/Swift SDK configuration:
-        - Path (starts with ../, ./, ~, /): Use local SDK at that path
-        - Branch/commit/version: Use remote SDK
-        - No value with -l: Use default local path (../../../klaviyo-swift-sdk)
-        - No value without -l: Use master branch
-        - "skip": Skip iOS configuration
+        - Version, branch, commit hash or filepath to local SDK
+        - Default: If --local, ../../../klaviyo-swift-sdk, else podspec version
 
   -s, --skip-pod-install
       Skip running 'pod install' after iOS configuration
-
-VALUE FORMATS:
-  Local paths:
-    - Relative: ../../klaviyo-android-sdk, ../../../klaviyo-swift-sdk
-    - Absolute: ~/projects/klaviyo-android-sdk
-    - Auto-detected when value starts with ../, ./, ~, or /
-
-  Remote references:
-    - Branch name: feat/new-feature, develop, master
-    - Commit hash: a1b2c3d (7-40 characters)
-    - Semantic version: 1.2.3
-    - Auto-detected for all other values
 
 EXAMPLES:
   # Use both local SDKs with default paths
   ./configure-sdk.sh --local
 
-  # Use custom local path for iOS or Android SDK
-  ./configure-sdk.sh --android=~/projects/klaviyo-android-sdk
-  ./configure-sdk.sh --ios=~/projects/klaviyo-swift-sdk
-
-  # Use specific branches (auto-detected as remote)
-  ./configure-sdk.sh --android=feature/new-api --ios=develop
-
+  # Configure Android or iOS SDKs to specific version, branch, commit or filepath
+  ./configure-sdk.sh --android [version/branch/commit/filepath]
+  ./configure-sdk.sh --ios [version/branch/commit/filepath]
 EOF
 }
 
@@ -180,8 +154,8 @@ if [[ "$is_local" == false && -z "$android_value" && -z "$ios_value" ]]; then
       ios_value="${ios_value:-$DEFAULT_IOS_SDK_PATH}"
       ;;
     "$remote_option")
-      read -rp "Enter the Android SDK version, branch, or commit hash (default: master): " android_value
-      android_value="${android_value:-master}"
+      read -rp "Enter the Android SDK version, branch, or commit hash (default: gradle.properties): " android_value
+      android_value="${android_value:-gradle.properties}"
 
       read -rp "Enter the iOS SDK version, branch, or commit hash (default: podspec): " ios_value
       ios_value="${ios_value:-podspec}"
@@ -214,18 +188,17 @@ else
     [[ "$android_value" == "default" ]] && android_value="$DEFAULT_ANDROID_SDK_PATH"
     [[ "$ios_value" == "default" ]] && ios_value="$DEFAULT_IOS_SDK_PATH"
   else
-    # No local flag: "default" means master branch for Android, podspec for iOS
-    [[ "$android_value" == "default" ]] && android_value="master"
+    # No local flag: "default" means gradle.properties for Android, podspec for iOS
+    [[ "$android_value" == "default" ]] && android_value="gradle.properties"
     [[ "$ios_value" == "default" ]] && ios_value="podspec"
   fi
 fi
 
-# Handle local SDK configuration
-# Reusable function to configure local.properties for requested dependency
+# Toggle Android composite build mode
 function configure_android_local_properties() {
-  local android_dir="$1"
+  local android_dir="$1" # Directory to modify (i.e. SDK or Example)
   local enabled="$2" # true or false
-  local sdk_path="$3"
+  local sdk_path="$3" # path to local Android SDK
   local local_properties_file="$android_dir/local.properties"
   local template_file="$android_dir/local.properties.template"
 
@@ -261,62 +234,87 @@ function configure_android_local_properties() {
   fi
 }
 
-# Configure local SDK for both directories
-function configure_local_android_sdk() {
-  local sdk_path="$1"
-
-  echo "Using Android SDK path: $sdk_path"
-
-  configure_android_local_properties "./android" "true" "$sdk_path"
-  configure_android_local_properties "./example/android" "true" "../$sdk_path"
-}
-
-# Handle remote Android SDK configuration
-function configure_remote_android_sdk() {
+# Configure Android SDK version/path
+function configure_android_gradle() {
   local android_sdk_version="$1"
   local property_file="./android/gradle.properties"
   local property_key="KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion"
+  local saved_comment="# saved:"
+  local cached_version
+  local save_cached=true
 
-  if [[ ! -f "$property_file" ]]; then
-    echo "Error: $property_file not found."
-    exit 1
-  fi
-
-  echo "Using Android SDK version: $android_sdk_version"
-
-  configure_android_local_properties "./android" "false"
-  configure_android_local_properties "./example/android" "false"
-
-  # Validate and format SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
-  if [[ ! "$android_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ && ! "$android_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
-    # Replace slashes with tildes and append "-SNAPSHOT"
-    android_sdk_version="${android_sdk_version//\//~}-SNAPSHOT"
-  fi
-
-  if grep -q "^$property_key=" $property_file; then
-    sed -i '' "s/^$property_key=.*/$property_key=$android_sdk_version/" $property_file
+  # Always restore from saved comment first if it exists
+  if grep -q "^$saved_comment" "$property_file"; then
+    cached_version=$(grep "^$saved_comment" "$property_file" | sed "s/^$saved_comment //")
+    # Remove the saved comment line
+    sed -i '' "/^$saved_comment/d" "$property_file"
+    # Update the property value
+    sed -i '' "s|^$property_key=.*|$property_key=$cached_version|" "$property_file"
   else
-    echo "$property_key=$android_sdk_version" >> $property_file
+    cached_version=$(grep "^$property_key=" "$property_file" | cut -d'=' -f2)
   fi
 
-  echo "Now targeting Android SDK version: $android_sdk_version"
+  if [[ "$android_sdk_version" =~ ^(\.\./|\./|~|/) ]]; then
+    # Configure local.properties for composite build
+    configure_android_local_properties "./android" "true" "$android_sdk_version"
+    configure_android_local_properties "./example/android" "true" "../$android_sdk_version"
+
+    echo "Targeting Android SDK path: $android_sdk_version"
+  else
+    # Reset local.properties file
+    configure_android_local_properties "./android" "false"
+    configure_android_local_properties "./example/android" "false"
+
+    # Validate and format SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
+    if [[ "$android_sdk_version" == "gradle.properties" ]]; then
+      save_cached=false
+      echo "Resetting to gradle.properties version: $cached_version"
+      android_sdk_version="$cached_version"
+    elif [[ ! "$android_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ && ! "$android_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+      # Replace slashes with tildes and append "-SNAPSHOT"
+      android_sdk_version="${android_sdk_version//\//~}-SNAPSHOT"
+    fi
+
+    sed -i '' "s|^$property_key=.*|$property_key=$android_sdk_version|" "$property_file"
+    echo "Targeting Android SDK version: $android_sdk_version"
+  fi
+
+  # Add saved comment above the property
+  if [[ "$save_cached" == true ]]; then
+    sed -i '' "/^$property_key=/i\\
+$saved_comment $cached_version
+" "$property_file"
+  fi
+
+  sed -i '' "s|^$property_key=.*|$property_key=$android_sdk_version|" "$property_file"
+
   echo "You should clean/sync gradle now in the IDE."
 }
 
 # Reusable function to configure the podfile for requested dependency
-function configure_podfile() {
+function configure_pods() {
   swift_sdk_version="$1"
+  local podspec="./klaviyo-react-native-sdk.podspec"
   local podfile="./example/ios/Podfile"
 
-  # Delete the overridden dependencies first
+  # Delete overridden dependencies first, if any
   sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
 
-  if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
-    echo "Skipping Swift SDK version update."
+  # Restore podspec
+  sed -i '' 's/\(s\.dependency "KlaviyoSwift"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoForms"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
+
+  if [[ "$swift_sdk_version" == "podspec" ]]; then
+    echo "Restored to $podspec"
     return
   fi
+
+  # Comment out podspec version
+  sed -i '' 's/\(s\.dependency "KlaviyoSwift"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoForms"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
+  echo "Commented out version constraints in $podspec for local development"
 
   # List of dependencies
   dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
@@ -346,59 +344,22 @@ function configure_podfile() {
   done
 }
 
-# Configure local swift SDK
-function configure_local_swift_sdk() {
-  local sdk_path="$1"
-
-  echo "Using iOS SDK path: $sdk_path"
-
-  # Ensure the path exists
-  if [[ ! -d "./example/ios/$sdk_path" ]]; then
-    echo "Error: Directory $sdk_path does not exist."
-    exit 1
-  fi
-
-  configure_podfile "$sdk_path"
-}
-
-# Handle remote Swift SDK configuration
-function configure_remote_swift_sdk() {
-  local swift_sdk_version="$1"
-
-  echo "Using iOS SDK version: $swift_sdk_version"
-
-  configure_podfile "$swift_sdk_version"
-}
-
 # Execute configuration based on values
 if [[ "$android_value" != "skip" ]]; then
-  if [[ "$android_value" =~ ^(\.\./|\./|~|/) ]]; then
-    # Local path detected
-    configure_local_android_sdk "$android_value"
-  else
-    # Remote branch/version
-    configure_remote_android_sdk "$android_value"
-  fi
+  configure_android_gradle "$android_value"
+  echo
 fi
 
 if [[ "$ios_value" != "skip" ]]; then
-  if [[ "$ios_value" =~ ^(\.\./|\./|~|/) ]]; then
-    # Local path detected
-    configure_local_swift_sdk "$ios_value"
-  else
-    # Remote branch/version
-    configure_remote_swift_sdk "$ios_value"
-  fi
-fi
+  configure_pods "$ios_value"
 
-# Handle pod install
-if [[ "$skip_pod_install" == true ]]; then
-  echo "Skipped 'pod install'"
-elif [[ "$ios_value" == "skip" ]]; then
-  echo "Skipped 'pod install' (iOS SDK configuration was skipped)"
-else
-  echo "Running 'pod install'..."
-  cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
-  bundle exec pod install
-  echo "'pod install' completed successfully."
+  # Handle pod install
+  if [[ "$skip_pod_install" == true ]]; then
+    echo "Skipped 'pod install'"
+  else
+    echo "Running 'pod install'..."
+    cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
+    bundle exec pod install
+    echo "'pod install' completed successfully."
+  fi
 fi
