@@ -69,7 +69,9 @@ public class KlaviyoBridge: NSObject {
     @MainActor
     @objc
     public static func registerGeofencing() {
-        KlaviyoSDK().registerGeofencing()
+        Task { @MainActor in
+            await KlaviyoSDK().registerGeofencing()
+        }
     }
 
     @MainActor
@@ -81,7 +83,9 @@ public class KlaviyoBridge: NSObject {
     @MainActor
     @objc
     public static func unregisterGeofencing() {
-        KlaviyoSDK().unregisterGeofencing()
+        Task { @MainActor in
+            await KlaviyoSDK().unregisterGeofencing()
+        }
     }
 
     @objc
