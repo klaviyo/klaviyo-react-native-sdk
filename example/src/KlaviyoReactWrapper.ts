@@ -139,6 +139,37 @@ export const unregisterGeofencing = async () => {
   }
 };
 
+export const getCurrentGeofences = async () => {
+  try {
+    Klaviyo.getCurrentGeofences((result) => {
+      const { geofences } = result;
+      console.log('Current geofences:', JSON.stringify(geofences, null, 2));
+
+      if (geofences.length === 0) {
+        Alert.alert(
+          'Current Geofences',
+          'No geofences are currently being monitored.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        const geofencesList = geofences
+          .map(
+            (g, index) =>
+              `${index + 1}. ${g.identifier}\n   Center: (${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)})\n   Radius: ${g.radius.toFixed(2)}m`
+          )
+          .join('\n\n');
+
+        Alert.alert(`Current Geofences (${geofences.length})`, geofencesList, [
+          { text: 'OK' },
+        ]);
+      }
+    });
+  } catch (e: any) {
+    console.log(e.message, e.code);
+    Alert.alert('Error', `Failed to get current geofences: ${e.message}`);
+  }
+};
+
 export const setPushToken = async () => {
   try {
     // If handling push tokens from the react native layer

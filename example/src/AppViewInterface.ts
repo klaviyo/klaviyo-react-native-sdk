@@ -17,6 +17,7 @@ import {
   unregisterFromInAppForms,
   registerGeofencing,
   unregisterGeofencing,
+  getCurrentGeofences,
   requestLocationPermission,
   getLocationAuthorizationStatus,
 } from './KlaviyoReactWrapper';
@@ -117,6 +118,11 @@ export const appViews: AppViewInterface[] = [
     title: 'Unregister Geofencing',
     color: '#4CAF50',
     onPress: unregisterGeofencing,
+  },
+  {
+    title: 'Get Current Geofences',
+    color: '#4CAF50',
+    onPress: getCurrentGeofences,
   },
   {
     title: 'Request Location Permission (Click Twice)',
