@@ -127,7 +127,9 @@ RCT_EXPORT_METHOD(registerGeofencing) {
 }
 
 RCT_EXPORT_METHOD(unregisterGeofencing) {
-    [KlaviyoBridge unregisterGeofencing];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge unregisterGeofencing];
+    });
 }
 
 RCT_EXPORT_METHOD(getCurrentGeofences: (RCTResponseSenderBlock)callback) {

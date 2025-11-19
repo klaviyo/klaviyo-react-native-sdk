@@ -83,17 +83,39 @@ public class KlaviyoBridge: NSObject {
     @MainActor
     @objc
     public static func unregisterGeofencing() {
-        KlaviyoSDK().unregisterGeofencing()
+        Task { @MainActor in
+            await KlaviyoSDK().unregisterGeofencing()
+
+        }
     }
 
     @MainActor
     @objc
     public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
-        let geofences = KlaviyoSDK().getCurrentGeofences()
-        let geofencesArray = geofences.map { region -> [String: AnyObject] in
-            [
-                "identifier": region.identifier as AnyObject,
-                "latitude": region.center.latitude as AnyObject,
+        Task { @MainActor in
+            await KlaviyoSDK().getCurrentGeofences { geofences in
+                let geofencesArray = geofences.map { region -> [String: AnyObject] in
+                    [
+                        "identifier": region.identifier as AnyObject,
+                        "latitude": region.center.latitude as AnyObject,
+                        "longitude": region.center.longitude as AnyObject,
+                        "radius": region.radius as AnyObject
+                    ]
+                }
+                callback(["geofences": geofencesArray as AnyObject])
+            }
+        }
+    }
+
+    @MainActor
+    @objc
+    public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
+        Task { @MainActor in
+            await KlaviyoSDK().getCurrentGeofences { geofences in
+                let geofencesArray = geofences.map { region -> [String: AnyObject] in
+                    [
+                        "identifier": region.identifier as AnyObject,
+                        "latitude": region.center.latitude as AnyObject,
                 "longitude": region.center.longitude as AnyObject,
                 "radius": region.radius as AnyObject
             ]
