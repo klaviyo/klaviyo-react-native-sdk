@@ -24,6 +24,9 @@ jest.mock('react-native', () => {
         createEvent: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        registerGeofencing: jest.fn(),
+        unregisterGeofencing: jest.fn(),
+        getCurrentGeofences: jest.fn(),
         handleUniversalTrackingLink: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
@@ -261,6 +264,56 @@ describe('Klaviyo SDK', () => {
       Klaviyo.unregisterFromInAppForms();
       expect(
         NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
+      ).toHaveBeenCalled();
+    });
+  });
+
+  describe('geofencing', () => {
+    it('should register for geofencing', () => {
+      Klaviyo.registerGeofencing();
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerGeofencing
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should unregister from geofencing', () => {
+      Klaviyo.unregisterGeofencing();
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterGeofencing
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should get current geofences through callback correctly', () => {
+      const mockGeofences = {
+        geofences: [
+          {
+            identifier: 'geofence_1',
+            latitude: 42.3601,
+            longitude: -71.0589,
+            radius: 100,
+          },
+          {
+            identifier: 'geofence_2',
+            latitude: 40.7128,
+            longitude: -74.006,
+            radius: 200,
+          },
+        ],
+      };
+
+      // Test with callback
+      Klaviyo.getCurrentGeofences((result) => {
+        expect(result).toEqual(mockGeofences);
+      });
+
+      // Simulate callback invocation
+      const getCurrentGeofencesCall =
+        NativeModules.KlaviyoReactNativeSdk.getCurrentGeofences.mock
+          .calls[0][0];
+      getCurrentGeofencesCall(mockGeofences);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.getCurrentGeofences
       ).toHaveBeenCalled();
     });
   });

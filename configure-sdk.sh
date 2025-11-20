@@ -300,6 +300,7 @@ function configure_pods() {
   sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoLocation'/d" "$podfile"
 
   # Restore podspec
   sed -i '' 's/\(s\.dependency "KlaviyoSwift"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
@@ -316,7 +317,7 @@ function configure_pods() {
   echo "Commented out version constraints in $podspec for local development"
 
   # List of dependencies
-  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
+  dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms" "KlaviyoLocation")
 
   # Find the line number of the target block
   target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)

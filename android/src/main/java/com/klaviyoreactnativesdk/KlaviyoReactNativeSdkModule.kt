@@ -1,5 +1,6 @@
 package com.klaviyoreactnativesdk
 
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Callback
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -20,6 +21,9 @@ import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.unregisterFromInAppForms
+import com.klaviyo.location.LocationManager
+import com.klaviyo.location.registerGeofencing
+import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
@@ -85,6 +89,41 @@ class KlaviyoReactNativeSdkModule(
     UiThreadUtil.runOnUiThread {
       Klaviyo.unregisterFromInAppForms()
     }
+  }
+
+  @ReactMethod
+  fun registerGeofencing() {
+    Klaviyo.registerGeofencing()
+  }
+
+  @ReactMethod
+  fun unregisterGeofencing() {
+    Klaviyo.unregisterGeofencing()
+  }
+
+  @ReactMethod
+  fun getCurrentGeofences(callback: Callback) {
+    // Note: in the future, we may be storing more fences than we are observing, so we'd have to update this
+    val geofencesArray = Arguments.createArray()
+    Registry.getOrNull<LocationManager>()?.getStoredGeofences()?.forEach { geofence ->
+      geofencesArray.pushMap(
+        Arguments.createMap().apply {
+          putString("identifier", geofence.id)
+          putDouble("latitude", geofence.latitude)
+          putDouble("longitude", geofence.longitude)
+          putDouble("radius", geofence.radius.toDouble())
+        },
+      )
+    } ?: run {
+      Registry.log.wtf("Geofencing is not yet registered")
+    }
+
+    val resultMap =
+      Arguments.createMap().apply {
+        putArray("geofences", geofencesArray)
+      }
+
+    callback.invoke(resultMap)
   }
 
   @ReactMethod

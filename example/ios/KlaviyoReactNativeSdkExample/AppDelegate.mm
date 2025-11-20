@@ -24,7 +24,7 @@ BOOL useNativeImplementation = YES;
     // iOS Installation Step 3: Initialize the SDK with public key, if
     // initializing from native code Exclude if initializing from react native
     // layer
-    [PushNotificationsHelper initializeSDK:@"Xr5bFG"];
+    [PushNotificationsHelper initializeSDK:@"YOUR_KLAVIYO_PUBLIC_API_KEY"];
 
     // iOS Installation Step 4: Request notification permission from the user
     // Exclude if handling permissions from react native layer
@@ -32,6 +32,11 @@ BOOL useNativeImplementation = YES;
   } else {
     // Initialize cross-platform push library, e.g. Firebase
   }
+
+  // Start monitoring geofences from background
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [KlaviyoBridge monitorGeofencesFromBackground];
+  });
 
   // refer to installation step 16 below
   NSMutableDictionary *launchOptionsWithURL =
