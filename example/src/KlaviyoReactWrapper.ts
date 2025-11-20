@@ -141,6 +141,7 @@ export const unregisterGeofencing = async () => {
 
 export const getCurrentGeofences = async () => {
   try {
+    // Note: this @internal method is intended only for demonstration and debugging purposes
     Klaviyo.getCurrentGeofences((result) => {
       const { geofences } = result;
       console.log('Current geofences:', JSON.stringify(geofences, null, 2));
