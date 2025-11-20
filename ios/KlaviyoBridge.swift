@@ -85,7 +85,6 @@ public class KlaviyoBridge: NSObject {
     public static func unregisterGeofencing() {
         Task { @MainActor in
             await KlaviyoSDK().unregisterGeofencing()
-
         }
     }
 
@@ -93,34 +92,17 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
         Task { @MainActor in
-            await KlaviyoSDK().getCurrentGeofences { geofences in
-                let geofencesArray = geofences.map { region -> [String: AnyObject] in
-                    [
-                        "identifier": region.identifier as AnyObject,
-                        "latitude": region.center.latitude as AnyObject,
-                        "longitude": region.center.longitude as AnyObject,
-                        "radius": region.radius as AnyObject
-                    ]
-                }
-                callback(["geofences": geofencesArray as AnyObject])
+            let geofences = await KlaviyoSDK().getCurrentGeofences()
+            let geofencesArray = geofences.map { region -> [String: AnyObject] in
+                [
+                    "identifier": region.identifier as AnyObject,
+                    "latitude": region.center.latitude as AnyObject,
+                    "longitude": region.center.longitude as AnyObject,
+                    "radius": region.radius as AnyObject
+                ]
             }
+            callback(["geofences": geofencesArray as AnyObject])
         }
-    }
-
-    @MainActor
-    @objc
-    public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
-        Task { @MainActor in
-            await KlaviyoSDK().getCurrentGeofences { geofences in
-                let geofencesArray = geofences.map { region -> [String: AnyObject] in
-                    [
-                        "identifier": region.identifier as AnyObject,
-                        "latitude": region.center.latitude as AnyObject,
-                "longitude": region.center.longitude as AnyObject,
-                "radius": region.radius as AnyObject
-            ]
-        }
-        callback(["geofences": geofencesArray as AnyObject])
     }
 
     @objc
