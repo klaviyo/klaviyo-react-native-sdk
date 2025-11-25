@@ -83,6 +83,22 @@ yarn example ios
 yarn example android
 ```
 
+#### Developing with Local/Unreleased SDK dependencies
+
+The `configure-sdk.sh` script configures the SDK to use target local or remote versions of the
+native Android and iOS SDKs. Essential for testing changes across all three SDKs during development.
+
+```bash
+# Configure both platforms to default local paths
+./configure-sdk.sh -l
+
+# Optionally override the path, or specify whether to configure android or iOS only
+./configure-sdk.sh -l -a ../klaviyo-android-sdk-worktree
+
+# Configure specific remote dependency by version, commit hash, or branch name
+./configure-sdk.sh -r --android=COMMIT_HASH_OR_BRANCH_NAME --ios=COMMIT_HASH_OR_BRANCH_NAME
+```
+
 ## Pull Requests
 
 If prompted to create a pull request, favor starting it in draft unless asked otherwise.

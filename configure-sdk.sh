@@ -1,11 +1,204 @@
 #!/bin/bash
 
-# Handle local SDK configuration
-# Reusable function to configure local.properties
-function configure_local_properties() {
-  local android_dir="$1"
+# Help documentation
+function show_help() {
+  cat << EOF
+Klaviyo SDK Configuration Script
+
+This script configures the Klaviyo Android and Swift SDK dependencies for the
+React Native SDK. It can be run with command line arguments, outlined below.
+Or, without options the script runs in interactive mode with a menu interface.
+
+OPTIONS:
+  -h, --help
+      Show this help message and exit
+
+  -l, --local
+      Convenience flag to configure both SDKs with default local paths
+      Can be combined with platform flags to override defaults
+
+  -a, --android[=<value>]
+      Specify Android SDK configuration:
+        - Version, branch, commit hash or filepath to local SDK
+        - Default: If --local, ../../klaviyo-android-sdk, else cached version in gradle.properties
+
+  -i, --ios[=<value>]
+      Specify iOS/Swift SDK configuration:
+        - Version, branch, commit hash or filepath to local SDK
+        - Default: If --local, ../../../klaviyo-swift-sdk, else podspec version
+
+  -s, --skip-pod-install
+      Skip running 'pod install' after iOS configuration
+
+EXAMPLES:
+  # Use both local SDKs with default paths
+  ./configure-sdk.sh --local
+
+  # Configure Android or iOS SDKs to specific version, branch, commit or filepath
+  ./configure-sdk.sh --android [version/branch/commit/filepath]
+  ./configure-sdk.sh --ios [version/branch/commit/filepath]
+EOF
+}
+
+# Default SDK paths
+DEFAULT_ANDROID_SDK_PATH="../../klaviyo-android-sdk"
+DEFAULT_IOS_SDK_PATH="../../../klaviyo-swift-sdk"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Parse command line arguments
+is_local=false
+android_value=""
+ios_value=""
+skip_pod_install=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -l|--local)
+      is_local=true
+      shift
+      ;;
+    -a|--android)
+      # Check if next arg exists and isn't a flag
+      if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+        android_value="$2"
+        shift 2
+      else
+        android_value="default"
+        shift
+      fi
+      ;;
+    --android=*)
+      android_value="${1#*=}"
+      shift
+      ;;
+    -i|--ios)
+      # Check if next arg exists and isn't a flag
+      if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+        ios_value="$2"
+        shift 2
+      else
+        ios_value="default"
+        shift
+      fi
+      ;;
+    --ios=*)
+      ios_value="${1#*=}"
+      shift
+      ;;
+    -s|--skip-pod-install)
+      skip_pod_install=true
+      shift
+      ;;
+    -*)
+      # Handle combined short flags (e.g., -lia, -la, -li)
+      if [[ ${#1} -gt 2 ]]; then
+        flags="${1#-}"
+        for ((i=0; i<${#flags}; i++)); do
+          case "${flags:$i:1}" in
+            l) is_local=true ;;
+            a) android_value="default" ;;
+            i) ios_value="default" ;;
+            s) skip_pod_install=true ;;
+            h) show_help; exit 0 ;;
+            *)
+              echo "Unknown flag: -${flags:$i:1}"
+              echo "Run '$0 --help' for usage information"
+              exit 1
+              ;;
+          esac
+        done
+        shift
+      else
+        echo "Unknown option: $1"
+        echo "Run '$0 --help' for usage information"
+        exit 1
+      fi
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Run '$0 --help' for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# Interactive mode: prompt for all configuration choices if none were provided as arguments
+if [[ "$is_local" == false && -z "$android_value" && -z "$ios_value" ]]; then
+  # Source menu helper function
+  source "$SCRIPT_DIR/lib/choose_from_menu.sh"
+
+  tput clear
+  echo "This script will help you configure the Klaviyo Android and Swift SDK dependencies"
+  echo
+
+  # Ask for configuration type
+  config_type=""
+  local_option="Local paths"
+  remote_option="Remote (branch/commit/version)"
+  choose_from_menu "Choose configuration type:" config_type "$local_option" "$remote_option"
+
+  case "$config_type" in
+    "$local_option")
+      echo
+      echo "A relative path should be relative to ./android"
+      read -rp "Enter the path to klaviyo-android-sdk (default: $DEFAULT_ANDROID_SDK_PATH): " android_value
+      android_value="${android_value:-$DEFAULT_ANDROID_SDK_PATH}"
+      echo
+
+      echo "A relative path should be relative to ./example/ios"
+      read -rp "Enter the relative path to klaviyo-swift-sdk (default: $DEFAULT_IOS_SDK_PATH): " ios_value
+      ios_value="${ios_value:-$DEFAULT_IOS_SDK_PATH}"
+      ;;
+    "$remote_option")
+      read -rp "Enter the Android SDK version, branch, or commit hash (default: gradle.properties): " android_value
+      android_value="${android_value:-gradle.properties}"
+
+      read -rp "Enter the iOS SDK version, branch, or commit hash (default: podspec): " ios_value
+      ios_value="${ios_value:-podspec}"
+      ;;
+  esac
+
+  # Pod install prompt
+  if [[ "$ios_value" != "skip" && "$skip_pod_install" != true ]]; then
+    echo
+    read -rp "Do you want to run 'pod install'? (Y/n): " response
+    response=${response:-y}
+    if [[ ! "$response" =~ ^[yY]$ ]]; then
+      skip_pod_install=true
+    fi
+  fi
+else
+  # Non-interactive mode: process defaults and implicit skips
+  if [[ -z "$android_value" && -z "$ios_value" ]]; then
+    # If neither platform specified, default both
+    android_value="default"
+    ios_value="default"
+  elif [[ -n "$android_value" || -n "$ios_value" ]]; then
+    # Implicit skip logic: if one platform specified, skip the other
+    [[ -z "$android_value" ]] && android_value="skip"
+    [[ -z "$ios_value" ]] && ios_value="skip"
+  fi
+
+  if [[ "$is_local" == true ]]; then
+    # Local flag: "default" means local paths
+    [[ "$android_value" == "default" ]] && android_value="$DEFAULT_ANDROID_SDK_PATH"
+    [[ "$ios_value" == "default" ]] && ios_value="$DEFAULT_IOS_SDK_PATH"
+  else
+    # No local flag: "default" means gradle.properties for Android, podspec for iOS
+    [[ "$android_value" == "default" ]] && android_value="gradle.properties"
+    [[ "$ios_value" == "default" ]] && ios_value="podspec"
+  fi
+fi
+
+# Toggle Android composite build mode
+function configure_android_local_properties() {
+  local android_dir="$1" # Directory to modify (i.e. SDK or Example)
   local enabled="$2" # true or false
-  local sdk_path="$3"
+  local sdk_path="$3" # path to local Android SDK
   local local_properties_file="$android_dir/local.properties"
   local template_file="$android_dir/local.properties.template"
 
@@ -39,22 +232,88 @@ function configure_local_properties() {
       echo "Updated localSdkPath to $sdk_path in $local_properties_file"
     fi
   fi
-  echo
 }
 
-function configure_podfile() {
-  local podfile="./example/ios/Podfile"
-  swift_sdk_version="$1"
+# Configure Android SDK version/path
+function configure_android_gradle() {
+  local android_sdk_version="$1"
+  local property_file="./android/gradle.properties"
+  local property_key="KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion"
+  local saved_comment="# saved:"
+  local cached_version
+  local save_cached=true
 
-  # Delete the overridden dependencies first
+  # Always restore from saved comment first if it exists
+  if grep -q "^$saved_comment" "$property_file"; then
+    cached_version=$(grep "^$saved_comment" "$property_file" | sed "s/^$saved_comment //")
+    # Remove the saved comment line
+    sed -i '' "/^$saved_comment/d" "$property_file"
+    # Update the property value
+    sed -i '' "s|^$property_key=.*|$property_key=$cached_version|" "$property_file"
+  else
+    cached_version=$(grep "^$property_key=" "$property_file" | cut -d'=' -f2)
+  fi
+
+  if [[ "$android_sdk_version" =~ ^(\.\./|\./|~|/) ]]; then
+    # Configure local.properties for composite build
+    configure_android_local_properties "./android" "true" "$android_sdk_version"
+    configure_android_local_properties "./example/android" "true" "../$android_sdk_version"
+
+    echo "Targeting Android SDK path: $android_sdk_version"
+  else
+    # Reset local.properties file
+    configure_android_local_properties "./android" "false"
+    configure_android_local_properties "./example/android" "false"
+
+    # Validate and format SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
+    if [[ "$android_sdk_version" == "gradle.properties" ]]; then
+      save_cached=false
+      echo "Resetting to gradle.properties version: $cached_version"
+      android_sdk_version="$cached_version"
+    elif [[ ! "$android_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ && ! "$android_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+      # Replace slashes with tildes and append "-SNAPSHOT"
+      android_sdk_version="${android_sdk_version//\//~}-SNAPSHOT"
+    fi
+
+    echo "Targeting Android SDK version: $android_sdk_version"
+  fi
+
+  # Add saved comment above the property
+  if [[ "$save_cached" == true ]]; then
+    sed -i '' "/^$property_key=/i\\
+$saved_comment $cached_version
+" "$property_file"
+  fi
+
+  sed -i '' "s|^$property_key=.*|$property_key=$android_sdk_version|" "$property_file"
+
+  echo "You should clean/sync gradle now in the IDE."
+}
+
+# Reusable function to configure the podfile for requested dependency
+function configure_pods() {
+  swift_sdk_version="$1"
+  local podspec="./klaviyo-react-native-sdk.podspec"
+  local podfile="./example/ios/Podfile"
+
+  # Delete overridden dependencies first, if any
   sed -i '' "/pod 'KlaviyoCore'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
 
-  if [[ -z "$swift_sdk_version" || "$swift_sdk_version" == "podspec" ]]; then
-    echo "Skipping Swift SDK version update."
+  # Restore podspec
+  sed -i '' 's/\(s\.dependency "KlaviyoSwift"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoForms"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
+
+  if [[ "$swift_sdk_version" == "podspec" ]]; then
+    echo "Restored to $podspec"
     return
   fi
+
+  # Comment out podspec version
+  sed -i '' 's/\(s\.dependency "KlaviyoSwift"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoForms"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
+  echo "Commented out version constraints in $podspec for local development"
 
   # List of dependencies
   dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms")
@@ -84,176 +343,22 @@ function configure_podfile() {
   done
 }
 
-# Configure local SDK for both directories
-function configure_local_android_sdk() {
-  local default_sdk_path="../../klaviyo-android-sdk"
-  read -rp "Enter the relative path to klaviyo-android-sdk (default: $default_sdk_path): " sdk_path
-  sdk_path=${sdk_path:-$default_sdk_path}
+# Execute configuration based on values
+if [[ "$android_value" != "skip" ]]; then
+  configure_android_gradle "$android_value"
   echo
-
-  configure_local_properties "./android" "true" "$sdk_path"
-  configure_local_properties "./example/android" "true" "../$sdk_path"
-}
-
-function configure_local_swift_sdk() {
-  local original_dir
-  original_dir=$(pwd) # Save the original working directory
-
-  local swift_sdk_path="../../../klaviyo-swift-sdk"
-
-  read -rp "Enter the relative path to klaviyo-swift-sdk (default: $swift_sdk_path): " sdk_path
-  sdk_path=${sdk_path:-$swift_sdk_path}
-  echo
-
-  # Ensure the path exists
-  if [[ ! -d "./example/ios/$sdk_path" ]]; then
-    echo "Error: Directory $sdk_path does not exist."
-    exit 1
-  fi
-
-  configure_podfile "$sdk_path"
-
-  cd "$original_dir" || exit 1 # Return to the original working directory
-}
-
-# Handle remote SDK configuration
-function configure_remote_android_sdk() {
-  configure_local_properties "./android" "false"
-  configure_local_properties "./example/android" "false"
-
-  local property_file="./android/gradle.properties"
-  local property_key="KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion"
-
-  if [[ ! -f "$property_file" ]]; then
-    echo "Error: $property_file not found."
-    exit 1
-  fi
-
-  local property_value
-  property_value=$(grep "^$property_key=" "$property_file" | cut -d'=' -f2)
-
-  if [[ -z "$property_value" ]]; then
-    echo "Error: Property '$property_key' not found in $property_file."
-    exit 1
-  fi
-
-  echo "Enter the android SDK version, branch, or commit hash [return] to skip"
-  echo "(current: $property_value)"
-  read -r sdkVersion
-  sdkVersion=${sdkVersion:-current}
-
-  if [[ -n "$sdkVersion" && "$sdkVersion" != "current" ]]; then
-    # Validate and format SDK version (semantic version or commit hash are unchanged, else assume it is a branch name)
-    if [[ ! "$sdkVersion" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ && ! "$sdkVersion" =~ ^[a-f0-9]{7,40}$ ]]; then
-      # Replace slashes with tildes and append "-SNAPSHOT"
-      sdkVersion="${sdkVersion//\//~}-SNAPSHOT"
-    fi
-
-    if grep -q "^$property_key=" $property_file; then
-      sed -i '' "s/^$property_key=.*/$property_key=$sdkVersion/" $property_file
-    else
-      echo "$property_key=$sdkVersion" >> $property_file
-    fi
-  else
-    echo "Skipping SDK version update."
-    sdkVersion=property_value
-  fi
-
-  echo "Now targeting SDK version: $sdkVersion."
-  echo "You should clean/sync gradle now."
-  echo
-}
-
-function configure_remote_swift_sdk() {
-  read -rp "Enter the swift SDK version, branch, or commit hash [return] to use podspec: " swift_sdk_version
-  swift_sdk_version=${swift_sdk_version:-podspec}
-
-  configure_podfile "$swift_sdk_version"
-}
-
-function choose_from_menu() {
-    local prompt="$1" outvar="$2"
-    shift
-    shift
-    local options=("$@") cur=0 count=$# index=0
-
-    # Display prompt
-    echo -n "$prompt"
-    echo
-    echo
-
-    # Save cursor position
-    tput sc
-
-    while true; do
-        # Clear the menu area
-        tput rc
-
-        # Display menu options
-        for ((i=0; i<count; i++)); do
-            if [[ "$i" == "$cur" ]]; then
-                echo -e " \033[38;5;41m>\033[0m\033[38;5;35m${options[$i]}\033[0m"
-            else
-                echo "  ${options[$i]}"
-            fi
-        done
-
-        # Read in pressed key
-        read -rsn1 key
-        if [[ $key == $'\x1b' ]]; then
-            read -rsn2 key
-            case $key in
-                '[A') # Up arrow
-                    cur=$(( $cur - 1 ))
-                    [ "$cur" -lt 0 ] && cur=$((count - 1))
-                    ;;
-                '[B') # Down arrow
-                    cur=$(( $cur + 1 ))
-                    [ "$cur" -ge $count ] && cur=0
-                    ;;
-            esac
-        elif [[ $key == "" ]]; then # Enter key
-            break
-        fi
-    done
-
-    # Pass chosen selection to main body of script
-    eval "$outvar='${options[$cur]}'"
-    echo
-}
-
-# Define menu options
-declare -a selections
-selections=(
-    "Local SDKs"
-    "Remote (semantic version or git branch/commit)"
-    "Exit"
-)
-
-# Display header
-tput clear
-echo "This script will help you configure the Klaviyo Android and Swift SDK dependencies"
-echo
-
-# Call menu function
-choose_from_menu "Select an option using arrow keys and press Enter:" selected_choice "${selections[@]}"
-
-# Handle selection
-if [[ "$selected_choice" == "Local SDKs" ]]; then
-  configure_local_android_sdk
-  configure_local_swift_sdk
-
-elif [[ "$selected_choice" == "Remote (semantic version or git branch/commit)" ]]; then
-  configure_remote_android_sdk
-  configure_remote_swift_sdk
 fi
 
-read -rp "Do you want to run 'pod install'? (Y/n): " response
-response=${response:-y}
-if [[ "$response" =~ ^[yY]$ ]]; then
-  cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
-  bundle exec pod install
-  echo "'pod install' completed successfully."
-else
-  echo "Skipped 'pod install'."
+if [[ "$ios_value" != "skip" ]]; then
+  configure_pods "$ios_value"
+
+  # Handle pod install
+  if [[ "$skip_pod_install" == true ]]; then
+    echo "Skipped 'pod install'"
+  else
+    echo "Running 'pod install'..."
+    cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
+    bundle exec pod install
+    echo "'pod install' completed successfully."
+  fi
 fi
