@@ -126,11 +126,60 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Interactive menu helper function
+function choose_from_menu() {
+    local prompt="$1" outvar="$2"
+    shift
+    shift
+    local options=("$@") cur=0 count=$# index=0
+
+    # Display prompt
+    echo -n "$prompt"
+    echo
+    echo
+
+    # Save cursor position
+    tput sc
+
+    while true; do
+        # Restore cursor position
+        tput rc
+
+        # Display menu options
+        for ((i=0; i<count; i++)); do
+            if [[ "$i" == "$cur" ]]; then
+                echo -e " \033[38;5;41m>\033[0m\033[38;5;35m${options[$i]}\033[0m"
+            else
+                echo "  ${options[$i]}"
+            fi
+        done
+        echo
+
+        # Read pressed key
+        read -rsn1 key
+        if [[ $key == $'\x1b' ]]; then
+            read -rsn2 key
+            case $key in
+                '[A') # Up arrow
+                    cur=$(( $cur - 1 ))
+                    [ "$cur" -lt 0 ] && cur=$((count - 1))
+                    ;;
+                '[B') # Down arrow
+                    cur=$(( $cur + 1 ))
+                    [ "$cur" -ge $count ] && cur=0
+                    ;;
+            esac
+        elif [[ $key == "" ]]; then # Enter key
+            break
+        fi
+    done
+
+    # Pass chosen selection to caller
+    eval "$outvar='${options[$cur]}'"
+}
+
 # Interactive mode: prompt for all configuration choices if none were provided as arguments
 if [[ "$is_local" == false && -z "$android_value" && -z "$ios_value" ]]; then
-  # Source menu helper function
-  source "$SCRIPT_DIR/lib/choose_from_menu.sh"
-
   tput clear
   echo "This script will help you configure the Klaviyo Android and Swift SDK dependencies"
   echo
