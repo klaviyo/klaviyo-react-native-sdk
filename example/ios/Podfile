@@ -25,10 +25,10 @@ target 'KlaviyoReactNativeSdkExample' do
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
   # Using remote branch feat/geofencing from GitHub
-  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'feat/geofencing'
-  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'feat/geofencing'
-  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'feat/geofencing'
-  pod 'KlaviyoLocation', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'feat/geofencing'
+  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.2.0-alpha.1'
+  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.2.0-alpha.1'
+  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.2.0-alpha.1'
+  pod 'KlaviyoLocation', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.2.0-alpha.1'
 
   # Setup permissions for react-native-permissions
   setup_permissions([
