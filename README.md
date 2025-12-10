@@ -611,7 +611,6 @@ instructions for Geofencing in the README from each native Klaviyo SDK:
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing)
-  - Note: In order to ensure geofence events are delivered reliably to the Klaviyo SDK in any app state (opened, backgrounded, terminated) you must call `registerGeofencing` in the native layer in `didFinishLaunchingWithOptions` in the AppDelegate 
 
 ### Setup
 
