@@ -44,9 +44,6 @@
   - [Geofencing](#geofencing)
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
-      - [iOS](#ios-2)
-      - [Android](#android-2)
-    - [Getting Current Geofences](#getting-current-geofences)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
@@ -601,15 +598,19 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 
 ## Geofencing
 
-[Geofencing](https://help.klaviyo.com/hc/en-us/articles/360023213971) allows you to trigger location-based marketing campaigns by monitoring when users enter or exit specific geographic regions. The Klaviyo SDK can automatically track geofence transitions and send them as analytics events to your Klaviyo account.
+> ℹ️ Support for Geofencing is currently available for early access to select Klaviyo customers. Please contact your CSM to be enrolled.
+
+> Alpha geofencing support is available in SDK version 2.2.0-alpha.1 and higher.
+
+Geofencing allows you to trigger events when users enter or exit geographic regions. The Klaviyo SDK monitors geofences configured in your Klaviyo account and automatically tracks geofence enter and exit events. The SDK automatically handles geofence synchronization with your Klaviyo account—when you add, update, or remove geofences in Klaviyo, the SDK will automatically sync these changes on the next app launch or when the API key changes.
 
 ### Prerequisites
 
-Integrating geofencing is highly platform-specific. Begin by thoroughly reviewing the setup
+Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
 instructions for Geofencing in the README from each native Klaviyo SDK:
 
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk#Geofencing)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Geofencing)
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing) - Requires calling `registerGeofencing` in the AppDelegate to ensure geofence events are delivered to the Klaviyo SDK
 
 ### Setup
 
@@ -617,46 +618,6 @@ To enable geofencing in your app, you must:
 
 1. Configure location permissions in your app's platform-specific configuration files
 2. Call `Klaviyo.registerGeofencing()` after initializing the SDK
-
-#### iOS
-
-Before registering for geofencing, ensure your app has the necessary location permissions configured:
-
-1. Add location usage descriptions to your `Info.plist`:
-   ```xml
-   <key>NSLocationWhenInUseUsageDescription</key>
-   <string>We use your location to send you relevant offers when you're nearby our stores.</string>
-   <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-   <string>We use your location to send you relevant offers when you're nearby our stores.</string>
-   ```
-
-2. Request location permissions from your app code. You can use React Native libraries like [`@react-native-community/geolocation`](https://github.com/react-native-geolocation/react-native-geolocation) or handle this natively.
-
-3. For background geofence monitoring, you may need to enable location updates in the background. Refer to the [iOS SDK documentation](https://github.com/klaviyo/klaviyo-swift-sdk#Geofencing) for detailed setup instructions.
-
-4. Register for geofencing after initializing the SDK:
-   ```typescript
-   import { Klaviyo } from 'klaviyo-react-native-sdk';
-   
-   // After initializing with your public API key
-   Klaviyo.registerGeofencing();
-   ```
-
-> **Note:** On iOS, geofencing accuracy may vary. For precise location tracking, consider requesting "Always" location permission. However, be aware that Apple requires justification for "Always" permission usage in App Store submissions.
-
-#### Android
-
-Before registering for geofencing, ensure your app has the necessary location permissions:
-
-1. Add location permissions to your `AndroidManifest.xml`:
-   ```xml
-   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-   ```
-
-2. Request location permissions at runtime from your app code. You can use React Native's `PermissionsAndroid` API or handle this natively.
-
-3. For Android 10 (API level 29) and above, you may need to request `ACCESS_BACKGROUND_LOCATION` permission for background geofence monitoring. Refer to the [Android SDK documentation](https://github.com/klaviyo/klaviyo-android-sdk#Geofencing) for detailed setup instructions.
 
 4. Register for geofencing after initializing the SDK:
    ```typescript
