@@ -110,3 +110,8 @@ Make sure to use the URL scheme (rntest://) of the example app when testing.
 There is an open issue with [`@react-native-firebase/messaging`](https://github.com/invertase/react-native-firebase/issues/8022) where the SDK will uppercase any APNS token returned using `messaging().getAPNSToken()`.
 You can verify this by adding a log the `AppDelegate.m` file that prints the deviceToken (you will need to convert to a hex string).
 This might have no impact on your use case, but is something to consider when designing.
+
+### iOS Geofencing Events not Firing
+
+The delivery of geofence events to the Klaviyo SDK requires registering for geofences in the native iOS layer in `didFinishLaunchingWithOptions`. If you only call `Klaviyo.registerGeofencing()` in the React Native layer or any later in the lifecycle, triggered enter/exit events may not get delivered in a reliable manner as the native monitoring service relies on that AppDelegate entry point.
+
