@@ -69,23 +69,13 @@ public class KlaviyoBridge: NSObject {
     @MainActor
     @objc
     public static func registerGeofencing() {
-        Task { @MainActor in
-            await KlaviyoSDK().registerGeofencing()
-        }
-    }
-
-    @MainActor
-    @objc
-    public static func monitorGeofencesFromBackground() {
-        KlaviyoSDK().monitorGeofencesFromBackground()
+        KlaviyoSDK().registerGeofencing()
     }
 
     @MainActor
     @objc
     public static func unregisterGeofencing() {
-        Task { @MainActor in
-            await KlaviyoSDK().unregisterGeofencing()
-        }
+        KlaviyoSDK().unregisterGeofencing()
     }
 
     @MainActor

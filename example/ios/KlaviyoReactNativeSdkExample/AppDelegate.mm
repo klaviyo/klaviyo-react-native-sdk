@@ -35,7 +35,7 @@ BOOL useNativeImplementation = YES;
 
   // Start monitoring geofences from background
   dispatch_async(dispatch_get_main_queue(), ^{
-    [KlaviyoBridge monitorGeofencesFromBackground];
+    [KlaviyoBridge registerGeofencing];
   });
 
   // refer to installation step 16 below
