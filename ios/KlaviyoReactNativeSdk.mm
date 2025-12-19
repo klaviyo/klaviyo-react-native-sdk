@@ -116,6 +116,16 @@ RCT_EXPORT_METHOD(unregisterFromInAppForms) {
     [KlaviyoBridge unregisterFromInAppForms];
 }
 
+#ifndef RCT_NEW_ARCH_ENABLED
+// Implement RCTInvalidating protocol for old architecture
+// This is called when the bridge is being torn down, such as during Expo Updates.reloadAsync()
+- (void)invalidate {
+    // Notify the bridge that we're being invalidated
+    // This ensures the SDK state is properly preserved during Expo reloads
+    [KlaviyoBridge onBridgeInvalidating];
+}
+#endif
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

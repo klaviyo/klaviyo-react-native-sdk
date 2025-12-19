@@ -5,8 +5,9 @@
 @interface KlaviyoReactNativeSdk : NSObject <NativeKlaviyoReactNativeSdkSpec>
 #else
 #import <React/RCTBridgeModule.h>
+#import <React/RCTInvalidating.h>
 
-@interface KlaviyoReactNativeSdk : NSObject <RCTBridgeModule>
+@interface KlaviyoReactNativeSdk : NSObject <RCTBridgeModule, RCTInvalidating>
 #endif
 
 @end

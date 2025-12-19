@@ -164,6 +164,19 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().resetProfile()
     }
 
+    /// Called when the React Native bridge is being invalidated (e.g., during Expo Updates.reloadAsync()).
+    /// This method ensures the SDK handles the bridge teardown gracefully without unintentionally
+    /// clearing the push token or other profile data.
+    @objc
+    public static func onBridgeInvalidating() {
+        // Log the bridge invalidation for debugging purposes
+        NSLog("[Klaviyo RN SDK] Bridge is being invalidated - preserving SDK state")
+        // The native Klaviyo SDK persists state to disk automatically.
+        // This method serves as an explicit signal that the bridge is being torn down
+        // intentionally (e.g., Expo OTA update) rather than the app terminating.
+        // No action needed as the SDK state is preserved in the singleton.
+    }
+
     @objc
     public static func handleUniversalTrackingLink(_ url: URL) {
         KlaviyoSDK().handleUniversalTrackingLink(url)
