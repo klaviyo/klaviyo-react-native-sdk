@@ -12,7 +12,8 @@ import type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
  * providing a unified API for interacting with Klaviyo's event tracking and profile management features.
  */
 export interface KlaviyoInterface
-  extends KlaviyoEventAPI,
+  extends
+    KlaviyoEventAPI,
     KlaviyoProfileApi,
     KlaviyoPushApi,
     KlaviyoGeofencingApi,

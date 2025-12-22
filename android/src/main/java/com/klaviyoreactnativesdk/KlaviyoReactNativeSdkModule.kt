@@ -132,17 +132,19 @@ class KlaviyoReactNativeSdkModule(
 
     profile.toHashMap().iterator().forEach { (key, value) ->
       when (key) {
-        LOCATION, PROPERTIES ->
+        LOCATION, PROPERTIES -> {
           (value as? HashMap<*, *>)?.forEach { (key, value) ->
             if (key is String && value is Serializable) {
               parsedProfile[key] = value
             }
           }
+        }
 
-        else ->
+        else -> {
           if (value is Serializable) {
             parsedProfile[key] = value
           }
+        }
       }
     }
 
