@@ -354,6 +354,7 @@ function configure_pods() {
   # Restore podspec
   sed -i '' 's/\(s\.dependency "KlaviyoSwift"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
   sed -i '' 's/\(s\.dependency "KlaviyoForms"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoLocation"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
 
   if [[ "$swift_sdk_version" == "podspec" ]]; then
     echo "Restored to $podspec"
@@ -363,6 +364,7 @@ function configure_pods() {
   # Comment out podspec version
   sed -i '' 's/\(s\.dependency "KlaviyoSwift"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
   sed -i '' 's/\(s\.dependency "KlaviyoForms"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
+  sed -i '' 's/\(s\.dependency "KlaviyoLocation"\), "\([^"]*\)"/\1 ##, "\2"/' "$podspec"
   echo "Commented out version constraints in $podspec for local development"
 
   # List of dependencies

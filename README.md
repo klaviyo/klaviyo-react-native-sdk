@@ -598,9 +598,7 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 
 ## Geofencing
 
-> ℹ️ Support for Geofencing is currently available for early access to select Klaviyo customers. Please contact your CSM to be enrolled.
-
-> Alpha geofencing support is available in SDK version 2.2.0-alpha.1 and higher.
+> Geofencing support is available in SDK version 2.2.0 and higher.
 
 Geofencing allows you to trigger events when users enter or exit geographic regions. The Klaviyo SDK monitors geofences configured in your Klaviyo account and automatically tracks geofence enter and exit events. The SDK automatically handles geofence synchronization with your Klaviyo account—when you add, update, or remove geofences in Klaviyo, the SDK will automatically sync these changes on the next app launch or when the API key changes.
 
@@ -619,10 +617,11 @@ To enable geofencing in your app, you must:
 1. Configure location permissions in your app's platform-specific configuration files
 2. Call `Klaviyo.registerGeofencing()` after initializing the SDK
 
-4. Register for geofencing after initializing the SDK:
+3. Register for geofencing after initializing the SDK:
+
    ```typescript
    import { Klaviyo } from 'klaviyo-react-native-sdk';
-   
+
    // After initializing with your public API key
    Klaviyo.registerGeofencing();
    ```
