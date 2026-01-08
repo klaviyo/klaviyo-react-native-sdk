@@ -76,9 +76,9 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@evilmartians/lefthook": "^1.6.0",
-    "@react-native-community/cli": "19.1.1",
-    "@react-native/eslint-config": "0.80.2",
-    "@react-native/new-app-screen": "0.80.2",
+    "@react-native-community/cli": "20.0.0",
+    "@react-native/eslint-config": "0.81.5",
+    "@react-native/new-app-screen": "0.81.5",
     "@release-it/conventional-changelog": "^9.0.2",
     "@types/jest": "^29.5.5",
     "@types/react": "^19.1.0",
@@ -92,12 +92,13 @@
     "lint-staged": "^15.2.0",
     "prettier": "^3.0.3",
     "react": "19.1.0",
-    "react-native": "0.80.2",
+    "react-native": "0.81.5",
     "react-native-builder-bob": "^0.36.0",
+    "react-native-safe-area-context": "^5.5.2",
     "release-it": "^17.10.0",
     "turbo": "^1.10.7",
     "typedoc": "^0.25.7",
-    "typescript": "^5.0.2"
+    "typescript": "^5.8.3"
   },
   "resolutions": {
     "@types/react": "^19.1.0"
