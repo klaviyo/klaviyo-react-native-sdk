@@ -6,10 +6,10 @@
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
   "react-native": "./lib/module/index.js",
-  "types": "./lib/typescript/src/index.d.ts",
+  "types": "./lib/typescript/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/typescript/src/index.d.ts",
+      "types": "./lib/typescript/index.d.ts",
       "react-native": "./lib/module/index.js",
       "import": "./lib/module/index.js",
       "require": "./lib/commonjs/index.js"
@@ -78,6 +78,7 @@
     "@react-native/babel-preset": "^0.83.1",
     "@react-native/eslint-config": "0.81.5",
     "@react-native/new-app-screen": "0.81.5",
+    "@react-native/typescript-config": "0.81.5",
     "@release-it/conventional-changelog": "^9.0.2",
     "@types/jest": "^29.5.5",
     "@types/react": "^19.1.0",
