@@ -600,7 +600,7 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 
 > Geofencing support is available in SDK version 2.2.0 and higher.
 
-Geofencing allows you to trigger events when users enter or exit geographic regions. The Klaviyo SDK monitors geofences configured in your Klaviyo account and automatically tracks geofence enter and exit events. The SDK automatically handles geofence synchronization with your Klaviyo account—when you add, update, or remove geofences in Klaviyo, the SDK will automatically sync these changes on the next app launch or when the API key changes.
+[Geofencing](https://help.klaviyo.com/hc/en-us/articles/45194892526747) allows you to trigger events when users enter or exit geographic regions. The Klaviyo SDK monitors geofences configured in your Klaviyo account and automatically tracks geofence enter and exit events. The SDK automatically handles geofence synchronization with your Klaviyo account—when you add, update, or remove geofences in Klaviyo, the SDK will automatically sync these changes on the next app launch or when the API key changes.
 
 ### Prerequisites
 
