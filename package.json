@@ -95,7 +95,6 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-builder-bob": "^0.36.0",
-    "react-native-safe-area-context": "^5.5.2",
     "release-it": "^17.10.0",
     "turbo": "^1.10.7",
     "typedoc": "^0.25.7",
