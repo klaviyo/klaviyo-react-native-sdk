@@ -45,7 +45,8 @@
     "lint": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --ignore-pattern '**/build/**' && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' && swiftlint",
     "lint-fix": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --ignore-pattern '**/build/**' --fix && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' -F && swiftlint --fix ",
     "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,md,yml}'",
-    "generate-docs": "typedoc src"
+    "generate-docs": "typedoc src",
+    "attw": "attw --pack . --ignore-rules unexpected-module-syntax"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
@@ -73,6 +74,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@evilmartians/lefthook": "^1.6.0",
     "@react-native-community/cli": "19.1.1",
     "@react-native/eslint-config": "0.80.2",
