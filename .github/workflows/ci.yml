@@ -61,3 +61,6 @@ jobs:
 
       - name: Build package
         run: yarn prepare
+
+      - name: Validate TypeScript types
+        run: yarn attw
