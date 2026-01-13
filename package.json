@@ -92,7 +92,7 @@
     "prettier": "^3.0.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-builder-bob": "0.39.1",
+    "react-native-builder-bob": "0.40.17",
     "release-it": "^17.10.0",
     "ts-add-js-extension": "^1.6.6",
     "turbo": "^1.10.7",
