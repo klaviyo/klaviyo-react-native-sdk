@@ -3,16 +3,13 @@
   "version": "2.2.0",
   "description": "Official Klaviyo React Native SDK",
   "source": "./src/index.tsx",
-  "main": "./lib/commonjs/index.js",
-  "module": "./lib/module/index.js",
-  "react-native": "./lib/module/index.js",
+  "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
-      "react-native": "./lib/module/index.js",
-      "import": "./lib/module/index.js",
-      "require": "./lib/commonjs/index.js"
+      "default": "./lib/module/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -41,13 +38,13 @@
     "test": "jest",
     "typecheck": "tsc",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build",
+    "prepare": "bob build && ts-add-js-extension add --dir=lib/typescript",
     "release": "release-it",
     "lint": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --ignore-pattern '**/build/**' && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' && swiftlint",
     "lint-fix": "eslint '**/*.{js,jsx,ts,tsx}' --ignore-pattern 'docs/**' --ignore-pattern '**/build/**' --fix && ktlint '**/*.kt' '!**/node_modules/**' '!**/docs/**' -F && swiftlint --fix ",
     "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,md,yml}'",
     "generate-docs": "typedoc src",
-    "attw": "attw --pack . --ignore-rules unexpected-module-syntax"
+    "attw": "attw --pack . --ignore-rules unexpected-module-syntax cjs-resolves-to-esm"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
@@ -95,8 +92,9 @@
     "prettier": "^3.0.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-builder-bob": "^0.36.0",
+    "react-native-builder-bob": "^0.40.17",
     "release-it": "^17.10.0",
+    "ts-add-js-extension": "^1.6.6",
     "turbo": "^1.10.7",
     "typedoc": "^0.25.7",
     "typescript": "^5.8.3"
@@ -174,12 +172,6 @@
     "source": "src",
     "output": "lib",
     "targets": [
-      [
-        "commonjs",
-        {
-          "esm": true
-        }
-      ],
       [
         "module",
         {
