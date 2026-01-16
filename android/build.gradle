@@ -27,10 +27,6 @@ def isNewArchitectureEnabled() {
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
 
-if (isNewArchitectureEnabled()) {
-  apply plugin: "com.facebook.react"
-}
-
 def getExtOrDefault(name) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["KlaviyoReactNativeSdk_" + name]
 }
@@ -121,6 +117,7 @@ dependencies {
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:forms:$klaviyoAndroidSdkVersion"
+  api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
   implementation "com.github.klaviyo.klaviyo-android-sdk:core:$klaviyoAndroidSdkVersion"
 
   // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically

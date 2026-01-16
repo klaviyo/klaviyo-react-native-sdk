@@ -30,6 +30,7 @@ if (localPropertiesFile.exists() && localPropertiesFile.canRead()) {
         substitute module("com.github.klaviyo.klaviyo-android-sdk:core") using project(":sdk:core")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:analytics") using project(":sdk:analytics")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:forms") using project(":sdk:forms")
+        substitute module("com.github.klaviyo.klaviyo-android-sdk:location") using project(":sdk:location")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:push-fcm") using project(":sdk:push-fcm")
       }
     }

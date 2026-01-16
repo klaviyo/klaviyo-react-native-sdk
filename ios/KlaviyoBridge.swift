@@ -1,5 +1,6 @@
 import KlaviyoSwift
 import KlaviyoForms
+@_spi(KlaviyoPrivate)import KlaviyoLocation
 @_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
@@ -63,6 +64,35 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func unregisterFromInAppForms() {
         KlaviyoSDK().unregisterFromInAppForms()
+    }
+
+    @MainActor
+    @objc
+    public static func registerGeofencing() {
+        KlaviyoSDK().registerGeofencing()
+    }
+
+    @MainActor
+    @objc
+    public static func unregisterGeofencing() {
+        KlaviyoSDK().unregisterGeofencing()
+    }
+
+    @MainActor
+    @objc
+    public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
+        Task { @MainActor in
+            let geofences = await KlaviyoSDK().getCurrentGeofences()
+            let geofencesArray = geofences.map { region -> [String: AnyObject] in
+                [
+                    "identifier": region.identifier as AnyObject,
+                    "latitude": region.center.latitude as AnyObject,
+                    "longitude": region.center.longitude as AnyObject,
+                    "radius": region.radius as AnyObject
+                ]
+            }
+            callback(["geofences": geofencesArray as AnyObject])
+        }
     }
 
     @objc

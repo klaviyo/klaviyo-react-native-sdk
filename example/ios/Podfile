@@ -1,13 +1,16 @@
-# Resolve react_native_pods.rb with node to allow for hoisting
-require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve(
-    "react-native/scripts/react_native_pods.rb",
-    {paths: [process.argv[1]]},
-  )', __dir__]).strip
+ def node_require(script)
+   require Pod::Executable.execute_command('node', ['-p',
+     "require.resolve(
+       '#{script}',
+       {paths: [process.argv[1]]},
+     )", __dir__]).strip
+ end
+
+node_require('react-native/scripts/react_native_pods.rb')
+node_require('react-native-permissions/scripts/setup.rb')
 
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
-
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -21,6 +24,12 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
+
+  # Setup permissions for react-native-permissions
+  setup_permissions([
+    'LocationWhenInUse',
+    'LocationAlways',
+  ])
 
   use_react_native!(
     :path => config[:reactNativePath],

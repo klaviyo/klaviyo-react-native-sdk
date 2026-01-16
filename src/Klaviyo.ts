@@ -2,6 +2,7 @@ import type { KlaviyoEventAPI } from './Event';
 import type { KlaviyoProfileApi } from './Profile';
 import type { KlaviyoPushApi } from './Push';
 import type { KlaviyoFormsApi } from './Forms';
+import type { KlaviyoGeofencingApi } from './Geofencing';
 import type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 
 /**
@@ -11,9 +12,11 @@ import type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
  * providing a unified API for interacting with Klaviyo's event tracking and profile management features.
  */
 export interface KlaviyoInterface
-  extends KlaviyoEventAPI,
+  extends
+    KlaviyoEventAPI,
     KlaviyoProfileApi,
     KlaviyoPushApi,
+    KlaviyoGeofencingApi,
     KlaviyoFormsApi,
     KlaviyoDeepLinkAPI {
   /**

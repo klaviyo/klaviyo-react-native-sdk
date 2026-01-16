@@ -7,6 +7,7 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 import type { FormConfiguration } from './Forms';
+import type { Geofence } from './Geofencing';
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -66,6 +67,17 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms: () => {
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  registerGeofencing(): void {
+    KlaviyoReactNativeSdk.registerGeofencing();
+  },
+  unregisterGeofencing(): void {
+    KlaviyoReactNativeSdk.unregisterGeofencing();
+  },
+  getCurrentGeofences(
+    callback: (result: { geofences: Geofence[] }) => void
+  ): void {
+    KlaviyoReactNativeSdk.getCurrentGeofences(callback);
+  },
   /**
    * Resolves a Klaviyo tracking link to a Universal Link URL,
    * then handles navigation to the resolved URL.
@@ -102,3 +114,4 @@ export {
 export type { KlaviyoInterface } from './Klaviyo';
 export type { FormConfiguration } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
+export type { Geofence } from './Geofencing';

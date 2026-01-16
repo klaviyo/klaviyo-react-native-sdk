@@ -40,6 +40,11 @@
     - [Setup](#setup-1)
       - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
     - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
+
+  - [Geofencing](#geofencing)
+    - [Prerequisites](#prerequisites-2)
+    - [Setup](#setup-2)
+    - [Unregistering from Geofencing](#unregistering-from-geofencing)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -590,6 +595,48 @@ Klaviyo.unregisterFromInAppForms(config);
 ```
 
 Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
+
+## Geofencing
+
+> Geofencing support is available in SDK version 2.2.0 and higher.
+
+[Geofencing](https://help.klaviyo.com/hc/en-us/articles/45194892526747) allows you to trigger events when users enter or exit geographic regions. The Klaviyo SDK monitors geofences configured in your Klaviyo account and automatically tracks geofence enter and exit events. The SDK automatically handles geofence synchronization with your Klaviyo account—when you add, update, or remove geofences in Klaviyo, the SDK will automatically sync these changes on the next app launch or when the API key changes.
+
+### Prerequisites
+
+Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
+instructions for Geofencing in the README from each native Klaviyo SDK:
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing)
+
+### Setup
+
+To enable geofencing in your app, you must:
+
+1. Configure location permissions in your app's platform-specific configuration files
+2. Call `Klaviyo.registerGeofencing()` after initializing the SDK
+
+3. Register for geofencing after initializing the SDK:
+
+   ```typescript
+   import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+   // After initializing with your public API key
+   Klaviyo.registerGeofencing();
+   ```
+
+### Unregistering from Geofencing
+
+If at any point you need to stop monitoring geofences, e.g. when the user logs out or opts out of location tracking, you may call:
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+Klaviyo.unregisterGeofencing();
+```
+
+After unregistering, the SDK will stop monitoring geofences and will no longer report geofence transition events. You can call `registerGeofencing()` again to resume monitoring.
 
 ## Troubleshooting
 
