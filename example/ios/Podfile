@@ -24,10 +24,6 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
-  pod 'KlaviyoCore', '5.2.0'
-  pod 'KlaviyoSwift', '5.2.0'
-  pod 'KlaviyoForms', '5.2.0'
-  pod 'KlaviyoLocation', '5.2.0'
 
   # Setup permissions for react-native-permissions
   setup_permissions([
