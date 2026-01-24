@@ -29,7 +29,7 @@ DerivedData
 *.xcuserstate
 project.xcworkspace
 .xcode.env.local
-GoogleService-info.plist
+GoogleService-Info.plist
 
 # Android/IJ
 #
