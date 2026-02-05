@@ -8,6 +8,7 @@ import {
 import type { Event } from './Event';
 import type { FormConfiguration } from './Forms';
 import type { Geofence } from './Geofencing';
+import type { Subscription } from './Subscription';
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -60,6 +61,9 @@ export const Klaviyo: KlaviyoInterface = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
+  },
+  createSubscription(subscription: Subscription): void {
+    KlaviyoReactNativeSdk.createSubscription(subscription);
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     KlaviyoReactNativeSdk.registerForInAppForms(configuration);
@@ -115,3 +119,4 @@ export type { KlaviyoInterface } from './Klaviyo';
 export type { FormConfiguration } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
+export type { Subscription, SubscriptionChannels } from './Subscription';

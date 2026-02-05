@@ -269,4 +269,37 @@ class KlaviyoReactNativeSdkModule(
 
     Klaviyo.createEvent(event = klaviyoEvent)
   }
+
+  @ReactMethod
+  fun createSubscription(subscription: ReadableMap) {
+    val listId =
+      subscription
+        .takeIf {
+          it.hasKey("listId") && it.getType("listId") == ReadableType.String
+        }?.getString("listId") ?: run {
+        Registry.log.error("Klaviyo React Native SDK: listId is required for subscription")
+        return
+      }
+
+    var channels: com.klaviyo.analytics.model.Subscription.Channels? = null
+    if (subscription.hasKey("channels") && subscription.getType("channels") == ReadableType.Map) {
+      subscription.getMap("channels")?.let { channelsMap ->
+        val email = channelsMap.takeIf {
+          it.hasKey("email") && it.getType("email") == ReadableType.Boolean
+        }?.getBoolean("email") ?: false
+        val sms = channelsMap.takeIf {
+          it.hasKey("sms") && it.getType("sms") == ReadableType.Boolean
+        }?.getBoolean("sms") ?: false
+        channels = com.klaviyo.analytics.model.Subscription.Channels(email = email, sms = sms)
+      }
+    }
+
+    val klaviyoSubscription =
+      com.klaviyo.analytics.model.Subscription(
+        listId = listId,
+        channels = channels,
+      )
+
+    Klaviyo.createSubscription(subscription = klaviyoSubscription)
+  }
 }

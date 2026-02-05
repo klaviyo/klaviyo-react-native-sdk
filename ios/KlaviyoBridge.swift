@@ -217,6 +217,24 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().create(event: event)
     }
 
+    @objc
+    public static func createSubscription(subscription: [String: AnyObject]) {
+        guard let listId = subscription["listId"] as? String,
+              !listId.isEmpty else {
+            return
+        }
+
+        var channels: Subscription.Channels?
+        if let channelsDict = subscription["channels"] as? [String: AnyObject] {
+            let email = channelsDict["email"] as? Bool ?? false
+            let sms = channelsDict["sms"] as? Bool ?? false
+            channels = Subscription.Channels(email: email, sms: sms)
+        }
+
+        let klaviyoSubscription = Subscription(listId: listId, channels: channels)
+        KlaviyoSDK().create(subscription: klaviyoSubscription)
+    }
+
     static func getEventMetricsName(_ str: String) -> Event.EventName? {
         switch str {
         case Event.EventName.viewedProductMetric.value:

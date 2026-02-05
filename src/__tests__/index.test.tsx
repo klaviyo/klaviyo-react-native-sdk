@@ -28,6 +28,7 @@ jest.mock('react-native', () => {
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
         handleUniversalTrackingLink: jest.fn(),
+        createSubscription: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
             FIRST_NAME: 'first_name',
@@ -420,6 +421,52 @@ describe('Klaviyo SDK', () => {
 
       // Restore console.error
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('subscriptions', () => {
+    it('should create a subscription with listId only', () => {
+      const subscription = {
+        listId: 'list_123',
+      };
+
+      Klaviyo.createSubscription(subscription);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith(subscription);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should create a subscription with channels', () => {
+      const subscription = {
+        listId: 'list_456',
+        channels: {
+          email: true,
+          sms: false,
+        },
+      };
+
+      Klaviyo.createSubscription(subscription);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith(subscription);
+    });
+
+    it('should create a subscription with all channels enabled', () => {
+      const subscription = {
+        listId: 'list_789',
+        channels: {
+          email: true,
+          sms: true,
+        },
+      };
+
+      Klaviyo.createSubscription(subscription);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith(subscription);
     });
   });
 });

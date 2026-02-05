@@ -108,6 +108,11 @@ RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)
     [KlaviyoBridge createEventWithEvent:event];
 }
 
+RCT_EXPORT_METHOD(createSubscription: (NSDictionary *) subscription)
+{
+    [KlaviyoBridge createSubscriptionWithSubscription:subscription];
+}
+
 RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration];
