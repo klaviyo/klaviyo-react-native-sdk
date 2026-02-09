@@ -90,6 +90,13 @@ repositories {
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 def kotlin_version = getExtOrDefault("kotlinVersion")
+
+// Whether to include location permissions from Klaviyo's location module.
+// Set klaviyoIncludeLocationPermissions=false in your gradle.properties to exclude them.
+// When false, apps using geofencing must declare location permissions in their own manifest.
+def includeLocationPermissions = rootProject.hasProperty('klaviyoIncludeLocationPermissions')
+    ? rootProject.property('klaviyoIncludeLocationPermissions').toBoolean()
+    : true
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
   localProperties.load(new FileInputStream(rootProject.file("local.properties")))
@@ -117,7 +124,12 @@ dependencies {
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:forms:$klaviyoAndroidSdkVersion"
-  api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
+  if (includeLocationPermissions) {
+    api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
+  } else {
+    // TODO: Update version once Android SDK releases noPermissions flavor
+    api "com.github.klaviyo.klaviyo-android-sdk:location:feat~flutter-support-SNAPSHOT:noPermissions@aar"
+  }
   implementation "com.github.klaviyo.klaviyo-android-sdk:core:$klaviyoAndroidSdkVersion"
 
   // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically

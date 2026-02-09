@@ -44,6 +44,8 @@
   - [Geofencing](#geofencing)
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
+      - [Android Location Permissions](#android-location-permissions)
+      - [Registering for Geofencing](#registering-for-geofencing)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
@@ -616,15 +618,34 @@ To enable geofencing in your app, you must:
 
 1. Configure location permissions in your app's platform-specific configuration files
 2. Call `Klaviyo.registerGeofencing()` after initializing the SDK
+3. Prompt the user to grant background location permissions at run time
 
-3. Register for geofencing after initializing the SDK:
+#### Android Location Permissions
 
-   ```typescript
-   import { Klaviyo } from 'klaviyo-react-native-sdk';
+By default, the Klaviyo React Native SDK includes these manifest declarations for the android location permissions required for geofencing.
 
-   // After initializing with your public API key
-   Klaviyo.registerGeofencing();
-   ```
+```xml
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+```
+
+If your app doesn't use geofencing, or you prefer to declare the permissions in your own app manifest, add the following to your `android/gradle.properties`:
+
+```properties
+klaviyoIncludeLocationPermissions=false
+```
+
+#### Registering for Geofencing
+
+After configuring permissions, register for geofencing after initializing the SDK:
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+// After initializing with your public API key
+Klaviyo.registerGeofencing();
+```
 
 ### Unregistering from Geofencing
 
