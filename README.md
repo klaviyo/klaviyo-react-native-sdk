@@ -45,7 +45,7 @@
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
       - [Android Location Permissions](#android-location-permissions)
-      - [Registering for Geofencing](#registering-for-geofencing)
+      - [iOS Location Permissions](#ios-location-permissions)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
@@ -618,6 +618,14 @@ To enable geofencing in your app, you must:
 
 1. Configure location permissions in your app's platform-specific configuration files
 2. Call `Klaviyo.registerGeofencing()` after initializing the SDK
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+// After initializing with your public API key
+Klaviyo.registerGeofencing();
+```
+
 3. Prompt the user to grant background location permissions at run time
 
 #### Android Location Permissions
@@ -636,16 +644,9 @@ If your app doesn't use geofencing, or you prefer to declare the permissions in 
 klaviyoIncludeLocationPermissions=false
 ```
 
-#### Registering for Geofencing
+#### iOS Location Permissions
 
-After configuring permissions, register for geofencing after initializing the SDK:
-
-```typescript
-import { Klaviyo } from 'klaviyo-react-native-sdk';
-
-// After initializing with your public API key
-Klaviyo.registerGeofencing();
-```
+The Klaviyo React Native SDK does not automatically set up permissions to support geofencing on iOS. You must implement them yourself following the [native instructions](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing) to add the necessary keys to the Info.plist if your app utilizes geofencing.
 
 ### Unregistering from Geofencing
 
