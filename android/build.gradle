@@ -127,8 +127,7 @@ dependencies {
   if (includeLocationPermissions) {
     api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
   } else {
-    // TODO: Update version once Android SDK releases noPermissions flavor
-    api "com.github.klaviyo.klaviyo-android-sdk:location:feat~flutter-support-SNAPSHOT:noPermissions@aar"
+    api "com.github.klaviyo.klaviyo-android-sdk:location-no-permissions:$klaviyoAndroidSdkVersion"
   }
   implementation "com.github.klaviyo.klaviyo-android-sdk:core:$klaviyoAndroidSdkVersion"
 
