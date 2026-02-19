@@ -19,8 +19,13 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   s.dependency "KlaviyoSwift", "5.2.0"
-  s.dependency "KlaviyoForms", "5.2.0"
-  s.dependency "KlaviyoLocation", "5.2.0"
+  # Optional location and forms; included by default, set to 'false' to exclude
+  if ENV['ENABLE_KLAVIYO_LOCATIONS'] != 'false'
+    s.dependency "KlaviyoLocation", "5.2.0"
+  end
+  if ENV['ENABLE_KLAVIYO_FORMS'] != 'false'
+    s.dependency "KlaviyoForms", "5.2.0"
+  end
 
   s.default_subspecs = :none
 

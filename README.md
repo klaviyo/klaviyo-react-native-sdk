@@ -15,6 +15,7 @@
   - [Installation](#installation)
     - [Android](#android-1)
     - [iOS](#ios-1)
+      - [Optional modules: In-App Forms and Geofencing (iOS)](#optional-modules-in-app-forms-and-geofencing-ios)
   - [Initialization](#initialization)
     - [React Native Initialization](#react-native-initialization)
     - [Native Initialization](#native-initialization)
@@ -157,6 +158,24 @@ pod install
 ```
 
 You may also need to run `pod update` or `pod install --repo-update` after updating your SDK version.
+
+#### Optional modules: In-App Forms and Geofencing (iOS)
+
+In-App Forms and Geofencing (location) are **included by default** on iOS. To reduce app size or if you do not use these features, you can exclude them by setting the corresponding environment variable to `false` **before** running `pod install`:
+
+| Feature          | Environment variable       | Default | Description                                                      |
+| ---------------- | -------------------------- | ------- | ---------------------------------------------------------------- |
+| **In-App Forms** | `ENABLE_KLAVIYO_FORMS`     | `true`  | Set to `false` to exclude the KlaviyoForms native dependency.    |
+| **Geofencing**   | `ENABLE_KLAVIYO_LOCATIONS` | `true`  | Set to `false` to exclude the KlaviyoLocation native dependency. |
+
+To exclude both optional modules, then install pods:
+
+```sh
+cd ios
+ENABLE_KLAVIYO_FORMS=false ENABLE_KLAVIYO_LOCATIONS=false pod install
+```
+
+Or see the [example app Podfile](./example/ios/Podfile) for a reference that sets these environment variables before pods are installed.
 
 ## Initialization
 
@@ -545,6 +564,7 @@ In-App Forms supports advanced targeting and segmentation. In your Klaviyo accou
 ### Prerequisites
 
 - Import the Klaviyo module
+- **iOS:** In-App Forms is included by default. To exclude it, set `ENABLE_KLAVIYO_FORMS=false` before `pod install`. See [Optional modules: In-App Forms and Geofencing (iOS)](#optional-modules-in-app-forms-and-geofencing-ios).
 - We strongly recommend using the latest version of the SDK to ensure compatibility with the latest In-App Forms features. The minimum SDK version supporting In-App Forms is 1.2.0, and a feature matrix is provided below. Forms that leverage unsupported features will not appear in your app until you update to a version that supports those features.
 - Please read the [migration guide](MIGRATION_GUIDE.md) if you are upgrading from 1.2.0 to understanding changes to In-App Forms behavior.
 
@@ -604,8 +624,9 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 
 ### Prerequisites
 
-Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
-instructions for Geofencing in the README from each native Klaviyo SDK:
+- **iOS:** Geofencing is included by default. To exclude it, set `ENABLE_KLAVIYO_LOCATIONS=false` before `pod install`. See [Optional modules: In-App Forms and Geofencing (iOS)](#optional-modules-in-app-forms-and-geofencing-ios).
+- Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
+  instructions for Geofencing in the README from each native Klaviyo SDK:
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing)
