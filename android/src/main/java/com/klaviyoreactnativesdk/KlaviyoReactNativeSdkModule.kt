@@ -18,9 +18,11 @@ import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.unregisterFromInAppForms
+import com.klaviyo.location.GeofencingProvider
 import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
@@ -47,6 +49,8 @@ class KlaviyoReactNativeSdkModule(
           this[PROPERTIES] = PROPERTIES
         },
       "EVENT_NAMES" to this.extractConstants<EventMetric>(),
+      "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
+      "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
     )
 
   private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword =
