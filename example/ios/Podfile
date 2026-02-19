@@ -1,6 +1,6 @@
 # Set environment variables to opt in or out of KlaviyoForms and KlaviyoLocation pods
 ENV['ENABLE_KLAVIYO_FORMS'] = 'true'
-ENV['ENABLE_KLAVIYO_LOCATIONS'] = 'true'
+ENV['ENABLE_KLAVIYO_LOCATION'] = 'true'
 
 def node_require(script)
    require Pod::Executable.execute_command('node', ['-p',
