@@ -45,6 +45,9 @@
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
+  - [Android Module Configuration](#android-module-configuration)
+    - [Excluding Location / Geofencing](#excluding-location--geofencing)
+    - [Excluding In-App Forms](#excluding-in-app-forms)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -637,6 +640,40 @@ Klaviyo.unregisterGeofencing();
 ```
 
 After unregistering, the SDK will stop monitoring geofences and will no longer report geofence transition events. You can call `registerGeofencing()` again to resume monitoring.
+
+## Android Module Configuration
+
+The React Native SDK includes the full Klaviyo Android SDK modules by default, including geofencing (location)
+and in-app forms. If your app doesn't use these features, you can reduce your app's dependency footprint by
+opting out of the full modules. When opted out, only a lightweight `-core` module is included which provides
+the API surface (compiles) but no implementation (no-ops at runtime). This avoids pulling in heavy transitive
+dependencies like Google Play Services Location or the forms WebView rendering engine.
+
+### Excluding Location / Geofencing
+
+To exclude the full location module (which includes geofencing and location permissions), add the following
+to your app's `android/gradle.properties`:
+
+```properties
+klaviyoIncludeLocation=false
+```
+
+When set to `false`, only the lightweight `location-core` module is included. Calls to `registerGeofencing()`
+and `getCurrentGeofences()` will be no-ops and log a warning.
+
+### Excluding In-App Forms
+
+To exclude the full forms module (which includes the WebView rendering engine for in-app forms), add the
+following to your app's `android/gradle.properties`:
+
+```properties
+klaviyoIncludeForms=false
+```
+
+When set to `false`, only the lightweight `forms-core` module is included. Calls to `registerForInAppForms()`
+will be no-ops and log a warning.
+
+> **Note**: Both flags default to `true` if not specified, so you only need to set them if you want to opt out.
 
 ## Troubleshooting
 
