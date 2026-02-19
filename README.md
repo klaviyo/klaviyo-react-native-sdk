@@ -658,8 +658,10 @@ to your app's `android/gradle.properties`:
 klaviyoIncludeLocation=false
 ```
 
-When set to `false`, only the lightweight `location-core` module is included. Calls to `registerGeofencing()`
-and `getCurrentGeofences()` will be no-ops and log a warning.
+When set to `false`, only the lightweight `location-core` module is included. The API surface
+(`registerGeofencing()`, `getCurrentGeofences()`, etc.) remains available so your code compiles,
+but these calls will be no-ops at runtime since the underlying implementation is not present.
+The SDK handles this gracefully and logs an error.
 
 ### Excluding In-App Forms
 
@@ -670,8 +672,10 @@ following to your app's `android/gradle.properties`:
 klaviyoIncludeForms=false
 ```
 
-When set to `false`, only the lightweight `forms-core` module is included. Calls to `registerForInAppForms()`
-will be no-ops and log a warning.
+When set to `false`, only the lightweight `forms-core` module is included. The API surface
+(`registerForInAppForms()`, `unregisterFromInAppForms()`, etc.) remains available so your code
+compiles, but these calls will be no-ops at runtime since the underlying implementation is not
+present. The SDK handles this gracefully and logs an error.
 
 > **Note**: Both flags default to `true` if not specified, so you only need to set them if you want to opt out.
 
