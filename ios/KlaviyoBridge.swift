@@ -1,6 +1,10 @@
 import KlaviyoSwift
+#if canImport(KlaviyoForms)
 import KlaviyoForms
-@_spi(KlaviyoPrivate)import KlaviyoLocation
+#endif
+#if canImport(KlaviyoLocation)
+@_spi(KlaviyoPrivate) import KlaviyoLocation
+#endif
 @_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
@@ -53,34 +57,43 @@ public class KlaviyoBridge: NSObject {
     @MainActor
     @objc
     public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
+        #if canImport(KlaviyoForms)
         if let configurationLength = configuration?["sessionTimeoutDuration"] as? TimeInterval {
             KlaviyoSDK().registerForInAppForms(configuration: InAppFormsConfig(sessionTimeoutDuration: configurationLength))
         } else {
             KlaviyoSDK().registerForInAppForms()
         }
+        #endif
     }
 
     @MainActor
     @objc
     public static func unregisterFromInAppForms() {
+        #if canImport(KlaviyoForms)
         KlaviyoSDK().unregisterFromInAppForms()
+        #endif
     }
 
     @MainActor
     @objc
     public static func registerGeofencing() {
+        #if canImport(KlaviyoLocation)
         KlaviyoSDK().registerGeofencing()
+        #endif
     }
 
     @MainActor
     @objc
     public static func unregisterGeofencing() {
+        #if canImport(KlaviyoLocation)
         KlaviyoSDK().unregisterGeofencing()
+        #endif
     }
 
     @MainActor
     @objc
     public static func getCurrentGeofences(callback: @escaping ([String: AnyObject]) -> Void) {
+        #if canImport(KlaviyoLocation)
         Task { @MainActor in
             let geofences = await KlaviyoSDK().getCurrentGeofences()
             let geofencesArray = geofences.map { region -> [String: AnyObject] in
@@ -93,6 +106,9 @@ public class KlaviyoBridge: NSObject {
             }
             callback(["geofences": geofencesArray as AnyObject])
         }
+        #else
+        callback(["geofences": [] as AnyObject])
+        #endif
     }
 
     @objc
