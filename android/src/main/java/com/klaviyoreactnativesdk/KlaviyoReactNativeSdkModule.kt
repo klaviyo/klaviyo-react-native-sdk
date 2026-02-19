@@ -71,12 +71,16 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun registerForInAppForms(configuration: ReadableMap?) {
     UiThreadUtil.runOnUiThread {
-      val timeout = configuration?.getDouble("sessionTimeoutDuration")?.seconds
-      Klaviyo.registerForInAppForms(
-        InAppFormsConfig(
-          sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
-        ),
-      )
+      try {
+        val timeout = configuration?.getDouble("sessionTimeoutDuration")?.seconds
+        Klaviyo.registerForInAppForms(
+          InAppFormsConfig(
+            sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
+          ),
+        )
+      } catch (e: Exception) {
+        Registry.log.error("Android unable to register for in app forms on main thread", e)
+      }
     }
   }
 
