@@ -15,6 +15,7 @@ import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
+import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
@@ -82,6 +83,8 @@ class KlaviyoReactNativeSdkModule(
             sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
           ),
         )
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
       } catch (e: Exception) {
         Registry.log.error("Android unable to register for in app forms on main thread", e)
       }
@@ -91,18 +94,30 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun unregisterFromInAppForms() {
     UiThreadUtil.runOnUiThread {
-      Klaviyo.unregisterFromInAppForms()
+      try {
+        Klaviyo.unregisterFromInAppForms()
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      }
     }
   }
 
   @ReactMethod
   fun registerGeofencing() {
-    Klaviyo.registerGeofencing()
+    try {
+      Klaviyo.registerGeofencing()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Location module is not available", e)
+    }
   }
 
   @ReactMethod
   fun unregisterGeofencing() {
-    Klaviyo.unregisterGeofencing()
+    try {
+      Klaviyo.unregisterGeofencing()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Location module is not available", e)
+    }
   }
 
   @ReactMethod
