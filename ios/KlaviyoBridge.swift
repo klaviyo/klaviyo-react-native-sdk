@@ -49,7 +49,7 @@ public class KlaviyoBridge: NSObject {
         ProfileProperty.allCases.getDictionaryFromEnum()
     }
 
-   @objc
+    @objc
     public static var isFormsAvailable: Bool {
         #if canImport(KlaviyoForms)
         return true
