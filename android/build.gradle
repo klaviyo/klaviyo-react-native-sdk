@@ -96,6 +96,17 @@ if (rootProject.file("local.properties").canRead()) {
 }
 def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
 
+// Whether to include the full location module (geofencing + location permissions).
+// Set klaviyoIncludeLocation=false in your gradle.properties to use lightweight location-core instead.
+def includeLocation = rootProject.hasProperty('klaviyoIncludeLocation')
+    ? rootProject.property('klaviyoIncludeLocation').toBoolean()
+    : true
+
+// Whether to include the full forms module (in-app forms rendering).
+// Set klaviyoIncludeForms=false in your gradle.properties to use lightweight forms-core instead.
+def includeForms = rootProject.hasProperty('klaviyoIncludeForms')
+    ? rootProject.property('klaviyoIncludeForms').toBoolean()
+    : true
 
 dependencies {
   if (reactNativeAndroidVersion) {
@@ -116,9 +127,21 @@ dependencies {
   // Klaviyo Android SDK
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
-  api "com.github.klaviyo.klaviyo-android-sdk:forms:$klaviyoAndroidSdkVersion"
-  api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
   implementation "com.github.klaviyo.klaviyo-android-sdk:core:$klaviyoAndroidSdkVersion"
+
+  // Location: full module (includes -core transitively), or just -core for lightweight
+  if (includeLocation) {
+    api "com.github.klaviyo.klaviyo-android-sdk:location:$klaviyoAndroidSdkVersion"
+  } else {
+    implementation "com.github.klaviyo.klaviyo-android-sdk:location-core:$klaviyoAndroidSdkVersion"
+  }
+
+  // Forms: full module (includes -core transitively), or just -core for lightweight
+  if (includeForms) {
+    api "com.github.klaviyo.klaviyo-android-sdk:forms:$klaviyoAndroidSdkVersion"
+  } else {
+    implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
+  }
 
   // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
   implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"

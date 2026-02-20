@@ -269,7 +269,7 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalled();
     });
 
-    it('throws and logs when KlaviyoForms module is not available', () => {
+    it('logs error and noops when KlaviyoForms module is not available', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       const defaultConstants =
         NativeModules.KlaviyoReactNativeSdk.getConstants();
@@ -279,9 +279,7 @@ describe('Klaviyo SDK', () => {
       });
 
       try {
-        expect(() => Klaviyo.registerForInAppForms()).toThrow(
-          'KlaviyoForms module was not included in this build'
-        );
+        Klaviyo.registerForInAppForms();
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           expect.stringContaining('KlaviyoForms')
         );
@@ -289,8 +287,11 @@ describe('Klaviyo SDK', () => {
           NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
         ).not.toHaveBeenCalled();
 
-        expect(() => Klaviyo.unregisterFromInAppForms()).toThrow(
-          'KlaviyoForms module was not included in this build'
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.unregisterFromInAppForms();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoForms')
         );
         expect(
           NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
@@ -353,7 +354,7 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalled();
     });
 
-    it('throws and logs when KlaviyoLocation module is not available', () => {
+    it('logs error and noops when KlaviyoLocation module is not available', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       const defaultConstants =
         NativeModules.KlaviyoReactNativeSdk.getConstants();
@@ -363,9 +364,7 @@ describe('Klaviyo SDK', () => {
       });
 
       try {
-        expect(() => Klaviyo.registerGeofencing()).toThrow(
-          'KlaviyoLocation module was not included in this build'
-        );
+        Klaviyo.registerGeofencing();
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           expect.stringContaining('KlaviyoLocation')
         );
@@ -373,15 +372,21 @@ describe('Klaviyo SDK', () => {
           NativeModules.KlaviyoReactNativeSdk.registerGeofencing
         ).not.toHaveBeenCalled();
 
-        expect(() => Klaviyo.unregisterGeofencing()).toThrow(
-          'KlaviyoLocation module was not included in this build'
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.unregisterGeofencing();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoLocation')
         );
         expect(
           NativeModules.KlaviyoReactNativeSdk.unregisterGeofencing
         ).not.toHaveBeenCalled();
 
-        expect(() => Klaviyo.getCurrentGeofences(() => {})).toThrow(
-          'KlaviyoLocation module was not included in this build'
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.getCurrentGeofences(() => {});
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoLocation')
         );
         expect(
           NativeModules.KlaviyoReactNativeSdk.getCurrentGeofences

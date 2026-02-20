@@ -10,24 +10,30 @@ import type { FormConfiguration } from './Forms';
 import type { Geofence } from './Geofencing';
 
 const FORMS_UNAVAILABLE_MESSAGE =
-  'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build.';
+  'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build. ' +
+  'To enable forms, ensure KLAVIYO_INCLUDE_FORMS is not set to "false" in your Podfile (iOS) ' +
+  'and klaviyoIncludeForms is not set to false in gradle.properties (Android).';
 const LOCATION_UNAVAILABLE_MESSAGE =
-  'Klaviyo Location (geofencing) is not available. The KlaviyoLocation module was not included in this build.';
+  'Klaviyo Location (geofencing) is not available. The KlaviyoLocation module was not included in this build. ' +
+  'To enable location, ensure KLAVIYO_INCLUDE_LOCATION is not set to "false" in your Podfile (iOS) ' +
+  'and klaviyoIncludeLocation is not set to false in gradle.properties (Android).';
 
-function requireFormsAvailable(): void {
+function isFormsAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
   if (constants.FORMS_AVAILABLE === false) {
     console.error(`[Klaviyo] ${FORMS_UNAVAILABLE_MESSAGE}`);
-    throw new Error(FORMS_UNAVAILABLE_MESSAGE);
+    return false;
   }
+  return true;
 }
 
-function requireLocationAvailable(): void {
+function isLocationAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
   if (constants.LOCATION_AVAILABLE === false) {
     console.error(`[Klaviyo] ${LOCATION_UNAVAILABLE_MESSAGE}`);
-    throw new Error(LOCATION_UNAVAILABLE_MESSAGE);
+    return false;
   }
+  return true;
 }
 
 /**
@@ -83,25 +89,28 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.createEvent(event);
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
-    requireFormsAvailable();
+    if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.registerForInAppForms(configuration);
   },
-  unregisterFromInAppForms: () => {
-    requireFormsAvailable();
+  unregisterFromInAppForms(): void {
+    if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
   registerGeofencing(): void {
-    requireLocationAvailable();
+    if (!isLocationAvailable()) return;
     KlaviyoReactNativeSdk.registerGeofencing();
   },
   unregisterGeofencing(): void {
-    requireLocationAvailable();
+    if (!isLocationAvailable()) return;
     KlaviyoReactNativeSdk.unregisterGeofencing();
   },
   getCurrentGeofences(
     callback: (result: { geofences: Geofence[] }) => void
   ): void {
-    requireLocationAvailable();
+    if (!isLocationAvailable()) {
+      callback({ geofences: [] });
+      return;
+    }
     KlaviyoReactNativeSdk.getCurrentGeofences(callback);
   },
   /**
