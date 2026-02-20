@@ -107,7 +107,10 @@ export const Klaviyo: KlaviyoInterface = {
   getCurrentGeofences(
     callback: (result: { geofences: Geofence[] }) => void
   ): void {
-    if (!isLocationAvailable()) return;
+    if (!isLocationAvailable()) {
+      callback({ geofences: [] });
+      return;
+    }
     KlaviyoReactNativeSdk.getCurrentGeofences(callback);
   },
   /**
