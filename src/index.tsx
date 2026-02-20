@@ -11,12 +11,12 @@ import type { Geofence } from './Geofencing';
 
 const FORMS_UNAVAILABLE_MESSAGE =
   'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build. ' +
-  'To enable forms, set KLAVIYO_INCLUDE_FORMS=true in your Podfile (iOS) ' +
-  'or klaviyoIncludeForms=true in gradle.properties (Android).';
+  'To enable forms, ensure KLAVIYO_INCLUDE_FORMS is not set to "false" in your Podfile (iOS) ' +
+  'and klaviyoIncludeForms is not set to false in gradle.properties (Android).';
 const LOCATION_UNAVAILABLE_MESSAGE =
   'Klaviyo Location (geofencing) is not available. The KlaviyoLocation module was not included in this build. ' +
-  'To enable location, set KLAVIYO_INCLUDE_LOCATION=true in your Podfile (iOS) ' +
-  'or klaviyoIncludeLocation=true in gradle.properties (Android).';
+  'To enable location, ensure KLAVIYO_INCLUDE_LOCATION is not set to "false" in your Podfile (iOS) ' +
+  'and klaviyoIncludeLocation is not set to false in gradle.properties (Android).';
 
 function isFormsAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
