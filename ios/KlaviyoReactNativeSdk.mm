@@ -1,4 +1,5 @@
 #import "KlaviyoReactNativeSdk.h"
+#import <React/RCTEventEmitter.h>
 #if __has_include(<klaviyo_react_native_sdk/klaviyo_react_native_sdk-Swift.h>)
 #import <klaviyo_react_native_sdk/klaviyo_react_native_sdk-Swift.h>
 #else
@@ -6,12 +7,19 @@
 #endif
 
 
+@interface KlaviyoReactNativeSdk : RCTEventEmitter <RCTBridgeModule>
+@end
+
 @implementation KlaviyoReactNativeSdk
 RCT_EXPORT_MODULE()
 
 // this is required if we are using constantsToExport (read constantsToExport docs for more info)
 + (BOOL)requiresMainQueueSetup {
     return YES;
+}
+
+- (NSArray<NSString *> *)supportedEvents {
+    return @[@"FormLifecycleEvent"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -136,6 +144,21 @@ RCT_EXPORT_METHOD(getCurrentGeofences: (RCTResponseSenderBlock)callback) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge getCurrentGeofencesWithCallback:^(NSDictionary *result) {
             callback(@[result]);
+        }];
+    });
+}
+
+RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge registerFormLifecycleHandlerWithCallback:^(NSString *event, NSString *formId) {
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf) {
+                [strongSelf sendEventWithName:@"FormLifecycleEvent" body:@{
+                    @"event": event,
+                    @"formId": formId
+                }];
+            }
         }];
     });
 }
