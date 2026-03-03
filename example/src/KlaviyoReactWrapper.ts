@@ -35,19 +35,20 @@ export const initialize = async () => {
 
     // Register form lifecycle handler to log events
     Klaviyo.registerFormLifecycleHandler((data: FormLifecycleEventData) => {
+      const nameInfo = data.formName ? ` (${data.formName})` : '';
       console.log(
-        `[Form Lifecycle] ${data.event.toUpperCase()}: Form ${data.formId}`
+        `[Form Lifecycle] ${data.event.toUpperCase()}: Form ${data.formId}${nameInfo}`
       );
 
       switch (data.event) {
         case FormLifecycleEvent.FORM_SHOWN:
-          console.log(`Form ${data.formId} is being shown`);
+          console.log(`Form ${data.formId}${nameInfo} is being shown`);
           break;
         case FormLifecycleEvent.FORM_DISMISSED:
-          console.log(`Form ${data.formId} was dismissed`);
+          console.log(`Form ${data.formId}${nameInfo} was dismissed`);
           break;
         case FormLifecycleEvent.FORM_CTA_CLICKED:
-          console.log(`Form ${data.formId} CTA was clicked`);
+          console.log(`Form ${data.formId}${nameInfo} CTA was clicked`);
           break;
       }
     });

@@ -151,12 +151,13 @@ RCT_EXPORT_METHOD(getCurrentGeofences: (RCTResponseSenderBlock)callback) {
 RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
     __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_main_queue(), ^{
-        [KlaviyoBridge registerFormLifecycleHandlerWithCallback:^(NSString *event, NSString *formId) {
+        [KlaviyoBridge registerFormLifecycleHandlerWithCallback:^(NSString *event, NSString *formId, NSString *formName) {
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf sendEventWithName:@"FormLifecycleEvent" body:@{
                     @"event": event,
-                    @"formId": formId
+                    @"formId": formId,
+                    @"formName": formName
                 }];
             }
         }];

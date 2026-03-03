@@ -114,10 +114,11 @@ export const Klaviyo: KlaviyoInterface = {
 
     const subscription = eventEmitter.addListener(
       'FormLifecycleEvent',
-      (data: { event: string; formId: string }) => {
+      (data: { event: string; formId: string; formName?: string }) => {
         const lifecycleData: FormLifecycleEventData = {
           event: data.event as FormLifecycleEventEnum,
           formId: data.formId,
+          formName: data.formName,
         };
         handler(lifecycleData);
       }

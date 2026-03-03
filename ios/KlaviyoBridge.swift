@@ -97,10 +97,9 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerFormLifecycleHandler(callback: @escaping (String, String) -> Void) {
-        KlaviyoSDK().registerFormLifecycleHandler { event in
-            // iOS SDK doesn't provide formId, so pass empty string
-            callback(event.rawValue, "")
+    public static func registerFormLifecycleHandler(callback: @escaping (String, String, String) -> Void) {
+        KlaviyoSDK().registerFormLifecycleHandler { event, context in
+            callback(event.rawValue, context.formId ?? "", context.formName ?? "")
         }
     }
 

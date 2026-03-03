@@ -53,6 +53,8 @@ export interface FormLifecycleEventData {
   event: FormLifecycleEvent;
   /** The form ID associated with this event */
   formId: string;
+  /** The form name associated with this event */
+  formName?: string;
 }
 
 /**
