@@ -53,7 +53,8 @@ podspec_file="klaviyo-react-native-sdk.podspec"
 if [[ -f "$podspec_file" ]]; then
   sed -i '' "s/\"KlaviyoSwift\", \".*\"/\"KlaviyoSwift\", \"$swift_version\"/" "$podspec_file"
   sed -i '' "s/\"KlaviyoForms\", \".*\"/\"KlaviyoForms\", \"$swift_version\"/" "$podspec_file"
-  echo "Updated KlaviyoSwift and KlaviyoForms version in $podspec_file."
+  sed -i '' "s/\"KlaviyoLocation\", \".*\"/\"KlaviyoLocation\", \"$swift_version\"/" "$podspec_file"
+  echo "Updated KlaviyoSwift, KlaviyoForms, and KlaviyoLocation version in $podspec_file."
 else
   echo "Error: $podspec_file not found."
   exit 1
@@ -82,8 +83,8 @@ if [[ -d "$ios_dir" ]]; then
     echo "Running bundle install..."
     bundle install || { echo "Error: Failed to run bundle install."; exit 1; }
   fi
-  echo "Running pod update for KlaviyoSwift..."
-  bundle exec pod update KlaviyoSwift || { echo "Error: Failed to update pods."; exit 1; }
+  echo "Running pod update for KlaviyoSwift, KlaviyoForms, and KlaviyoLocation..."
+  bundle exec pod update KlaviyoSwift KlaviyoForms KlaviyoLocation || { echo "Error: Failed to update pods."; exit 1; }
   cd - || exit
 else
   echo "Error: $ios_dir not found."
