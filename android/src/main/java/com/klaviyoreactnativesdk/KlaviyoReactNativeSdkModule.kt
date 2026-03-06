@@ -20,11 +20,12 @@ import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
-import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.forms.registerFormLifecycleCallback
-import com.klaviyo.forms.FormLifecycleEvent
+import com.klaviyo.forms.unregisterFormLifecycleCallback
+import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
@@ -287,11 +288,12 @@ class KlaviyoReactNativeSdkModule(
   fun registerFormLifecycleHandler() {
     UiThreadUtil.runOnUiThread {
       Klaviyo.registerFormLifecycleCallback { event, context ->
-        val eventName = when (event) {
-          FormLifecycleEvent.FORM_SHOWN -> "form_shown"
-          FormLifecycleEvent.FORM_DISMISSED -> "form_dismissed"
-          FormLifecycleEvent.FORM_CTA_CLICKED -> "form_cta_clicked"
-        }
+        val eventName =
+          when (event) {
+            FormLifecycleEvent.FORM_SHOWN -> "form_shown"
+            FormLifecycleEvent.FORM_DISMISSED -> "form_dismissed"
+            FormLifecycleEvent.FORM_CTA_CLICKED -> "form_cta_clicked"
+          }
 
         val params =
           Arguments.createMap().apply {
@@ -304,4 +306,18 @@ class KlaviyoReactNativeSdkModule(
       }
     }
   }
+
+  @ReactMethod
+  fun unregisterFormLifecycleHandler() {
+    UiThreadUtil.runOnUiThread {
+      Klaviyo.unregisterFormLifecycleCallback()
+    }
+  }
+
+  // Required by NativeEventEmitter on the JS side
+  @ReactMethod
+  fun addListener(eventName: String) {}
+
+  @ReactMethod
+  fun removeListeners(count: Int) {}
 }

@@ -103,6 +103,12 @@ public class KlaviyoBridge: NSObject {
         }
     }
 
+    @MainActor
+    @objc
+    public static func unregisterFormLifecycleHandler() {
+        KlaviyoSDK().unregisterFormLifecycleHandler()
+    }
+
     @objc
     public static func setProfile(
         _ profileDict: [String: AnyObject]

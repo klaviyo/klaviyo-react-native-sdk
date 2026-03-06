@@ -128,6 +128,7 @@ export const Klaviyo: KlaviyoInterface = {
 
     return () => {
       subscription.remove();
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
     };
   },
 };
