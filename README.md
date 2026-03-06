@@ -627,8 +627,8 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
 instructions for Geofencing in the README from each native Klaviyo SDK:
 
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing)
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#geofencing)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#geofencing)
 
 ### Module Configuration
 
