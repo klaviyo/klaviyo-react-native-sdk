@@ -6,8 +6,14 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
-import type { FormConfiguration } from './Forms';
+import type {
+  FormConfiguration,
+  FormLifecycleHandler,
+  FormLifecycleEventData,
+  FormLifecycleEvent as FormLifecycleEventEnum,
+} from './Forms';
 import type { Geofence } from './Geofencing';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -101,6 +107,30 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
     return true;
   },
+  registerFormLifecycleHandler(handler: FormLifecycleHandler): () => void {
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    const subscription = eventEmitter.addListener(
+      'FormLifecycleEvent',
+      (data: { event: string; formId: string; formName?: string }) => {
+        const lifecycleData: FormLifecycleEventData = {
+          event: data.event as FormLifecycleEventEnum,
+          formId: data.formId,
+          formName: data.formName,
+        };
+        handler(lifecycleData);
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerFormLifecycleHandler();
+
+    return () => {
+      subscription.remove();
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
+    };
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -112,6 +142,11 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
-export type { FormConfiguration } from './Forms';
+export type {
+  FormConfiguration,
+  FormLifecycleHandler,
+  FormLifecycleEventData,
+} from './Forms';
+export { FormLifecycleEvent } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';

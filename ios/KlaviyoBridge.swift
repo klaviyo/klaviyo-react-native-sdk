@@ -95,6 +95,20 @@ public class KlaviyoBridge: NSObject {
         }
     }
 
+    @MainActor
+    @objc
+    public static func registerFormLifecycleHandler(callback: @escaping (String, String, String) -> Void) {
+        KlaviyoSDK().registerFormLifecycleHandler { event, context in
+            callback(event.rawValue, context.formId ?? "", context.formName ?? "")
+        }
+    }
+
+    @MainActor
+    @objc
+    public static func unregisterFormLifecycleHandler() {
+        KlaviyoSDK().unregisterFormLifecycleHandler()
+    }
+
     @objc
     public static func setProfile(
         _ profileDict: [String: AnyObject]

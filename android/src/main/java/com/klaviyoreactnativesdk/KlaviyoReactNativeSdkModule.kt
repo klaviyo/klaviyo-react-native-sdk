@@ -8,6 +8,8 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
@@ -18,8 +20,11 @@ import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
+import com.klaviyo.forms.registerFormLifecycleCallback
+import com.klaviyo.forms.unregisterFormLifecycleCallback
 import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
@@ -35,6 +40,15 @@ class KlaviyoReactNativeSdkModule(
     const val NAME = "KlaviyoReactNativeSdk"
     private const val LOCATION = "location"
     private const val PROPERTIES = "properties"
+  }
+
+  private fun sendEvent(
+    eventName: String,
+    params: WritableMap?,
+  ) {
+    reactContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit(eventName, params)
   }
 
   override fun getName(): String = NAME
@@ -269,4 +283,41 @@ class KlaviyoReactNativeSdkModule(
 
     Klaviyo.createEvent(event = klaviyoEvent)
   }
+
+  @ReactMethod
+  fun registerFormLifecycleHandler() {
+    UiThreadUtil.runOnUiThread {
+      Klaviyo.registerFormLifecycleCallback { event, context ->
+        val eventName =
+          when (event) {
+            FormLifecycleEvent.FORM_SHOWN -> "form_shown"
+            FormLifecycleEvent.FORM_DISMISSED -> "form_dismissed"
+            FormLifecycleEvent.FORM_CTA_CLICKED -> "form_cta_clicked"
+          }
+
+        val params =
+          Arguments.createMap().apply {
+            putString("event", eventName)
+            putString("formId", context.formId ?: "")
+            putString("formName", context.formName ?: "")
+          }
+
+        sendEvent("FormLifecycleEvent", params)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun unregisterFormLifecycleHandler() {
+    UiThreadUtil.runOnUiThread {
+      Klaviyo.unregisterFormLifecycleCallback()
+    }
+  }
+
+  // Required by NativeEventEmitter on the JS side
+  @ReactMethod
+  fun addListener(eventName: String) {}
+
+  @ReactMethod
+  fun removeListeners(count: Int) {}
 }
