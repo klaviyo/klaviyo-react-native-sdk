@@ -15,12 +15,15 @@ import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
+import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.unregisterFromInAppForms
+import com.klaviyo.location.GeofencingProvider
 import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
@@ -47,6 +50,8 @@ class KlaviyoReactNativeSdkModule(
           this[PROPERTIES] = PROPERTIES
         },
       "EVENT_NAMES" to this.extractConstants<EventMetric>(),
+      "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
+      "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
     )
 
   private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword =
@@ -78,6 +83,8 @@ class KlaviyoReactNativeSdkModule(
             sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
           ),
         )
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
       } catch (e: Exception) {
         Registry.log.error("Android unable to register for in app forms on main thread", e)
       }
@@ -87,18 +94,30 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun unregisterFromInAppForms() {
     UiThreadUtil.runOnUiThread {
-      Klaviyo.unregisterFromInAppForms()
+      try {
+        Klaviyo.unregisterFromInAppForms()
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      }
     }
   }
 
   @ReactMethod
   fun registerGeofencing() {
-    Klaviyo.registerGeofencing()
+    try {
+      Klaviyo.registerGeofencing()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Location module is not available", e)
+    }
   }
 
   @ReactMethod
   fun unregisterGeofencing() {
-    Klaviyo.unregisterGeofencing()
+    try {
+      Klaviyo.unregisterGeofencing()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Location module is not available", e)
+    }
   }
 
   @ReactMethod

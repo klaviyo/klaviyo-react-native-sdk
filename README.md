@@ -555,6 +555,26 @@ In-App Forms supports advanced targeting and segmentation. In your Klaviyo accou
 | Audience Targeting | 2.0.0               |
 | Event Triggers     | 2.1.0               |
 
+### Module Configuration
+
+The In-App Forms module is included by default. If you need to reduce your app's binary size and are not using In-App Forms, you can exclude it:
+
+**iOS** — In your `Podfile`, before the `target` block:
+
+```ruby
+ENV['KLAVIYO_INCLUDE_FORMS'] = 'false'
+```
+
+Then run `pod install`.
+
+**Android** — In your app's `gradle.properties`:
+
+```properties
+klaviyoIncludeForms=false
+```
+
+If the module is excluded, calls to `registerForInAppForms()` and `unregisterFromInAppForms()` will log an error and no-op.
+
 ### Setup
 
 To configure your app to display In-App Forms, call `Klaviyo.registerForInAppForms()` after initializing the SDK with your public API key. Once registered, the SDK may launch an overlay view at any time to present a form according to its targeting and behavior settings configured in your Klaviyo account.
@@ -607,8 +627,31 @@ Note that after unregistering, the next call to `registerForInAppForms()` will b
 Integrating geofencing is highly platform-specific as it utilizes the native monitoring systems. Begin by thoroughly reviewing the setup
 instructions for Geofencing in the README from each native Klaviyo SDK:
 
-- [Android](https://github.com/klaviyo/klaviyo-android-sdk/tree/rel/4.2.0-rc.1?tab=readme-ov-file#geofencing)
-- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/tree/rel/5.2.0-alpha.1?tab=readme-ov-file#geofencing)
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk?tab=readme-ov-file#geofencing)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#geofencing)
+
+### Module Configuration
+
+The Location module is included by default. To exclude it (e.g. if you are not using geofencing and want to reduce binary size or avoid location permission requirements):
+
+> **Note:** In the next major version, the Location module likely will be **excluded by default**.
+> If your app uses geofencing, we recommend explicitly opting in now to avoid disruption during the upgrade.
+
+**iOS** — In your `Podfile`, before the `target` block:
+
+```ruby
+ENV['KLAVIYO_INCLUDE_LOCATION'] = 'false'
+```
+
+Then run `pod install`.
+
+**Android** — In your app's `gradle.properties`:
+
+```properties
+klaviyoIncludeLocation=false
+```
+
+If the module is excluded, calls to geofencing methods will log an error and no-op.
 
 ### Setup
 

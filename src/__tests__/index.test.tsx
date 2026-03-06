@@ -56,6 +56,8 @@ jest.mock('react-native', () => {
             STARTED_CHECKOUT: 'Started Checkout',
             VIEWED_PRODUCT: 'Viewed Product',
           },
+          FORMS_AVAILABLE: true,
+          LOCATION_AVAILABLE: true,
         }),
       },
     },
@@ -266,6 +268,41 @@ describe('Klaviyo SDK', () => {
         NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
       ).toHaveBeenCalled();
     });
+
+    it('logs error and noops when KlaviyoForms module is not available', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const defaultConstants =
+        NativeModules.KlaviyoReactNativeSdk.getConstants();
+      NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue({
+        ...defaultConstants,
+        FORMS_AVAILABLE: false,
+      });
+
+      try {
+        Klaviyo.registerForInAppForms();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoForms')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
+        ).not.toHaveBeenCalled();
+
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.unregisterFromInAppForms();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoForms')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
+        ).not.toHaveBeenCalled();
+      } finally {
+        NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue(
+          defaultConstants
+        );
+        consoleErrorSpy.mockRestore();
+      }
+    });
   });
 
   describe('geofencing', () => {
@@ -315,6 +352,51 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.getCurrentGeofences
       ).toHaveBeenCalled();
+    });
+
+    it('logs error and noops when KlaviyoLocation module is not available', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const defaultConstants =
+        NativeModules.KlaviyoReactNativeSdk.getConstants();
+      NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue({
+        ...defaultConstants,
+        LOCATION_AVAILABLE: false,
+      });
+
+      try {
+        Klaviyo.registerGeofencing();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoLocation')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.registerGeofencing
+        ).not.toHaveBeenCalled();
+
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.unregisterGeofencing();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoLocation')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.unregisterGeofencing
+        ).not.toHaveBeenCalled();
+
+        consoleErrorSpy.mockClear();
+
+        Klaviyo.getCurrentGeofences(() => {});
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoLocation')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.getCurrentGeofences
+        ).not.toHaveBeenCalled();
+      } finally {
+        NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue(
+          defaultConstants
+        );
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 
