@@ -30,6 +30,7 @@
       - [Native Token Collection](#native-token-collection)
     - [Receiving Push Notifications](#receiving-push-notifications)
     - [Rich Push](#rich-push)
+    - [Push Action Buttons](#push-action-buttons)
     - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
@@ -432,6 +433,15 @@ No additional setup is needed to support rich push on Android.
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Rich-Push)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
+
+#### Push Action Buttons
+
+[Push Action Buttons](https://help.klaviyo.com/hc/en-us/article/46285872166683) is the ability to add clickable buttons to
+push notification messages. These buttons can show custom text, and, when clicked, deep link or open your app.
+Push notification messages can include a maximum of 3 buttons. No additional setup is needed to support push action buttons.
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#push-action-buttons)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#push-action-buttons)
 
 #### Badge Count
 
