@@ -287,19 +287,26 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun registerFormLifecycleHandler() {
     UiThreadUtil.runOnUiThread {
-      Klaviyo.registerFormLifecycleCallback { event, context ->
-        val eventName =
-          when (event) {
-            FormLifecycleEvent.FORM_SHOWN -> "form_shown"
-            FormLifecycleEvent.FORM_DISMISSED -> "form_dismissed"
-            FormLifecycleEvent.FORM_CTA_CLICKED -> "form_cta_clicked"
-          }
-
+      Klaviyo.registerFormLifecycleCallback { event ->
         val params =
           Arguments.createMap().apply {
-            putString("event", eventName)
-            putString("formId", context.formId ?: "")
-            putString("formName", context.formName ?: "")
+            putString("formId", event.formId)
+            putString("formName", event.formName)
+            when (event) {
+              is FormLifecycleEvent.FormShown -> {
+                putString("type", "formShown")
+              }
+
+              is FormLifecycleEvent.FormDismissed -> {
+                putString("type", "formDismissed")
+              }
+
+              is FormLifecycleEvent.FormCtaClicked -> {
+                putString("type", "formCtaClicked")
+                putString("buttonLabel", event.buttonLabel)
+                putString("deepLinkUrl", event.deepLinkUrl)
+              }
+            }
           }
 
         sendEvent("FormLifecycleEvent", params)

@@ -5,8 +5,7 @@ import {
   type Profile,
   ProfileProperty,
   type FormConfiguration,
-  FormLifecycleEvent,
-  type FormLifecycleEventData,
+  type FormLifecycleEvent,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -34,21 +33,23 @@ export const initialize = async () => {
     Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
 
     // Register form lifecycle handler to log events
-    Klaviyo.registerFormLifecycleHandler((data: FormLifecycleEventData) => {
-      const nameInfo = data.formName ? ` (${data.formName})` : '';
+    Klaviyo.registerFormLifecycleHandler((event: FormLifecycleEvent) => {
+      const nameInfo = event.formName ? ` (${event.formName})` : '';
       console.log(
-        `[Form Lifecycle] ${data.event.toUpperCase()}: Form ${data.formId}${nameInfo}`
+        `[Form Lifecycle] ${event.type}: Form ${event.formId}${nameInfo}`
       );
 
-      switch (data.event) {
-        case FormLifecycleEvent.FORM_SHOWN:
-          console.log(`Form ${data.formId}${nameInfo} is being shown`);
+      switch (event.type) {
+        case 'formShown':
+          console.log(`Form ${event.formId}${nameInfo} is being shown`);
           break;
-        case FormLifecycleEvent.FORM_DISMISSED:
-          console.log(`Form ${data.formId}${nameInfo} was dismissed`);
+        case 'formDismissed':
+          console.log(`Form ${event.formId}${nameInfo} was dismissed`);
           break;
-        case FormLifecycleEvent.FORM_CTA_CLICKED:
-          console.log(`Form ${data.formId}${nameInfo} CTA was clicked`);
+        case 'formCtaClicked':
+          console.log(
+            `Form ${event.formId}${nameInfo} CTA was clicked: ${event.buttonLabel}, deep link: ${event.deepLinkUrl}`
+          );
           break;
       }
     });

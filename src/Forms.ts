@@ -24,7 +24,7 @@ export interface KlaviyoFormsApi {
 }
 
 /**
- * Interface for an event
+ * Configuration for in-app forms
  */
 export interface FormConfiguration {
   /**
@@ -34,30 +34,41 @@ export interface FormConfiguration {
 }
 
 /**
- * Form lifecycle event types
+ * Discriminated union representing a form lifecycle event.
+ *
+ * Each variant carries contextual data about the form, and the `type` field
+ * serves as the discriminant. Use a `switch` on `event.type` to narrow the type
+ * and access variant-specific fields like `buttonLabel` and `deepLinkUrl`.
+ *
+ * Example usage:
+ * ```typescript
+ * Klaviyo.registerFormLifecycleHandler((event) => {
+ *   switch (event.type) {
+ *     case 'formShown':
+ *       console.log(`Form shown: ${event.formId}`);
+ *       break;
+ *     case 'formDismissed':
+ *       console.log(`Form dismissed: ${event.formId}`);
+ *       break;
+ *     case 'formCtaClicked':
+ *       console.log(`CTA clicked: ${event.buttonLabel}, deep link: ${event.deepLinkUrl}`);
+ *       break;
+ *   }
+ * });
+ * ```
  */
-export enum FormLifecycleEvent {
-  /** Form is shown/presented to the user */
-  FORM_SHOWN = 'form_shown',
-  /** Form was dismissed by the user */
-  FORM_DISMISSED = 'form_dismissed',
-  /** Form CTA was clicked by the user */
-  FORM_CTA_CLICKED = 'form_cta_clicked',
-}
-
-/**
- * Data associated with a form lifecycle event
- */
-export interface FormLifecycleEventData {
-  /** The type of lifecycle event */
-  event: FormLifecycleEvent;
-  /** The form ID associated with this event */
-  formId: string;
-  /** The form name associated with this event */
-  formName?: string;
-}
+export type FormLifecycleEvent =
+  | { type: 'formShown'; formId?: string; formName?: string }
+  | { type: 'formDismissed'; formId?: string; formName?: string }
+  | {
+      type: 'formCtaClicked';
+      formId?: string;
+      formName?: string;
+      buttonLabel?: string;
+      deepLinkUrl?: string;
+    };
 
 /**
  * Handler function type for form lifecycle events
  */
-export type FormLifecycleHandler = (data: FormLifecycleEventData) => void;
+export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
