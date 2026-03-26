@@ -9,8 +9,7 @@ import type { Event } from './Event';
 import type {
   FormConfiguration,
   FormLifecycleHandler,
-  FormLifecycleEventData,
-  FormLifecycleEvent as FormLifecycleEventEnum,
+  FormLifecycleEvent,
 } from './Forms';
 import type { Geofence } from './Geofencing';
 import { NativeEventEmitter, NativeModules } from 'react-native';
@@ -114,13 +113,14 @@ export const Klaviyo: KlaviyoInterface = {
 
     const subscription = eventEmitter.addListener(
       'FormLifecycleEvent',
-      (data: { event: string; formId: string; formName?: string }) => {
-        const lifecycleData: FormLifecycleEventData = {
-          event: data.event as FormLifecycleEventEnum,
-          formId: data.formId,
-          formName: data.formName,
-        };
-        handler(lifecycleData);
+      (data: {
+        type: string;
+        formId?: string;
+        formName?: string;
+        buttonLabel?: string;
+        deepLinkUrl?: string;
+      }) => {
+        handler(data as FormLifecycleEvent);
       }
     );
 
@@ -144,9 +144,8 @@ export {
 export type { KlaviyoInterface } from './Klaviyo';
 export type {
   FormConfiguration,
+  FormLifecycleEvent,
   FormLifecycleHandler,
-  FormLifecycleEventData,
 } from './Forms';
-export { FormLifecycleEvent } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';

@@ -97,9 +97,23 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerFormLifecycleHandler(callback: @escaping (String, String, String) -> Void) {
-        KlaviyoSDK().registerFormLifecycleHandler { event, context in
-            callback(event.rawValue, context.formId ?? "", context.formName ?? "")
+    public static func registerFormLifecycleHandler(callback: @escaping ([String: Any]) -> Void) {
+        KlaviyoSDK().registerFormLifecycleHandler { event in
+            var params: [String: Any] = [
+                "formId": event.formId as Any,
+                "formName": event.formName as Any
+            ]
+            switch event {
+            case .formShown:
+                params["type"] = "formShown"
+            case .formDismissed:
+                params["type"] = "formDismissed"
+            case let .formCtaClicked(_, _, buttonLabel, deepLinkUrl):
+                params["type"] = "formCtaClicked"
+                params["buttonLabel"] = buttonLabel as Any
+                params["deepLinkUrl"] = deepLinkUrl?.absoluteString as Any
+            }
+            callback(params)
         }
     }
 
