@@ -139,7 +139,18 @@ dependencies {
     }
 }
 
+// Apply google-services plugin when useNativeFirebase is enabled
+// For React Native apps, useNativeFirebase should typically be false - push is handled via
+// @react-native-firebase/messaging in the JavaScript layer instead.
 if (useNativeFirebase.toBoolean()) {
+  if (!file('google-services.json').exists()) {
+    throw new GradleException(
+      "useNativeFirebase is enabled but google-services.json is missing.\n" +
+      "Either:\n" +
+      "  1. Add google-services.json to example/android/app/\n" +
+      "  2. Set useNativeFirebase=false in gradle.properties (recommended for React Native apps)"
+    )
+  }
   // Note: this auto-initializes firebase from your google-services.json file.
   // You'll need to set applicationId to match your firebase project, see above
   apply plugin: "com.google.gms.google-services"
