@@ -41,6 +41,12 @@ class PushNotificationsHelper: NSObject {
   }
 
   @objc
+  static func handleSilentPush(userInfo: NSDictionary) {
+    NSLog("[Klaviyo] Silent push received: %@", userInfo)
+    // Perform background work here, e.g. prefetch content or sync state.
+  }
+
+  @objc
   static func handleReceivingPush(
     response: UNNotificationResponse,
     completionHandler: @escaping () -> Void,
