@@ -3,14 +3,16 @@
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
 
+// Conditionally import Firebase if available
+#if __has_include(<FirebaseCore/FirebaseCore.h>)
+#import <FirebaseCore/FirebaseCore.h>
+#import <FirebaseMessaging/FirebaseMessaging.h>
+#endif
+
 @implementation AppDelegate
 
 // Change to NO if you don't want debug alerts or logs.
 BOOL isDebug = YES;
-
-// Change to NO if you prefer to initialize and handle push tokens in the React
-// Native layer
-BOOL useNativeImplementation = YES;
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
@@ -20,18 +22,16 @@ BOOL useNativeImplementation = YES;
   // iOS Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  if (useNativeImplementation) {
-    // iOS Installation Step 3: Initialize the SDK with public key, if
-    // initializing from native code Exclude if initializing from react native
-    // layer
-    [PushNotificationsHelper initializeSDK:@"YOUR_KLAVIYO_PUBLIC_API_KEY"];
+  // Initialize cross-platform push library (Firebase)
+  // When using React Native layer for push, Firebase handles token management
+#if __has_include(<FirebaseCore/FirebaseCore.h>)
+  [FIRApp configure];
+#endif
 
-    // iOS Installation Step 4: Request notification permission from the user
-    // Exclude if handling permissions from react native layer
-    [PushNotificationsHelper requestNotificationPermission];
-  } else {
-    // Initialize cross-platform push library, e.g. Firebase
-  }
+  // OPTIONAL: Native initialization approach (uncomment if you prefer to initialize from Swift)
+  // See README.md for details on when you might want this.
+  // [PushNotificationsHelper initializeSDK:@"YOUR_KLAVIYO_PUBLIC_API_KEY"];
+  // [PushNotificationsHelper requestNotificationPermission];
 
   // Start monitoring geofences from background
   dispatch_async(dispatch_get_main_queue(), ^{
@@ -50,13 +50,14 @@ BOOL useNativeImplementation = YES;
 // token
 - (void)application:(UIApplication *)application
     didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-  if (useNativeImplementation) {
-    // iOS Installation Step 7: set the push token to Klaviyo SDK
-    // Exclude if handling push tokens from react native layer
-    [PushNotificationsHelper setPushTokenWithToken:deviceToken];
-  } else {
-    // Provide token to cross-platform push library, e.g. firebase
-  }
+  // Provide APNs token to Firebase for cross-platform push handling
+  // Firebase will manage the token and make it available via React Native
+#if __has_include(<FirebaseMessaging/FirebaseMessaging.h>)
+  [FIRMessaging messaging].APNSToken = deviceToken;
+#endif
+
+  // OPTIONAL: Native push token handling (uncomment if not using Firebase)
+  // [PushNotificationsHelper setPushTokenWithToken:deviceToken];
 
   if (isDebug) {
     NSString *token = [self stringFromDeviceToken:deviceToken];

@@ -10,9 +10,6 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.google.firebase.messaging.FirebaseMessaging
-import com.klaviyo.analytics.Klaviyo
-
 class MainApplication :
   Application(),
   ReactApplication {
@@ -39,17 +36,15 @@ class MainApplication :
     super.onCreate()
     loadReactNative(this)
 
-    if (BuildConfig.INITIALIZE_KLAVIYO_FROM_NATIVE) {
-      // Android Installation Step 3: Initialize the SDK with public key and context, if initializing from native code
-      Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
-
-      if (BuildConfig.USE_NATIVE_FIREBASE) {
-        // Android Installation Step 4a: Collect push token and pass it to Klaviyo, if handling push tokens natively
-        FirebaseMessaging.getInstance().token.addOnSuccessListener {
-          Log.d("KlaviyoSampleApp", "Push token set: $it")
-          Klaviyo.setPushToken(it)
-        }
-      }
-    }
+    // OPTIONAL: Native initialization approach (uncomment if you prefer to initialize from Kotlin)
+    // See README.md for details on when you might want this.
+    // import com.klaviyo.analytics.Klaviyo
+    // import com.google.firebase.messaging.FirebaseMessaging
+    //
+    // Klaviyo.initialize("YOUR_KLAVIYO_PUBLIC_API_KEY", this)
+    // FirebaseMessaging.getInstance().token.addOnSuccessListener {
+    //   Log.d("KlaviyoSampleApp", "Push token set: $it")
+    //   Klaviyo.setPushToken(it)
+    // }
   }
 }
