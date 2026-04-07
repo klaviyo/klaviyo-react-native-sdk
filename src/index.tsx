@@ -6,8 +6,13 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
-import type { FormConfiguration } from './Forms';
+import type {
+  FormConfiguration,
+  FormLifecycleHandler,
+  FormLifecycleEvent,
+} from './Forms';
 import type { Geofence } from './Geofencing';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
   'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build. ' +
@@ -136,6 +141,33 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
     return true;
   },
+  registerFormLifecycleHandler(handler: FormLifecycleHandler): () => void {
+    if (!isFormsAvailable()) return () => {};
+
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    const subscription = eventEmitter.addListener(
+      'FormLifecycleEvent',
+      (data: {
+        type: string;
+        formId: string;
+        formName: string;
+        buttonLabel?: string;
+        deepLinkUrl?: string;
+      }) => {
+        handler(data as FormLifecycleEvent);
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerFormLifecycleHandler();
+
+    return () => {
+      subscription.remove();
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
+    };
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -147,6 +179,10 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
-export type { FormConfiguration } from './Forms';
+export type {
+  FormConfiguration,
+  FormLifecycleEvent,
+  FormLifecycleHandler,
+} from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
