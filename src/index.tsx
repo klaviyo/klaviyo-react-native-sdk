@@ -41,6 +41,9 @@ function isLocationAvailable(): boolean {
   return true;
 }
 
+// Track active lifecycle subscription to prevent duplicate listeners
+let activeLifecycleSubscription: { remove: () => void } | null = null;
+
 /**
  * Implementation of the {@link KlaviyoInterface}
  */
@@ -144,11 +147,17 @@ export const Klaviyo: KlaviyoInterface = {
   registerFormLifecycleHandler(handler: FormLifecycleHandler): () => void {
     if (!isFormsAvailable()) return () => {};
 
+    // Clean up any existing subscription before re-registering
+    if (activeLifecycleSubscription) {
+      activeLifecycleSubscription.remove();
+      activeLifecycleSubscription = null;
+    }
+
     const eventEmitter = new NativeEventEmitter(
       NativeModules.KlaviyoReactNativeSdk
     );
 
-    const subscription = eventEmitter.addListener(
+    activeLifecycleSubscription = eventEmitter.addListener(
       'FormLifecycleEvent',
       (data: {
         type: string;
@@ -164,7 +173,8 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.registerFormLifecycleHandler();
 
     return () => {
-      subscription.remove();
+      activeLifecycleSubscription?.remove();
+      activeLifecycleSubscription = null;
       KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
     };
   },
