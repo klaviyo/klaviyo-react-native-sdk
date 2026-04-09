@@ -150,6 +150,7 @@ export const Klaviyo: KlaviyoInterface = {
     // Clean up any existing subscription before re-registering
     if (activeLifecycleSubscription) {
       activeLifecycleSubscription.remove();
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
       activeLifecycleSubscription = null;
     }
 
