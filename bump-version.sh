@@ -3,6 +3,7 @@
 set -euo pipefail
 
 usage() {
+  local exit_code="${1:-0}"
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
@@ -21,7 +22,7 @@ Examples:
   $(basename "$0") -v 2.4.0 --skip-native       # Bump RN SDK only, no native deps
   $(basename "$0") -v 2.4.0 -a 3.2.0 -s 4.1.0  # Bump everything non-interactively
 EOF
-  exit 0
+  exit "$exit_code"
 }
 
 new_version=""
@@ -37,8 +38,8 @@ while [[ $# -gt 0 ]]; do
     -s|--swift)     swift_version="$2"; shift 2 ;;
     --skip-native)  skip_native=true; shift ;;
     --skip-install) skip_install=true; shift ;;
-    -h|--help)      usage ;;
-    *)              echo "Unknown option: $1"; usage ;;
+    -h|--help)      usage 0 ;;
+    *)              echo "Error: Unknown option: $1" >&2; usage 1 ;;
   esac
 done
 
