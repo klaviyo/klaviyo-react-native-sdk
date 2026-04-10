@@ -3,6 +3,10 @@ import { Klaviyo } from '../index';
 import { EventName } from '../Event';
 import { ProfileProperty } from '../Profile';
 
+// Store event listeners for testing NativeEventEmitter
+const eventListeners: Record<string, Array<(data: any) => void>> = {};
+const mockRemove = jest.fn();
+
 // Mock the native module
 jest.mock('react-native', () => {
   return {
@@ -24,6 +28,8 @@ jest.mock('react-native', () => {
         createEvent: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        registerFormLifecycleHandler: jest.fn(),
+        unregisterFormLifecycleHandler: jest.fn(),
         registerGeofencing: jest.fn(),
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
@@ -61,16 +67,31 @@ jest.mock('react-native', () => {
         }),
       },
     },
+    NativeEventEmitter: jest.fn().mockImplementation(() => ({
+      addListener: jest.fn().mockImplementation((eventName, callback) => {
+        if (!eventListeners[eventName]) {
+          eventListeners[eventName] = [];
+        }
+        eventListeners[eventName]!.push(callback);
+        return { remove: mockRemove };
+      }),
+    })),
     Platform: {
       select: jest.fn().mockImplementation((obj) => obj.ios),
     },
   };
 });
 
+// Helper to simulate native event emission
+function emitNativeEvent(eventName: string, data: any) {
+  eventListeners[eventName]?.forEach((listener) => listener(data));
+}
+
 describe('Klaviyo SDK', () => {
   beforeEach(() => {
-    // Clear all mocks before each test
+    // Clear all mocks and event listeners before each test
     jest.clearAllMocks();
+    Object.keys(eventListeners).forEach((key) => delete eventListeners[key]);
   });
 
   describe('initialization', () => {
@@ -502,6 +523,94 @@ describe('Klaviyo SDK', () => {
 
       // Restore console.error
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('form lifecycle events', () => {
+    it('should register native handler and forward formShown events', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formShown',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+    });
+
+    it('should forward formDismissed events', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formDismissed',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formDismissed',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+    });
+
+    it('should forward formCtaClicked events with buttonLabel and deepLinkUrl', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: 'myapp://products',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: 'myapp://products',
+      });
+    });
+
+    it('should unsubscribe from events when cleanup function is called', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
+
+      // Clear any remove calls from re-registration cleanup of prior tests
+      mockRemove.mockClear();
+
+      unsubscribe();
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clean up previous subscription when re-registering', () => {
+      const handler1 = jest.fn();
+      const handler2 = jest.fn();
+
+      Klaviyo.registerFormLifecycleHandler(handler1);
+      mockRemove.mockClear();
+
+      // Re-registering should remove the previous listener before adding new one
+      Klaviyo.registerFormLifecycleHandler(handler2);
+      expect(mockRemove).toHaveBeenCalledTimes(1);
     });
   });
 });
