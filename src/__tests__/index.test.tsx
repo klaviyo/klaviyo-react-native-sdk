@@ -590,8 +590,12 @@ describe('Klaviyo SDK', () => {
       const handler = jest.fn();
       const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
 
-      // Clear any remove calls from re-registration cleanup of prior tests
+      // Clear any calls from re-registration cleanup of prior tests
       mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterFormLifecycleHandler as jest.Mock
+      ).mockClear();
 
       unsubscribe();
 
@@ -607,10 +611,17 @@ describe('Klaviyo SDK', () => {
 
       Klaviyo.registerFormLifecycleHandler(handler1);
       mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterFormLifecycleHandler as jest.Mock
+      ).mockClear();
 
-      // Re-registering should remove the previous listener before adding new one
+      // Re-registering should remove the previous listener and native handler before adding new one
       Klaviyo.registerFormLifecycleHandler(handler2);
       expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });
