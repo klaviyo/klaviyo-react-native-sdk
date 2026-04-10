@@ -623,5 +623,150 @@ describe('Klaviyo SDK', () => {
         NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
       ).toHaveBeenCalledTimes(1);
     });
+
+    it('should not forward events with missing formId', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not forward events with missing formName', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formDismissed',
+        formId: 'abc123',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formName')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not forward events with empty string formId', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formId: '',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not forward formCtaClicked events with missing buttonLabel', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        deepLinkUrl: 'myapp://products',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): buttonLabel')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not forward events with invalid type', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'unknownEventType',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid type')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not forward events with missing type', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid type')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should report multiple missing fields at once', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('formId')
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('formName')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should default deepLinkUrl to empty string when missing from formCtaClicked', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: '',
+      });
+    });
   });
 });

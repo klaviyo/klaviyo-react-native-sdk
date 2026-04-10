@@ -92,7 +92,7 @@ function isNonEmptyString(value: unknown): value is string {
 /**
  * Parses a raw native event payload into a validated {@link FormLifecycleEvent}.
  *
- * Returns `null` and logs a warning if required fields are missing or empty.
+ * Returns `null` and logs an error if required fields are missing or empty.
  * Required fields vary by event type:
  * - All events: `type`, `formId`, `formName`
  * - `formCtaClicked`: additionally requires `buttonLabel`
