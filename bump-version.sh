@@ -31,11 +31,18 @@ swift_version=""
 skip_native=false
 skip_install=false
 
+require_arg() {
+  if [[ -z "${2:-}" || "$2" =~ ^- ]]; then
+    echo "Error: $1 requires a version argument" >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -v|--version)   new_version="$2"; shift 2 ;;
-    -a|--android)   android_version="$2"; shift 2 ;;
-    -s|--swift)     swift_version="$2"; shift 2 ;;
+    -v|--version)   require_arg "$1" "${2:-}"; new_version="$2"; shift 2 ;;
+    -a|--android)   require_arg "$1" "${2:-}"; android_version="$2"; shift 2 ;;
+    -s|--swift)     require_arg "$1" "${2:-}"; swift_version="$2"; shift 2 ;;
     --skip-native)  skip_native=true; shift ;;
     --skip-install) skip_install=true; shift ;;
     -h|--help)      usage 0 ;;
