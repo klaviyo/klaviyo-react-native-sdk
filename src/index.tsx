@@ -6,11 +6,8 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
-import type {
-  FormConfiguration,
-  FormLifecycleHandler,
-  FormLifecycleEvent,
-} from './Forms';
+import type { FormConfiguration, FormLifecycleHandler } from './Forms';
+import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
@@ -160,14 +157,11 @@ export const Klaviyo: KlaviyoInterface = {
 
     activeLifecycleSubscription = eventEmitter.addListener(
       'FormLifecycleEvent',
-      (data: {
-        type: string;
-        formId: string;
-        formName: string;
-        buttonLabel?: string;
-        deepLinkUrl?: string;
-      }) => {
-        handler(data as FormLifecycleEvent);
+      (data: Record<string, unknown>) => {
+        const event = parseFormLifecycleEvent(data);
+        if (event !== null) {
+          handler(event);
+        }
       }
     );
 

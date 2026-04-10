@@ -72,3 +72,91 @@ export type FormLifecycleEvent =
  * Handler function type for form lifecycle events
  */
 export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
+
+/**
+ * Valid form lifecycle event type discriminants
+ */
+const FORM_LIFECYCLE_EVENT_TYPES = [
+  'formShown',
+  'formDismissed',
+  'formCtaClicked',
+] as const;
+
+/**
+ * Validates that a value is a non-empty string.
+ */
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Parses a raw native event payload into a validated {@link FormLifecycleEvent}.
+ *
+ * Returns `null` and logs a warning if required fields are missing or empty.
+ * Required fields vary by event type:
+ * - All events: `type`, `formId`, `formName`
+ * - `formCtaClicked`: additionally requires `buttonLabel`
+ *
+ * @param data Raw event data from the native bridge
+ * @returns A validated FormLifecycleEvent, or null if the payload is invalid
+ */
+export function parseFormLifecycleEvent(
+  data: Record<string, unknown>
+): FormLifecycleEvent | null {
+  const { type, formId, formName } = data;
+
+  if (
+    !isNonEmptyString(type) ||
+    !FORM_LIFECYCLE_EVENT_TYPES.includes(
+      type as (typeof FORM_LIFECYCLE_EVENT_TYPES)[number]
+    )
+  ) {
+    console.error(
+      `[Klaviyo] Ignoring form lifecycle event with invalid type: ${JSON.stringify(type)}`
+    );
+    return null;
+  }
+
+  const missingFields: string[] = [];
+  if (!isNonEmptyString(formId)) missingFields.push('formId');
+  if (!isNonEmptyString(formName)) missingFields.push('formName');
+
+  if (type === 'formCtaClicked' && !isNonEmptyString(data.buttonLabel)) {
+    missingFields.push('buttonLabel');
+  }
+
+  if (missingFields.length > 0) {
+    console.error(
+      `[Klaviyo] Ignoring ${type} event: missing required field(s): ${missingFields.join(', ')}`
+    );
+    return null;
+  }
+
+  const validatedType = type as FormLifecycleEvent['type'];
+  const validFormId = formId as string;
+  const validFormName = formName as string;
+
+  switch (validatedType) {
+    case 'formShown':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+      };
+    case 'formDismissed':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+      };
+    case 'formCtaClicked':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+        buttonLabel: data.buttonLabel as string,
+        deepLinkUrl:
+          typeof data.deepLinkUrl === 'string' ? data.deepLinkUrl : '',
+      };
+  }
+}
