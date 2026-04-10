@@ -39,6 +39,13 @@ export function useForms() {
           MAX_LIFECYCLE_EVENTS
         )
       );
+      if (event.type === 'formWillDisplay') {
+        console.log(
+          `[useForms] accepting form ${event.formId} (${event.formType})`
+        );
+        return true;
+      }
+      return undefined;
     });
     return () => {
       console.log('[useForms] unsubscribing from form lifecycle events');

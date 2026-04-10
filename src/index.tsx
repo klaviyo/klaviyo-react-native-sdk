@@ -45,6 +45,8 @@ function isLocationAvailable(): boolean {
 
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
+let lifecycleEventEmitter: InstanceType<typeof NativeEventEmitter> | null =
+  null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -172,15 +174,49 @@ export const Klaviyo: KlaviyoInterface = {
       activeLifecycleSubscription = null;
     }
 
-    const eventEmitter = new NativeEventEmitter(
-      NativeModules.KlaviyoReactNativeSdk
-    );
+    if (!lifecycleEventEmitter) {
+      lifecycleEventEmitter = new NativeEventEmitter(
+        NativeModules.KlaviyoReactNativeSdk
+      );
+    }
 
-    activeLifecycleSubscription = eventEmitter.addListener(
+    const subscription = lifecycleEventEmitter.addListener(
       'FormLifecycleEvent',
       (data: Record<string, unknown>) => {
         const event = parseFormLifecycleEvent(data);
-        if (event !== null) {
+        if (event === null) {
+          if (
+            data.type === 'formWillDisplay' &&
+            typeof data.formId === 'string'
+          ) {
+            KlaviyoReactNativeSdk.respondToFormWillDisplay(data.formId, true);
+          }
+          return;
+        }
+        if (event.type === 'formWillDisplay') {
+          let result;
+          try {
+            result = handler(event);
+          } catch (e) {
+            console.error('[Klaviyo] Form lifecycle handler threw:', e);
+            KlaviyoReactNativeSdk.respondToFormWillDisplay(event.formId, true);
+            return;
+          }
+          Promise.resolve(result).then(
+            (accepted) => {
+              KlaviyoReactNativeSdk.respondToFormWillDisplay(
+                event.formId,
+                accepted !== false
+              );
+            },
+            () => {
+              KlaviyoReactNativeSdk.respondToFormWillDisplay(
+                event.formId,
+                true
+              );
+            }
+          );
+        } else {
           handler(event);
         }
       }
@@ -188,8 +224,11 @@ export const Klaviyo: KlaviyoInterface = {
 
     KlaviyoReactNativeSdk.registerFormLifecycleHandler();
 
+    activeLifecycleSubscription = subscription;
+
     return () => {
-      activeLifecycleSubscription?.remove();
+      if (activeLifecycleSubscription !== subscription) return;
+      subscription.remove();
       activeLifecycleSubscription = null;
       KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
     };
