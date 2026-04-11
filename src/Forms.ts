@@ -92,10 +92,10 @@ function isNonEmptyString(value: unknown): value is string {
 /**
  * Parses a raw native event payload into a validated {@link FormLifecycleEvent}.
  *
- * Returns `null` and logs an error if required fields are missing or empty.
+ * Returns `null` and logs a warning if required fields are missing or empty.
  * Required fields vary by event type:
  * - All events: `type`, `formId`, `formName`
- * - `formCtaClicked`: additionally requires `buttonLabel`
+ * - `formCtaClicked`: additionally requires `buttonLabel` and `deepLinkUrl`
  *
  * @param data Raw event data from the native bridge
  * @returns A validated FormLifecycleEvent, or null if the payload is invalid
@@ -111,7 +111,7 @@ export function parseFormLifecycleEvent(
       type as (typeof FORM_LIFECYCLE_EVENT_TYPES)[number]
     )
   ) {
-    console.error(
+    console.warn(
       `[Klaviyo] Ignoring form lifecycle event with invalid type: ${JSON.stringify(type)}`
     );
     return null;
@@ -121,12 +121,13 @@ export function parseFormLifecycleEvent(
   if (!isNonEmptyString(formId)) missingFields.push('formId');
   if (!isNonEmptyString(formName)) missingFields.push('formName');
 
-  if (type === 'formCtaClicked' && !isNonEmptyString(data.buttonLabel)) {
-    missingFields.push('buttonLabel');
+  if (type === 'formCtaClicked') {
+    if (!isNonEmptyString(data.buttonLabel)) missingFields.push('buttonLabel');
+    if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
   }
 
   if (missingFields.length > 0) {
-    console.error(
+    console.warn(
       `[Klaviyo] Ignoring ${type} event: missing required field(s): ${missingFields.join(', ')}`
     );
     return null;
@@ -155,8 +156,7 @@ export function parseFormLifecycleEvent(
         formId: validFormId,
         formName: validFormName,
         buttonLabel: data.buttonLabel as string,
-        deepLinkUrl:
-          typeof data.deepLinkUrl === 'string' ? data.deepLinkUrl : '',
+        deepLinkUrl: data.deepLinkUrl as string,
       };
   }
 }

@@ -625,7 +625,7 @@ describe('Klaviyo SDK', () => {
     });
 
     it('should not forward events with missing formId', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -635,14 +635,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): formId')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not forward events with missing formName', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -652,14 +652,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): formName')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not forward events with empty string formId', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -670,14 +670,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): formId')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not forward formCtaClicked events with missing buttonLabel', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -689,14 +689,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): buttonLabel')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not forward events with invalid type', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -707,14 +707,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not forward events with missing type', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -724,14 +724,14 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should report multiple missing fields at once', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -740,16 +740,17 @@ describe('Klaviyo SDK', () => {
       });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('formId')
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('formName')
       );
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
-    it('should default deepLinkUrl to empty string when missing from formCtaClicked', () => {
+    it('should not forward formCtaClicked events with missing deepLinkUrl', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -760,13 +761,11 @@ describe('Klaviyo SDK', () => {
         buttonLabel: 'Shop Now',
       });
 
-      expect(handler).toHaveBeenCalledWith({
-        type: 'formCtaClicked',
-        formId: 'abc123',
-        formName: 'Test Form',
-        buttonLabel: 'Shop Now',
-        deepLinkUrl: '',
-      });
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): deepLinkUrl')
+      );
+      consoleWarnSpy.mockRestore();
     });
   });
 });

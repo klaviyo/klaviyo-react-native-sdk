@@ -1,14 +1,14 @@
 import { parseFormLifecycleEvent } from '../Forms';
 
 describe('parseFormLifecycleEvent', () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleWarnSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 
   describe('valid events', () => {
@@ -24,7 +24,7 @@ describe('parseFormLifecycleEvent', () => {
         formId: 'abc123',
         formName: 'Welcome Form',
       });
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('parses a valid formDismissed event', () => {
@@ -39,7 +39,7 @@ describe('parseFormLifecycleEvent', () => {
         formId: 'abc123',
         formName: 'Welcome Form',
       });
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('parses a valid formCtaClicked event with all fields', () => {
@@ -58,24 +58,7 @@ describe('parseFormLifecycleEvent', () => {
         buttonLabel: 'Shop Now',
         deepLinkUrl: 'myapp://products',
       });
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-    });
-
-    it('defaults deepLinkUrl to empty string when absent', () => {
-      const result = parseFormLifecycleEvent({
-        type: 'formCtaClicked',
-        formId: 'abc123',
-        formName: 'Welcome Form',
-        buttonLabel: 'Shop Now',
-      });
-
-      expect(result).toEqual({
-        type: 'formCtaClicked',
-        formId: 'abc123',
-        formName: 'Welcome Form',
-        buttonLabel: 'Shop Now',
-        deepLinkUrl: '',
-      });
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it('strips extra fields not part of the event type', () => {
@@ -103,7 +86,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type: "formExploded"')
       );
     });
@@ -115,7 +98,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type')
       );
     });
@@ -128,7 +111,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type')
       );
     });
@@ -141,7 +124,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('invalid type')
       );
     });
@@ -155,7 +138,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): formId')
       );
     });
@@ -167,7 +150,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): formName')
       );
     });
@@ -180,7 +163,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('formId')
       );
     });
@@ -193,7 +176,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('formName')
       );
     });
@@ -207,7 +190,7 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('missing required field(s): buttonLabel')
       );
     });
@@ -222,8 +205,37 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('buttonLabel')
+      );
+    });
+
+    it('returns null when deepLinkUrl is missing for formCtaClicked', () => {
+      const result = parseFormLifecycleEvent({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Welcome Form',
+        buttonLabel: 'Shop Now',
+      });
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): deepLinkUrl')
+      );
+    });
+
+    it('returns null when deepLinkUrl is empty string for formCtaClicked', () => {
+      const result = parseFormLifecycleEvent({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Welcome Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: '',
+      });
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('deepLinkUrl')
       );
     });
 
@@ -233,8 +245,8 @@ describe('parseFormLifecycleEvent', () => {
       });
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('formId, formName, buttonLabel')
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('formId, formName, buttonLabel, deepLinkUrl')
       );
     });
 
