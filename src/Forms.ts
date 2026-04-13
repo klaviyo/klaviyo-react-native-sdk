@@ -122,7 +122,7 @@ export function parseFormLifecycleEvent(
   if (!isNonEmptyString(formName)) missingFields.push('formName');
 
   if (type === 'formCtaClicked') {
-    if (!isNonEmptyString(data.buttonLabel)) missingFields.push('buttonLabel');
+    if (typeof data.buttonLabel !== 'string') missingFields.push('buttonLabel');
     if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
   }
 
