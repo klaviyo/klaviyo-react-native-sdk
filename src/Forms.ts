@@ -58,8 +58,19 @@ export interface FormConfiguration {
  * ```
  */
 export type FormLifecycleEvent =
+  /** Triggered when a form is shown to the user. Fired after the SDK has initiated form presentation. */
   | { type: 'formShown'; formId: string; formName: string }
+  /**
+   * Triggered when a form is dismissed by the user. Fired after the SDK has initiated form dismissal.
+   * Fires for user-initiated dismissals (e.g. tapping outside, close button).
+   * Does not fire when the SDK tears down the form internally (session timeouts, aborts).
+   */
   | { type: 'formDismissed'; formId: string; formName: string }
+  /**
+   * Triggered when a user taps a call-to-action (CTA) button in a form that has a deep link URL configured.
+   * Fired after the SDK has initiated deep link navigation.
+   * Not emitted if no deep link URL is configured for the CTA.
+   */
   | {
       type: 'formCtaClicked';
       formId: string;
