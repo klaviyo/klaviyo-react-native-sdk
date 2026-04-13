@@ -676,8 +676,7 @@ describe('Klaviyo SDK', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('should not forward formCtaClicked events with missing buttonLabel', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    it('should forward formCtaClicked events with missing buttonLabel as empty string', () => {
       const handler = jest.fn();
       Klaviyo.registerFormLifecycleHandler(handler);
 
@@ -688,11 +687,13 @@ describe('Klaviyo SDK', () => {
         deepLinkUrl: 'myapp://products',
       });
 
-      expect(handler).not.toHaveBeenCalled();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('missing required field(s): buttonLabel')
-      );
-      consoleWarnSpy.mockRestore();
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: '',
+        deepLinkUrl: 'myapp://products',
+      });
     });
 
     it('should not forward events with invalid type', () => {

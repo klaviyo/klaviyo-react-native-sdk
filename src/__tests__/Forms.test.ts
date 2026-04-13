@@ -181,7 +181,7 @@ describe('parseFormLifecycleEvent', () => {
       );
     });
 
-    it('returns null when buttonLabel is missing for formCtaClicked', () => {
+    it('defaults missing buttonLabel to empty string for formCtaClicked', () => {
       const result = parseFormLifecycleEvent({
         type: 'formCtaClicked',
         formId: 'abc123',
@@ -189,10 +189,13 @@ describe('parseFormLifecycleEvent', () => {
         deepLinkUrl: 'myapp://products',
       });
 
-      expect(result).toBeNull();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('missing required field(s): buttonLabel')
-      );
+      expect(result).toEqual({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Welcome Form',
+        buttonLabel: '',
+        deepLinkUrl: 'myapp://products',
+      });
     });
 
     it('allows empty string buttonLabel for formCtaClicked', () => {
@@ -250,7 +253,7 @@ describe('parseFormLifecycleEvent', () => {
 
       expect(result).toBeNull();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('formId, formName, buttonLabel, deepLinkUrl')
+        expect.stringContaining('formId, formName, deepLinkUrl')
       );
     });
 

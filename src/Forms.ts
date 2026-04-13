@@ -106,7 +106,7 @@ function isNonEmptyString(value: unknown): value is string {
  * Returns `null` and logs a warning if required fields are missing or empty.
  * Required fields vary by event type:
  * - All events: `type`, `formId`, `formName`
- * - `formCtaClicked`: additionally requires `buttonLabel` and `deepLinkUrl`
+ * - `formCtaClicked`: additionally requires `deepLinkUrl`; `buttonLabel` defaults to empty string if absent
  *
  * @param data Raw event data from the native bridge
  * @returns A validated FormLifecycleEvent, or null if the payload is invalid
@@ -133,7 +133,6 @@ export function parseFormLifecycleEvent(
   if (!isNonEmptyString(formName)) missingFields.push('formName');
 
   if (type === 'formCtaClicked') {
-    if (typeof data.buttonLabel !== 'string') missingFields.push('buttonLabel');
     if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
   }
 
@@ -166,7 +165,8 @@ export function parseFormLifecycleEvent(
         type: validatedType,
         formId: validFormId,
         formName: validFormName,
-        buttonLabel: data.buttonLabel as string,
+        buttonLabel:
+          typeof data.buttonLabel === 'string' ? data.buttonLabel : '',
         deepLinkUrl: data.deepLinkUrl as string,
       };
   }
