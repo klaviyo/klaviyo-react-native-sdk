@@ -58,8 +58,19 @@ export interface FormConfiguration {
  * ```
  */
 export type FormLifecycleEvent =
+  /** Triggered when a form is shown to the user. Fired after the SDK has initiated form presentation. */
   | { type: 'formShown'; formId: string; formName: string }
+  /**
+   * Triggered when a form is dismissed by the user. Fired after the SDK has initiated form dismissal.
+   * Fires for user-initiated dismissals (e.g. tapping outside, close button).
+   * Does not fire when the SDK tears down the form internally (session timeouts, aborts).
+   */
   | { type: 'formDismissed'; formId: string; formName: string }
+  /**
+   * Triggered when a user taps a call-to-action (CTA) button in a form that has a deep link URL configured.
+   * Fired after the SDK has initiated deep link navigation.
+   * Not emitted if no deep link URL is configured for the CTA.
+   */
   | {
       type: 'formCtaClicked';
       formId: string;
@@ -72,3 +83,91 @@ export type FormLifecycleEvent =
  * Handler function type for form lifecycle events
  */
 export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
+
+/**
+ * Valid form lifecycle event type discriminants
+ */
+const FORM_LIFECYCLE_EVENT_TYPES = [
+  'formShown',
+  'formDismissed',
+  'formCtaClicked',
+] as const;
+
+/**
+ * Validates that a value is a non-empty string.
+ */
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Parses a raw native event payload into a validated {@link FormLifecycleEvent}.
+ *
+ * Returns `null` and logs a warning if required fields are missing or empty.
+ * Required fields vary by event type:
+ * - All events: `type`, `formId`, `formName`
+ * - `formCtaClicked`: additionally requires `deepLinkUrl`; `buttonLabel` defaults to empty string if absent
+ *
+ * @param data Raw event data from the native bridge
+ * @returns A validated FormLifecycleEvent, or null if the payload is invalid
+ */
+export function parseFormLifecycleEvent(
+  data: Record<string, unknown>
+): FormLifecycleEvent | null {
+  const { type, formId, formName } = data;
+
+  if (
+    !isNonEmptyString(type) ||
+    !FORM_LIFECYCLE_EVENT_TYPES.includes(
+      type as (typeof FORM_LIFECYCLE_EVENT_TYPES)[number]
+    )
+  ) {
+    console.warn(
+      `[Klaviyo] Ignoring form lifecycle event with invalid type: ${JSON.stringify(type)}`
+    );
+    return null;
+  }
+
+  const missingFields: string[] = [];
+  if (!isNonEmptyString(formId)) missingFields.push('formId');
+  if (!isNonEmptyString(formName)) missingFields.push('formName');
+
+  if (type === 'formCtaClicked') {
+    if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
+  }
+
+  if (missingFields.length > 0) {
+    console.warn(
+      `[Klaviyo] Ignoring ${type} event: missing required field(s): ${missingFields.join(', ')}`
+    );
+    return null;
+  }
+
+  const validatedType = type as FormLifecycleEvent['type'];
+  const validFormId = formId as string;
+  const validFormName = formName as string;
+
+  switch (validatedType) {
+    case 'formShown':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+      };
+    case 'formDismissed':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+      };
+    case 'formCtaClicked':
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+        buttonLabel:
+          typeof data.buttonLabel === 'string' ? data.buttonLabel : '',
+        deepLinkUrl: data.deepLinkUrl as string,
+      };
+  }
+}
