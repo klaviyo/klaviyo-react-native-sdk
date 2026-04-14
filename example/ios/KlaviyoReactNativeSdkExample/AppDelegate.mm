@@ -205,6 +205,10 @@ BOOL useNativeImplementation = YES;
                                                    animated:YES
                                                  completion:nil];
     }
+  } else if (apsPayload[@"content-available"]) {
+    if (isDebug) {
+      NSLog(@"Standard Push with Background Processing: %@", userInfo);
+    }
   }
 
   // You MUST call the completion handler within ~30 seconds.
