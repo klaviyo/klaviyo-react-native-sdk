@@ -34,6 +34,26 @@ export interface FormConfiguration {
 }
 
 /**
+ * String constants for form lifecycle event types.
+ *
+ * These values match the `type` discriminants emitted by the native bridge
+ * and are safe to use when comparing {@link FormLifecycleEvent#type} or
+ * building dispatch tables keyed by event type.
+ */
+export const FormLifecycleEventType = {
+  /** Emitted when a form is shown to the user. */
+  Shown: 'formShown',
+  /** Emitted when the user dismisses a visible form. */
+  Dismissed: 'formDismissed',
+  /** Emitted when the user taps a CTA button with a configured deep link. */
+  CtaClicked: 'formCtaClicked',
+} as const;
+
+/** Union of valid {@link FormLifecycleEvent} type discriminants. */
+export type FormLifecycleEventType =
+  (typeof FormLifecycleEventType)[keyof typeof FormLifecycleEventType];
+
+/**
  * Discriminated union representing a form lifecycle event.
  *
  * Each variant carries contextual data about the form, and the `type` field
@@ -44,13 +64,13 @@ export interface FormConfiguration {
  * ```typescript
  * Klaviyo.registerFormLifecycleHandler((event) => {
  *   switch (event.type) {
- *     case 'formShown':
+ *     case FormLifecycleEventType.Shown:
  *       console.log(`Form shown: ${event.formId}`);
  *       break;
- *     case 'formDismissed':
+ *     case FormLifecycleEventType.Dismissed:
  *       console.log(`Form dismissed: ${event.formId}`);
  *       break;
- *     case 'formCtaClicked':
+ *     case FormLifecycleEventType.CtaClicked:
  *       console.log(`CTA clicked: ${event.buttonLabel}, deep link: ${event.deepLinkUrl}`);
  *       break;
  *   }
@@ -59,23 +79,39 @@ export interface FormConfiguration {
  */
 export type FormLifecycleEvent =
   /** Triggered when a form is shown to the user. Fired after the SDK has initiated form presentation. */
-  | { type: 'formShown'; formId: string; formName: string }
+  | {
+      type: typeof FormLifecycleEventType.Shown;
+      formId: string;
+      formName: string;
+    }
   /**
    * Triggered when a form is dismissed by the user. Fired after the SDK has initiated form dismissal.
    * Fires for user-initiated dismissals (e.g. tapping outside, close button).
    * Does not fire when the SDK tears down the form internally (session timeouts, aborts).
    */
-  | { type: 'formDismissed'; formId: string; formName: string }
+  | {
+      type: typeof FormLifecycleEventType.Dismissed;
+      formId: string;
+      formName: string;
+    }
   /**
    * Triggered when a user taps a call-to-action (CTA) button in a form that has a deep link URL configured.
    * Fired after the SDK has initiated deep link navigation.
    * Not emitted if no deep link URL is configured for the CTA.
    */
   | {
-      type: 'formCtaClicked';
+      type: typeof FormLifecycleEventType.CtaClicked;
       formId: string;
       formName: string;
+      /**
+       * Label of the tapped CTA button. May be an empty string when the
+       * button has no visible label configured.
+       */
       buttonLabel: string;
+      /**
+       * Deep link URL configured for the tapped CTA. Always present and
+       * non-empty — this event is not emitted when no deep link is configured.
+       */
       deepLinkUrl: string;
     };
 
@@ -84,14 +120,8 @@ export type FormLifecycleEvent =
  */
 export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
 
-/**
- * Valid form lifecycle event type discriminants
- */
-const FORM_LIFECYCLE_EVENT_TYPES = [
-  'formShown',
-  'formDismissed',
-  'formCtaClicked',
-] as const;
+const FORM_LIFECYCLE_EVENT_TYPES: readonly FormLifecycleEventType[] =
+  Object.values(FormLifecycleEventType);
 
 /**
  * Validates that a value is a non-empty string.
@@ -118,9 +148,7 @@ export function parseFormLifecycleEvent(
 
   if (
     !isNonEmptyString(type) ||
-    !FORM_LIFECYCLE_EVENT_TYPES.includes(
-      type as (typeof FORM_LIFECYCLE_EVENT_TYPES)[number]
-    )
+    !FORM_LIFECYCLE_EVENT_TYPES.includes(type as FormLifecycleEventType)
   ) {
     console.warn(
       `[Klaviyo] Ignoring form lifecycle event with invalid type: ${JSON.stringify(type)}`
@@ -132,7 +160,7 @@ export function parseFormLifecycleEvent(
   if (!isNonEmptyString(formId)) missingFields.push('formId');
   if (!isNonEmptyString(formName)) missingFields.push('formName');
 
-  if (type === 'formCtaClicked') {
+  if (type === FormLifecycleEventType.CtaClicked) {
     if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
   }
 
@@ -143,24 +171,24 @@ export function parseFormLifecycleEvent(
     return null;
   }
 
-  const validatedType = type as FormLifecycleEvent['type'];
+  const validatedType = type as FormLifecycleEventType;
   const validFormId = formId as string;
   const validFormName = formName as string;
 
   switch (validatedType) {
-    case 'formShown':
+    case FormLifecycleEventType.Shown:
       return {
         type: validatedType,
         formId: validFormId,
         formName: validFormName,
       };
-    case 'formDismissed':
+    case FormLifecycleEventType.Dismissed:
       return {
         type: validatedType,
         formId: validFormId,
         formName: validFormName,
       };
-    case 'formCtaClicked':
+    case FormLifecycleEventType.CtaClicked:
       return {
         type: validatedType,
         formId: validFormId,

@@ -6,6 +6,7 @@ import {
   ProfileProperty,
   type FormConfiguration,
   type FormLifecycleEvent,
+  FormLifecycleEventType,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -40,13 +41,13 @@ export const initialize = async () => {
       );
 
       switch (event.type) {
-        case 'formShown':
+        case FormLifecycleEventType.Shown:
           console.log(`Form ${event.formId}${nameInfo} is being shown`);
           break;
-        case 'formDismissed':
+        case FormLifecycleEventType.Dismissed:
           console.log(`Form ${event.formId}${nameInfo} was dismissed`);
           break;
-        case 'formCtaClicked':
+        case FormLifecycleEventType.CtaClicked:
           console.log(
             `Form ${event.formId}${nameInfo} CTA was clicked: ${event.buttonLabel}, deep link: ${event.deepLinkUrl}`
           );

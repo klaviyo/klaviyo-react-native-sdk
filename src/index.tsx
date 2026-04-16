@@ -184,6 +184,7 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
+export { FormLifecycleEventType } from './Forms';
 export type {
   FormConfiguration,
   FormLifecycleEvent,
