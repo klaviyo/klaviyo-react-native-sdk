@@ -184,6 +184,44 @@ BOOL useNativeImplementation = YES;
   [PushNotificationsHelper updateBadgeCount:0];
 }
 
+// iOS Installation Step 15: Handle silent push notifications (content-available: 1).
+// This method fires for both pure silent pushes and standard pushes that carry
+// content-available. Only forward pure silent pushes (no aps.alert) for background
+// processing — standard pushes are handled by willPresent/didReceive.
+- (void)application:(UIApplication *)application
+    didReceiveRemoteNotification:(NSDictionary *)userInfo
+          fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+  NSDictionary *apsPayload = userInfo[@"aps"];
+  BOOL hasVisibleContent = apsPayload[@"alert"] != nil;
+
+  if (!hasVisibleContent) {
+    [PushNotificationsHelper handleSilentPushWithUserInfo:userInfo];
+
+    if (isDebug) {
+      NSString *payload = [NSString stringWithFormat:@"%@", userInfo];
+      UIAlertController *alert = [UIAlertController
+          alertControllerWithTitle:@"Silent Push Received"
+                           message:payload
+                    preferredStyle:UIAlertControllerStyleAlert];
+      [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                                style:UIAlertActionStyleDefault
+                                              handler:nil]];
+      [self.window.rootViewController presentViewController:alert
+                                                   animated:YES
+                                                 completion:nil];
+    }
+  } else if (apsPayload[@"content-available"]) {
+    if (isDebug) {
+      NSLog(@"Standard Push with Background Processing: %@", userInfo);
+    }
+  }
+
+  // You MUST call the completion handler within ~30 seconds.
+  // Failing to do so will cause iOS to throttle or stop delivering
+  // silent push notifications to your app.
+  completionHandler(UIBackgroundFetchResultNewData);
+}
+
 // iOS Installation Step 16: call this method from
 // `application:didFinishLaunchingWithOptions:` before calling the super class
 // method with the launch arguments. This is a workaround for a react issue
