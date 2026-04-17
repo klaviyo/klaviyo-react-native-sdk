@@ -115,14 +115,20 @@ To run the example app:
   - Run `yarn install --immutable` from the root directory
   - Navigate to the `example` directory and run `bundle install`
   - Navigate to the `example/ios` directory and run `bundle exec pod install`
-- Android configuration:
-  - To initialize Klaviyo from the native layer, open `example/android/gradle.properties` and follow the
-    instructions to set your `publicApiKey` and verify `initializeKlaviyoFromNative` is enabled.
-  - If you wish to run the Android example app with push/firebase, you'll need to copy a `google-services.json`
-    file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
-    Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
-    This is disabled by default because the app will crash on launch without a `google-services.json` file.
-- From the project's root directory, use the following commands start a metro server and run the example app.
+- Configure your public API key:
+  - The example app initializes the SDK from JavaScript/TypeScript via an `.env` file
+    (loaded with [`react-native-dotenv`](https://github.com/goatandsheep/react-native-dotenv)).
+    Copy `example/.env.template` to `example/.env` and set your `KLAVIYO_API_KEY`.
+    `.env` is gitignored. If you skip this step the app still runs and shows a friendly
+    warning banner — non-push features work without an API key.
+    See [`example/README.md`](./example/README.md) for the full walkthrough.
+  - If you prefer to initialize natively instead, commented reference implementations live in
+    [`MainApplication.kt`](./example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainApplication.kt)
+    and [`AppDelegate.mm`](./example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm).
+- Push notifications are disabled by default. To enable them, add your Firebase config files as described
+  in [`example/README.md`](./example/README.md#firebase-setup). Without those files the app runs fine —
+  the push section is simply disabled and the rest of the demo works as usual.
+- From the project's root directory, use the following commands to start a metro server and run the example app.
   - `yarn example start` - to start the metro server
   - `yarn example android` - to run the example app on an Android emulator or device
   - `yarn example ios` - to run the example app on an iOS simulator
