@@ -18,13 +18,15 @@ import { FormsSection } from './sections/FormsSection';
 import { GeofencingSection } from './sections/GeofencingSection';
 import { PushSection } from './sections/PushSection';
 
-// Environment — copy example/.env.template to example/.env and fill in your key.
-// Run `yarn install` in example/ after adding react-native-dotenv, then restart Metro.
+// RN Installation Step: Source your public API key.
+// This example uses `react-native-dotenv` to inline `KLAVIYO_API_KEY` from
+// example/.env at build time; see example/babel.config.js for the plugin setup.
+// Integrators are free to source the key any way they like.
 import { KLAVIYO_API_KEY } from '@env';
 
-// react-native-dotenv inlines env vars at build time. Fail fast if the key is
-// missing or still set to the placeholder — the example app is useless without
-// one, and a clear module-load error beats silently broken SDK calls.
+// Fail fast if the key is missing or still set to the placeholder — the
+// example app is useless without one, and a clear module-load error beats
+// silently broken SDK calls.
 const PLACEHOLDER_API_KEY = 'YOUR_KLAVIYO_PUBLIC_API_KEY';
 const API_KEY = KLAVIYO_API_KEY ?? '';
 if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
@@ -33,9 +35,9 @@ if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
   );
 }
 
-// Initialize synchronously at module load so native SDK calls from hook
-// useEffects (which fire before App's useEffect) land after the bridge has
-// been told about the public key.
+// RN Installation Step: Initialize the Klaviyo SDK.
+// If you'd rather initialize from native code, see the
+// commented references in the iOS AppDelegate and Android MainApplication
 Klaviyo.initialize(API_KEY);
 
 type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push';

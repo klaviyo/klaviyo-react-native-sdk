@@ -24,7 +24,7 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    // Android Installation Step 5a: Depending on the state of your application when the notification is tapped,
+    // Android Installation Step: Depending on the state of your application when the notification is tapped,
     // the intent have started this activity, or it might be received via onNewIntent if the app was already running.
     // We recommend passing all intents through Klaviyo.handlePush to make sure you don't miss a use case.
     onNewIntent(intent)
@@ -33,7 +33,7 @@ class MainActivity : ReactActivity() {
   override fun onNewIntent(intent: Intent?) {
     super.onNewIntent(intent)
 
-    // Android Installation Step 5: Call handlePush when a push notification is tapped
+    // Android Installation Step: Call handlePush when a push notification is tapped
     // Note: due to platform differences, this step must be implemented in native code.
     // Tapping on a notification broadcasts an intent to your app. This method detects if the
     // intent originated from a Klaviyo push notification and registers a special Opened Push event

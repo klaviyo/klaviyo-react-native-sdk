@@ -1,6 +1,5 @@
 buildscript {
     ext {
-        // Android Installation Step 1a: Set compatible minSdkVersion and compileSdkVersion
         minSdkVersion = 24
         targetSdkVersion = 36 // Typically minSdkVersion <= targetSdkVersion <= compileSdkVersion
         compileSdkVersion = 36
@@ -17,7 +16,8 @@ buildscript {
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
 
-        // Android Installation Step - Required dependency to initialize firebase via google-services.json file
+        // Android Installation Step: google-services Gradle plugin,
+        // required to process google-services.json if you're enabling push.
         classpath("com.google.gms:google-services:4.4.2")
     }
 }

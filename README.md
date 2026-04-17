@@ -104,29 +104,9 @@ yarn add klaviyo-react-native-sdk
 
 ### Example App
 
-We have included an example app in this repository for reference of how to integrate with our SDK.
-It is primarily intended to give code samples such as how and where to `initialize`, implement notification
-delegate methods on iOS, and handle an opened notification intent on Android. We've commented the sample app
-code to call out key setup steps, search for `iOS Installation Step` and `Android Installation Step`.
-
-To run the example app:
-
-- Clone this repository
-- From the root directory, run `yarn example setup`. This is an alias that will do the following:
-  - Run `yarn install --immutable` from the root directory
-  - Navigate to the `example` directory and run `bundle install`
-  - Navigate to the `example/ios` directory and run `bundle exec pod install`
-- Android configuration:
-  - To initialize Klaviyo from the native layer, open `example/android/gradle.properties` and follow the
-    instructions to set your `publicApiKey` and verify `initializeKlaviyoFromNative` is enabled.
-  - If you wish to run the Android example app with push/firebase, you'll need to copy a `google-services.json`
-    file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
-    Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
-    This is disabled by default because the app will crash on launch without a `google-services.json` file.
-- From the project's root directory, use the following commands start a metro server and run the example app.
-  - `yarn example start` - to start the metro server
-  - `yarn example android` - to run the example app on an Android emulator or device
-  - `yarn example ios` - to run the example app on an iOS simulator
+The [example app](./example) is a reference integration demonstrating SDK setup and
+exercising the public API surface. See [`example/README.md`](./example/README.md) for
+setup instructions, Firebase configuration, and a walkthrough of the demonstrated features.
 
 ### Android
 

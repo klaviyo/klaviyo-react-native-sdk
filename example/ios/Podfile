@@ -2,13 +2,15 @@
 ENV['KLAVIYO_INCLUDE_FORMS'] = 'true'
 ENV['KLAVIYO_INCLUDE_LOCATION'] = 'true'
 
-# Force @react-native-firebase pods to build as static frameworks. The flag is a
-# no-op in the default RN build (static libraries all around) but is required when
-# use_frameworks! is enabled below (via USE_FRAMEWORKS env var), because RNFirebase's
-# Swift/ObjC wrappers would otherwise default to dynamic linkage and fail to link
-# against Firebase's static-only native pods (FirebaseCore, FirebaseMessaging, etc.).
-# Kept set unconditionally so `USE_FRAMEWORKS=dynamic pod install` works without extra
-# setup. Must be declared before any pod directives so the RNFirebase modules see it.
+# Force @react-native-firebase pods to build as static frameworks.
+# The flag is a no-op in the default RN build
+# (static libraries all around) but is required when use_frameworks! is enabled
+# below (via USE_FRAMEWORKS env var), because RNFirebase's Swift/ObjC wrappers
+# would otherwise default to dynamic linkage and fail to link against
+# Firebase's static-only native pods (FirebaseCore, FirebaseMessaging, etc.).
+# Kept set unconditionally so `USE_FRAMEWORKS=dynamic pod install` works without
+# extra setup. Must be declared before any pod directives so the RNFirebase
+# modules see it.
 $RNFirebaseAsStaticFramework = true
 
 def node_require(script)
