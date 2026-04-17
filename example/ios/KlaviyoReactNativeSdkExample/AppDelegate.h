@@ -8,7 +8,6 @@
 #import "klaviyo_react_native_sdk-Swift.h"
 #endif
 
-// iOS Installation Step 1: Conform AppDelegate to UNUserNotificationCenterDelegate
 @interface AppDelegate: RCTAppDelegate <UNUserNotificationCenterDelegate>
 
 @end

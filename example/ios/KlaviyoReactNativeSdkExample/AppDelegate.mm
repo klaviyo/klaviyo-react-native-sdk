@@ -19,7 +19,7 @@ BOOL isDebug = YES;
   self.moduleName = @"KlaviyoReactNativeSdkExample";
   self.initialProps = @{};
 
-  // iOS Installation Step 2: Set the UNUserNotificationCenter delegate to self
+  // iOS Installation Step: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
   // Initialize Firebase. See example/README.md for GoogleService-Info.plist
@@ -47,7 +47,8 @@ BOOL isDebug = YES;
   // the "earliest possible" option but not required; the Swift SDK's
   // registerGeofencing() is safe to invoke from JS once RN init completes.
 
-  // refer to installation step 16 below
+  // See `getLaunchOptionsWithURL` below — workaround for a React Native
+  // cold-start deep-link issue from terminated-state remote notifications.
   NSMutableDictionary *launchOptionsWithURL =
       [self getLaunchOptionsWithURL:launchOptions];
 
@@ -55,7 +56,7 @@ BOOL isDebug = YES;
       didFinishLaunchingWithOptions:launchOptionsWithURL];
 }
 
-// iOS Installation Step 6: Implement this delegate to receive and log the
+// iOS Installation Step: Implement this delegate to receive and log the
 // APNs push token. Firebase's default method swizzling (enabled by default
 // when FirebaseAppDelegateProxyEnabled is absent from Info.plist) handles
 // forwarding this callback to FIRMessaging and to RNFB's internal registration
@@ -74,8 +75,6 @@ BOOL isDebug = YES;
   }
 }
 
-// iOS Installation Step 8: [Optional] Implement this if registering with APNs
-// fails
 - (void)application:(UIApplication *)application
     didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
   if (isDebug) {
@@ -83,14 +82,14 @@ BOOL isDebug = YES;
   }
 }
 
-// iOS Installation Step 9: Implement the delegate
+// iOS Installation Step: Implement the delegate
 // didReceiveNotificationResponse to response to user actions (tapping on push)
 // push notifications when the app is in the background NOTE: this delegate will
-// NOT be called if iOS Installation Step 2 is not done.
+// NOT be called if the UNUserNotificationCenter delegate isn't set (see above).
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
     didReceiveNotificationResponse:(UNNotificationResponse *)response
              withCompletionHandler:(void (^)())completionHandler {
-  // iOS Installation Step 10: call `handleReceivingPushWithResponse` method and
+  // iOS Installation Step: call `handleReceivingPushWithResponse` method and
   // pass in the below arguments. Note that handleReceivingPushWithResponse
   // calls our SDK and is something that has to be implemented in your app as
   // well. Further, if you want to intercept urls instead of them being routed
@@ -107,7 +106,7 @@ BOOL isDebug = YES;
                                 options:@{}];
                       }];
 
-  // iOS Installation Step 9a: update the app count to current badge number - 1.
+  // iOS Installation Step: update the app count to current badge number - 1.
   // You can also set this to 0 if you no longer want the badge to show.
   [PushNotificationsHelper updateBadgeCount:[UIApplication sharedApplication]
                                                 .applicationIconBadgeNumber -
@@ -127,9 +126,10 @@ BOOL isDebug = YES;
   }
 }
 
-// iOS Installation Step 11: Implement the delegate willPresentNotification to
+// iOS Installation Step: Implement the delegate willPresentNotification to
 // handle push notifications when the app is in the foreground NOTE: this
-// delegate will NOT be called if iOS Installation Step 2 is not done.
+// delegate will NOT be called if the UNUserNotificationCenter delegate isn't
+// set (see above).
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:
@@ -153,14 +153,14 @@ BOOL isDebug = YES;
                                                completion:nil];
   }
 
-  // iOS Installation Step 12: call the completion handler with presentation
+  // iOS Installation Step: call the completion handler with presentation
   // options here, such as showing a banner or playing a sound.
   completionHandler(UNNotificationPresentationOptionAlert |
                     UNNotificationPresentationOptionBadge |
                     UNNotificationPresentationOptionSound);
 }
 
-// iOS Installation Step 13: Implement this method to receive deep link. There
+// iOS Installation Step: Implement this method to receive deep link. There
 // are some addition setup steps needed as mentioned in the readme here -
 // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
 // Calling `RCTLinkingManager` is required for your react native listeners to be
@@ -172,7 +172,7 @@ BOOL isDebug = YES;
   return [RCTLinkingManager application:app openURL:url options:options];
 }
 
-// iOS Installation Step 13a: Implement this method to handle Universal Links
+// iOS Installation Step: Implement this method to handle Universal Links
 // (https://) This is required for Klaviyo universal tracking links and other
 // HTTPS deep links Calling `RCTLinkingManager` forwards the universal link to
 // your React Native code
@@ -186,7 +186,7 @@ BOOL isDebug = YES;
                      restorationHandler:restorationHandler];
 }
 
-// iOS Installation Step 14: if you want to reset the app badge count whenever
+// iOS Installation Step: if you want to reset the app badge count whenever
 // the app becomes active implement this delegate method and set the badge count
 // to 0. Note that this may sometimes mean that the user would miss the
 // notification.
@@ -194,7 +194,7 @@ BOOL isDebug = YES;
   [PushNotificationsHelper updateBadgeCount:0];
 }
 
-// iOS Installation Step 15: Handle silent push notifications (content-available: 1).
+// iOS Installation Step: Handle silent push notifications (content-available: 1).
 // This method fires for both pure silent pushes and standard pushes that carry
 // content-available. Only forward pure silent pushes (no aps.alert) for background
 // processing — standard pushes are handled by willPresent/didReceive.
@@ -232,7 +232,7 @@ BOOL isDebug = YES;
   completionHandler(UIBackgroundFetchResultNewData);
 }
 
-// iOS Installation Step 16: call this method from
+// iOS Installation Step: call this method from
 // `application:didFinishLaunchingWithOptions:` before calling the super class
 // method with the launch arguments. This is a workaround for a react issue
 // where if the app is terminated the deep link isn't sent to the react native

@@ -114,7 +114,7 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    // Android Installation Step 1b - add firebase dependency if using push
+    // Android Installation Step - add firebase dependency if using push
     implementation 'com.google.firebase:firebase-messaging-ktx:24.0.0'
 
     if (hermesEnabled.toBoolean()) {
@@ -124,11 +124,14 @@ dependencies {
     }
 }
 
-// Apply the google-services plugin only when google-services.json is present.
-// This lets the example app build out of the box without a Firebase project.
-// To enable push: drop your Firebase project's google-services.json into
-// example/android/app/, and make sure its package_name matches applicationId
-// above. See example/README.md for full setup details.
+// For the example app we only apply the google-services plugin
+// when google-services.json is present. This lets the example app build out of
+// the box without a Firebase project. To enable push: drop your Firebase
+// project's google-services.json into example/android/app/, and make sure its
+// package_name matches applicationId above. See example/README.md for full
+// setup details. The equivalent on iOS is the `#if __has_include(...)` +
+// `if (plistPath)` guard in example/ios/.../AppDelegate.mm.
 if (file('google-services.json').exists()) {
+    // Optional Android Installation Step: Apply the google-services plugin to enable push
     apply plugin: "com.google.gms.google-services"
 }
