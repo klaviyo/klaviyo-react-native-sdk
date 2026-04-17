@@ -1,0 +1,43 @@
+example/src/hooks/usePush.ts
+  26513b4669cf9486 2,9,16,23,28-32,34,36-72,89-99,106-107,110
+example/src/hooks/useAnalytics.ts
+  26513b4669cf9486 18,23-35,56,69-71,74-91,94-95,98-99,101-102,104-108,111-139,159-167,196,204-226,230-240,242
+example/ios/KlaviyoReactNativeSdkExample/Info.plist
+  26513b4669cf9486 59,61
+example/src/App.tsx
+  26513b4669cf9486 12,29,133-210,388-389,391-400
+example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm
+  26513b4669cf9486 40-45,65-70
+example/package.json
+  26513b4669cf9486 14-15
+example/src/PermissionHelper.ts
+  26513b4669cf9486 1-2,10-16,31,38-42,49-55,66,69,73,83,85-86,252-253,313-321,326,329-332,340
+example/src/components/ProfileTextField.tsx
+  26513b4669cf9486 9,11,15-16,41-52
+example/src/components/Collapsible.tsx
+  26513b4669cf9486 1-50
+example/index.js
+  26513b4669cf9486 5-19
+example/src/Styles.ts
+  26513b4669cf9486 108-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "0eb526f805b67579d98263c9ad5bcdd0b9020330",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 5379,
+      "total_deletions": 887,
+      "accepted_lines": 3409,
+      "overriden_lines": 44
+    }
+  }
+}
