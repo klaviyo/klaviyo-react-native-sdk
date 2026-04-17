@@ -1,0 +1,23 @@
+example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm
+  26513b4669cf9486 45-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "0d5789b62aa0dd09b9727fb725975209932d863c",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 43,
+      "total_deletions": 62,
+      "accepted_lines": 43,
+      "overriden_lines": 0
+    }
+  }
+}
