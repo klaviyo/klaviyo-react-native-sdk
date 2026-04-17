@@ -1,19 +1,11 @@
-## Changes in this file must *NOT* be tracked by Version Control Systems,
-# as it contains information specific to your local configuration,
-# such as your Klaviyo company ID aka "Public API Key".
+## local.properties must *NOT* be tracked by Version Control Systems,
+# as it contains information specific to your local configuration.
 # Only the base template should be checked in to VCS.
-# Copy this file to `local.properties` to set your local overrides
-
-# Configures whether Klaviyo.initialize() is called from native java/kotlin layer, or javascript/typescript layer
-initializeKlaviyoFromNative=true
-
-# Set your public Klaviyo API key
-publicApiKey=YOUR_KLAVIYO_PUBLIC_API_KEY
-
-# Enable Firebase in the example app. You must add your google-services.json file to the project,
-# and update the applicationId in build.gradle, else the app will crash on launch
-useNativeFirebase=false
-
+# Copy this file to `local.properties` to set your local overrides.
+#
+# Note: the Klaviyo public API key is configured in JavaScript via
+# example/.env — see example/.env.template.
+#
 # For local SDK development: set to true in your local.properties file
 # you must set separately for the example app and the library
 localCompositeBuild=false
