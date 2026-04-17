@@ -25,11 +25,14 @@ export function usePush() {
       setPushNotificationsEnabled(isAuthorized);
     });
 
-    // Try to fetch a cached token. On a first-ever launch this returns null
-    // because APNs registration hasn't happened yet (that's triggered by the
-    // user granting permission via messaging().requestPermission()). On
-    // subsequent launches where permission is already granted, this returns
-    // the cached token immediately.
+    // Try to fetch a cached token. Returns null on a first-ever launch where
+    // APNs registration (iOS) or FCM token generation (Android) hasn't
+    // completed yet; on subsequent launches it returns the cached token
+    // immediately. Note: token availability is independent of notification
+    // permission — on iOS, APNs delivers a token as long as
+    // registerForRemoteNotifications() has been called and the device has
+    // network connectivity, whether or not the user has granted permission
+    // to display notifications.
     fetchAndSetPushToken().then((token) => {
       if (token) setPushToken(token);
     });
@@ -46,15 +49,13 @@ export function usePush() {
     // notification permission on first launch.
     const unsubscribeTokenRefresh = messaging.onTokenRefresh(
       (fcmToken: string) => {
-        if (Platform.OS === 'android') {
-          if (fcmToken) {
-            Klaviyo.setPushToken(fcmToken);
-            setPushToken(fcmToken);
-          }
-        } else {
+        if (Platform.OS === 'ios') {
           fetchAndSetPushToken().then((apnsToken) => {
             if (apnsToken) setPushToken(apnsToken);
           });
+        } else if (fcmToken) {
+          Klaviyo.setPushToken(fcmToken);
+          setPushToken(fcmToken);
         }
       }
     );

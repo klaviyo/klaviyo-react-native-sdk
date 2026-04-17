@@ -100,7 +100,8 @@
     "typescript": "^5.8.3"
   },
   "resolutions": {
-    "@types/react": "^19.1.0"
+    "@types/react": "^19.1.0",
+    "protobufjs": "^7.5.5"
   },
   "peerDependencies": {
     "react": "*",

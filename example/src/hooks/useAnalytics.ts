@@ -9,11 +9,6 @@ import {
   type Profile,
 } from 'klaviyo-react-native-sdk';
 
-// NOTE: getEmail/getPhoneNumber/getExternalId/getPushToken use callbacks rather than
-// returning values directly. The Android bridge is async-only; a synchronous return
-// value is an iOS-only implementation detail and is not reliable cross-platform.
-// Always use the callback form for correct behavior on both platforms.
-
 export function useAnalytics() {
   // Identity
   const [email, setEmail] = useState('');
@@ -91,33 +86,38 @@ export function useAnalytics() {
     Klaviyo.setProfileAttribute(ProfileProperty.ZIP, zip);
   };
 
-  // Location requires the structured `Location` type. `setProfileAttribute` accepts
-  // only string values, so we use `setProfile({ location })` as the canonical path.
-  const handleSetLocation = () => {
+  // Build a Location from the current form fields, or null if every field is blank.
+  // Shared by handleSetLocation (location-only setProfile) and handleSetProfile
+  // (full-profile setProfile).
+  const buildLocation = (): Location | null => {
+    const cityT = city.trim();
+    const countryT = country.trim();
+    const zipT = zip.trim();
     const lat = latitude.trim() ? parseFloat(latitude) : undefined;
     const lon = longitude.trim() ? parseFloat(longitude) : undefined;
     const hasLocation =
-      city || country || zip || Number.isFinite(lat) || Number.isFinite(lon);
-    if (!hasLocation) return;
-
-    const location: Location = {
-      city: city || undefined,
-      country: country || undefined,
-      zip: zip || undefined,
+      cityT || countryT || zipT || Number.isFinite(lat) || Number.isFinite(lon);
+    if (!hasLocation) return null;
+    return {
+      city: cityT || undefined,
+      country: countryT || undefined,
+      zip: zipT || undefined,
       latitude: Number.isFinite(lat) ? lat : undefined,
       longitude: Number.isFinite(lon) ? lon : undefined,
     };
+  };
+
+  // Location requires the structured `Location` type. `setProfileAttribute` accepts
+  // only string values, so we use `setProfile({ location })` as the canonical path.
+  const handleSetLocation = () => {
+    const location = buildLocation();
+    if (!location) return;
     Klaviyo.setProfile({ location });
   };
 
   // Aggregate: build a full Profile object from every non-empty form field and
   // call setProfile(profile) in a single shot. Demonstrates Klaviyo.setProfile().
   const handleSetProfile = () => {
-    const lat = latitude.trim() ? parseFloat(latitude) : undefined;
-    const lon = longitude.trim() ? parseFloat(longitude) : undefined;
-    const hasLocation =
-      city || country || zip || Number.isFinite(lat) || Number.isFinite(lon);
-
     const profile: Profile = {
       email: email || undefined,
       phoneNumber: phoneNumber || undefined,
@@ -126,15 +126,7 @@ export function useAnalytics() {
       lastName: lastName || undefined,
       title: title || undefined,
       organization: organization || undefined,
-      location: hasLocation
-        ? {
-            city: city || undefined,
-            country: country || undefined,
-            zip: zip || undefined,
-            latitude: Number.isFinite(lat) ? lat : undefined,
-            longitude: Number.isFinite(lon) ? lon : undefined,
-          }
-        : undefined,
+      location: buildLocation() ?? undefined,
     };
     Klaviyo.setProfile(profile);
   };
