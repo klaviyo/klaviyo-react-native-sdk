@@ -71,15 +71,6 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
-def localProperties = new Properties()
-if (rootProject.file("local.properties").canRead()) {
-    localProperties.load(new FileInputStream(rootProject.file("local.properties")))
-}
-
-//Local properties that will be declared as build config fields:
-def apiKey = localProperties['publicApiKey'] ?: publicApiKey
-def initializeKlaviyoFromNative = localProperties['initializeKlaviyoFromNative'] ?: initializeKlaviyoFromNative
-def useNativeFirebase = localProperties['useNativeFirebase'] ?: useNativeFirebase
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -108,9 +99,6 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
-            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
-            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -118,9 +106,6 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
-            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
-            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
     }
 }
@@ -139,8 +124,11 @@ dependencies {
     }
 }
 
-if (useNativeFirebase.toBoolean()) {
-  // Note: this auto-initializes firebase from your google-services.json file.
-  // You'll need to set applicationId to match your firebase project, see above
-  apply plugin: "com.google.gms.google-services"
+// Apply the google-services plugin only when google-services.json is present.
+// This lets the example app build out of the box without a Firebase project.
+// To enable push: drop your Firebase project's google-services.json into
+// example/android/app/, and make sure its package_name matches applicationId
+// above. See example/README.md for full setup details.
+if (file('google-services.json').exists()) {
+    apply plugin: "com.google.gms.google-services"
 }

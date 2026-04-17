@@ -3,14 +3,21 @@
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
 
+// Conditionally import Firebase if available.
+// The example app runs without push when no GoogleService-Info.plist is present —
+// these headers are only available once the Firebase pods are linked in.
+#if __has_include(<FirebaseCore/FirebaseCore.h>)
+#import <FirebaseCore/FirebaseCore.h>
+#endif
+
+// For native-only push integration (no @react-native-firebase/messaging),
+// see the Klaviyo Swift SDK README for guidance:
+// https://github.com/klaviyo/klaviyo-swift-sdk#push-notifications
+
 @implementation AppDelegate
 
 // Change to NO if you don't want debug alerts or logs.
 BOOL isDebug = YES;
-
-// Change to NO if you prefer to initialize and handle push tokens in the React
-// Native layer
-BOOL useNativeImplementation = YES;
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
@@ -20,23 +27,35 @@ BOOL useNativeImplementation = YES;
   // iOS Installation Step 2: Set the UNUserNotificationCenter delegate to self
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
-  if (useNativeImplementation) {
-    // iOS Installation Step 3: Initialize the SDK with public key, if
-    // initializing from native code Exclude if initializing from react native
-    // layer
-    [PushNotificationsHelper initializeSDK:@"YOUR_KLAVIYO_PUBLIC_API_KEY"];
-
-    // iOS Installation Step 4: Request notification permission from the user
-    // Exclude if handling permissions from react native layer
-    [PushNotificationsHelper requestNotificationPermission];
-  } else {
-    // Initialize cross-platform push library, e.g. Firebase
+  // Initialize Firebase only when a GoogleService-Info.plist is bundled.
+  // Without the plist, [FIRApp configure] crashes on launch — so push is simply
+  // disabled in that build. See example/README.md for how to enable push.
+#if __has_include(<FirebaseCore/FirebaseCore.h>)
+  NSString *plistPath = [[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"];
+  if (plistPath) {
+    [FIRApp configure];
   }
+#endif
 
-  // Start monitoring geofences from background
-  dispatch_async(dispatch_get_main_queue(), ^{
-    [KlaviyoBridge registerGeofencing];
-  });
+  // APNs registration is driven from JS via messaging().requestPermission(),
+  // which calls registerForRemoteNotifications() under the hood and produces
+  // the APNs token. Note: APNs registration is independent of the user's
+  // notification permission — the token is delivered as soon as the device
+  // completes the APNs handshake with network connectivity, regardless of
+  // whether the user has allowed notifications to be displayed. We trigger
+  // the request from the "Request Push Permission" button in the UI instead
+  // of here so the flow is user-driven and observable in the demo.
+
+  // OPTIONAL: Native initialization approach (uncomment if you prefer to initialize from Swift)
+  // See README.md for details on when you might want this.
+  // [PushNotificationsHelper initializeSDK:@"YOUR_KLAVIYO_PUBLIC_API_KEY"];
+  // [PushNotificationsHelper requestNotificationPermission];
+
+  // Geofencing registration is JS-driven in this example — see
+  // example/src/hooks/useLocation.ts, which calls Klaviyo.registerGeofencing()
+  // after the user grants location permission. Calling it from AppDelegate is
+  // the "earliest possible" option but not required; the Swift SDK's
+  // registerGeofencing() is safe to invoke from JS once RN init completes.
 
   // refer to installation step 16 below
   NSMutableDictionary *launchOptionsWithURL =
@@ -46,17 +65,18 @@ BOOL useNativeImplementation = YES;
       didFinishLaunchingWithOptions:launchOptionsWithURL];
 }
 
-// iOS Installation Step 6: Implement this delegate to receive and set the push
-// token
+// iOS Installation Step 6: Implement this delegate to receive and log the
+// APNs push token. Firebase's default method swizzling (enabled by default
+// when FirebaseAppDelegateProxyEnabled is absent from Info.plist) handles
+// forwarding this callback to FIRMessaging and to RNFB's internal registration
+// waiter — the app just needs to implement this method so the selector is in
+// the dispatch table for swizzling to find.
 - (void)application:(UIApplication *)application
     didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-  if (useNativeImplementation) {
-    // iOS Installation Step 7: set the push token to Klaviyo SDK
-    // Exclude if handling push tokens from react native layer
-    [PushNotificationsHelper setPushTokenWithToken:deviceToken];
-  } else {
-    // Provide token to cross-platform push library, e.g. firebase
-  }
+  // OPTIONAL: Native push token handling (uncomment if not using Firebase).
+  // See the Klaviyo Swift SDK README for the full native integration path:
+  // https://github.com/klaviyo/klaviyo-swift-sdk#push-notifications
+  // [PushNotificationsHelper setPushTokenWithToken:deviceToken];
 
   if (isDebug) {
     NSString *token = [self stringFromDeviceToken:deviceToken];
