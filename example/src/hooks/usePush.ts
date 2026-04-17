@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { Klaviyo } from 'klaviyo-react-native-sdk';
 import {
   requestPushPermission,
@@ -25,17 +25,37 @@ export function usePush() {
       setPushNotificationsEnabled(isAuthorized);
     });
 
-    // Try to fetch a cached token. On a first-ever launch this returns null
-    // because APNs registration hasn't happened yet (that's triggered by the
-    // user granting permission via messaging().requestPermission()). On
-    // subsequent launches where permission is already granted, this returns
-    // the cached token immediately.
+    // Re-check permission whenever the app returns to the foreground — the
+    // user may have toggled the setting from the OS Settings app. The Klaviyo
+    // SDK handles the permission-change side effects internally on resume;
+    // this listener is purely to keep the example UI in sync.
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (nextState) => {
+        if (nextState === 'active') {
+          checkPushPermissionStatus().then(setPushNotificationsEnabled);
+        }
+      }
+    );
+
+    // Try to fetch a cached token. Returns null on a first-ever launch where
+    // APNs registration (iOS) or FCM token generation (Android) hasn't
+    // completed yet; on subsequent launches it returns the cached token
+    // immediately. Note: token availability is independent of notification
+    // permission — on iOS, APNs delivers a token as long as
+    // registerForRemoteNotifications() has been called and the device has
+    // network connectivity, whether or not the user has granted permission
+    // to display notifications.
     fetchAndSetPushToken().then((token) => {
       if (token) setPushToken(token);
     });
 
     const messaging = getMessagingInstance();
-    if (!messaging) return;
+    if (!messaging) {
+      return () => {
+        appStateSubscription.remove();
+      };
+    }
 
     // onTokenRefresh delivers the FCM registration token. On Android that's
     // what Klaviyo expects and what we want to display. On iOS, Klaviyo uses
@@ -46,15 +66,13 @@ export function usePush() {
     // notification permission on first launch.
     const unsubscribeTokenRefresh = messaging.onTokenRefresh(
       (fcmToken: string) => {
-        if (Platform.OS === 'android') {
-          if (fcmToken) {
-            Klaviyo.setPushToken(fcmToken);
-            setPushToken(fcmToken);
-          }
-        } else {
+        if (Platform.OS === 'ios') {
           fetchAndSetPushToken().then((apnsToken) => {
             if (apnsToken) setPushToken(apnsToken);
           });
+        } else if (fcmToken) {
+          Klaviyo.setPushToken(fcmToken);
+          setPushToken(fcmToken);
         }
       }
     );
@@ -68,6 +86,7 @@ export function usePush() {
     return () => {
       unsubscribeTokenRefresh();
       unsubscribeMessage();
+      appStateSubscription.remove();
     };
   }, []);
 
