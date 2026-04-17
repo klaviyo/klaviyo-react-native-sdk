@@ -1,6 +1,6 @@
 
-#import <React/RCTBridgeModule.h>
+#import <React/RCTEventEmitter.h>
 
-@interface KlaviyoReactNativeSdk : NSObject <RCTBridgeModule>
+@interface KlaviyoReactNativeSdk : RCTEventEmitter <RCTBridgeModule>
 
 @end

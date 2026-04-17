@@ -3,6 +3,10 @@ import { Klaviyo } from '../index';
 import { EventName } from '../Event';
 import { ProfileProperty } from '../Profile';
 
+// Store event listeners for testing NativeEventEmitter
+const eventListeners: Record<string, Array<(data: any) => void>> = {};
+const mockRemove = jest.fn();
+
 // Mock the native module
 jest.mock('react-native', () => {
   return {
@@ -24,6 +28,8 @@ jest.mock('react-native', () => {
         createEvent: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        registerFormLifecycleHandler: jest.fn(),
+        unregisterFormLifecycleHandler: jest.fn(),
         registerGeofencing: jest.fn(),
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
@@ -61,16 +67,31 @@ jest.mock('react-native', () => {
         }),
       },
     },
+    NativeEventEmitter: jest.fn().mockImplementation(() => ({
+      addListener: jest.fn().mockImplementation((eventName, callback) => {
+        if (!eventListeners[eventName]) {
+          eventListeners[eventName] = [];
+        }
+        eventListeners[eventName]!.push(callback);
+        return { remove: mockRemove };
+      }),
+    })),
     Platform: {
       select: jest.fn().mockImplementation((obj) => obj.ios),
     },
   };
 });
 
+// Helper to simulate native event emission
+function emitNativeEvent(eventName: string, data: any) {
+  eventListeners[eventName]?.forEach((listener) => listener(data));
+}
+
 describe('Klaviyo SDK', () => {
   beforeEach(() => {
-    // Clear all mocks before each test
+    // Clear all mocks and event listeners before each test
     jest.clearAllMocks();
+    Object.keys(eventListeners).forEach((key) => delete eventListeners[key]);
   });
 
   describe('initialization', () => {
@@ -501,6 +522,250 @@ describe('Klaviyo SDK', () => {
       );
 
       // Restore console.error
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('form lifecycle events', () => {
+    it('should register native handler and forward formShown events', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formShown',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+    });
+
+    it('should forward formDismissed events', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formDismissed',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formDismissed',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+    });
+
+    it('should forward formCtaClicked events with buttonLabel and deepLinkUrl', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: 'myapp://products',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+        deepLinkUrl: 'myapp://products',
+      });
+    });
+
+    it('should unsubscribe from events when cleanup function is called', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
+
+      // Clear any calls from re-registration cleanup of prior tests
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterFormLifecycleHandler as jest.Mock
+      ).mockClear();
+
+      unsubscribe();
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clean up previous subscription when re-registering', () => {
+      const handler1 = jest.fn();
+      const handler2 = jest.fn();
+
+      Klaviyo.registerFormLifecycleHandler(handler1);
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterFormLifecycleHandler as jest.Mock
+      ).mockClear();
+
+      // Re-registering should remove the previous listener and native handler before adding new one
+      Klaviyo.registerFormLifecycleHandler(handler2);
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not forward events with missing formId', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formId')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not forward events with missing formName', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formDismissed',
+        formId: 'abc123',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formName')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not forward events with empty string formId', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formId: '',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): formId')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should forward formCtaClicked events with missing buttonLabel as empty string', () => {
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        deepLinkUrl: 'myapp://products',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: '',
+        deepLinkUrl: 'myapp://products',
+      });
+    });
+
+    it('should not forward events with invalid type', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'unknownEventType',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid type')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not forward events with missing type', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid type')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should report multiple missing fields at once', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('formId')
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('formName')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should not forward formCtaClicked events with missing deepLinkUrl', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formCtaClicked',
+        formId: 'abc123',
+        formName: 'Test Form',
+        buttonLabel: 'Shop Now',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing required field(s): deepLinkUrl')
+      );
       consoleWarnSpy.mockRestore();
     });
   });

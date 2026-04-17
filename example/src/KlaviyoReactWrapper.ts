@@ -5,6 +5,8 @@ import {
   type Profile,
   ProfileProperty,
   type FormConfiguration,
+  type FormLifecycleEvent,
+  FormLifecycleEventType,
 } from 'klaviyo-react-native-sdk';
 
 import {
@@ -30,6 +32,28 @@ export const initialize = async () => {
     // Alternate iOS Installation Step 3
     // Initialize the SDK with public key, if initializing from React Native
     Klaviyo.initialize('YOUR_KLAVIYO_PUBLIC_API_KEY');
+
+    // Register form lifecycle handler to log events
+    Klaviyo.registerFormLifecycleHandler((event: FormLifecycleEvent) => {
+      const nameInfo = event.formName ? ` (${event.formName})` : '';
+      console.log(
+        `[Form Lifecycle] ${event.type}: Form ${event.formId}${nameInfo}`
+      );
+
+      switch (event.type) {
+        case FormLifecycleEventType.Shown:
+          console.log(`Form ${event.formId}${nameInfo} is being shown`);
+          break;
+        case FormLifecycleEventType.Dismissed:
+          console.log(`Form ${event.formId}${nameInfo} was dismissed`);
+          break;
+        case FormLifecycleEventType.CtaClicked:
+          console.log(
+            `Form ${event.formId}${nameInfo} CTA was clicked: ${event.buttonLabel}, deep link: ${event.deepLinkUrl}`
+          );
+          break;
+      }
+    });
   } catch (e: any) {
     console.log(e.message, e.code);
   }
