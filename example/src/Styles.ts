@@ -21,13 +21,8 @@ const rowContainerBase = {
 
 export const styles = StyleSheet.create({
   // Container styles
-  // Keep centering here for backwards compatibility with the pre-overhaul App
-  // that still ships on feat/example-app. The new sectioned App.tsx (PR 3)
-  // replaces this with a top-aligned layout in a separate wrapper style.
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.background,
   },
   scrollContent: {
