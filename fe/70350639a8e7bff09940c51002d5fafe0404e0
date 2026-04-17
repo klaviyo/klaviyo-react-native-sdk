@@ -1,0 +1,35 @@
+example/src/Styles.ts
+  26513b4669cf9486 1-20,23,26-95,99-276
+example/src/components/Collapsible.tsx
+  26513b4669cf9486 1-50
+example/src/components/ProfileTextField.tsx
+  26513b4669cf9486 1-56
+example/src/components/ActionButton.tsx
+  26513b4669cf9486 1-48
+example/src/theme.ts
+  26513b4669cf9486 1-73
+example/src/components/SectionHeader.tsx
+  26513b4669cf9486 1-14
+example/src/components/ToggleButtons.tsx
+  26513b4669cf9486 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "fe70350639a8e7bff09940c51002d5fafe0404e0",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 2454,
+      "total_deletions": 1138,
+      "accepted_lines": 5442,
+      "overriden_lines": 0
+    }
+  }
+}
