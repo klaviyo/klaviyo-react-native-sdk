@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet } from 'react-native';
+import { AppState } from 'react-native';
 import { Klaviyo, type Geofence } from 'klaviyo-react-native-sdk';
 import {
   requestLocationPermission,
   checkLocationPermissionState,
   type LocationPermissionState,
 } from '../PermissionHelper';
-import { colors, spacing, borderRadius, typography } from '../theme';
 
 export function useLocation() {
   // Registered state always starts false — set to true only after a successful register call.
@@ -14,7 +13,7 @@ export function useLocation() {
   const [locationPermission, setLocationPermission] =
     useState<LocationPermissionState>('none');
 
-  // Geofence modal state — App.tsx renders the modal using these values
+  // Geofence modal state — consumed by GeofencesModal rendered from App.tsx
   const [geofencesModalVisible, setGeofencesModalVisible] = useState(false);
   const [currentGeofences, setCurrentGeofences] = useState<Geofence[]>([]);
 
@@ -23,10 +22,25 @@ export function useLocation() {
     setLocationPermission(state);
   }, []);
 
-  // Check permission state on mount
+  // Check permission state on mount, and again whenever the app returns to
+  // the foreground — the user may have toggled the setting from the OS
+  // Settings app. Keeps the example UI in sync with external changes.
   useEffect(() => {
     console.log('[useLocation] mounted');
     refreshLocationPermission();
+
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (nextState) => {
+        if (nextState === 'active') {
+          refreshLocationPermission();
+        }
+      }
+    );
+
+    return () => {
+      appStateSubscription.remove();
+    };
   }, [refreshLocationPermission]);
 
   // Registration is only triggered by explicit user action, never on mount
@@ -70,65 +84,3 @@ export function useLocation() {
     handleCloseGeofencesModal,
   };
 }
-
-// Shared styles for the geofences modal — exported so App.tsx can use them
-// when rendering the Modal component (JSX must live in .tsx files)
-export const geofenceModalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    // No modal-overlay token in theme.ts; inline scrim. Consider adding a
-    // `colors.modalOverlay` token to theme.ts if more modals are introduced.
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.mdlg,
-  },
-  container: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.md,
-    padding: spacing.mdlg,
-    width: '100%',
-    maxHeight: '80%',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: spacing.md,
-    textAlign: 'center' as const,
-  },
-  emptyText: {
-    ...typography.label,
-    color: colors.secondaryText,
-    textAlign: 'center' as const,
-    marginBottom: spacing.md,
-    fontStyle: 'italic' as const,
-  },
-  geofenceItem: {
-    paddingVertical: spacing.smmd,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  geofenceName: {
-    ...typography.label,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  geofenceDetail: {
-    fontSize: 12,
-    color: colors.secondaryText,
-    fontFamily: 'monospace',
-  },
-  closeButton: {
-    marginTop: spacing.md,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.smmd,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center' as const,
-  },
-  closeButtonText: {
-    ...typography.button,
-    color: colors.buttonText,
-  },
-});

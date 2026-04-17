@@ -7,11 +7,25 @@ export type LocationPermissionState = 'none' | 'inUse' | 'background';
 // Module-scope memoization so we don't repeatedly `require()` or log.
 let _firebaseAvailable: boolean | null = null;
 
-// Deep-link to the app's own Settings page. RN's Linking.openSettings()
-// uses UIApplication.openSettingsURLString on iOS and the app detail
-// settings intent on Android.
-const openAppSettings = () => {
-  Linking.openSettings();
+// Lazily capture Firebase's AuthorizationStatus enum on first use. Same
+// motivation as `getMessagingInstance` — avoid paying the `require()` cost
+// (and noisy try/catch path) on every permission check. Undefined means
+// Firebase isn't linked; callers should short-circuit before reaching here,
+// but the guard keeps this helper safe to call in isolation.
+type AuthorizationStatusEnum = Record<string, number>;
+let _authorizationStatus: AuthorizationStatusEnum | undefined;
+let _authorizationStatusLoaded = false;
+const getAuthorizationStatus = (): AuthorizationStatusEnum | undefined => {
+  if (!_authorizationStatusLoaded) {
+    try {
+      _authorizationStatus = require('@react-native-firebase/messaging').default
+        .AuthorizationStatus;
+    } catch {
+      _authorizationStatus = undefined;
+    }
+    _authorizationStatusLoaded = true;
+  }
+  return _authorizationStatus;
 };
 
 /**
@@ -28,7 +42,7 @@ const handleDeniedPermissionModal = () => {
       },
       {
         text: 'Open Settings',
-        onPress: () => openAppSettings(),
+        onPress: () => Linking.openSettings(),
       },
     ]
   );
@@ -217,6 +231,19 @@ export const checkLocationPermissionState =
 // =============================================================================
 // Push Notification Permissions
 // =============================================================================
+//
+// NOTE FOR INTEGRATORS: the Firebase-availability gating below
+// (`isFirebasePushAvailable`, `getMessagingInstance`, and the `if (!messaging)
+// return null` short-circuits in request/fetch helpers) is a convenience for
+// running this example app without Firebase config files in place. It lets
+// anyone clone the repo, `yarn install`, and launch the app to explore the
+// UI — push features just stay dormant until they drop in their own
+// `GoogleService-Info.plist` (iOS) / `google-services.json` (Android).
+//
+// In a real app, Firebase is a prerequisite for push — you don't need this
+// graceful-degradation layer. Call `messaging()` directly and let it throw
+// loudly if the config is missing; that's a build-time setup bug you want
+// to surface, not hide.
 
 /**
  * Check if Firebase push is configured and available.
@@ -300,11 +327,11 @@ export const requestPushPermission = async (): Promise<boolean> => {
       }
     } else if (Platform.OS === 'ios') {
       const iOsAuthStatus = await messaging.requestPermission();
-      const AuthorizationStatus = require('@react-native-firebase/messaging')
-        .default.AuthorizationStatus;
+      const AuthorizationStatus = getAuthorizationStatus();
       isAuthorized =
-        iOsAuthStatus === AuthorizationStatus.AUTHORIZED ||
-        iOsAuthStatus === AuthorizationStatus.PROVISIONAL;
+        !!AuthorizationStatus &&
+        (iOsAuthStatus === AuthorizationStatus.AUTHORIZED ||
+          iOsAuthStatus === AuthorizationStatus.PROVISIONAL);
     }
 
     if (isAuthorized) {
@@ -365,8 +392,10 @@ export const checkPushPermissionStatus = async (): Promise<boolean> => {
 
   try {
     const status = await messaging.hasPermission();
-    const AuthorizationStatus = require('@react-native-firebase/messaging')
-      .default.AuthorizationStatus;
+    const AuthorizationStatus = getAuthorizationStatus();
+    if (!AuthorizationStatus) {
+      return false;
+    }
     return (
       status === AuthorizationStatus.AUTHORIZED ||
       status === AuthorizationStatus.PROVISIONAL

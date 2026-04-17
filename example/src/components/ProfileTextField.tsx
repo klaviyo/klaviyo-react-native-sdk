@@ -8,7 +8,12 @@ interface ProfileTextFieldProps {
   onChangeText: (text: string) => void;
   onSetPress?: () => void;
   placeholder?: string;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'decimal-pad';
+  keyboardType?:
+    | 'default'
+    | 'email-address'
+    | 'phone-pad'
+    | 'decimal-pad'
+    | 'number-pad';
 }
 
 /**

@@ -38,7 +38,6 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
         <Text
           style={[
             styles.toggleButtonText,
-            !leftDisabled && isLeftActive && styles.toggleButtonTextActive,
             leftDisabled && styles.toggleButtonTextDisabled,
           ]}
         >
@@ -57,7 +56,6 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
         <Text
           style={[
             styles.toggleButtonText,
-            !rightDisabled && !isLeftActive && styles.toggleButtonTextActive,
             rightDisabled && styles.toggleButtonTextDisabled,
           ]}
         >
