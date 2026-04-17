@@ -27,6 +27,35 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
+      # Stub Firebase config so Xcode's Resources build phase finds the referenced plist.
+      # The real GoogleService-Info.plist is gitignored; integrators add their own
+      # (see example/README.md). Stub is enough because the app's AppDelegate guards
+      # runtime Firebase init via `if (plistPath) [FIRApp configure]` — CI just needs
+      # the file to exist for Xcode's build input validation to pass.
+      - name: Stub GoogleService-Info.plist for CI
+        run: |
+          cat > example/ios/GoogleService-Info.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>BUNDLE_ID</key><string>com.klaviyoreactnativesdkexample</string>
+            <key>GOOGLE_APP_ID</key><string>1:000000000000:ios:0000000000000000000000</string>
+            <key>API_KEY</key><string>AIzaSyA00000000000000000000000000000000</string>
+            <key>GCM_SENDER_ID</key><string>000000000000</string>
+            <key>PROJECT_ID</key><string>stub-project</string>
+            <key>STORAGE_BUCKET</key><string>stub-project.appspot.com</string>
+            <key>PLIST_VERSION</key><string>1</string>
+            <key>IS_GCM_ENABLED</key><true/>
+            <key>IS_ADS_ENABLED</key><false/>
+            <key>IS_ANALYTICS_ENABLED</key><false/>
+            <key>IS_APPINVITE_ENABLED</key><false/>
+            <key>IS_SIGNIN_ENABLED</key><false/>
+          </dict>
+          </plist>
+          EOF
+        shell: bash
+
       - name: Cache turborepo for iOS
         uses: actions/cache@v4
         with:
