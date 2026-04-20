@@ -1,0 +1,39 @@
+package.json
+  26513b4669cf9486 103-104
+example/ios/Podfile
+  26513b4669cf9486 5-13
+.gitignore
+  26513b4669cf9486 32,83-85
+example/package.json
+  26513b4669cf9486 14-15,32-33
+example/babel.config.js
+  26513b4669cf9486 10-22
+example/src/env.d.ts
+  26513b4669cf9486 1-6
+example/src/hooks/useAnalytics.ts
+  26513b4669cf9486 94-97,102-103,110-116,131
+example/index.js
+  26513b4669cf9486 5-24
+example/src/App.tsx
+  26513b4669cf9486 1-13,15,17-51,54-58,60,64,68-69,73,80-82,85-404,406-418
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "bc9e74c02b8333c25cd66bd9463cef72d22f7d8a",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 3,
+      "accepted_lines": 963,
+      "overriden_lines": 0
+    }
+  }
+}
