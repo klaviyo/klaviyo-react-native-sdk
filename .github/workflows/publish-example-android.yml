@@ -1,0 +1,129 @@
+# Publish the React Native SDK example app to Google Play Console internal track.
+#
+# Triggers:
+#   - workflow_dispatch: Manual publish (preferred — SDK releases don't map 1:1 to example app publishes)
+#   - release: published: Fires on every SDK release to keep the example app in sync
+#
+# Required secrets (set in repo Settings → Secrets and variables → Actions):
+#   GOOGLE_SERVICES_JSON      - Contents of google-services.json for Firebase
+#   SIGNING_KEY               - Base64-encoded release keystore
+#   ALIAS                     - Key alias in the keystore
+#   KEY_STORE_PASSWORD        - Keystore password
+#   KEY_PASSWORD              - Key password
+#   SERVICE_ACCOUNT_JSON      - Google Play service account JSON (plain text)
+#   KLAVIYO_EXAMPLE_API_KEY   - Klaviyo public API key for the example app build.
+#                               Required: workflow fails early if unset (guard step after checkout).
+
+name: Publish Example App to Play Store Internal Track
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ published ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify KLAVIYO_EXAMPLE_API_KEY secret is set
+        run: |
+          if [ -z "${KLAVIYO_EXAMPLE_API_KEY}" ]; then
+            echo "::error::KLAVIYO_EXAMPLE_API_KEY secret is not set. The workflow cannot proceed — the build would produce an app that crashes at launch."
+            exit 1
+          fi
+        shell: bash
+        env:
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+
+      # Node + Yarn 3 + workspace deps. Required because the React Native Gradle plugin
+      # invokes the Metro bundler during bundleRelease to generate the JS bundle. Installs
+      # the example workspace too, making react-native and its CLI available to Gradle.
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          java-package: jdk
+
+      - name: Add Google Services from Secrets
+        run: 'echo "$GOOGLE_SERVICES_JSON" > ./example/android/app/google-services.json'
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      # Write the Klaviyo public API key into example/.env so react-native-dotenv
+      # can expose it to the JS layer as KLAVIYO_API_KEY (imported from '@env').
+      # The guard step above ensures the secret is set before we reach this point.
+      - name: Write .env with Klaviyo API key
+        run: echo "KLAVIYO_API_KEY=${KLAVIYO_EXAMPLE_API_KEY}" > example/.env
+        env:
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+
+      # bundleRelease triggers react-native bundle automatically via the RN Gradle plugin.
+      # We cd into the android directory so that relative paths in settings.gradle resolve correctly.
+      - name: Assemble Release Bundle
+        run: cd example/android && ./gradlew :app:bundleRelease
+        env:
+          # Prevent Metro from trying to start a dev server during the build
+          CI: true
+
+      - name: Sign Release
+        id: sign_release
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: example/android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Deploy to Internal Track
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: com.klaviyoreactnativesdkexample
+          releaseFiles: ${{ steps.sign_release.outputs.signedReleaseFile }}
+          track: internal
+          status: completed
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "✅ RN SDK Example App published to Play Store internal track"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Release:* `${{ github.event.release.tag_name || 'manual' }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "🚨 RN SDK Example App Play Store publish failed"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Release:* `${{ github.event.release.tag_name || 'manual' }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
