@@ -1,0 +1,49 @@
+example/package.json
+  26513b4669cf9486 14-15,32-33
+example/src/components/GeofencesModal.tsx
+  26513b4669cf9486 1,3-11,13-16,19-126
+example/index.js
+  26513b4669cf9486 5-24
+example/src/hooks/usePush.ts
+  26513b4669cf9486 28-35,52,56-58
+example/src/hooks/useLocation.ts
+  26513b4669cf9486 15
+example/src/env.d.ts
+  26513b4669cf9486 1-6
+example/src/App.tsx
+  26513b4669cf9486 1-10,12,15-49,51-55,57,61,65-66,70,77-79,82-361,363-375
+example/src/hooks/useAnalytics.ts
+  26513b4669cf9486 89-95,99-104,108-114,129
+.gitignore
+  26513b4669cf9486 32,83-85
+package.json
+  26513b4669cf9486 103-104
+example/src/hooks/useForms.ts
+  26513b4669cf9486 9-13
+example/src/PermissionHelper.ts
+  26513b4669cf9486 220-232
+example/ios/Podfile
+  26513b4669cf9486 5-13
+example/babel.config.js
+  26513b4669cf9486 10-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "fcb4542b6cc23292110a5bdf3b5601e87f25033c",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 180,
+      "total_deletions": 144,
+      "accepted_lines": 1636,
+      "overriden_lines": 0
+    }
+  }
+}
