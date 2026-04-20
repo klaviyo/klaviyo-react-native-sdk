@@ -1,0 +1,23 @@
+.github/workflows/publish-example-android.yml
+  26513b4669cf9486 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "85e0eb76fc9e3f61a971bfea8579632f2a9d9962",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3996,
+      "total_deletions": 19,
+      "accepted_lines": 3943,
+      "overriden_lines": 0
+    }
+  }
+}
