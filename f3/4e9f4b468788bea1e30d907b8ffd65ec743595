@@ -1,0 +1,23 @@
+.github/workflows/publish-example-android.yml
+  26513b4669cf9486 1-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "f34e9f4b468788bea1e30d907b8ffd65ec743595",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 144,
+      "total_deletions": 0,
+      "accepted_lines": 144,
+      "overriden_lines": 0
+    }
+  }
+}
