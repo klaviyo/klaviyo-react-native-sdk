@@ -1,0 +1,61 @@
+example/src/env.d.ts
+  26513b4669cf9486 1-6
+example/src/sections/FormsSection.tsx
+  26513b4669cf9486 1-28
+example/src/App.tsx
+  26513b4669cf9486 1-3,5,8-48,50-54,56,60,64-65,69,76-78,81-112,114-126
+example/src/sections/GeofencingSection.tsx
+  26513b4669cf9486 1-61
+example/src/sections/ProfileSection.tsx
+  26513b4669cf9486 1-135
+example/ios/Podfile
+  26513b4669cf9486 5-13
+example/src/hooks/useForms.ts
+  26513b4669cf9486 9-13
+example/package.json
+  26513b4669cf9486 14-15,32-33
+example/src/components/GeofencesModal.tsx
+  26513b4669cf9486 1,3-11,13-16,19-126
+example/src/Styles.ts
+  26513b4669cf9486 187
+example/src/hooks/usePush.ts
+  26513b4669cf9486 28-35,52,56-58
+.gitignore
+  26513b4669cf9486 32,83-85
+example/index.js
+  26513b4669cf9486 5-24
+example/src/sections/PushSection.tsx
+  26513b4669cf9486 1-78
+example/babel.config.js
+  26513b4669cf9486 10-22
+example/src/hooks/useLocation.ts
+  26513b4669cf9486 15
+package.json
+  26513b4669cf9486 103-104
+example/src/sections/EventsSection.tsx
+  26513b4669cf9486 1-31
+example/src/hooks/useAnalytics.ts
+  26513b4669cf9486 89-95,99-104,108-114,129
+example/src/PermissionHelper.ts
+  26513b4669cf9486 10-30,241-253,337,339-341,402-405
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "4f947322df8bc3a6cabae04cd7f3517a146d9c08",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3078,
+      "total_deletions": 1697,
+      "accepted_lines": 3116,
+      "overriden_lines": 0
+    }
+  }
+}
