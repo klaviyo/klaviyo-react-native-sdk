@@ -1,0 +1,35 @@
+package.json
+  26513b4669cf9486 103-104
+example/index.js
+  26513b4669cf9486 5-24
+.gitignore
+  26513b4669cf9486 32,83-84
+example/.env.template
+  26513b4669cf9486 1
+example/package.json
+  26513b4669cf9486 14-15,32-33
+example/src/env.d.ts
+  26513b4669cf9486 1-6
+example/babel.config.js
+  26513b4669cf9486 10-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "2369d18c2e4f98326d35f073156d6c627739072b",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 5307,
+      "total_deletions": 3,
+      "accepted_lines": 5307,
+      "overriden_lines": 0
+    }
+  }
+}
