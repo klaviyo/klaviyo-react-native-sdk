@@ -2,12 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - master
-      - rel/*
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lint:
