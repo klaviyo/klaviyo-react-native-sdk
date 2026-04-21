@@ -1,9 +1,7 @@
 package com.klaviyoreactnativesdkexample
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -24,7 +22,6 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate = DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    Log.v("KlaviyoSampleApp", "MainActivity.onCreate()")
     super.onCreate(savedInstanceState)
 
     // Android Installation Step 5a: Depending on the state of your application when the notification is tapped,
@@ -34,8 +31,6 @@ class MainActivity : ReactActivity() {
   }
 
   override fun onNewIntent(intent: Intent?) {
-    Log.v("KlaviyoSampleApp", "MainActivity.onNewIntent()")
-    Log.v("KlaviyoSampleApp", "Launch Intent: " + intent.toString())
     super.onNewIntent(intent)
 
     // Android Installation Step 5: Call handlePush when a push notification is tapped
