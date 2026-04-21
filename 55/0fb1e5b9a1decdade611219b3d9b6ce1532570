@@ -1,0 +1,27 @@
+example/android/app/src/main/AndroidManifest.xml
+  26513b4669cf9486 32-33
+example/README.md
+  26513b4669cf9486 3-24,34-35,86-87,91,119,132-133,135-141
+example/src/App.tsx
+  26513b4669cf9486 21-24,38-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "550fb1e5b9a1decdade611219b3d9b6ce1532570",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 1673,
+      "total_deletions": 111,
+      "accepted_lines": 1495,
+      "overriden_lines": 21
+    }
+  }
+}
