@@ -1,0 +1,27 @@
+example/src/components/FormLifecycleEventsModal.tsx
+  26513b4669cf9486 1-206
+example/src/sections/FormsSection.tsx
+  26513b4669cf9486 5-6,23-32
+example/src/hooks/useForms.ts
+  26513b4669cf9486 1-9,15-39,56-67,72-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "6566e74e1f4fe6fa461031b037492f77c6ba95f8",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 274,
+      "total_deletions": 6,
+      "accepted_lines": 270,
+      "overriden_lines": 0
+    }
+  }
+}
