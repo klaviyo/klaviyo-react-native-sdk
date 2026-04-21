@@ -14,7 +14,7 @@ PODS:
     - KlaviyoLocation (= 5.2.2)
     - KlaviyoSwift (= 5.2.2)
     - React-Core
-  - KlaviyoCore (5.2.2):
+  - KlaviyoCore (5.2.3):
     - AnyCodable-FlightSchool
   - KlaviyoForms (5.2.2):
     - KlaviyoSwift (~> 5.2.2)
@@ -23,7 +23,7 @@ PODS:
   - KlaviyoSwift (5.2.2):
     - AnyCodable-FlightSchool
     - KlaviyoCore (~> 5.2.2)
-  - KlaviyoSwiftExtension (5.2.1)
+  - KlaviyoSwiftExtension (5.2.3)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -2637,12 +2637,12 @@ SPEC CHECKSUMS:
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   klaviyo-react-native-sdk: 308ea86b6b48d10be7127aba51f5800167122b7d
-  KlaviyoCore: 0104cec11bbc1c5838f9a232ea420d15a43bbdfb
+  KlaviyoCore: 2d25b89148def504b58956ec1255f2c442528766
   KlaviyoForms: 4be515497a79df4876b950eb1de5742dc42754e0
   KlaviyoLocation: edb041d083080aacdf052bc2f6a3b708ec76a721
   KlaviyoSwift: 596bf5471ec37eed2773ffc603b3026895b93bb8
-  KlaviyoSwiftExtension: 310a32489eeca1b2a540903a55028b1ffef6b070
-  RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
+  KlaviyoSwiftExtension: 963bedfdb2dbc303c89792933f052edf907f0dbb
+  RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: 5eb1d2eeff5fb91151e8a8eef45b6c7658b6c897
   RCTRequired: cebcf9442fc296c9b89ac791dfd463021d9f6f23
   RCTTypeSafety: b99aa872829ee18f6e777e0ef55852521c5a6788
@@ -2708,8 +2708,8 @@ SPEC CHECKSUMS:
   ReactCommon: 5cfd842fcd893bb40fc835f98fadc60c42906a20
   RNPermissions: 86933bcc014e7fa7d77e09b7b0b0b858287d611f
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Yoga: 1e91d83a5286cfd3b725eade59274c92270540d4
+  Yoga: cc4a6600d61e4e9276e860d4d68eebb834a050ba
 
-PODFILE CHECKSUM: 03bdd0145df6393c4c141686be3a82ab1eb4ee5d
+PODFILE CHECKSUM: e4f2a13ef9210a13d7487a4551f3cc09342ca1de
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2
