@@ -1,0 +1,23 @@
+example/README.md
+  26513b4669cf9486 92-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "82bc3d301520b43cc4b829e9f626cf70ff76d4af",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 4862,
+      "total_deletions": 8,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    }
+  }
+}
