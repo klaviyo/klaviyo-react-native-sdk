@@ -1,7 +1,45 @@
+example/ios/KlaviyoReactNativeSdkExampleExtension/NotificationService.swift
+  26513b4669cf9486 8
+example/android/app/build.gradle
+  26513b4669cf9486 117,127-133
+example/README.md
+  26513b4669cf9486 1-141
+example/android/app/src/main/java/com/klaviyoreactnativesdkexample/MainActivity.kt
+  26513b4669cf9486 30,41
+README.md
+  26513b4669cf9486 106-108
+example/android/build.gradle
+  26513b4669cf9486 3,20-23
+example/ios/KlaviyoReactNativeSdkExample/AppDelegate.h
+  26513b4669cf9486 11
+example/ios/KlaviyoReactNativeSdkExample/AppDelegate.mm
+  26513b4669cf9486 22,50-51,59,78,87,90,94,111,131,133-134,158,165,177,191,199
+example/ios/KlaviyoReactNativeSdkExample/PushNotificationsHelper.swift
+  26513b4669cf9486 21
+example/ios/Podfile
+  26513b4669cf9486 5-13
+example/src/App.tsx
+  26513b4669cf9486 21-26,29-31,38-43
+example/android/app/src/main/AndroidManifest.xml
+  26513b4669cf9486 1,26,32-33,37,49,58,65
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.3.1",
   "base_commit_sha": "a9440887219f75bfa1099596f3a16d6af6c63d08",
-  "prompts": {}
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 11457,
+      "total_deletions": 153,
+      "accepted_lines": 182,
+      "overriden_lines": 0
+    }
+  }
 }
