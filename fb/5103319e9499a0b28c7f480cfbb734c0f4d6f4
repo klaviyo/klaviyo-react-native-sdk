@@ -1,0 +1,25 @@
+README.md
+  26513b4669cf9486 118-133
+example/README.md
+  26513b4669cf9486 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "fb5103319e9499a0b28c7f480cfbb734c0f4d6f4",
+  "prompts": {
+    "26513b4669cf9486": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dfa349-3d11-47bd-8059-669a63bebb7a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 820,
+      "total_deletions": 8,
+      "accepted_lines": 3018,
+      "overriden_lines": 0
+    }
+  }
+}
