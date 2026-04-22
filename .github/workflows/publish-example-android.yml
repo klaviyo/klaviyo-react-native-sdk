@@ -71,32 +71,47 @@ jobs:
         env:
           KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
+      # Decode the base64-encoded upload keystore from secrets into a file that
+      # the Gradle signing config can point at. The runner is ephemeral so the
+      # plaintext .jks is torn down with the VM, but we also remove it at the
+      # end of the job as hygiene.
+      - name: Decode upload keystore
+        run: echo "$SIGNING_KEY" | base64 -d > "${RUNNER_TEMP}/upload.jks"
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+
       # bundleRelease triggers react-native bundle automatically via the RN Gradle plugin.
       # We cd into the android directory so that relative paths in settings.gradle resolve correctly.
+      #
+      # Signing is done inline via `-Pandroid.injected.signing.*` gradle properties so AGP
+      # produces a properly v2/v3-signed AAB in a single pass — no separate re-sign step,
+      # no risk of double-signing (Play rejects AABs with multiple signer certificates).
       - name: Assemble Release Bundle
-        run: cd example/android && ./gradlew :app:bundleRelease
+        run: |
+          cd example/android && ./gradlew :app:bundleRelease \
+            -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
+            -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
+            -Pandroid.injected.signing.key.alias="${ALIAS}" \
+            -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
         env:
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
           # Prevent Metro from trying to start a dev server during the build
           CI: true
-
-      - name: Sign Release
-        id: sign_release
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: example/android/app/build/outputs/bundle/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Deploy to Internal Track
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.klaviyoreactnativesdkexample
-          releaseFiles: ${{ steps.sign_release.outputs.signedReleaseFile }}
+          releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/upload.jks"
 
       - name: Notify Slack on success
         if: success()
