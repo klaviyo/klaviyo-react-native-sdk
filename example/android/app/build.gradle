@@ -85,7 +85,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "2.4.0"
         manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {
@@ -101,9 +101,12 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Release builds are produced unsigned — the CI publish workflow
+            // (.github/workflows/publish-example-android.yml) signs the AAB in
+            // a separate step with the real upload key. Gradle-signing here
+            // would double-sign the bundle and Play rejects AABs with multiple
+            // signers. For local signed release builds, pass the signing
+            // config via `-Pandroid.injected.signing.*` gradle properties.
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
