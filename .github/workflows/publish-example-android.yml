@@ -109,6 +109,10 @@ jobs:
           # Prevent Metro from trying to start a dev server during the build
           CI: true
 
+      # `status: draft` — the release lands on the internal track unpublished
+      # so you can manually promote it in Play Console. Required while the app
+      # listing itself is still in Draft state (no published version yet);
+      # flip to `completed` once the listing is fully configured for release.
       - name: Deploy to Internal Track
         uses: r0adkll/upload-google-play@v1.1.3
         with:
@@ -116,7 +120,7 @@ jobs:
           packageName: com.klaviyoreactnativesdkexample
           releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
-          status: completed
+          status: draft
 
       - name: Clean up keystore
         if: always()
