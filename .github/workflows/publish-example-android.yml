@@ -86,9 +86,17 @@ jobs:
       # Signing is done inline via `-Pandroid.injected.signing.*` gradle properties so AGP
       # produces a properly v2/v3-signed AAB in a single pass — no separate re-sign step,
       # no risk of double-signing (Play rejects AABs with multiple signer certificates).
+      # versionCode is overridden per-run via github.run_number so successive
+      # CI uploads never collide on Play's strictly-increasing versionCode rule.
+      # build.gradle's static `versionCode 1` stays as the local dev default;
+      # AGP's `android.injected.version.code` property wins over it at build time.
+      # Caveat: manual Play uploads that bump versionCode outside CI can get
+      # ahead of github.run_number — if that happens, bump CI past the manual
+      # number (e.g. by re-triggering the workflow N times, or adding an offset).
       - name: Assemble Release Bundle
         run: |
           cd example/android && ./gradlew :app:bundleRelease \
+            -Pandroid.injected.version.code=${{ github.run_number }} \
             -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
             -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
