@@ -107,6 +107,10 @@ jobs:
           payload: |
             text: "✅ RN SDK Example App published to Play Store internal track"
             blocks:
+              - type: "header"
+                text:
+                  type: "plain_text"
+                  text: "✅ RN SDK Example App published to Play Store internal track"
               - type: "section"
                 text:
                   type: "mrkdwn"
@@ -125,6 +129,10 @@ jobs:
           payload: |
             text: "🚨 RN SDK Example App Play Store publish failed"
             blocks:
+              - type: "header"
+                text:
+                  type: "plain_text"
+                  text: "🚨 RN SDK Example App Play Store publish failed"
               - type: "section"
                 text:
                   type: "mrkdwn"
