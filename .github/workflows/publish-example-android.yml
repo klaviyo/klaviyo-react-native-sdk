@@ -19,11 +19,17 @@ name: Publish Example App to Play Store Internal Track
 on:
   workflow_dispatch:
   release:
-    types: [ published ]
+    types: [published]
+  # Temporary: run on every push to this branch so we can iterate on the workflow
+  # before merge. `workflow_dispatch` only works from the default branch, so this
+  # is the only way to exercise the pipeline end-to-end against the PR. Remove
+  # this `push` trigger before merging to master.
+  push:
+    branches: [ecm/ci/android-example-play-publish]
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
