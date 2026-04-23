@@ -18,8 +18,8 @@ across `example/` to walk the integration surface:
 
 - `RN Installation Step` — `example/src/App.tsx` and `example/index.js` (SDK init,
   API key sourcing, optional `@react-native-firebase/messaging` background handler)
-- `iOS Installation Step` — `example/ios/KlaviyoReactNativeSdkExample/AppDelegate.{h,mm}`,
-  `PushNotificationsHelper.swift`, `NotificationService.swift`, and the Podfile
+- `iOS Installation Step` — `example/ios/KlaviyoReactNativeSdkExample/AppDelegate.swift`,
+  `NotificationService.swift`, and the Podfile
 - `Android Installation Step` — `example/android/build.gradle`, `app/build.gradle`,
   `AndroidManifest.xml`, and `MainActivity.kt`
 
@@ -125,7 +125,7 @@ project's Resources build phase references it unconditionally. Two options:
 
 For apps that prefer to handle push tokens natively (e.g., brownfield apps), the
 Klaviyo iOS and Android SDKs both have their own native push APIs. See the
-`AppDelegate.mm` comments on iOS and `MainApplication.kt` comments on Android for
+`AppDelegate.swift` comments on iOS and `MainApplication.kt` comments on Android for
 pointers, plus the platform SDKs' READMEs:
 
 - iOS: https://github.com/klaviyo/klaviyo-swift-sdk#push-notifications
@@ -136,8 +136,8 @@ are managed:
 
 - **Android:** `Klaviyo.handlePush(intent)` in `MainActivity.kt` (`onCreate` +
   `onNewIntent`) — covers cold-start taps and resume-from-background taps.
-- **iOS:** `[PushNotificationsHelper handleReceivingPushWithResponse:...]` inside
-  the `userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:`
-  delegate in `AppDelegate.mm`, plus the `getLaunchOptionsWithURL` helper to
-  forward any cold-start deep-link URL (React Native issue
+- **iOS:** `Push.handleReceivingPush(response:...)` inside the
+  `userNotificationCenter(_:didReceive:withCompletionHandler:)` delegate in
+  `AppDelegate.swift`, plus the `getLaunchOptionsWithURL` helper to forward any
+  cold-start deep-link URL (React Native issue
   [#32350](https://github.com/facebook/react-native/issues/32350)).
