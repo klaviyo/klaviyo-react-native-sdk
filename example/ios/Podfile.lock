@@ -2416,6 +2416,34 @@ PODS:
     - React-perflogger (= 0.81.5)
     - React-utils (= 0.81.5)
     - SocketRocket
+  - RNCAsyncStorage (2.2.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - RNFBApp (24.0.0):
     - boost
     - DoubleConversion
@@ -2586,6 +2614,7 @@ DEPENDENCIES:
   - ReactAppDependencyProvider (from `build/generated/ios`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - RNPermissions (from `../node_modules/react-native-permissions`)
@@ -2766,6 +2795,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNFBApp:
     :path: "../node_modules/@react-native-firebase/app"
   RNFBMessaging:
@@ -2878,6 +2909,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: c277c5b231881ad4f00cd59e3aa0671b99d7ebee
   ReactCodegen: 1e847cf77c1402fe7394dae41b3829c95569e76e
   ReactCommon: 5cfd842fcd893bb40fc835f98fadc60c42906a20
+  RNCAsyncStorage: 8857fb173af29664cb90897903902dc8533e36cc
   RNFBApp: 60f4af1a2a4d35178aa4faccf1dbba6792ad0ece
   RNFBMessaging: 55269ab548e741b512386230d5d3856b3e963584
   RNPermissions: 86933bcc014e7fa7d77e09b7b0b0b858287d611f
