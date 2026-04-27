@@ -1,20 +1,15 @@
-# Publish the React Native SDK example app to Google Play Console internal track.
+# Publish the React Native SDK example app to internal/test distribution
+# tracks on both stores (Google Play internal, Apple TestFlight). Android and
+# iOS are independent jobs sharing the same triggers and shared composite
+# actions in .github/actions/.
 #
 # Triggers:
-#   - workflow_dispatch: Manual publish (preferred — SDK releases don't map 1:1 to example app publishes)
-#   - release: published: Fires on every SDK release to keep the example app in sync
+#   - workflow_dispatch:    Manual publish (preferred — SDK releases don't map 1:1 to example app publishes)
+#   - release: published:   Fires on every SDK release to keep the example app in sync
 #
-# Required secrets (set in repo Settings → Secrets and variables → Actions):
-#   GOOGLE_SERVICES_JSON      - Contents of google-services.json for Firebase
-#   SIGNING_KEY               - Base64-encoded release keystore
-#   ALIAS                     - Key alias in the keystore
-#   KEY_STORE_PASSWORD        - Keystore password
-#   KEY_PASSWORD              - Key password
-#   SERVICE_ACCOUNT_JSON      - Google Play service account JSON (plain text)
-#   KLAVIYO_EXAMPLE_API_KEY   - Klaviyo public API key for the example app build.
-#                               Required: workflow fails early if unset (guard step after checkout).
+# Required secrets — see "Required secrets" section in the PR description.
 
-name: Publish Example App to Play Store Internal Track
+name: Publish Example App
 
 on:
   workflow_dispatch:
@@ -28,21 +23,17 @@ on:
     branches: [ecm/ci/android-example-play-publish]
 
 jobs:
-  deploy:
+  deploy-android:
+    name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify KLAVIYO_EXAMPLE_API_KEY secret is set
-        run: |
-          if [ -z "${KLAVIYO_EXAMPLE_API_KEY}" ]; then
-            echo "::error::KLAVIYO_EXAMPLE_API_KEY secret is not set. The workflow cannot proceed — the build would produce an app that crashes at launch."
-            exit 1
-          fi
-        shell: bash
-        env:
-          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+      - name: Prep example app
+        uses: ./.github/actions/example-publish-prep
+        with:
+          api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # Node + Yarn 3 + workspace deps. Required because the React Native Gradle plugin
       # invokes the Metro bundler during bundleRelease to generate the JS bundle. Installs
@@ -62,14 +53,6 @@ jobs:
         shell: bash
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-
-      # Write the Klaviyo public API key into example/.env so react-native-dotenv
-      # can expose it to the JS layer as KLAVIYO_API_KEY (imported from '@env').
-      # The guard step above ensures the secret is set before we reach this point.
-      - name: Write .env with Klaviyo API key
-        run: echo "KLAVIYO_API_KEY=${KLAVIYO_EXAMPLE_API_KEY}" > example/.env
-        env:
-          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # Decode the base64-encoded upload keystore from secrets into a file that
       # the Gradle signing config can point at. The runner is ephemeral so the
@@ -128,44 +111,249 @@ jobs:
 
       - name: Notify Slack on success
         if: success()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: ./.github/actions/notify-slack-publish
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "✅ RN SDK Example App published to Play Store internal track"
-            blocks:
-              - type: "header"
-                text:
-                  type: "plain_text"
-                  text: "✅ RN SDK Example App published to Play Store internal track"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Release:* `${{ github.event.release.tag_name || 'manual' }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+          result: success
+          platform: Play Store
+          version_label: ${{ github.event.release.tag_name || 'manual' }}
 
       - name: Notify Slack on failure
         if: failure()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: ./.github/actions/notify-slack-publish
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "🚨 RN SDK Example App Play Store publish failed"
-            blocks:
-              - type: "header"
-                text:
-                  type: "plain_text"
-                  text: "🚨 RN SDK Example App Play Store publish failed"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Release:* `${{ github.event.release.tag_name || 'manual' }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+          result: failure
+          platform: Play Store
+          version_label: ${{ github.event.release.tag_name || 'manual' }}
+
+  deploy-ios:
+    name: Publish to TestFlight
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prep example app
+        uses: ./.github/actions/example-publish-prep
+        with:
+          api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+
+      # Node + Yarn 3 + workspace deps. The React Native Xcode build phase
+      # invokes Metro to bundle JS during archive; node and yarn must be on PATH.
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: example/ios
+
+      # Real (not stubbed) plist injected from a base64-encoded secret so the
+      # built app can talk to Firebase for push delivery. The contents are the
+      # GoogleService-Info.plist downloaded from the Firebase console for the
+      # com.klaviyoreactnativesdkexample bundle ID, base64-encoded and stored
+      # as the GOOGLE_SERVICE_INFO_PLIST_BASE64 repo secret.
+      - name: Inject GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        shell: bash
+        run: echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > example/ios/GoogleService-Info.plist
+
+      # bundle exec pod install with --repo-update so a stale CDN cache on the
+      # runner can't pin us to old pod versions. The .xcode.env.local file is
+      # generated by pod install and pins NODE_BINARY at the path of node at
+      # install time; we delete it so the Xcode build phase falls back to
+      # `command -v node`, which resolves to the setup-node binary on $PATH.
+      - name: Install CocoaPods dependencies
+        working-directory: example/ios
+        shell: bash
+        run: |
+          bundle exec pod install --repo-update
+          rm -f .xcode.env.local
+
+      # Cert + provisioning profile setup mirrors the iOS test app
+      # (klaviyo-ios-test-app/.github/workflows/testflight.yml). Profiles are
+      # imported by their UUID (xcodebuild matches by UUID, not name) and the
+      # discovered UUIDs are exported to GITHUB_ENV for downstream steps.
+      - name: Install Apple Certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          EXTENSION_PROVISION_PROFILE_BASE64: ${{ secrets.EXTENSION_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        shell: bash
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+          security list-keychains -d user -s ~/Library/Keychains/build.keychain-db ~/Library/Keychains/login.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode --output certificate.p12
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          echo "Keychain search list:"
+          security list-keychains -d user
+          echo "Valid signing identities (cert+key pairs):"
+          security find-identity -v -p codesigning
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > app.mobileprovision
+          APP_UUID=$(grep -aEo '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}' app.mobileprovision | head -1)
+          echo "App profile UUID: ${APP_UUID}"
+          cp app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${APP_UUID}.mobileprovision
+          echo "APP_PROFILE_UUID=${APP_UUID}" >> $GITHUB_ENV
+
+          if [ -n "$EXTENSION_PROVISION_PROFILE_BASE64" ]; then
+            echo -n "$EXTENSION_PROVISION_PROFILE_BASE64" | base64 --decode > extension.mobileprovision
+            EXT_UUID=$(grep -aEo '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}' extension.mobileprovision | head -1)
+            echo "Extension profile UUID: ${EXT_UUID}"
+            cp extension.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${EXT_UUID}.mobileprovision
+            echo "EXT_PROFILE_UUID=${EXT_UUID}" >> $GITHUB_ENV
+          else
+            # If no separate extension profile was provided, fall back to the
+            # app profile UUID. Works only if the app profile's bundle ID is a
+            # wildcard that covers the extension; otherwise the extension build
+            # will fail and EXTENSION_PROVISION_PROFILE_BASE64 must be set.
+            echo "EXT_PROFILE_UUID=${APP_UUID}" >> $GITHUB_ENV
+          fi
+
+      # MARKETING_VERSION is the user-facing version string and is kept in sync
+      # with the SDK version by bump-version.sh. BUILD_NUMBER must strictly
+      # increase across TestFlight uploads — github.run_number gives us that.
+      - name: Set build number
+        shell: bash
+        run: |
+          MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
+          echo "Marketing version: $MARKETING_VERSION"
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      # Modern Xcode ignores CLI-passed signing flags in favor of project-level
+      # settings, so we must edit the .pbxproj. We update both ExportOptions.plist
+      # (provisioning profile UUIDs by bundle ID) and the Xcode project itself
+      # (per-target Manual signing settings) via the xcodeproj Ruby gem.
+      - name: Configure per-target signing
+        working-directory: example/ios
+        shell: bash
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.klaviyoreactnativesdkexample ${APP_PROFILE_UUID}" ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension ${EXT_PROFILE_UUID}" ExportOptions.plist
+          echo "ExportOptions.plist updated:"
+          cat ExportOptions.plist
+
+          ruby <<'RUBY'
+          require 'xcodeproj'
+          project = Xcodeproj::Project.open('KlaviyoReactNativeSdkExample.xcodeproj')
+          app_uuid = ENV['APP_PROFILE_UUID']
+          ext_uuid = ENV['EXT_PROFILE_UUID']
+          raise "APP_PROFILE_UUID is empty" if app_uuid.nil? || app_uuid.empty?
+          raise "EXT_PROFILE_UUID is empty" if ext_uuid.nil? || ext_uuid.empty?
+          signing_targets = %w[KlaviyoReactNativeSdkExample KlaviyoReactNativeSdkExampleExtension]
+          project.targets.each do |target|
+            next unless signing_targets.include?(target.name)
+            uuid = (target.name == 'KlaviyoReactNativeSdkExample') ? app_uuid : ext_uuid
+            target.build_configurations.each do |config|
+              config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+              config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+              config.build_settings['DEVELOPMENT_TEAM'] = 'G3793W2RJ2'
+              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = uuid
+            end
+            puts "#{target.name}: PROVISIONING_PROFILE_SPECIFIER = #{uuid}"
+          end
+          project.save
+          RUBY
+
+      # Retry loop handles the case where someone uploaded a manual TestFlight
+      # build outside of CI and bumped the build number past github.run_number.
+      # On collision, parse the previousBundleVersion from altool's error output
+      # and re-archive with build number = prev + 1.
+      - name: Build and Upload to TestFlight
+        working-directory: example/ios
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          # Prevent Metro from trying to start a dev server during the build
+          CI: true
+        shell: bash
+        run: |
+          MAX_RETRIES=3
+          BUILD_NUMBER=${{ env.BUILD_NUMBER }}
+          UPLOAD_SUCCESS=false
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "=== Attempt $attempt: build number $BUILD_NUMBER ==="
+
+            rm -rf ./build KlaviyoReactNativeSdkExample.xcarchive
+
+            xcrun agvtool new-version -all $BUILD_NUMBER
+
+            xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
+              -scheme KlaviyoReactNativeSdkExample \
+              -configuration Release \
+              archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
+              DEVELOPMENT_TEAM=G3793W2RJ2
+
+            xcodebuild -exportArchive \
+              -archivePath KlaviyoReactNativeSdkExample.xcarchive \
+              -exportOptionsPlist ExportOptions.plist \
+              -exportPath ./build
+
+            UPLOAD_OUTPUT=$(xcrun altool --upload-app --type ios \
+              --file "build/KlaviyoReactNativeSdkExample.ipa" \
+              --username "$APPLE_ID" --password "$APP_SPECIFIC_PASSWORD" 2>&1) || true
+            echo "$UPLOAD_OUTPUT"
+
+            if ! echo "$UPLOAD_OUTPUT" | grep -q "ERROR:"; then
+              UPLOAD_SUCCESS=true
+              echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+              break
+            fi
+
+            PREV_BUILD=$(echo "$UPLOAD_OUTPUT" | grep -o 'previousBundleVersion = [0-9]*' | head -1 | grep -o '[0-9]*') || true
+            if [ -z "$PREV_BUILD" ]; then
+              echo "Upload failed with non-recoverable error"
+              exit 1
+            fi
+
+            BUILD_NUMBER=$((PREV_BUILD + 1))
+            echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+            echo "Build $PREV_BUILD already exists — retrying with $BUILD_NUMBER"
+          done
+
+          if [ "$UPLOAD_SUCCESS" != "true" ]; then
+            echo "Upload failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+      - name: Clean up keychain and signing artifacts
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain build.keychain 2>/dev/null || true
+          rm -f certificate.p12 app.mobileprovision extension.mobileprovision
+
+      - name: Notify Slack on success
+        if: success()
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: success
+          platform: TestFlight
+          version_label: ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }})
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          platform: TestFlight
+          version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || github.run_number }})
