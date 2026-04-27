@@ -1,5 +1,5 @@
 // React / React Native
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SectionList, SafeAreaView, Linking } from 'react-native';
 
 // Klaviyo SDK
@@ -8,6 +8,9 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 // Local components / styles
 import { styles } from './Styles';
 import { SectionHeader } from './components/SectionHeader';
+import { AppHeader } from './components/AppHeader';
+import { CompanyIdModal } from './components/CompanyIdModal';
+import { useCompanyId } from './hooks/useCompanyId';
 
 // Section components — each section owns the hook(s) it consumes, so state
 // changes in one section don't re-render sibling sections. No React.memo or
@@ -69,6 +72,10 @@ const renderSection = (sectionKey: SectionKey) => {
 };
 
 export default function App() {
+  const { companyId, isOverridden, changeCompanyId, resetToDefault } =
+    useCompanyId();
+  const [settingsVisible, setSettingsVisible] = useState(false);
+
   useEffect(() => {
     // Deep linking handler
     const handleUrl = (url: string) => {
@@ -97,6 +104,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
       <SectionList
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -107,6 +115,20 @@ export default function App() {
           <SectionHeader title={section.title} />
         )}
         stickySectionHeadersEnabled={false}
+      />
+      <CompanyIdModal
+        visible={settingsVisible}
+        currentCompanyId={companyId}
+        isOverridden={isOverridden}
+        onSave={(key) => {
+          changeCompanyId(key);
+          setSettingsVisible(false);
+        }}
+        onReset={() => {
+          resetToDefault();
+          setSettingsVisible(false);
+        }}
+        onClose={() => setSettingsVisible(false)}
       />
     </SafeAreaView>
   );
