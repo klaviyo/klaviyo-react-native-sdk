@@ -84,6 +84,27 @@ else
   exit 1
 fi
 
+# Keep the example app's user-facing version (Android versionName + iOS
+# MARKETING_VERSION) in sync with the SDK version so TestFlight / Play Store
+# uploads carry the SDK version they're demonstrating.
+example_android_gradle="example/android/app/build.gradle"
+if [[ -f "$example_android_gradle" ]]; then
+  sed -i '' "s/versionName \"[^\"]*\"/versionName \"$new_version\"/" "$example_android_gradle"
+  echo "Updated example app versionName in $example_android_gradle."
+else
+  echo "Error: $example_android_gradle not found."
+  exit 1
+fi
+
+example_ios_pbxproj="example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj"
+if [[ -f "$example_ios_pbxproj" ]]; then
+  sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $new_version;/g" "$example_ios_pbxproj"
+  echo "Updated example app MARKETING_VERSION in $example_ios_pbxproj."
+else
+  echo "Error: $example_ios_pbxproj not found."
+  exit 1
+fi
+
 # --- Native dependencies (skippable) ---
 
 if [[ "$skip_native" == true ]]; then
