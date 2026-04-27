@@ -1,0 +1,37 @@
+.swiftlint.yml
+  6fb20c729bc9b720 2-3
+  e4bda2ce8ecebcfe 1,4-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "794db23d96ab19feda65d1f3861d0581ac3decfa",
+  "prompts": {
+    "6fb20c729bc9b720": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78226704-eb46-47f8-a8b8-e01ebf0ba01e",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 201,
+      "total_deletions": 471,
+      "accepted_lines": 201,
+      "overriden_lines": 0
+    },
+    "e4bda2ce8ecebcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0b44ed8-52f8-47dc-83a4-da8416520256",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 1213,
+      "total_deletions": 4,
+      "accepted_lines": 770,
+      "overriden_lines": 0
+    }
+  }
+}
