@@ -436,9 +436,9 @@ No additional setup is needed to support rich push on Android.
 
 #### Push Action Buttons
 
-[Push Action Buttons](https://help.klaviyo.com/hc/en-us/article/46285872166683) is the ability to add clickable buttons to
+[Push Action Buttons](https://help.klaviyo.com/hc/en-us/article/46285872166683) provide the ability to add clickable buttons to
 push notification messages. These buttons can show custom text, and, when clicked, deep link or open your app.
-Push notification messages can include a maximum of 3 buttons. No additional setup is needed to support push action buttons.
+A notification can include up to 3 buttons. No additional SDK setup is required.
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#push-action-buttons)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#push-action-buttons)
