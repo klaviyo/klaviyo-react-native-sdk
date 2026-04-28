@@ -12,13 +12,12 @@ permissions:
 
 jobs:
   build-ios:
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       TURBO_CACHE_DIR: .turbo/ios
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -57,7 +56,7 @@ jobs:
         shell: bash
 
       - name: Cache turborepo for iOS
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.TURBO_CACHE_DIR }}
           key: ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-${{ hashFiles('yarn.lock') }}
@@ -65,7 +64,6 @@ jobs:
             ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-
 
       - name: Check turborepo cache for iOS
-        if: github.run_attempt == 1
         run: |
           TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
 
@@ -73,19 +71,8 @@ jobs:
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
 
-      - name: Cache cocoapods
-        if: env.turbo_cache_hit != 1 && github.run_attempt == 1
-        id: cocoapods-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/ios/Pods
-          key: ${{ runner.os }}-cocoapods-${{ inputs.new-architecture }}-${{ hashFiles('yarn.lock', 'example/ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cocoapods-${{ inputs.new-architecture }}-
-
       - name: Install cocoapods
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        if: env.turbo_cache_hit != 1
         run: |
           export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
           yarn example setup
