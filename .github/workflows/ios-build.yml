@@ -51,24 +51,34 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-
 
-      # Cache the resolved Pods/ directory so RN CLI's auto pod install (which
-      # always runs as part of `react-native build-ios`) can short-circuit
+      # Cache the resolved Pods/ directory so pod install can short-circuit
       # when nothing relevant changed: it sees Pods/Manifest.lock matching
       # Podfile.lock and treats it as a no-op (~2s vs ~30-60s for a fresh
       # download from the CocoaPods CDN).
       #
-      # Key invalidates whenever anything that affects pod resolution OR our
-      # local SDK pod's content changes:
-      #   - Podfile.lock         (pod versions)
-      #   - Gemfile.lock         (CocoaPods gem version)
-      #   - .ruby-version        (Ruby version)
-      #   - root podspec(s)      (our local SDK pod definition)
-      #   - ios/**.{swift,h,m,mm} (our local SDK pod's Swift/ObjC source)
+      # Key invalidates on:
+      #   - Podfile.lock     (pod versions)
+      #   - Gemfile.lock     (CocoaPods gem version)
+      #   - .ruby-version    (Ruby version)
+      #   - root podspec(s)  (our local SDK pod definition — source_files glob
+      #                       lives here, so glob changes invalidate)
+      #
+      # Notably *not* in the key: our SDK's iOS source files in `ios/`. For
+      # local-path pods, CocoaPods doesn't bundle source into Pods/ — it only
+      # adds path references to Pods.xcodeproj that xcodebuild resolves at
+      # compile time. So content edits to existing files don't make the
+      # cached Pods/ stale. The one exception is adding/removing files
+      # matching the podspec's source_files glob: in that case Pods.xcodeproj
+      # would be missing/stale references and the new file would silently not
+      # be compiled into the pod. Rare in practice — local devs catch it
+      # because their own `pod install` regenerates the project — and not
+      # worth invalidating the cache on every SDK content edit to defend
+      # against.
       - name: Cache Pods
         uses: actions/cache@v5
         with:
           path: example/ios/Pods
-          key: ${{ runner.os }}-pods-${{ inputs.new-architecture }}-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec', 'ios/**/*.swift', 'ios/**/*.h', 'ios/**/*.m', 'ios/**/*.mm') }}
+          key: ${{ runner.os }}-pods-${{ inputs.new-architecture }}-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec') }}
           restore-keys: |
             ${{ runner.os }}-pods-${{ inputs.new-architecture }}-
 
