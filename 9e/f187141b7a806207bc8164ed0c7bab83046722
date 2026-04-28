@@ -1,0 +1,38 @@
+.github/workflows/publish-example.yml
+  e4bda2ce8ecebcfe 221,223-228,233
+.github/workflows/ios-build.yml
+  e4bda2ce8ecebcfe 54,59-76,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "9ef187141b7a806207bc8164ed0c7bab83046722",
+  "prompts": {
+    "22e98d22d2a405e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1e054b8d-c54d-45b9-8abc-4a3d7095fc0b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 2244,
+      "total_deletions": 20,
+      "accepted_lines": 1129,
+      "overriden_lines": 0
+    },
+    "e4bda2ce8ecebcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0b44ed8-52f8-47dc-83a4-da8416520256",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 29,
+      "total_deletions": 1115,
+      "accepted_lines": 29,
+      "overriden_lines": 0
+    }
+  }
+}
