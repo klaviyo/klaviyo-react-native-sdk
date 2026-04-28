@@ -2808,16 +2808,16 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: 40327c1f555630d715630a2cbfa1246ce2b987ad
+    :commit: 2bdf794c4a2cc22c9b8f731a5e6b8c17d025f8c1
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 40327c1f555630d715630a2cbfa1246ce2b987ad
+    :commit: 2bdf794c4a2cc22c9b8f731a5e6b8c17d025f8c1
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 40327c1f555630d715630a2cbfa1246ce2b987ad
+    :commit: 2bdf794c4a2cc22c9b8f731a5e6b8c17d025f8c1
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 40327c1f555630d715630a2cbfa1246ce2b987ad
+    :commit: 2bdf794c4a2cc22c9b8f731a5e6b8c17d025f8c1
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2838,10 +2838,10 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   klaviyo-react-native-sdk: a6a954a9f3206771303e23c49a0618eb4ceb5218
-  KlaviyoCore: 0d27552664bb46b171e8256b92a3af94e7261a00
+  KlaviyoCore: 0735e9f71d29c7dfb7b1301845b6986ccf566bcd
   KlaviyoForms: 589f91cb245dbf78f657cbc46a1d3dab47bef601
   KlaviyoLocation: 9ba7810b0cbe1205dad0903c42dc420ba8dd6025
-  KlaviyoSwift: 844dda154601d17f1b6a95dca8e5e6dd918b4664
+  KlaviyoSwift: 6cad13c24d067c615db499984136d0273eaf9a36
   KlaviyoSwiftExtension: 963bedfdb2dbc303c89792933f052edf907f0dbb
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47

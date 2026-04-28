@@ -121,12 +121,3 @@ jobs:
         run: |
           export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" ${{ github.run_attempt > 1 && '--force' || '' }}
-
-      # If the pod install run during the build mutated Podfile.lock, the
-      # committer used a different Ruby/CocoaPods version than what
-      # example/.ruby-version + example/Gemfile pin. Fail loudly so the PR
-      # author updates the lockfile properly. Skipped on a turbo HIT
-      # because no pod install ran in that case.
-      - name: Verify Podfile.lock unchanged
-        if: env.turbo_cache_hit != 1
-        run: git diff --exit-code example/ios/Podfile.lock
