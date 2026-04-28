@@ -26,6 +26,9 @@
         "src/*.ts",
         "src/*.tsx",
         "example/package.json",
+        "example/.ruby-version",
+        "example/Gemfile",
+        "example/Gemfile.lock",
         "example/ios",
         "!example/ios/build",
         "!example/ios/Pods"

@@ -15,45 +15,33 @@ jobs:
     runs-on: macos-26
     env:
       TURBO_CACHE_DIR: .turbo/ios
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '2.6.10'
+          # ruby-version is read from example/.ruby-version. bundler-cache:true
+          # also runs `bundle install --frozen` against example/Gemfile, so
+          # any Gemfile / Gemfile.lock drift fails this step early.
+          working-directory: example
+          bundler-cache: true
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      # Stub Firebase config so Xcode's Resources build phase finds the referenced plist.
-      # The real GoogleService-Info.plist is gitignored; integrators add their own
-      # (see example/README.md). Stub is enough because the app's AppDelegate guards
-      # runtime Firebase init via `if (plistPath) [FIRApp configure]` — CI just needs
-      # the file to exist for Xcode's build input validation to pass.
-      - name: Stub GoogleService-Info.plist for CI
-        run: |
-          cat > example/ios/GoogleService-Info.plist <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>BUNDLE_ID</key><string>com.klaviyoreactnativesdkexample</string>
-            <key>GOOGLE_APP_ID</key><string>1:000000000000:ios:0000000000000000000000</string>
-            <key>API_KEY</key><string>AIzaSyA00000000000000000000000000000000</string>
-            <key>GCM_SENDER_ID</key><string>000000000000</string>
-            <key>PROJECT_ID</key><string>stub-project</string>
-            <key>STORAGE_BUCKET</key><string>stub-project.appspot.com</string>
-            <key>PLIST_VERSION</key><string>1</string>
-            <key>IS_GCM_ENABLED</key><true/>
-            <key>IS_ADS_ENABLED</key><false/>
-            <key>IS_ANALYTICS_ENABLED</key><false/>
-            <key>IS_APPINVITE_ENABLED</key><false/>
-            <key>IS_SIGNIN_ENABLED</key><false/>
-          </dict>
-          </plist>
-          EOF
+      # Real Firebase plist injected from a base64-encoded secret. The example
+      # app's AppDelegate guards runtime Firebase init via
+      # `if (plistPath) [FIRApp configure]`, but Xcode's Resources build phase
+      # still needs the file to exist for build-input validation. Using the
+      # real plist (vs a stub) keeps the smoke-test build identical to the
+      # publish path.
+      - name: Inject GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         shell: bash
+        run: echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > example/ios/GoogleService-Info.plist
 
       - name: Cache turborepo for iOS
         uses: actions/cache@v5
@@ -63,7 +51,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-
 
+      # Probe whether turbo would short-circuit the build:ios task. Gated on
+      # github.run_attempt == 1 to give us a "rerun = force fresh" lever:
+      # on a manual rerun, we skip this probe so turbo_cache_hit stays unset
+      # and the build step below gets `--force` (see expression there).
       - name: Check turborepo cache for iOS
+        if: github.run_attempt == 1
         run: |
           TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
 
@@ -71,13 +64,25 @@ jobs:
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
 
-      - name: Install cocoapods
-        if: env.turbo_cache_hit != 1
-        run: |
-          export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
-          yarn example setup
-          rm -f example/ios/.xcode.env.local
-
+      # `react-native build-ios` runs `bundle install` + `bundle exec pod install`
+      # automatically (per example/react-native.config.js's
+      # automaticPodsInstallation: true), so we don't run a separate pod-install
+      # step — fewer moving parts, and the same code path real users hit.
+      #
+      # `--force` on rerun makes the run_attempt-gated probe above actually
+      # mean something: even if turbo's cache restored from this branch's
+      # last run, --force ignores it and re-executes build:ios from scratch.
       - name: Build example for iOS
+        env:
+          RCT_NEW_ARCH_ENABLED: ${{ inputs.new-architecture }}
         run: |
-          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" ${{ github.run_attempt > 1 && '--force' || '' }}
+
+      # If the pod install run during the build mutated Podfile.lock, the
+      # committer used a different Ruby/CocoaPods version than what
+      # example/.ruby-version + example/Gemfile pin. Fail loudly so the PR
+      # author updates the lockfile properly. Skipped on a turbo HIT
+      # because no pod install ran in that case.
+      - name: Verify Podfile.lock unchanged
+        if: env.turbo_cache_hit != 1
+        run: git diff --exit-code example/ios/Podfile.lock

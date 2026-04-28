@@ -4,8 +4,9 @@
 # actions in .github/actions/.
 #
 # Triggers:
-#   - workflow_dispatch:    Manual publish (preferred — SDK releases don't map 1:1 to example app publishes)
+#   - workflow_dispatch:    Manual publish (the typical case)
 #   - release: published:   Fires on every SDK release to keep the example app in sync
+#   - push to master:       Fires when this PR (or a follow-up) merges to master
 #
 # Required secrets — see "Required secrets" section in the PR description.
 
@@ -15,12 +16,8 @@ on:
   workflow_dispatch:
   release:
     types: [published]
-  # Temporary: run on every push to this branch so we can iterate on the workflow
-  # before merge. `workflow_dispatch` only works from the default branch, so this
-  # is the only way to exercise the pipeline end-to-end against the PR. Remove
-  # this `push` trigger before merging to master.
   push:
-    branches: [ecm/ci/android-example-play-publish]
+    branches: [master]
 
 jobs:
   deploy-android:
@@ -168,6 +165,8 @@ jobs:
   deploy-ios:
     name: Publish to TestFlight
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
 
     steps:
       - uses: actions/checkout@v5
@@ -185,12 +184,11 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
-          bundler-cache: true
-          # Gemfile lives at example/, not example/ios/. The xcodeproj gem
-          # used by the per-target signing step is pulled in transitively
-          # via cocoapods 1.15.2.
+          # ruby-version is read from example/.ruby-version. bundler-cache:true
+          # also runs `bundle install --frozen` against example/Gemfile, so
+          # any Gemfile / Gemfile.lock drift fails this step early.
           working-directory: example
+          bundler-cache: true
 
       # Real (not stubbed) plist injected from a base64-encoded secret so the
       # built app can talk to Firebase for push delivery. The contents are the
