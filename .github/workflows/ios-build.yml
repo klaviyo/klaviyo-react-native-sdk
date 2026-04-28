@@ -85,22 +85,37 @@ jobs:
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
 
+      # Explicit pod install BEFORE the build, with RCT_NEW_ARCH_ENABLED
+      # exported in the shell. This is load-bearing on a fresh runner because
+      # `react-native build-ios`'s auto pod install (via cli-platform-apple's
+      # createBuild.js) detects arch by checking whether
+      # Pods/Pods.xcodeproj/project.pbxproj contains `-DRCT_NEW_ARCH_ENABLED=1`
+      # — which on a fresh runner doesn't exist yet, so its getArchitecture()
+      # returns false and runPodInstall hard-codes the env var to '0' in the
+      # execa call (overriding any shell export). That mismatched arch flag
+      # then causes the Podfile's pre_install codegen to skip generating
+      # ReactAppDependencyProvider.podspec, and pod install fails on the
+      # dangling reference. Running pod install ourselves first populates
+      # Pods/ correctly so the auto-install during the build sees
+      # Manifest.lock matching Podfile.lock and is essentially a no-op.
+      - name: Install CocoaPods
+        if: env.turbo_cache_hit != 1
+        working-directory: example/ios
+        shell: bash
+        run: |
+          export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
+          bundle exec pod install
+          rm -f .xcode.env.local
+
       # `react-native build-ios` runs `bundle install` + `bundle exec pod install`
       # automatically (per example/react-native.config.js's
-      # automaticPodsInstallation: true), so we don't run a separate pod-install
-      # step — fewer moving parts, and the same code path real users hit.
+      # automaticPodsInstallation: true). With Pods/ already populated from
+      # the step above, that auto-install is fast (Manifest.lock matches
+      # Podfile.lock, ~5-10s).
       #
       # `--force` on rerun makes the run_attempt-gated probe above actually
       # mean something: even if turbo's cache restored from this branch's
       # last run, --force ignores it and re-executes build:ios from scratch.
-      #
-      # `RCT_NEW_ARCH_ENABLED` must be exported in the script body, not just
-      # set via the step `env:` block. Empirically, the step-env value isn't
-      # reliably propagated through the yarn → turbo → RN CLI → bundle exec
-      # → pod install chain (the Podfile reports "Configuring the target
-      # with the Legacy Architecture" even when the step env shows the var
-      # is 1). An explicit shell `export` was what the original workflow
-      # used and it survives all the way into the Podfile.
       - name: Build example for iOS
         shell: bash
         run: |
