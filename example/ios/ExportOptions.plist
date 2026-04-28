@@ -3,17 +3,10 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
     <key>teamID</key>
     <string>APPLE_TEAM_ID_PLACEHOLDER</string>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.klaviyoreactnativesdkexample</key>
-        <string>GH_actions</string>
-        <key>com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension</key>
-        <string>GH_actions</string>
-    </dict>
 </dict>
 </plist>
