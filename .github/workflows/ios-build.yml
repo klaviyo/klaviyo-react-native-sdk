@@ -31,12 +31,9 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      # Real Firebase plist injected from a base64-encoded secret. The example
-      # app's AppDelegate guards runtime Firebase init via
-      # `if (plistPath) [FIRApp configure]`, but Xcode's Resources build phase
-      # still needs the file to exist for build-input validation. Using the
-      # real plist (vs a stub) keeps the smoke-test build identical to the
-      # publish path.
+      # AppDelegate calls FirebaseApp.configure() unconditionally; the file
+      # must exist on disk at archive time. Real plist (vs stub) keeps the
+      # smoke build identical to the publish path.
       - name: Inject GoogleService-Info.plist
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
@@ -51,27 +48,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-
 
-      # Cache the resolved Pods/ directory so pod install can short-circuit
-      # when nothing relevant changed: it sees Pods/Manifest.lock matching
-      # Podfile.lock and treats it as a no-op (~2s vs ~30-60s for a fresh
-      # download from the CocoaPods CDN).
-      #
-      # Key invalidates on:
-      #   - Podfile.lock     (pod versions)
-      #   - Gemfile.lock     (CocoaPods gem version)
-      #   - .ruby-version    (Ruby version)
-      #   - root podspec(s)  (our local SDK pod definition)
-      #
-      # Notably *not* in the key: our SDK's iOS source files in `ios/`. For
-      # local-path pods, CocoaPods doesn't bundle source into Pods/ — it only
-      # adds path references to Pods.xcodeproj that xcodebuild resolves at
-      # compile time, and `pod install` re-evaluates the podspec's
-      # source_files glob from the current filesystem on every run. So
-      # neither content edits nor file-set changes (added/removed files)
-      # make the cached Pods/ stale: the explicit `Install CocoaPods` step
-      # below always runs `bundle exec pod install`, which rewrites
-      # Pods.xcodeproj from current state and picks up any new files
-      # automatically.
+      # Cache Pods/ so pod install short-circuits when Manifest.lock matches
+      # Podfile.lock (~2s vs ~30-60s fresh from CDN). Local SDK source isn't
+      # in the key: pod install re-evaluates source_files globs and rewrites
+      # Pods.xcodeproj on every run, so it can't go stale.
       - name: Cache Pods
         uses: actions/cache@v5
         with:
@@ -80,10 +60,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-${{ inputs.new-architecture }}-
 
-      # Probe whether turbo would short-circuit the build:ios task. Gated on
-      # github.run_attempt == 1 to give us a "rerun = force fresh" lever:
-      # on a manual rerun, we skip this probe so turbo_cache_hit stays unset
-      # and the build step below gets `--force` (see expression there).
+      # Skipped on manual rerun so turbo_cache_hit stays unset and the build
+      # step below runs with --force (rerun = force fresh).
       - name: Check turborepo cache for iOS
         if: github.run_attempt == 1
         run: |
@@ -93,19 +71,11 @@ jobs:
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
 
-      # Explicit pod install BEFORE the build, with RCT_NEW_ARCH_ENABLED
-      # exported in the shell. This is load-bearing on a fresh runner because
-      # `react-native build-ios`'s auto pod install (via cli-platform-apple's
-      # createBuild.js) detects arch by checking whether
-      # Pods/Pods.xcodeproj/project.pbxproj contains `-DRCT_NEW_ARCH_ENABLED=1`
-      # — which on a fresh runner doesn't exist yet, so its getArchitecture()
-      # returns false and runPodInstall hard-codes the env var to '0' in the
-      # execa call (overriding any shell export). That mismatched arch flag
-      # then causes the Podfile's pre_install codegen to skip generating
-      # ReactAppDependencyProvider.podspec, and pod install fails on the
-      # dangling reference. Running pod install ourselves first populates
-      # Pods/ correctly so the auto-install during the build sees
-      # Manifest.lock matching Podfile.lock and is essentially a no-op.
+      # Explicit pod install before the build to work around an RN CLI bug:
+      # on a fresh runner, its arch detection reads a pbxproj that doesn't
+      # exist yet, defaults to legacy, and forces RCT_NEW_ARCH_ENABLED=0 in
+      # its subprocess (overriding the shell export). Populating Pods/ first
+      # makes the build's auto pod install a fast no-op.
       - name: Install CocoaPods
         if: env.turbo_cache_hit != 1
         working-directory: example/ios
@@ -115,15 +85,8 @@ jobs:
           bundle exec pod install
           rm -f .xcode.env.local
 
-      # `react-native build-ios` runs `bundle install` + `bundle exec pod install`
-      # automatically (per example/react-native.config.js's
-      # automaticPodsInstallation: true). With Pods/ already populated from
-      # the step above, that auto-install is fast (Manifest.lock matches
-      # Podfile.lock, ~5-10s).
-      #
-      # `--force` on rerun makes the run_attempt-gated probe above actually
-      # mean something: even if turbo's cache restored from this branch's
-      # last run, --force ignores it and re-executes build:ios from scratch.
+      # --force on rerun bypasses turbo's cache (paired with the run_attempt
+      # gate on the probe above).
       - name: Build example for iOS
         shell: bash
         run: |

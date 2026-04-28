@@ -1,19 +1,9 @@
-# Publish the React Native SDK example app to internal/test distribution
-# tracks on both stores (Google Play internal, Apple TestFlight). Android and
-# iOS are independent jobs sharing the same triggers and shared composite
-# actions in .github/actions/.
+# Publish the example app to Play internal track + TestFlight. Android and
+# iOS are independent jobs.
 #
-# Triggers:
-#   - workflow_dispatch:                  Manual publish (the typical case)
-#   - release: published:                 Fires on every SDK release to keep the example app in sync
-#   - push to master:                     Fires when this PR (or a follow-up) merges to master
-#   - pull_request: types: [labeled]:     When a PR is labeled `deploy-example-app`, build and
-#                                         publish that PR's HEAD. The `cleanup-label` job at the
-#                                         bottom of this file removes the label after the run
-#                                         completes (success or failure) so reapplying the label
-#                                         re-triggers a fresh publish.
-#
-# Required secrets — see "Required secrets" section in the PR description.
+# Triggers: manual dispatch, release: published, push to master, and
+# `pull_request: labeled` when the label is `deploy-example-app` (the
+# cleanup-label job below removes it after the run so reapplying re-triggers).
 
 name: Publish Example App
 
@@ -30,9 +20,7 @@ jobs:
   deploy-android:
     name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
-    # When the workflow is fired by `pull_request: labeled`, only run if the
-    # added label was specifically `deploy-example-app`. Other triggers
-    # (workflow_dispatch, release, push to master) run unconditionally.
+    # On pull_request, only run if the added label is deploy-example-app.
     if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
 
     steps:
@@ -43,9 +31,7 @@ jobs:
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
-      # Node + Yarn 3 + workspace deps. Required because the React Native Gradle plugin
-      # invokes the Metro bundler during bundleRelease to generate the JS bundle. Installs
-      # the example workspace too, making react-native and its CLI available to Gradle.
+      # bundleRelease invokes Metro via the RN Gradle plugin; node + yarn must be on PATH.
       - name: Setup
         uses: ./.github/actions/setup
 
@@ -62,18 +48,13 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
-      # Decode the base64-encoded upload keystore from secrets into a file that
-      # the Gradle signing config can point at. The runner is ephemeral so the
-      # plaintext .jks is torn down with the VM, but we also remove it at the
-      # end of the job as hygiene.
       - name: Decode upload keystore
         run: echo "$SIGNING_KEY" | base64 -d > "${RUNNER_TEMP}/upload.jks"
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
 
-      # versionName is the user-facing version string and is kept in sync with
-      # the SDK version by bump-version.sh. Read it now so Slack notifications
-      # can include it on both success and failure paths.
+      # Read versionName (kept in sync with SDK version by bump-version.sh)
+      # so Slack notifications can include it on success or failure.
       - name: Read versionName
         shell: bash
         run: |
@@ -81,19 +62,14 @@ jobs:
           echo "Version name: $VERSION_NAME"
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
 
-      # Auth for the Play Edits API used by the preflight step below.
+      # Auth for the Play Edits API preflight below.
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # Find the highest versionCode ever uploaded for this app and pick
-      # highest+1 as our target. The /edits/{editId}/bundles endpoint
-      # returns ALL bundles for the app (not edit-scoped — confirmed by
-      # fastlane/supply's aab_version_codes treating it that way and by
-      # local probe against this app's package). The androidpublisher
-      # OAuth scope is required explicitly; the default cloud-platform
-      # scope from `gcloud auth print-access-token` does not cover Play
-      # API endpoints and silently returns an empty bundles list.
+      # Pick highest+1 versionCode. /edits/{id}/bundles returns ALL bundles
+      # for the app, not edit-scoped. The androidpublisher scope is required
+      # explicitly — the default cloud-platform scope returns empty.
       - name: Resolve next versionCode from Play
         shell: bash
         env:
@@ -104,11 +80,8 @@ jobs:
           AUTH="Authorization: Bearer $TOKEN"
           API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
 
-          # `-f` makes curl exit non-zero on HTTP error (4xx/5xx), so a
-          # misconfigured service account or transient API failure aborts
-          # the step here instead of silently producing HIGHEST=0 → a
-          # full Android build that fails at upload with a confusing
-          # version-code-conflict error.
+          # `-f` aborts on HTTP error so we don't silently fall back to
+          # HIGHEST=0 and hit a confusing version-code conflict at upload.
           EDIT_ID=$(curl -fsS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
           BUNDLES=$(curl -fsS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
           curl -fsS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
@@ -119,14 +92,8 @@ jobs:
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
 
-      # bundleRelease triggers react-native bundle automatically via the RN
-      # Gradle plugin. We cd into the android directory so that relative paths
-      # in settings.gradle resolve correctly.
-      #
-      # Signing is done inline via -Pandroid.injected.signing.* properties so
-      # AGP produces a properly v2/v3-signed AAB in a single pass — no
-      # separate re-sign step, no risk of double-signing (Play rejects AABs
-      # with multiple signer certificates).
+      # Inline signing via -Pandroid.injected.signing.* — AGP produces a
+      # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
       - name: Assemble Release Bundle
         shell: bash
         env:
@@ -143,10 +110,8 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
 
-      # `status: draft` — the release lands on the internal track unpublished
-      # so it can be manually promoted in Play Console. Required while the app
-      # listing itself is in Draft state (no published version yet); flip to
-      # `completed` once the listing is fully configured for release.
+      # `status: draft` is required while the listing has no published
+      # version. Flip to `completed` once the listing is fully configured.
       - name: Deploy to Internal Track
         uses: r0adkll/upload-google-play@v1.1.3
         with:
@@ -193,8 +158,7 @@ jobs:
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
-      # Node + Yarn 3 + workspace deps. The React Native Xcode build phase
-      # invokes Metro to bundle JS during archive; node and yarn must be on PATH.
+      # The RN Xcode build phase invokes Metro during archive; node + yarn must be on PATH.
       - name: Setup
         uses: ./.github/actions/setup
 
@@ -207,25 +171,15 @@ jobs:
           working-directory: example
           bundler-cache: true
 
-      # Real (not stubbed) plist injected from a base64-encoded secret so the
-      # built app can talk to Firebase for push delivery. The contents are the
-      # GoogleService-Info.plist downloaded from the Firebase console for the
-      # com.klaviyoreactnativesdkexample bundle ID, base64-encoded and stored
-      # as the GOOGLE_SERVICE_INFO_PLIST_BASE64 repo secret.
+      # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
+      # push delivery works against the published build.
       - name: Inject GoogleService-Info.plist
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         shell: bash
         run: echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > example/ios/GoogleService-Info.plist
 
-      # Cache Pods/ keyed on the inputs that affect pod resolution. On a hit,
-      # `pod install` below sees Manifest.lock matching Podfile.lock and is a
-      # no-op (~2s vs ~30-60s for a fresh CDN download). Notably *not* keyed
-      # on `ios/**` SDK source — see the matching cache step in ios-build.yml
-      # for the rationale. Short version: pod install always re-evaluates
-      # the podspec's source_files glob from the current filesystem and
-      # rewrites Pods.xcodeproj, so neither content edits nor file-set
-      # changes in `ios/` need to bust the Pods cache.
+      # See ios-build.yml's Cache Pods step for the cache-key rationale.
       - name: Cache Pods
         uses: actions/cache@v5
         with:
@@ -234,18 +188,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-publish-
 
-      # bundle exec pod install with --repo-update so a stale CDN cache on the
-      # runner can't pin us to old pod versions. The .xcode.env.local file is
-      # generated by pod install and pins NODE_BINARY at the path of node at
-      # install time; we delete it so the Xcode build phase falls back to
-      # `command -v node`, which resolves to the setup-node binary on $PATH.
-      #
-      # RCT_NEW_ARCH_ENABLED=1 is required for RN's new-architecture codegen
-      # to run during pod install. Without it, Pods like ReactAppDependencyProvider
-      # are still wired into the Pods project but the codegen outputs they
-      # depend on (e.g. RCTAppDependencyProvider.h) never get generated, and
-      # xcodebuild archive fails on missing headers. RN 0.81's default is
-      # new-arch on; matching that here keeps the example app representative.
+      # --repo-update so stale CDN caches can't pin us to old versions.
+      # Delete .xcode.env.local so the Xcode build phase falls back to
+      # `command -v node` (resolves to the setup-node binary on $PATH).
+      # RCT_NEW_ARCH_ENABLED=1 is required for new-arch codegen to run
+      # during pod install — otherwise xcodebuild fails on missing headers
+      # like RCTAppDependencyProvider.h.
       - name: Install CocoaPods dependencies
         working-directory: example/ios
         shell: bash
@@ -255,10 +203,7 @@ jobs:
           bundle exec pod install --repo-update
           rm -f .xcode.env.local
 
-      # Write the App Store Connect API .p8 to the conventional location so
-      # both `xcodebuild -allowProvisioningUpdates ...` and `xcrun altool
-      # --apiKey ...` auto-discover it. Apple tools look for the file at
-      # ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8.
+      # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -270,8 +215,7 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
-      # Read MARKETING_VERSION (kept in sync with the SDK version by
-      # bump-version.sh) so it can be referenced in Slack notifications.
+      # MARKETING_VERSION is kept in sync with the SDK by bump-version.sh.
       - name: Read marketing version
         shell: bash
         run: |
@@ -279,11 +223,8 @@ jobs:
           echo "Marketing version: $MARKETING_VERSION"
           echo "MARKETING_VERSION=$MARKETING_VERSION" >> $GITHUB_ENV
 
-      # Preflight: ask App Store Connect for the most recent CFBundleVersion
-      # for this app and use latest+1. Mirrors the Android preflight; lets us
-      # archive once with the right build number and avoid an archive-and-retry
-      # loop. The `jwt` gem is installed inline because example/Gemfile only
-      # declares CocoaPods (we don't want to pollute it).
+      # Pick latest+1 CFBundleVersion (mirrors the Android preflight). `jwt`
+      # is installed inline rather than added to example/Gemfile.
       - name: Resolve next build number from App Store Connect
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -325,12 +266,8 @@ jobs:
           raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." if apps['data'].empty?
           app_id = apps['data'][0]['id']
 
-          # Fetch every build's CFBundleVersion and take the numeric max,
-          # mirroring the Android side. Sorting by uploadedDate isn't
-          # reliable — Apple's `uploadedDate` is sometimes null in the API
-          # response, and a build uploaded out of chronological order can
-          # report a stale "latest". `limit=200` is the API's max page size;
-          # if the example ever grows past 200 builds, we'd need pagination.
+          # Fetch all builds and take the numeric max — `uploadedDate` can
+          # be null. limit=200 is the API max; pagination needed past that.
           builds = get(URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{app_id}&limit=200"), token)
           versions = builds['data'].map { |b| b['attributes']['version'].to_i }
           latest = versions.empty? ? 0 : versions.max
@@ -341,23 +278,15 @@ jobs:
           File.open(ENV.fetch('GITHUB_ENV'), 'a') { |f| f.puts "BUILD_NUMBER=#{next_build}" }
           RUBY
 
-      # Stamp the resolved build number into the project so Xcode picks it up
-      # at archive time. agvtool updates CFBundleVersion across all targets.
+      # agvtool updates CFBundleVersion across all targets.
       - name: Set build number on project
         working-directory: example/ios
         shell: bash
         run: xcrun agvtool new-version -all "$BUILD_NUMBER"
 
-      # Stamp the team ID into ExportOptions.plist (checked-in copy uses a
-      # placeholder so the team ID isn't recorded in source).
-      #
-      # Also explicitly set signingCertificate to "Apple Distribution".
-      # Without this, exportArchive's automatic-style signing can fall back
-      # to the legacy "iOS Distribution" cert family, which is what produced
-      # the previous run's `No signing certificate "iOS Distribution" found`
-      # error. "Apple Distribution" is the modern unified identity that maps
-      # to Distribution Managed certs (which is what -allowProvisioningUpdates
-      # uses on the cloud side).
+      # Team ID is stamped from a secret (checked-in plist uses a placeholder).
+      # signingCertificate is forced to "Apple Distribution" so exportArchive
+      # doesn't fall back to the legacy "iOS Distribution" cert family.
       - name: Stamp signing config into ExportOptions.plist
         working-directory: example/ios
         env:
@@ -365,49 +294,33 @@ jobs:
         shell: bash
         run: |
           /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
-          # `Add` if missing, `Set` if present. PlistBuddy errors on Add
-          # when the key exists, so attempt Add then fall back to Set.
+          # PlistBuddy errors on Add when the key exists, so try Add then Set.
           /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
             || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
 
-      # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild call
-      # App Store Connect (using the API key flags below) to register the
-      # distribution cert, create or refresh provisioning profiles, and
-      # download anything missing. The .p8 sits at the conventional path so
-      # Apple tools can find it; -authenticationKeyPath is still required for
-      # CLI invocations.
+      # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
+      # register/refresh the distribution cert and provisioning profiles
+      # via App Store Connect using the API key flags.
       - name: Archive
         working-directory: example/ios
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          # New architecture must be enabled at archive time too — some RN
-          # build-phase scripts read this env var directly to decide whether
-          # to invoke codegen and pull in the generated provider files.
+          # RN build-phase scripts read this directly to wire codegen outputs.
           RCT_NEW_ARCH_ENABLED: '1'
-          # Prevent Metro from trying to start a dev server during the build
+          # Prevent Metro from starting a dev server.
           CI: true
         shell: bash
         run: |
-          # Only clear the previous archive — DO NOT `rm -rf ./build`. Pod
-          # install generates RN's new-arch codegen artifacts into
-          # ./build/generated/ios/ (RCTAppDependencyProvider.h etc.) and
-          # xcodebuild reads them from there during archive. Wiping ./build
-          # right before archive deletes those headers and breaks the build.
+          # DO NOT `rm -rf ./build` — pod install writes new-arch codegen
+          # headers (RCTAppDependencyProvider.h etc.) into ./build/generated/ios
+          # and xcodebuild reads them from there during archive.
           rm -rf KlaviyoReactNativeSdkExample.xcarchive
-          # `-destination "generic/platform=iOS"` pins the archive to iOS device.
-          # Without it, xcodebuild defaults to the runner's "My Mac" destination
-          # (the scheme has Designed-for-iPad enabled, and Apple Silicon runners
-          # advertise "My Mac" as a valid target). Mac archive uses Development
-          # signing rules, which is why earlier runs failed asking for an iOS
-          # App Development profile.
-          #
-          # No CODE_SIGN_IDENTITY override here. With the right destination
-          # (iOS device), Automatic signing + the `archive` action picks Apple
-          # Distribution on its own; combining Automatic with a manual
-          # CODE_SIGN_IDENTITY is what xcodebuild flagged as "conflicting
-          # provisioning settings".
+          # `-destination "generic/platform=iOS"` pins archive to iOS device.
+          # Without it, xcodebuild picks "My Mac" (Designed-for-iPad scheme
+          # on Apple Silicon advertises it as valid) and uses Development
+          # signing rules.
           xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
             -scheme KlaviyoReactNativeSdkExample \
             -configuration Release \
@@ -435,8 +348,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
-      # altool with the API key — Apple's recommended path. No Apple ID, no
-      # app-specific password, no 2FA dance.
+      # altool with the API key — no Apple ID / app-specific password / 2FA dance.
       - name: Upload to TestFlight
         working-directory: example/ios
         env:
@@ -472,11 +384,7 @@ jobs:
           platform: TestFlight
           version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
 
-  # When triggered by `pull_request: labeled`, remove the label after the
-  # publish jobs finish so reapplying it can re-trigger a fresh publish.
-  # Runs whether the deploys succeeded or failed (`if: always()`), and
-  # only when the label that fired this run was actually `deploy-example-app`
-  # (other labels skipped both deploy jobs entirely; nothing to clean up).
+  # Remove the deploy-example-app label after the run so reapplying re-triggers.
   cleanup-label:
     name: Remove deploy-example-app label
     needs: [deploy-android, deploy-ios]
@@ -497,7 +405,6 @@ jobs:
                 name: 'deploy-example-app',
               });
             } catch (e) {
-              // 404 means the label is already gone (e.g. someone removed
-              // it manually mid-run). Anything else, surface it.
+              // 404 = label already gone (e.g. removed manually mid-run).
               if (e.status !== 404) throw e;
             }
