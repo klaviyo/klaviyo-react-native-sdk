@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		ECAD002C2BC0AD0100000001 /* KlaviyoReactNativeSdkExampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAD002D2BC0AD0100000002 /* KlaviyoReactNativeSdkExampleTests.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1BE92CB23FB415E631030426 /* Pods_KlaviyoReactNativeSdkExample.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */; };
 		346E4F992BC59CB200CBCFC1 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346E4F982BC59CB200CBCFC1 /* NotificationService.swift */; };
@@ -18,6 +17,7 @@
 		858546827EE31BCF954B5894 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EAF4C8777D1D9603852AFE9 /* Pods_KlaviyoReactNativeSdkExample_KlaviyoReactNativeSdkExampleTests.framework */; };
 		DECD2DBA06E2DAA45E7CDF3E /* Pods_KlaviyoReactNativeSdkExampleExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17427A3A2BF01B069BB68B44 /* Pods_KlaviyoReactNativeSdkExampleExtension.framework */; };
 		ECAD001C2BC0AD0100000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAD001D2BC0AD0100000002 /* AppDelegate.swift */; };
+		ECAD002C2BC0AD0100000001 /* KlaviyoReactNativeSdkExampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAD002D2BC0AD0100000002 /* KlaviyoReactNativeSdkExampleTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,7 +54,6 @@
 /* Begin PBXFileReference section */
 		00E356EE1AD99517003FC87E /* KlaviyoReactNativeSdkExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KlaviyoReactNativeSdkExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ECAD002D2BC0AD0100000002 /* KlaviyoReactNativeSdkExampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlaviyoReactNativeSdkExampleTests.swift; sourceTree = "<group>"; };
 		02D376B6B2241AD5D0F0527E /* Pods-KlaviyoReactNativeSdkExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample.debug.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample/Pods-KlaviyoReactNativeSdkExample.debug.xcconfig"; sourceTree = "<group>"; };
 		0ECD08CB82CD21CD0799D483 /* Pods-KlaviyoReactNativeSdkExample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExample.release.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExample/Pods-KlaviyoReactNativeSdkExample.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* KlaviyoReactNativeSdkExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlaviyoReactNativeSdkExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,6 +73,7 @@
 		974C3532D83C254EB74322A0 /* Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig"; path = "Target Support Files/Pods-KlaviyoReactNativeSdkExampleExtension/Pods-KlaviyoReactNativeSdkExampleExtension.release.xcconfig"; sourceTree = "<group>"; };
 		E4C158056E6A2B2F8545C7E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = KlaviyoReactNativeSdkExample/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ECAD001D2BC0AD0100000002 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = KlaviyoReactNativeSdkExample/AppDelegate.swift; sourceTree = "<group>"; };
+		ECAD002D2BC0AD0100000002 /* KlaviyoReactNativeSdkExampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlaviyoReactNativeSdkExampleTests.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EEC94C900FFF3B8C61C8D2B9 /* Pods_KlaviyoReactNativeSdkExample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_KlaviyoReactNativeSdkExample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FD53FFCC5B84A56D4578F6AF /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };

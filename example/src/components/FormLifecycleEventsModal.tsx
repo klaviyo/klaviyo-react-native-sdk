@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Modal,
   View,
   Text,
   FlatList,
@@ -8,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { FormLifecycleEventType } from 'klaviyo-react-native-sdk';
+import { BaseModal } from './BaseModal';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import type { FormLifecycleLogEntry } from '../hooks/useForms';
 
@@ -42,112 +42,82 @@ export const FormLifecycleEventsModal: React.FC<
   FormLifecycleEventsModalProps
 > = ({ visible, events, onClose, onClear }) => {
   return (
-    <Modal
+    <BaseModal
       visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={`Form Lifecycle Events (${events.length})`}
+      maxHeight="80%"
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.title}>
-            {`Form Lifecycle Events (${events.length})`}
+      {events.length === 0 ? (
+        <Text style={styles.emptyText}>
+          No form lifecycle events received yet. Register for in-app forms and
+          trigger one in your Klaviyo account.
+        </Text>
+      ) : (
+        <FlatList<FormLifecycleLogEntry>
+          data={events}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => {
+            const { event, receivedAt } = item;
+            return (
+              <View style={styles.eventItem}>
+                <View style={styles.eventHeader}>
+                  <Text style={styles.eventType}>{eventLabel(event.type)}</Text>
+                  <Text style={styles.eventTime}>
+                    {formatTimestamp(receivedAt)}
+                  </Text>
+                </View>
+                {/* Values are JSON.stringify'd so the modal functions as a
+                    protocol inspector — empty strings render as "" instead
+                    of being collapsed into placeholder text. */}
+                <Text
+                  style={styles.eventDetail}
+                >{`formId: ${JSON.stringify(event.formId)}`}</Text>
+                <Text
+                  style={styles.eventDetail}
+                >{`formName: ${JSON.stringify(event.formName)}`}</Text>
+                {event.type === FormLifecycleEventType.CtaClicked && (
+                  <>
+                    <Text
+                      style={styles.eventDetail}
+                    >{`buttonLabel: ${JSON.stringify(event.buttonLabel)}`}</Text>
+                    <Text
+                      style={styles.eventDetail}
+                    >{`deepLinkUrl: ${JSON.stringify(event.deepLinkUrl)}`}</Text>
+                  </>
+                )}
+              </View>
+            );
+          }}
+        />
+      )}
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[styles.button, styles.clearButton]}
+          onPress={onClear}
+          disabled={events.length === 0}
+        >
+          <Text
+            style={[
+              styles.buttonText,
+              events.length === 0 && styles.buttonTextDisabled,
+            ]}
+          >
+            Clear
           </Text>
-          {events.length === 0 ? (
-            <Text style={styles.emptyText}>
-              No form lifecycle events received yet. Register for in-app forms
-              and trigger one in your Klaviyo account.
-            </Text>
-          ) : (
-            <FlatList<FormLifecycleLogEntry>
-              data={events}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => {
-                const { event, receivedAt } = item;
-                return (
-                  <View style={styles.eventItem}>
-                    <View style={styles.eventHeader}>
-                      <Text style={styles.eventType}>
-                        {eventLabel(event.type)}
-                      </Text>
-                      <Text style={styles.eventTime}>
-                        {formatTimestamp(receivedAt)}
-                      </Text>
-                    </View>
-                    {/* Values are JSON.stringify'd so the modal functions as a
-                        protocol inspector — empty strings render as "" instead
-                        of being collapsed into placeholder text. */}
-                    <Text
-                      style={styles.eventDetail}
-                    >{`formId: ${JSON.stringify(event.formId)}`}</Text>
-                    <Text
-                      style={styles.eventDetail}
-                    >{`formName: ${JSON.stringify(event.formName)}`}</Text>
-                    {event.type === FormLifecycleEventType.CtaClicked && (
-                      <>
-                        <Text
-                          style={styles.eventDetail}
-                        >{`buttonLabel: ${JSON.stringify(event.buttonLabel)}`}</Text>
-                        <Text
-                          style={styles.eventDetail}
-                        >{`deepLinkUrl: ${JSON.stringify(event.deepLinkUrl)}`}</Text>
-                      </>
-                    )}
-                  </View>
-                );
-              }}
-            />
-          )}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.clearButton]}
-              onPress={onClear}
-              disabled={events.length === 0}
-            >
-              <Text
-                style={[
-                  styles.buttonText,
-                  events.length === 0 && styles.buttonTextDisabled,
-                ]}
-              >
-                Clear
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.closeButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.buttonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.closeButton]}
+          onPress={onClose}
+        >
+          <Text style={styles.buttonText}>Close</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </BaseModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.mdlg,
-  },
-  container: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.md,
-    padding: spacing.mdlg,
-    width: '100%',
-    maxHeight: '80%',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: spacing.md,
-    textAlign: 'center' as const,
-  },
   emptyText: {
     ...typography.label,
     color: colors.secondaryText,
