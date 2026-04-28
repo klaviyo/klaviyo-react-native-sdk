@@ -33,6 +33,9 @@ export const colors = {
   warningBackground: '#FFF4E5',
   warningBorder: '#FFB020',
   warningText: '#8B5A00',
+
+  // Modal scrim (semi-transparent backdrop behind modal content)
+  modalOverlay: 'rgba(0, 0, 0, 0.5)',
 };
 
 export const spacing = {

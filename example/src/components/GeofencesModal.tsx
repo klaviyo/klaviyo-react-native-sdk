@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Modal,
   View,
   Text,
   FlatList,
@@ -8,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { type Geofence } from 'klaviyo-react-native-sdk';
+import { BaseModal } from './BaseModal';
 import { colors, spacing, borderRadius, typography } from '../theme';
 
 interface GeofencesModalProps {
@@ -22,73 +22,43 @@ export const GeofencesModal: React.FC<GeofencesModalProps> = ({
   onClose,
 }) => {
   return (
-    <Modal
+    <BaseModal
       visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={`Monitored Geofences (${geofences.length})`}
+      maxHeight="80%"
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.title}>
-            {`Monitored Geofences (${geofences.length})`}
-          </Text>
-          {geofences.length === 0 ? (
-            <Text style={styles.emptyText}>
-              No geofences are currently being monitored.
-            </Text>
-          ) : (
-            <FlatList<Geofence>
-              data={geofences}
-              keyExtractor={(item) => item.identifier}
-              renderItem={({ item, index }) => (
-                <View style={styles.geofenceItem}>
-                  <Text style={styles.geofenceName}>
-                    {`${index + 1}. ${item.identifier}`}
-                  </Text>
-                  <Text style={styles.geofenceDetail}>
-                    {`Center: (${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)})`}
-                  </Text>
-                  <Text style={styles.geofenceDetail}>
-                    {`Radius: ${item.radius.toFixed(2)}m`}
-                  </Text>
-                </View>
-              )}
-            />
+      {geofences.length === 0 ? (
+        <Text style={styles.emptyText}>
+          No geofences are currently being monitored.
+        </Text>
+      ) : (
+        <FlatList<Geofence>
+          data={geofences}
+          keyExtractor={(item) => item.identifier}
+          renderItem={({ item, index }) => (
+            <View style={styles.geofenceItem}>
+              <Text style={styles.geofenceName}>
+                {`${index + 1}. ${item.identifier}`}
+              </Text>
+              <Text style={styles.geofenceDetail}>
+                {`Center: (${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)})`}
+              </Text>
+              <Text style={styles.geofenceDetail}>
+                {`Radius: ${item.radius.toFixed(2)}m`}
+              </Text>
+            </View>
           )}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+        />
+      )}
+      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <Text style={styles.closeButtonText}>Close</Text>
+      </TouchableOpacity>
+    </BaseModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    // No modal-overlay token in theme.ts; inline scrim. Consider adding a
-    // `colors.modalOverlay` token to theme.ts if more modals are introduced.
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.mdlg,
-  },
-  container: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.md,
-    padding: spacing.mdlg,
-    width: '100%',
-    maxHeight: '80%',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: spacing.md,
-    textAlign: 'center' as const,
-  },
   emptyText: {
     ...typography.label,
     color: colors.secondaryText,
