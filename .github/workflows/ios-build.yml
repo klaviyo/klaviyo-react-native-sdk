@@ -51,6 +51,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-
 
+      # Cache the resolved Pods/ directory so RN CLI's auto pod install (which
+      # always runs as part of `react-native build-ios`) can short-circuit
+      # when nothing relevant changed: it sees Pods/Manifest.lock matching
+      # Podfile.lock and treats it as a no-op (~2s vs ~30-60s for a fresh
+      # download from the CocoaPods CDN).
+      #
+      # Key invalidates whenever anything that affects pod resolution OR our
+      # local SDK pod's content changes:
+      #   - Podfile.lock         (pod versions)
+      #   - Gemfile.lock         (CocoaPods gem version)
+      #   - .ruby-version        (Ruby version)
+      #   - root podspec(s)      (our local SDK pod definition)
+      #   - ios/**.{swift,h,m,mm} (our local SDK pod's Swift/ObjC source)
+      - name: Cache Pods
+        uses: actions/cache@v5
+        with:
+          path: example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ inputs.new-architecture }}-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec', 'ios/**/*.swift', 'ios/**/*.h', 'ios/**/*.m', 'ios/**/*.mm') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-${{ inputs.new-architecture }}-
+
       # Probe whether turbo would short-circuit the build:ios task. Gated on
       # github.run_attempt == 1 to give us a "rerun = force fresh" lever:
       # on a manual rerun, we skip this probe so turbo_cache_hit stays unset
