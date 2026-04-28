@@ -321,13 +321,25 @@ jobs:
 
       # Stamp the team ID into ExportOptions.plist (checked-in copy uses a
       # placeholder so the team ID isn't recorded in source).
-      - name: Stamp Apple Team ID into ExportOptions.plist
+      #
+      # Also explicitly set signingCertificate to "Apple Distribution".
+      # Without this, exportArchive's automatic-style signing can fall back
+      # to the legacy "iOS Distribution" cert family, which is what produced
+      # the previous run's `No signing certificate "iOS Distribution" found`
+      # error. "Apple Distribution" is the modern unified identity that maps
+      # to Distribution Managed certs (which is what -allowProvisioningUpdates
+      # uses on the cloud side).
+      - name: Stamp signing config into ExportOptions.plist
         working-directory: example/ios
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
         run: |
           /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
+          # `Add` if missing, `Set` if present. PlistBuddy errors on Add
+          # when the key exists, so attempt Add then fall back to Set.
+          /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
 
       # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild call
       # App Store Connect (using the API key flags below) to register the
