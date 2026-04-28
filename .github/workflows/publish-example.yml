@@ -4,9 +4,14 @@
 # actions in .github/actions/.
 #
 # Triggers:
-#   - workflow_dispatch:    Manual publish (the typical case)
-#   - release: published:   Fires on every SDK release to keep the example app in sync
-#   - push to master:       Fires when this PR (or a follow-up) merges to master
+#   - workflow_dispatch:                  Manual publish (the typical case)
+#   - release: published:                 Fires on every SDK release to keep the example app in sync
+#   - push to master:                     Fires when this PR (or a follow-up) merges to master
+#   - pull_request: types: [labeled]:     When a PR is labeled `deploy-example-app`, build and
+#                                         publish that PR's HEAD. The `cleanup-label` job at the
+#                                         bottom of this file removes the label after the run
+#                                         completes (success or failure) so reapplying the label
+#                                         re-triggers a fresh publish.
 #
 # Required secrets — see "Required secrets" section in the PR description.
 
@@ -18,11 +23,17 @@ on:
     types: [published]
   push:
     branches: [master]
+  pull_request:
+    types: [labeled]
 
 jobs:
   deploy-android:
     name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
+    # When the workflow is fired by `pull_request: labeled`, only run if the
+    # added label was specifically `deploy-example-app`. Other triggers
+    # (workflow_dispatch, release, push to master) run unconditionally.
+    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
 
     steps:
       - uses: actions/checkout@v5
@@ -93,9 +104,14 @@ jobs:
           AUTH="Authorization: Bearer $TOKEN"
           API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
 
-          EDIT_ID=$(curl -sS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
-          BUNDLES=$(curl -sS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
-          curl -sS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
+          # `-f` makes curl exit non-zero on HTTP error (4xx/5xx), so a
+          # misconfigured service account or transient API failure aborts
+          # the step here instead of silently producing HIGHEST=0 → a
+          # full Android build that fails at upload with a confusing
+          # version-code-conflict error.
+          EDIT_ID=$(curl -fsS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
+          BUNDLES=$(curl -fsS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
+          curl -fsS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
 
           HIGHEST=$(echo "$BUNDLES" | jq '[.bundles[]?.versionCode // 0] | max // 0')
           NEXT=$(( HIGHEST + 1 ))
@@ -167,6 +183,7 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
 
     steps:
       - uses: actions/checkout@v5
@@ -306,8 +323,15 @@ jobs:
           raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." if apps['data'].empty?
           app_id = apps['data'][0]['id']
 
-          builds = get(URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{app_id}&sort=-uploadedDate&limit=1"), token)
-          latest = builds['data'].empty? ? 0 : builds['data'][0]['attributes']['version'].to_i
+          # Fetch every build's CFBundleVersion and take the numeric max,
+          # mirroring the Android side. Sorting by uploadedDate isn't
+          # reliable — Apple's `uploadedDate` is sometimes null in the API
+          # response, and a build uploaded out of chronological order can
+          # report a stale "latest". `limit=200` is the API's max page size;
+          # if the example ever grows past 200 builds, we'd need pagination.
+          builds = get(URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{app_id}&limit=200"), token)
+          versions = builds['data'].map { |b| b['attributes']['version'].to_i }
+          latest = versions.empty? ? 0 : versions.max
           next_build = latest + 1
 
           puts "Latest TestFlight build for #{bundle_id}: #{latest}"
@@ -445,3 +469,33 @@ jobs:
           result: failure
           platform: TestFlight
           version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
+
+  # When triggered by `pull_request: labeled`, remove the label after the
+  # publish jobs finish so reapplying it can re-trigger a fresh publish.
+  # Runs whether the deploys succeeded or failed (`if: always()`), and
+  # only when the label that fired this run was actually `deploy-example-app`
+  # (other labels skipped both deploy jobs entirely; nothing to clean up).
+  cleanup-label:
+    name: Remove deploy-example-app label
+    needs: [deploy-android, deploy-ios]
+    if: always() && github.event_name == 'pull_request' && github.event.label.name == 'deploy-example-app'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                name: 'deploy-example-app',
+              });
+            } catch (e) {
+              // 404 means the label is already gone (e.g. someone removed
+              // it manually mid-run). Anything else, surface it.
+              if (e.status !== 404) throw e;
+            }
