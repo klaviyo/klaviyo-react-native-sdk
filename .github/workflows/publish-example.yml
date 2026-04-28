@@ -81,16 +81,11 @@ jobs:
       # Find the highest versionCode ever uploaded for this app and pick
       # highest+1 as our target. The /edits/{editId}/bundles endpoint
       # returns ALL bundles for the app (not edit-scoped — confirmed by
-      # the comment on fastlane/supply's aab_version_codes). The
-      # androidpublisher OAuth scope is required explicitly; the default
-      # cloud-platform scope from `gcloud auth print-access-token` doesn't
-      # cover Play API endpoints.
-      #
-      # Floor of 100 as a safety net: if the bundles list comes back empty
-      # for any reason (auth issue, API hiccup, brand-new app), starting
-      # at 100 leapfrogs the small versionCodes (1-9) we know got uploaded
-      # earlier in this PR's iterations, avoiding "version code 1 has
-      # already been used" rejections.
+      # fastlane/supply's aab_version_codes treating it that way and by
+      # local probe against this app's package). The androidpublisher
+      # OAuth scope is required explicitly; the default cloud-platform
+      # scope from `gcloud auth print-access-token` does not cover Play
+      # API endpoints and silently returns an empty bundles list.
       - name: Resolve next versionCode from Play
         shell: bash
         env:
@@ -105,17 +100,8 @@ jobs:
           BUNDLES=$(curl -sS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
           curl -sS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
 
-          echo "Bundles response:"
-          echo "$BUNDLES" | jq .
-
           HIGHEST=$(echo "$BUNDLES" | jq '[.bundles[]?.versionCode // 0] | max // 0')
-          # Apply a floor of 100 to leapfrog any small historical versionCodes
-          # not currently surfaced by the bundles list (e.g. left-behind drafts).
-          if [ "$HIGHEST" -lt 100 ]; then
-            NEXT=100
-          else
-            NEXT=$(( HIGHEST + 1 ))
-          fi
+          NEXT=$(( HIGHEST + 1 ))
           echo "Highest existing versionCode: $HIGHEST"
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
@@ -347,23 +333,27 @@ jobs:
         shell: bash
         run: |
           rm -rf ./build KlaviyoReactNativeSdkExample.xcarchive
-          # CODE_SIGN_IDENTITY override: the .pbxproj has the RN-template default
-          # `CODE_SIGN_IDENTITY[sdk=iphoneos*] = "iPhone Developer"` baked in,
-          # which forces Development signing even on Release archives. That makes
-          # -allowProvisioningUpdates ask for a Development profile (and try to
-          # register the runner machine as a dev device, which fails). The
-          # unconditional CLI override below wins over the project's conditional
-          # value because command-line build settings have highest precedence in
-          # xcodebuild's resolution order.
+          # `-destination "generic/platform=iOS"` pins the archive to iOS device.
+          # Without it, xcodebuild defaults to the runner's "My Mac" destination
+          # (the scheme has Designed-for-iPad enabled, and Apple Silicon runners
+          # advertise "My Mac" as a valid target). Mac archive uses Development
+          # signing rules, which is why earlier runs failed asking for an iOS
+          # App Development profile.
+          #
+          # No CODE_SIGN_IDENTITY override here. With the right destination
+          # (iOS device), Automatic signing + the `archive` action picks Apple
+          # Distribution on its own; combining Automatic with a manual
+          # CODE_SIGN_IDENTITY is what xcodebuild flagged as "conflicting
+          # provisioning settings".
           xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
             -scheme KlaviyoReactNativeSdkExample \
             -configuration Release \
+            -destination "generic/platform=iOS" \
             archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
             -allowProvisioningUpdates \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       - name: Export IPA
