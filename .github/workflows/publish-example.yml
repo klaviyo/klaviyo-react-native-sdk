@@ -221,11 +221,11 @@ jobs:
       # Cache Pods/ keyed on the inputs that affect pod resolution. On a hit,
       # `pod install` below sees Manifest.lock matching Podfile.lock and is a
       # no-op (~2s vs ~30-60s for a fresh CDN download). Notably *not* keyed
-      # on `ios/**` SDK source — for local-path pods CocoaPods only adds path
-      # references to Pods.xcodeproj, so source edits don't make the cache
-      # stale. See the matching cache step in ios-build.yml for full
-      # rationale and the rare edge case (file-set changes in the podspec
-      # source_files glob).
+      # on `ios/**` SDK source — see the matching cache step in ios-build.yml
+      # for the rationale. Short version: pod install always re-evaluates
+      # the podspec's source_files glob from the current filesystem and
+      # rewrites Pods.xcodeproj, so neither content edits nor file-set
+      # changes in `ios/` need to bust the Pods cache.
       - name: Cache Pods
         uses: actions/cache@v5
         with:

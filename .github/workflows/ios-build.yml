@@ -60,20 +60,18 @@ jobs:
       #   - Podfile.lock     (pod versions)
       #   - Gemfile.lock     (CocoaPods gem version)
       #   - .ruby-version    (Ruby version)
-      #   - root podspec(s)  (our local SDK pod definition — source_files glob
-      #                       lives here, so glob changes invalidate)
+      #   - root podspec(s)  (our local SDK pod definition)
       #
       # Notably *not* in the key: our SDK's iOS source files in `ios/`. For
       # local-path pods, CocoaPods doesn't bundle source into Pods/ — it only
       # adds path references to Pods.xcodeproj that xcodebuild resolves at
-      # compile time. So content edits to existing files don't make the
-      # cached Pods/ stale. The one exception is adding/removing files
-      # matching the podspec's source_files glob: in that case Pods.xcodeproj
-      # would be missing/stale references and the new file would silently not
-      # be compiled into the pod. Rare in practice — local devs catch it
-      # because their own `pod install` regenerates the project — and not
-      # worth invalidating the cache on every SDK content edit to defend
-      # against.
+      # compile time, and `pod install` re-evaluates the podspec's
+      # source_files glob from the current filesystem on every run. So
+      # neither content edits nor file-set changes (added/removed files)
+      # make the cached Pods/ stale: the explicit `Install CocoaPods` step
+      # below always runs `bundle exec pod install`, which rewrites
+      # Pods.xcodeproj from current state and picks up any new files
+      # automatically.
       - name: Cache Pods
         uses: actions/cache@v5
         with:
