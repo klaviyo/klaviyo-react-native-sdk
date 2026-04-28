@@ -93,10 +93,18 @@ jobs:
       # `--force` on rerun makes the run_attempt-gated probe above actually
       # mean something: even if turbo's cache restored from this branch's
       # last run, --force ignores it and re-executes build:ios from scratch.
+      #
+      # `RCT_NEW_ARCH_ENABLED` must be exported in the script body, not just
+      # set via the step `env:` block. Empirically, the step-env value isn't
+      # reliably propagated through the yarn → turbo → RN CLI → bundle exec
+      # → pod install chain (the Podfile reports "Configuring the target
+      # with the Legacy Architecture" even when the step env shows the var
+      # is 1). An explicit shell `export` was what the original workflow
+      # used and it survives all the way into the Podfile.
       - name: Build example for iOS
-        env:
-          RCT_NEW_ARCH_ENABLED: ${{ inputs.new-architecture }}
+        shell: bash
         run: |
+          export RCT_NEW_ARCH_ENABLED=${{ inputs.new-architecture }}
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" ${{ github.run_attempt > 1 && '--force' || '' }}
 
       # If the pod install run during the build mutated Podfile.lock, the
