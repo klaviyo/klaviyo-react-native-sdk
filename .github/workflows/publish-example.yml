@@ -242,20 +242,23 @@ jobs:
       # (per-target Manual signing settings) via the xcodeproj Ruby gem.
       - name: Configure per-target signing
         working-directory: example/ios
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
         run: |
+          /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.klaviyoreactnativesdkexample ${APP_PROFILE_UUID}" ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension ${EXT_PROFILE_UUID}" ExportOptions.plist
-          echo "ExportOptions.plist updated:"
-          cat ExportOptions.plist
 
           ruby <<'RUBY'
           require 'xcodeproj'
           project = Xcodeproj::Project.open('KlaviyoReactNativeSdkExample.xcodeproj')
           app_uuid = ENV['APP_PROFILE_UUID']
           ext_uuid = ENV['EXT_PROFILE_UUID']
+          team_id = ENV['APPLE_TEAM_ID']
           raise "APP_PROFILE_UUID is empty" if app_uuid.nil? || app_uuid.empty?
           raise "EXT_PROFILE_UUID is empty" if ext_uuid.nil? || ext_uuid.empty?
+          raise "APPLE_TEAM_ID is empty" if team_id.nil? || team_id.empty?
           signing_targets = %w[KlaviyoReactNativeSdkExample KlaviyoReactNativeSdkExampleExtension]
           project.targets.each do |target|
             next unless signing_targets.include?(target.name)
@@ -263,7 +266,7 @@ jobs:
             target.build_configurations.each do |config|
               config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
               config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
-              config.build_settings['DEVELOPMENT_TEAM'] = 'G3793W2RJ2'
+              config.build_settings['DEVELOPMENT_TEAM'] = team_id
               config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = uuid
             end
             puts "#{target.name}: PROVISIONING_PROFILE_SPECIFIER = #{uuid}"
@@ -280,6 +283,7 @@ jobs:
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Prevent Metro from trying to start a dev server during the build
           CI: true
         shell: bash
@@ -299,7 +303,7 @@ jobs:
               -scheme KlaviyoReactNativeSdkExample \
               -configuration Release \
               archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-              DEVELOPMENT_TEAM=G3793W2RJ2
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
             xcodebuild -exportArchive \
               -archivePath KlaviyoReactNativeSdkExample.xcarchive \

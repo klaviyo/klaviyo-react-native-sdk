@@ -5,7 +5,7 @@
     <key>method</key>
     <string>app-store</string>
     <key>teamID</key>
-    <string>G3793W2RJ2</string>
+    <string>APPLE_TEAM_ID_PLACEHOLDER</string>
     <key>signingStyle</key>
     <string>manual</string>
     <key>provisioningProfiles</key>
