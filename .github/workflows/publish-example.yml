@@ -26,6 +26,10 @@ jobs:
   deploy-android:
     name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
+    # TEMP: gated off while we iterate on the iOS job. Android was confirmed
+    # working in run 25031149357. Re-enable by removing this `if` once the
+    # iOS pipeline is reliably green.
+    if: false
 
     steps:
       - uses: actions/checkout@v4
@@ -345,7 +349,12 @@ jobs:
           CI: true
         shell: bash
         run: |
-          rm -rf ./build KlaviyoReactNativeSdkExample.xcarchive
+          # Only clear the previous archive — DO NOT `rm -rf ./build`. Pod
+          # install generates RN's new-arch codegen artifacts into
+          # ./build/generated/ios/ (RCTAppDependencyProvider.h etc.) and
+          # xcodebuild reads them from there during archive. Wiping ./build
+          # right before archive deletes those headers and breaks the build.
+          rm -rf KlaviyoReactNativeSdkExample.xcarchive
           # `-destination "generic/platform=iOS"` pins the archive to iOS device.
           # Without it, xcodebuild defaults to the runner's "My Mac" destination
           # (the scheme has Designed-for-iPad enabled, and Apple Silicon runners
