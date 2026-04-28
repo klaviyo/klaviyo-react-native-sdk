@@ -1,0 +1,25 @@
+name: Prepare example app for publish
+description: Verifies the Klaviyo example API key secret is set and writes example/.env so react-native-dotenv can expose it as KLAVIYO_API_KEY at build time.
+inputs:
+  api_key:
+    description: Klaviyo public API key (typically passed from secrets.KLAVIYO_EXAMPLE_API_KEY)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Klaviyo example API key is set
+      shell: bash
+      env:
+        KLAVIYO_API_KEY: ${{ inputs.api_key }}
+      run: |
+        if [ -z "${KLAVIYO_API_KEY}" ]; then
+          echo "::error::Klaviyo example API key is empty. The build would produce an app that crashes at launch — set the KLAVIYO_EXAMPLE_API_KEY repo secret."
+          exit 1
+        fi
+
+    - name: Write example/.env
+      shell: bash
+      env:
+        KLAVIYO_API_KEY: ${{ inputs.api_key }}
+      run: echo "KLAVIYO_API_KEY=${KLAVIYO_API_KEY}" > example/.env

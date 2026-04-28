@@ -1,0 +1,39 @@
+name: Notify Slack of example app publish result
+description: Posts a Slack message summarizing a publish job (success or failure) for the React Native SDK example app.
+inputs:
+  webhook:
+    description: Slack incoming webhook URL
+    required: true
+  result:
+    description: "'success' or 'failure' — drives icon and headline"
+    required: true
+  platform:
+    description: "Human-readable platform label (e.g. 'Play Store', 'TestFlight')"
+    required: true
+  version_label:
+    description: Version string to show in the message (e.g. release tag or 'X.Y.Z (build)')
+    required: false
+    default: manual
+
+runs:
+  using: composite
+  steps:
+    - uses: slackapi/slack-github-action@v2.1.1
+      with:
+        webhook: ${{ inputs.webhook }}
+        webhook-type: incoming-webhook
+        payload: |
+          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+          blocks:
+            - type: "header"
+              text:
+                type: "plain_text"
+                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+            - type: "section"
+              text:
+                type: "mrkdwn"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+            - type: "section"
+              text:
+                type: "mrkdwn"
+                text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
