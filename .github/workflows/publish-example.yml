@@ -78,17 +78,20 @@ jobs:
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # Find the highest versionCode already uploaded for this package and
-      # pick highest+1 as our target. This handles two collision sources in
-      # one shot:
-      #   - github.run_number resetting (workflow rename, repo migration)
-      #   - manual Play Console uploads outside of CI
-      # versionCode is baked into the AAB at bundle time, so determining it
-      # before the build is the only path that doesn't require a retry-rebuild
-      # loop. Race condition risk (two concurrent runs picking the same
-      # versionCode) is real in theory but a non-issue for our trigger set
-      # (workflow_dispatch, release: published, branch push).
-      - name: Resolve next versionCode from Play track
+      # Find the highest versionCode currently in any active track release
+      # and pick highest+1 as our target. The Play Edits API doesn't expose
+      # a flat "all bundles ever uploaded" list — `/edits/{editId}/bundles`
+      # is scoped to the current edit (always empty here since we open one
+      # just to query). Iterating active releases across every track gives
+      # us the highest live versionCode, which is enough to leapfrog past
+      # any prior CI run, manual upload, or workflow rename collision.
+      #
+      # Caveat: Play also rejects upload of a versionCode that was used in
+      # a deleted/archived draft. Those don't appear in tracks.list. If we
+      # ever hit that edge case, the manual fix is to re-run with a higher
+      # number (push a no-op commit to bump github.run_number, or upload a
+      # placeholder bundle outside CI).
+      - name: Resolve next versionCode from Play tracks
         shell: bash
         env:
           PACKAGE_NAME: com.klaviyoreactnativesdkexample
@@ -99,12 +102,14 @@ jobs:
           API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
 
           EDIT_ID=$(curl -sS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
-          BUNDLES=$(curl -sS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
+          TRACKS=$(curl -sS -H "$AUTH" "$API/edits/$EDIT_ID/tracks")
           curl -sS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
 
-          HIGHEST=$(echo "$BUNDLES" | jq '[.bundles[]?.versionCode // 0] | max // 0')
+          # Walk every track → release → versionCodes, coerce to int, take max.
+          # `// 0` makes the jq pipeline yield 0 for an app with no releases yet.
+          HIGHEST=$(echo "$TRACKS" | jq '[.tracks[]?.releases[]?.versionCodes[]? | tonumber] | max // 0')
           NEXT=$(( HIGHEST + 1 ))
-          echo "Highest existing versionCode: $HIGHEST"
+          echo "Highest active versionCode across all tracks: $HIGHEST"
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
 
@@ -332,6 +337,13 @@ jobs:
         shell: bash
         run: |
           rm -rf ./build KlaviyoReactNativeSdkExample.xcarchive
+          # CODE_SIGN_IDENTITY override: the .pbxproj has the RN-template default
+          # `CODE_SIGN_IDENTITY[sdk=iphoneos*] = "iPhone Developer"` baked in,
+          # which forces Development signing even on Release archives. That makes
+          # -allowProvisioningUpdates ask for a Development profile (and try to
+          # register the runner machine as a dev device, which fails). Forcing
+          # "Apple Distribution" here gets Xcode to provision an App Store
+          # distribution profile via the API key instead.
           xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
             -scheme KlaviyoReactNativeSdkExample \
             -configuration Release \
@@ -340,6 +352,8 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            "CODE_SIGN_IDENTITY[sdk=iphoneos*]=Apple Distribution" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       - name: Export IPA
