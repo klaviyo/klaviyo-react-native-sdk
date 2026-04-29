@@ -11,6 +11,9 @@
     "build:ios": "react-native build-ios --scheme KlaviyoReactNativeSdkExample --mode Debug --extra-params \"-sdk iphonesimulator CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO\""
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-firebase/app": "^24.0.0",
+    "@react-native-firebase/messaging": "^24.0.0",
     "@react-native/new-app-screen": "0.81.5",
     "react": "19.1.0",
     "react-native": "0.81.5",
@@ -27,7 +30,8 @@
     "@react-native/babel-preset": "0.81.5",
     "@react-native/metro-config": "0.81.5",
     "@react-native/typescript-config": "0.81.5",
-    "react-native-builder-bob": "^0.36.0"
+    "react-native-builder-bob": "^0.36.0",
+    "react-native-dotenv": "^3.4.11"
   },
   "engines": {
     "node": ">=20"

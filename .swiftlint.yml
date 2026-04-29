@@ -1,0 +1,7 @@
+excluded:
+  - '**/node_modules'
+  - '**/Pods'
+
+disabled_rules:
+  # Arbitrary 250-line class body limit; we'll judge complexity by other means.
+  - type_body_length
