@@ -115,6 +115,18 @@ else
     read -rp "Enter the Android SDK version: " android_version
   fi
 
+  # Swift SDK version
+  if [[ -z "$swift_version" ]]; then
+    read -rp "Enter the Swift SDK version: " swift_version
+  fi
+
+  # Reset any local SDK overrides before re-pinning. Re-uses configure-sdk.sh
+  # as the single source of truth for cleanup logic. This handles:
+  #   - Android: stale `# saved:` comments, localCompositeBuild flags
+  #   - iOS: Podfile pod entries, commented podspec pins, KlaviyoSwiftExtension overrides
+  echo "Resetting iOS and Android overrides via configure-sdk.sh..."
+  ./configure-sdk.sh --android gradle.properties --ios podspec --skip-pod-install
+
   gradle_properties="./android/gradle.properties"
   if [[ -f "$gradle_properties" ]]; then
     sed -i '' "s/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=.*/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=$android_version/" "$gradle_properties"
@@ -124,17 +136,28 @@ else
     exit 1
   fi
 
-  # Swift SDK version
-  if [[ -z "$swift_version" ]]; then
-    read -rp "Enter the Swift SDK version: " swift_version
-  fi
-
+  # Pin KlaviyoSwift, KlaviyoForms, KlaviyoLocation in the podspec.
+  # Accepts any of these starting forms per dep line (configure-sdk.sh can leave
+  # the second form behind when overriding to a branch/path; the bare form is
+  # what lands when working against an unreleased native version):
+  #   s.dependency "Name"
+  #   s.dependency "Name" ##, "old"
+  #   s.dependency "Name", "old"
+  # All three are normalized to: s.dependency "Name", "$swift_version"
   podspec_file="klaviyo-react-native-sdk.podspec"
   if [[ -f "$podspec_file" ]]; then
-    sed -i '' "s/\"KlaviyoSwift\", \".*\"/\"KlaviyoSwift\", \"$swift_version\"/" "$podspec_file"
-    sed -i '' "s/\"KlaviyoForms\", \".*\"/\"KlaviyoForms\", \"$swift_version\"/" "$podspec_file"
-    sed -i '' "s/\"KlaviyoLocation\", \".*\"/\"KlaviyoLocation\", \"$swift_version\"/" "$podspec_file"
-    echo "Updated KlaviyoSwift, KlaviyoForms, and KlaviyoLocation version in $podspec_file."
+    for dep in KlaviyoSwift KlaviyoForms KlaviyoLocation; do
+      # 1. Strip any existing pin or commented pin -> bare
+      sed -i '' -E "s/(s\\.dependency \"$dep\")( ##)?, \"[^\"]*\"/\\1/" "$podspec_file"
+      # 2. Append the new pin to the bare line
+      sed -i '' -E "s/(s\\.dependency \"$dep\")\$/\\1, \"$swift_version\"/" "$podspec_file"
+      # 3. Verify -- fail loud rather than silently shipping unpinned
+      if ! grep -qE "s\\.dependency \"$dep\", \"$swift_version\"" "$podspec_file"; then
+        echo "Error: failed to pin $dep to $swift_version in $podspec_file." >&2
+        exit 1
+      fi
+    done
+    echo "Pinned KlaviyoSwift, KlaviyoForms, and KlaviyoLocation to $swift_version in $podspec_file."
   else
     echo "Error: $podspec_file not found."
     exit 1
