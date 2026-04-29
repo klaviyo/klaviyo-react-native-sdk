@@ -18,13 +18,13 @@ Pod::Spec.new do |s|
   s.pod_target_xcconfig = { "DEFINES_MODULE" => "YES" }
 
   s.dependency "React-Core"
-  s.dependency "KlaviyoSwift"
+  s.dependency "KlaviyoSwift", "5.3.1"
   # Optional location and forms; included by default, set to 'false' to exclude
   if ENV['KLAVIYO_INCLUDE_LOCATION'] != 'false'
-    s.dependency "KlaviyoLocation"
+    s.dependency "KlaviyoLocation", "5.3.1"
   end
   if ENV['KLAVIYO_INCLUDE_FORMS'] != 'false'
-    s.dependency "KlaviyoForms"
+    s.dependency "KlaviyoForms", "5.3.1"
   end
 
   s.default_subspecs = :none
