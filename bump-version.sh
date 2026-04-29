@@ -195,8 +195,8 @@ if [[ "$skip_native" == false ]]; then
       echo "Running bundle install..."
       bundle install || { echo "Error: Failed to run bundle install."; exit 1; }
     fi
-    echo "Running pod update for KlaviyoSwift, KlaviyoForms, and KlaviyoLocation..."
-    bundle exec pod update KlaviyoSwift KlaviyoForms KlaviyoLocation || { echo "Error: Failed to update pods."; exit 1; }
+    echo "Running pod update for Klaviyo pods..."
+    bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension || { echo "Error: Failed to update pods."; exit 1; }
     cd - || exit
   else
     echo "Error: $ios_dir not found."

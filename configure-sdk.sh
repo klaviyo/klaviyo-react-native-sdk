@@ -429,13 +429,18 @@ fi
 if [[ "$ios_value" != "skip" ]]; then
   configure_pods "$ios_value"
 
-  # Handle pod install
+  # Refresh the Klaviyo pods. `pod update <names>` (vs plain `pod install`) is
+  # required because configure-sdk.sh is in the business of *changing* the pod
+  # source for those pods (podspec ↔ branch ↔ commit ↔ local path), and plain
+  # `pod install` refuses to bridge a Podfile.lock pin against a different
+  # source. Updating only the Klaviyo pods leaves the rest of Podfile.lock
+  # alone so unrelated deps (RN, Firebase, etc.) don't churn.
   if [[ "$skip_pod_install" == true ]]; then
-    echo "Skipped 'pod install'"
+    echo "Skipped pod refresh"
   else
-    echo "Running 'pod install'..."
+    echo "Running 'pod update' for Klaviyo pods..."
     cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
-    bundle exec pod install
-    echo "'pod install' completed successfully."
+    bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension
+    echo "Pod refresh completed successfully."
   fi
 fi
