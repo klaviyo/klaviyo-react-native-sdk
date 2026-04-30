@@ -350,13 +350,21 @@ function configure_pods() {
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoLocation'/d" "$podfile"
+  sed -i '' "/pod 'KlaviyoSwiftExtension'/d" "$podfile"
 
   # Restore podspec
   sed -i '' 's/\(s\.dependency "KlaviyoSwift"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
   sed -i '' 's/\(s\.dependency "KlaviyoForms"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
   sed -i '' 's/\(s\.dependency "KlaviyoLocation"\) ##, "\([^"]*\)"/\1, "\2"/' "$podspec"
 
+  # Locate Extension target marker and prepare newline literal for sed insertions
+  local nl=$'\n'
+  local ext_marker_line
+  ext_marker_line=$(grep -n "# Insert override klaviyo-swift-sdk extension pod below this line when needed" "$podfile" | cut -d: -f1)
+
   if [[ "$swift_sdk_version" == "podspec" ]]; then
+    # Restore default extension pod entry (deleted above with the main pods)
+    sed -i '' "${ext_marker_line}a\\${nl}  pod 'KlaviyoSwiftExtension'${nl}" "$podfile"
     echo "Restored to $podspec"
     return
   fi
@@ -393,6 +401,23 @@ function configure_pods() {
     echo "Added $dependency dependency to $podfile"
     target_line=$((target_line + 1)) # Increment target line for next insertion
   done
+
+  # Insert KlaviyoSwiftExtension override into the Extension target (separate marker)
+  local ext_entry
+  if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+    ext_entry="pod 'KlaviyoSwiftExtension', '$swift_sdk_version'"
+  elif [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
+    ext_entry="pod 'KlaviyoSwiftExtension', :path => '$swift_sdk_version'"
+  elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+    ext_entry="pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
+  else
+    ext_entry="pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => '$swift_sdk_version'"
+  fi
+
+  # Re-locate marker since main target overrides shifted line numbers
+  ext_marker_line=$(grep -n "# Insert override klaviyo-swift-sdk extension pod below this line when needed" "$podfile" | cut -d: -f1)
+  sed -i '' "${ext_marker_line}a\\${nl}  $ext_entry${nl}" "$podfile"
+  echo "Added KlaviyoSwiftExtension dependency to $podfile"
 }
 
 # Execute configuration based on values
@@ -404,13 +429,18 @@ fi
 if [[ "$ios_value" != "skip" ]]; then
   configure_pods "$ios_value"
 
-  # Handle pod install
+  # Refresh the Klaviyo pods. `pod update <names>` (vs plain `pod install`) is
+  # required because configure-sdk.sh is in the business of *changing* the pod
+  # source for those pods (podspec ↔ branch ↔ commit ↔ local path), and plain
+  # `pod install` refuses to bridge a Podfile.lock pin against a different
+  # source. Updating only the Klaviyo pods leaves the rest of Podfile.lock
+  # alone so unrelated deps (RN, Firebase, etc.) don't churn.
   if [[ "$skip_pod_install" == true ]]; then
-    echo "Skipped 'pod install'"
+    echo "Skipped pod refresh"
   else
-    echo "Running 'pod install'..."
+    echo "Running 'pod update' for Klaviyo pods..."
     cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
-    bundle exec pod install
-    echo "'pod install' completed successfully."
+    bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension
+    echo "Pod refresh completed successfully."
   fi
 fi
