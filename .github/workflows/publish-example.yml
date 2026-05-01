@@ -122,7 +122,11 @@ jobs:
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
           mkdir -p "${RUNNER_TEMP}/whatsnew"
-          printf '%s' "${RELEASE_BODY}" | head -c 500 > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
+          # Bash parameter expansion truncates by character (locale-aware,
+          # ubuntu-24.04 runners default to en_US.UTF-8), so emojis or
+          # non-ASCII text near the boundary don't get split mid-byte —
+          # which would produce invalid UTF-8 and risk a Play Store reject.
+          printf '%s' "${RELEASE_BODY:0:500}" > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
           echo "WHATSNEW_DIR=${RUNNER_TEMP}/whatsnew" >> "${GITHUB_ENV}"
 
       - name: Deploy to Internal Track
