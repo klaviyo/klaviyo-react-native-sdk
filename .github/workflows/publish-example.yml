@@ -1,14 +1,32 @@
 # Publish the example app to Play internal track + TestFlight. Android and
 # iOS are independent jobs.
 #
-# Triggers: manual dispatch, release: published, push to master, and
-# `pull_request: labeled` when the label is `deploy-example-app` (the
-# cleanup-label job below removes it after the run so reapplying re-triggers).
+# Triggers:
+#   - workflow_dispatch     (manual; choose `both` / `android` / `ios`)
+#   - release: published    (both platforms)
+#   - push to master        (both platforms)
+#   - pull_request: labeled (label drives platform selection — see below)
+#
+# Label conventions (cleanup-label removes them after the run so reapplying
+# re-triggers):
+#   - `deploy-example-app`         → both platforms
+#   - `deploy-example-app:android` → Android only
+#   - `deploy-example-app:ios`     → iOS only
 
 name: Publish Example App
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Which platform(s) to publish'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - android
+          - ios
   release:
     types: [published]
   push:
@@ -20,8 +38,14 @@ jobs:
   deploy-android:
     name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
-    # On pull_request, only run if the added label is deploy-example-app.
-    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:android`.
+    if: |
+      github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
 
     steps:
       - uses: actions/checkout@v5
@@ -171,7 +195,14 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
-    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `ios`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:ios`.
+    if: |
+      github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
 
     steps:
       - uses: actions/checkout@v5
@@ -407,17 +438,23 @@ jobs:
           platform: TestFlight
           version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
 
-  # Remove the deploy-example-app label after the run so reapplying re-triggers.
+  # Remove the deploy-example-app[:platform] label after the run so reapplying
+  # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
     needs: [deploy-android, deploy-ios]
-    if: always() && github.event_name == 'pull_request' && github.event.label.name == 'deploy-example-app'
+    if: |
+      always()
+      && github.event_name == 'pull_request'
+      && startsWith(github.event.label.name, 'deploy-example-app')
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
       - name: Remove label
         uses: actions/github-script@v7
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
         with:
           script: |
             try {
@@ -425,7 +462,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
-                name: 'deploy-example-app',
+                name: process.env.LABEL_NAME,
               });
             } catch (e) {
               // 404 = label already gone (e.g. removed manually mid-run).
