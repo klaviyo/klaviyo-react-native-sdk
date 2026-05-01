@@ -1,0 +1,25 @@
+.github/workflows/publish-example.yml
+  38ce6e7f634a0ffc 113-127,129,136-137,151-154
+.github/actions/notify-slack-publish/action.yml
+  38ce6e7f634a0ffc 17-19,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "031775af55a729d41b920ce0bcc9a8860f988364",
+  "prompts": {
+    "38ce6e7f634a0ffc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5f4154f2-e5c0-4b0d-b631-8e462a026f3f",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 4,
+      "accepted_lines": 109,
+      "overriden_lines": 1
+    }
+  }
+}
