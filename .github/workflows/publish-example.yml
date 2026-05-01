@@ -110,16 +110,31 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
 
-      # `status: draft` is required while the listing has no published
-      # version. Flip to `completed` once the listing is fully configured.
+      # On `release: published`, write the GitHub release body into a
+      # `whatsnew-en-US` file so the upload action attaches it as Play Store
+      # release notes. Truncate to 500 chars per Google's per-locale cap.
+      # Other triggers (workflow_dispatch / push / labeled PR) skip this and
+      # the release lands without notes.
+      - name: Prepare release notes
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/whatsnew"
+          printf '%s' "${RELEASE_BODY}" | head -c 500 > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
+          echo "WHATSNEW_DIR=${RUNNER_TEMP}/whatsnew" >> "${GITHUB_ENV}"
+
       - name: Deploy to Internal Track
+        id: play_upload
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.klaviyoreactnativesdkexample
           releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
-          status: draft
+          status: completed
+          whatsNewDirectory: ${{ env.WHATSNEW_DIR }}
 
       - name: Clean up keystore
         if: always()
@@ -133,6 +148,10 @@ jobs:
           result: success
           platform: Play Store
           version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          # The action emits this for every non-internalsharing track too —
+          # it's the standard `play.google.com/apps/test/<pkg>/<code>` URL,
+          # only resolvable by users already authorized for the build.
+          install_url: ${{ steps.play_upload.outputs.internalSharingDownloadUrl }}
 
       - name: Notify Slack on failure
         if: failure()
