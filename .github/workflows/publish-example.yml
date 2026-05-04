@@ -116,6 +116,15 @@ jobs:
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
 
+      # Build the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
+      # podspec/build.gradle path bugs, and stale `lib/` builds before the
+      # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
+      # skipped — the runner is ephemeral. See pack-and-test.sh for details.
+      - name: Pack SDK + flip example to packed install
+        shell: bash
+        run: ./pack-and-test.sh setup
+
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
       # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
       - name: Assemble Release Bundle
@@ -242,12 +251,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-publish-
 
+      # Build the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
+      # podspec path bugs, and stale `lib/` builds before the IPA hits
+      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
+      # runner is ephemeral. See pack-and-test.sh for details. Must run
+      # before "Install CocoaPods dependencies" so that pod install picks
+      # up the packed-mode resolution (marker is set, react-native.config.js
+      # points at example/node_modules/<sdk>).
+      - name: Pack SDK + flip example to packed install
+        shell: bash
+        run: ./pack-and-test.sh setup
+
       # --repo-update so stale CDN caches can't pin us to old versions.
       # Delete .xcode.env.local so the Xcode build phase falls back to
       # `command -v node` (resolves to the setup-node binary on $PATH).
       # RCT_NEW_ARCH_ENABLED=1 is required for new-arch codegen to run
       # during pod install — otherwise xcodebuild fails on missing headers
-      # like RCTAppDependencyProvider.h.
+      # like RCTAppDependencyProvider.h. With pack-and-test having flipped
+      # the marker above, this pod install runs in packed mode.
       - name: Install CocoaPods dependencies
         working-directory: example/ios
         shell: bash
