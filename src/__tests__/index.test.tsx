@@ -73,7 +73,19 @@ jest.mock('react-native', () => {
           eventListeners[eventName] = [];
         }
         eventListeners[eventName]!.push(callback);
-        return { remove: mockRemove };
+        // `remove` both bumps the spy (so existing tests that assert
+        // `mockRemove.toHaveBeenCalled*` keep working) and actually splices
+        // the callback out of `eventListeners` so subsequent
+        // `emitNativeEvent` calls don't reach detached listeners.
+        const remove = () => {
+          mockRemove();
+          const arr = eventListeners[eventName];
+          if (arr) {
+            const idx = arr.indexOf(callback);
+            if (idx >= 0) arr.splice(idx, 1);
+          }
+        };
+        return { remove };
       }),
     })),
     Platform: {
@@ -605,6 +617,25 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalledTimes(1);
     });
 
+    it('should be safe to call the unsubscribe function more than once', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
+
+      // Calling unsubscribe twice should not throw, and the handler should
+      // remain unregistered. Behavioral check only — the implementation may
+      // re-fire native unregister defensively, which is intentional.
+      unsubscribe();
+      expect(() => unsubscribe()).not.toThrow();
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formShown',
+        formId: 'abc123',
+        formName: 'Test Form',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
     it('should clean up previous subscription when re-registering', () => {
       const handler1 = jest.fn();
       const handler2 = jest.fn();
@@ -622,6 +653,41 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
       ).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs error and noops when KlaviyoForms module is not available', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const defaultConstants =
+        NativeModules.KlaviyoReactNativeSdk.getConstants();
+      NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue({
+        ...defaultConstants,
+        FORMS_AVAILABLE: false,
+      });
+
+      try {
+        const handler = jest.fn();
+        const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoForms')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.registerFormLifecycleHandler
+        ).not.toHaveBeenCalled();
+
+        // The returned no-op must be safe to call and must not touch the
+        // native bridge — there's no listener or native registration to tear
+        // down on the no-op path.
+        expect(() => unsubscribe()).not.toThrow();
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
+        ).not.toHaveBeenCalled();
+      } finally {
+        NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue(
+          defaultConstants
+        );
+        consoleErrorSpy.mockRestore();
+      }
     });
 
     it('should not forward events with missing formId', () => {
