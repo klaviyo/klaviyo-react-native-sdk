@@ -56,7 +56,7 @@ export function PushSection() {
             title="Set Push Token"
             onPress={push.handleSetPushToken}
           />
-          {(Platform.OS === 'android' || push.pushNotificationsEnabled) && (
+          {Platform.OS === 'ios' && push.pushNotificationsEnabled && (
             <ProfileTextField
               label="Badge Count"
               value={push.badgeCount}
