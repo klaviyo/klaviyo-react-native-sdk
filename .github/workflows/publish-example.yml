@@ -1,14 +1,32 @@
 # Publish the example app to Play internal track + TestFlight. Android and
 # iOS are independent jobs.
 #
-# Triggers: manual dispatch, release: published, push to master, and
-# `pull_request: labeled` when the label is `deploy-example-app` (the
-# cleanup-label job below removes it after the run so reapplying re-triggers).
+# Triggers:
+#   - workflow_dispatch     (manual; choose `both` / `android` / `ios`)
+#   - release: published    (both platforms)
+#   - push to master        (both platforms)
+#   - pull_request: labeled (label drives platform selection — see below)
+#
+# Label conventions (cleanup-label removes them after the run so reapplying
+# re-triggers):
+#   - `deploy-example-app`         → both platforms
+#   - `deploy-example-app:android` → Android only
+#   - `deploy-example-app:ios`     → iOS only
 
 name: Publish Example App
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Which platform(s) to publish'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - android
+          - ios
   release:
     types: [published]
   push:
@@ -20,8 +38,14 @@ jobs:
   deploy-android:
     name: Publish to Play Store internal track
     runs-on: ubuntu-24.04
-    # On pull_request, only run if the added label is deploy-example-app.
-    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:android`.
+    if: |
+      github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
 
     steps:
       - uses: actions/checkout@v5
@@ -110,16 +134,35 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
 
-      # `status: draft` is required while the listing has no published
-      # version. Flip to `completed` once the listing is fully configured.
+      # On `release: published`, write the GitHub release body into a
+      # `whatsnew-en-US` file so the upload action attaches it as Play Store
+      # release notes. Truncate to 500 chars per Google's per-locale cap.
+      # Other triggers (workflow_dispatch / push / labeled PR) skip this and
+      # the release lands without notes.
+      - name: Prepare release notes
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/whatsnew"
+          # Bash parameter expansion truncates by character (locale-aware,
+          # ubuntu-24.04 runners default to en_US.UTF-8), so emojis or
+          # non-ASCII text near the boundary don't get split mid-byte —
+          # which would produce invalid UTF-8 and risk a Play Store reject.
+          printf '%s' "${RELEASE_BODY:0:500}" > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
+          echo "WHATSNEW_DIR=${RUNNER_TEMP}/whatsnew" >> "${GITHUB_ENV}"
+
       - name: Deploy to Internal Track
+        id: play_upload
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.klaviyoreactnativesdkexample
           releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
-          status: draft
+          status: completed
+          whatsNewDirectory: ${{ env.WHATSNEW_DIR }}
 
       - name: Clean up keystore
         if: always()
@@ -133,6 +176,10 @@ jobs:
           result: success
           platform: Play Store
           version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          # The action emits this for every non-internalsharing track too —
+          # it's the standard `play.google.com/apps/test/<pkg>/<code>` URL,
+          # only resolvable by users already authorized for the build.
+          install_url: ${{ steps.play_upload.outputs.internalSharingDownloadUrl }}
 
       - name: Notify Slack on failure
         if: failure()
@@ -148,7 +195,14 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
-    if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-example-app'
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `ios`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:ios`.
+    if: |
+      github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
 
     steps:
       - uses: actions/checkout@v5
@@ -384,17 +438,23 @@ jobs:
           platform: TestFlight
           version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
 
-  # Remove the deploy-example-app label after the run so reapplying re-triggers.
+  # Remove the deploy-example-app[:platform] label after the run so reapplying
+  # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
     needs: [deploy-android, deploy-ios]
-    if: always() && github.event_name == 'pull_request' && github.event.label.name == 'deploy-example-app'
+    if: |
+      always()
+      && github.event_name == 'pull_request'
+      && startsWith(github.event.label.name, 'deploy-example-app')
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
       - name: Remove label
         uses: actions/github-script@v7
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
         with:
           script: |
             try {
@@ -402,7 +462,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
-                name: 'deploy-example-app',
+                name: process.env.LABEL_NAME,
               });
             } catch (e) {
               // 404 = label already gone (e.g. removed manually mid-run).
