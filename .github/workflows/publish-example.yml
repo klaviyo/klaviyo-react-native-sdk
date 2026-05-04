@@ -121,12 +121,8 @@ jobs:
       # podspec/build.gradle path bugs, and stale `lib/` builds before the
       # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
       # skipped — the runner is ephemeral. See pack-and-test.sh for details.
-      # PACK_TEST_SKIP_PODS=1 because this Android runner has no Ruby/bundler
-      # — the script's iOS pod install would fail. iOS job runs pods.
       - name: Pack SDK + flip example to packed install
         shell: bash
-        env:
-          PACK_TEST_SKIP_PODS: '1'
         run: ./pack-and-test.sh setup
 
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
@@ -255,12 +251,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-publish-
 
+      # Build the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
+      # podspec path bugs, and stale `lib/` builds before the IPA hits
+      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
+      # runner is ephemeral. See pack-and-test.sh for details. Must run
+      # before "Install CocoaPods dependencies" so that pod install picks
+      # up the packed-mode resolution (marker is set, react-native.config.js
+      # points at example/node_modules/<sdk>).
+      - name: Pack SDK + flip example to packed install
+        shell: bash
+        run: ./pack-and-test.sh setup
+
       # --repo-update so stale CDN caches can't pin us to old versions.
       # Delete .xcode.env.local so the Xcode build phase falls back to
       # `command -v node` (resolves to the setup-node binary on $PATH).
       # RCT_NEW_ARCH_ENABLED=1 is required for new-arch codegen to run
       # during pod install — otherwise xcodebuild fails on missing headers
-      # like RCTAppDependencyProvider.h.
+      # like RCTAppDependencyProvider.h. With pack-and-test having flipped
+      # the marker above, this pod install runs in packed mode.
       - name: Install CocoaPods dependencies
         working-directory: example/ios
         shell: bash
@@ -364,22 +373,6 @@ jobs:
           # PlistBuddy errors on Add when the key exists, so try Add then Set.
           /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
             || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
-
-      # Build the example app against the SDK as `npm install`-ed from a
-      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
-      # podspec path bugs, and stale `lib/` builds before the IPA hits
-      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
-      # runner is ephemeral. See pack-and-test.sh for details. Setup also
-      # re-runs `pod install`, so it must happen after the Cache Pods step
-      # above and before Archive. RCT_NEW_ARCH_ENABLED=1 mirrors the env
-      # the earlier "Install CocoaPods dependencies" step set — without it,
-      # this re-run of pod install skips new-arch codegen and Archive then
-      # fails on missing RCTAppDependencyProvider.h.
-      - name: Pack SDK + flip example to packed install
-        shell: bash
-        env:
-          RCT_NEW_ARCH_ENABLED: '1'
-        run: ./pack-and-test.sh setup
 
       # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
       # register/refresh the distribution cert and provisioning profiles
