@@ -49,9 +49,25 @@ class KlaviyoReactNativeSdkModule(
     eventName: String,
     params: WritableMap?,
   ) {
-    reactContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit(eventName, params)
+    // Form lifecycle callbacks fire from the native SDK and can race the
+    // host Activity/Process being torn down (background → low-memory kill,
+    // config change, deep-link launch from CTA, dev-mode HMR/fast-refresh).
+    // `getJSModule` throws `RuntimeException: Catalyst Instance has already
+    // disappeared` in that window, so guard the call. Pattern mirrors RN's
+    // own AppStateModule.sendEvent fix.
+    // Using `hasActiveCatalystInstance` (deprecated alias of
+    // `hasActiveReactInstance`) for broader peer-dep range — the SDK's
+    // peerDependencies allow any react-native version.
+    if (!reactContext.hasActiveCatalystInstance()) return
+    try {
+      reactContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(eventName, params)
+    } catch (e: Exception) {
+      // TOCTOU race: catalyst instance was alive at the check above but is
+      // being torn down by the time we call. Drop the event quietly.
+      Registry.log.error("Failed to emit $eventName: catalyst instance unavailable", e)
+    }
   }
 
   override fun getName(): String = NAME
