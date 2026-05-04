@@ -31,9 +31,9 @@
 #     run: ./pack-and-test.sh setup
 #   - name: Build example app (Android / iOS / etc.)
 #     run: yarn example build:android   # or whatever the target is
-#   - name: Restore workspace mode
-#     if: always()
-#     run: ./pack-and-test.sh restore
+#
+# `restore` is omitted in CI on purpose — runners are ephemeral, so cleanup
+# costs runtime for no benefit. Run `restore` locally when iterating.
 
 set -euo pipefail
 
@@ -108,20 +108,24 @@ cmd_setup() {
 
   require_tool jq
   require_tool yarn
+  require_tool npm
   require_tool shasum
 
   echo "==> Cleaning previous artifacts"
   rm -rf "$ROOT/lib" "$TARBALL_DIR"
   mkdir -p "$TARBALL_DIR"
 
-  SETUP_PROGRESS="building"
-  echo "==> Building published artifacts (yarn run prepare)"
-  (cd "$ROOT" && yarn run prepare)
-
   SETUP_PROGRESS="packing"
-  echo "==> Packing tarball"
-  local raw_tarball="$TARBALL_DIR/klaviyo-react-native-sdk.tgz"
-  (cd "$ROOT" && yarn pack --out "$raw_tarball")
+  echo "==> Packing tarball (npm pack runs the 'prepare' lifecycle internally)"
+  # npm pack > yarn pack here: yarn 3 omits the `prepublishOnly` lifecycle hook
+  # and follows different default-include rules. Our actual publish goes through
+  # `release-it` -> `npm publish`, so simulating with `npm pack` is closer to
+  # the artifact customers will install. `prepare` (which runs `bob build`)
+  # fires automatically via the pack lifecycle — no explicit prepare needed.
+  local pkg_version
+  pkg_version=$(jq -r '.version' "$ROOT/package.json")
+  local raw_tarball="$TARBALL_DIR/klaviyo-react-native-sdk-$pkg_version.tgz"
+  (cd "$ROOT" && npm pack --pack-destination "$TARBALL_DIR")
 
   # Yarn 3 caches `file:` deps by URL — re-using the same path on every run
   # silently serves stale cached content. Hash the tarball into the filename

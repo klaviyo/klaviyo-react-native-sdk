@@ -17,9 +17,11 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Prepare
-        run: yarn prepare
-
+      # No explicit `yarn prepare` step — `npm publish` (via JS-DevTools/npm-publish)
+      # runs the `prepare` lifecycle internally before packing, which is where
+      # `bob build` produces `lib/`. The composite `Setup` step's `yarn install`
+      # also runs `prepare` as a postinstall, so the artifact is built twice
+      # already; running it a third time explicitly was wasted CI minutes.
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}

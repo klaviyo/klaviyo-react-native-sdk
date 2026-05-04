@@ -116,6 +116,15 @@ jobs:
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
 
+      # Build the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
+      # podspec/build.gradle path bugs, and stale `lib/` builds before the
+      # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
+      # skipped — the runner is ephemeral. See pack-and-test.sh for details.
+      - name: Pack SDK + flip example to packed install
+        shell: bash
+        run: ./pack-and-test.sh setup
+
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
       # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
       - name: Assemble Release Bundle
@@ -351,6 +360,17 @@ jobs:
           # PlistBuddy errors on Add when the key exists, so try Add then Set.
           /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
             || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
+
+      # Build the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
+      # podspec path bugs, and stale `lib/` builds before the IPA hits
+      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
+      # runner is ephemeral. See pack-and-test.sh for details. Setup also
+      # re-runs `pod install`, so it must happen after the Cache Pods step
+      # above and before Archive.
+      - name: Pack SDK + flip example to packed install
+        shell: bash
+        run: ./pack-and-test.sh setup
 
       # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
       # register/refresh the distribution cert and provisioning profiles
