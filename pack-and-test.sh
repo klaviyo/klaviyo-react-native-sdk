@@ -110,6 +110,11 @@ cmd_setup() {
   require_tool yarn
   require_tool npm
   require_tool shasum
+  # Bundler/CocoaPods only needed when we'll touch iOS Pods. Android-only
+  # CI runners (no Ruby) opt out via PACK_TEST_SKIP_PODS=1.
+  if [[ "${PACK_TEST_SKIP_PODS:-}" != "1" ]]; then
+    require_tool bundle
+  fi
 
   echo "==> Cleaning previous artifacts"
   rm -rf "$ROOT/lib" "$TARBALL_DIR"
@@ -170,10 +175,17 @@ cmd_setup() {
   echo "==> Installing in example/ (drops --immutable, package.json changed)"
   (cd "$EXAMPLE" && yarn install)
 
-  SETUP_PROGRESS="pods"
-  require_tool bundle
-  echo "==> Running pod install in example/ios/"
-  (cd "$EXAMPLE/ios" && bundle exec pod install)
+  if [[ "${PACK_TEST_SKIP_PODS:-}" == "1" ]]; then
+    echo "==> Skipping pod install (PACK_TEST_SKIP_PODS=1)"
+  else
+    SETUP_PROGRESS="pods"
+    # `bundle exec pod install` inherits the parent process's env. iOS
+    # publish CI sets RCT_NEW_ARCH_ENABLED=1 on this step so new-arch
+    # codegen runs and produces RCTAppDependencyProvider.h etc; without
+    # that, the subsequent Archive step breaks on missing headers.
+    echo "==> Running pod install in example/ios/"
+    (cd "$EXAMPLE/ios" && bundle exec pod install)
+  fi
 
   SETUP_PROGRESS="done"
 
@@ -227,8 +239,12 @@ cmd_restore() {
   echo "==> Reinstalling dependencies"
   (cd "$EXAMPLE" && yarn install)
 
-  echo "==> Running pod install in example/ios/"
-  (cd "$EXAMPLE/ios" && bundle exec pod install)
+  if [[ "${PACK_TEST_SKIP_PODS:-}" == "1" ]]; then
+    echo "==> Skipping pod install (PACK_TEST_SKIP_PODS=1)"
+  else
+    echo "==> Running pod install in example/ios/"
+    (cd "$EXAMPLE/ios" && bundle exec pod install)
+  fi
 
   rm -rf "$TARBALL_DIR"
 

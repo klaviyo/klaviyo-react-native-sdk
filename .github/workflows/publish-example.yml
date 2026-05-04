@@ -121,8 +121,12 @@ jobs:
       # podspec/build.gradle path bugs, and stale `lib/` builds before the
       # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
       # skipped — the runner is ephemeral. See pack-and-test.sh for details.
+      # PACK_TEST_SKIP_PODS=1 because this Android runner has no Ruby/bundler
+      # — the script's iOS pod install would fail. iOS job runs pods.
       - name: Pack SDK + flip example to packed install
         shell: bash
+        env:
+          PACK_TEST_SKIP_PODS: '1'
         run: ./pack-and-test.sh setup
 
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
@@ -367,9 +371,14 @@ jobs:
       # TestFlight. Cleanup (`restore`) is intentionally skipped — the
       # runner is ephemeral. See pack-and-test.sh for details. Setup also
       # re-runs `pod install`, so it must happen after the Cache Pods step
-      # above and before Archive.
+      # above and before Archive. RCT_NEW_ARCH_ENABLED=1 mirrors the env
+      # the earlier "Install CocoaPods dependencies" step set — without it,
+      # this re-run of pod install skips new-arch codegen and Archive then
+      # fails on missing RCTAppDependencyProvider.h.
       - name: Pack SDK + flip example to packed install
         shell: bash
+        env:
+          RCT_NEW_ARCH_ENABLED: '1'
         run: ./pack-and-test.sh setup
 
       # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
