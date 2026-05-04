@@ -85,3 +85,8 @@ example/.env
 
 # Local AI settings files
 .claude
+
+# pack-and-test.sh artifacts (build + swap example to packed SDK)
+.tarballs/
+.pack-mode-active
+*.workspace-backup
