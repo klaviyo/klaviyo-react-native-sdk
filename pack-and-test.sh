@@ -57,6 +57,16 @@ require_tool() {
   }
 }
 
+# Metro persists Haste maps and transform output across processes; the cache
+# keys don't include our marker, so stale workspace-mode resolutions bleed
+# into packed-mode bundles (and vice versa) without invalidation. Cheap to
+# blow them away on every mode flip.
+clear_metro_caches() {
+  local tmpdir="${TMPDIR:-/tmp}"
+  rm -rf "${tmpdir%/}"/metro-* "${tmpdir%/}"/haste-map-* \
+    "$EXAMPLE/node_modules/.cache/metro" 2>/dev/null || true
+}
+
 # Tracks how far setup got, so on_error knows whether to attempt a restore.
 SETUP_PROGRESS="none"
 
@@ -144,6 +154,14 @@ cmd_setup() {
   # which can let stale packed/workspace state leak across runs. Clear it.
   rm -f "$INSTALL_STATE"
 
+  # Metro persists Haste maps + transform output under $TMPDIR. Those keys
+  # don't include the marker, so a workspace-mode session populates the
+  # cache, then a packed-mode bundle hits the cache and gets back the
+  # workspace resolution. Nuking these forces a fresh resolve. Babel's
+  # `api.cache.using` in babel.config.js handles the per-file transform
+  # invalidation; this handles Metro's higher-level caches.
+  clear_metro_caches
+
   SETUP_PROGRESS="installed"
   echo "==> Installing in example/ (drops --immutable, package.json changed)"
   (cd "$EXAMPLE" && yarn install)
@@ -200,6 +218,7 @@ cmd_restore() {
   fi
 
   rm -f "$INSTALL_STATE"
+  clear_metro_caches
 
   echo "==> Reinstalling dependencies"
   (cd "$EXAMPLE" && yarn install)

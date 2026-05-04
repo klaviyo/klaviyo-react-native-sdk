@@ -6,9 +6,12 @@ const fs = require('fs');
 // mode we skip the workspace-aware Babel config (which aliases the SDK's
 // source files back to <repo>/src/) and let standard transforms apply.
 // Cleared by `pack-and-test.sh restore`.
-const isPacked = fs.existsSync(
-  path.resolve(__dirname, '..', '.pack-mode-active')
-);
+//
+// Babel caches resolved configs aggressively. Returning a function (rather
+// than an object) lets us call `api.cache.using(...)` so the cache key
+// includes the marker's existence — flipping the marker invalidates any
+// cached transform output produced under the other mode.
+const MARKER = path.resolve(__dirname, '..', '.pack-mode-active');
 
 const baseConfig = {
   presets: ['module:@react-native/babel-preset'],
@@ -27,12 +30,16 @@ const baseConfig = {
   ],
 };
 
-if (isPacked) {
-  module.exports = baseConfig;
-} else {
+module.exports = function (api) {
+  const isPacked = api.cache.using(() => fs.existsSync(MARKER));
+
+  if (isPacked) {
+    return baseConfig;
+  }
+
   const { getConfig } = require('react-native-builder-bob/babel-config');
   const pkg = require('../package.json');
   const root = path.resolve(__dirname, '..');
 
-  module.exports = getConfig(baseConfig, { root, pkg });
-}
+  return getConfig(baseConfig, { root, pkg });
+};
