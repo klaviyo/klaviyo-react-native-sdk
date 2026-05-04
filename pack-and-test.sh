@@ -167,8 +167,12 @@ cmd_setup() {
   clear_metro_caches
 
   SETUP_PROGRESS="installed"
-  echo "==> Installing in example/ (drops --immutable, package.json changed)"
-  (cd "$EXAMPLE" && yarn install)
+  # We just rewrote example/package.json, so yarn install MUST update the
+  # lockfile. yarn 3 defaults `enableImmutableInstalls` to true when CI=true,
+  # which would block this even without an explicit --immutable flag — set
+  # the env var inline so it applies just to this invocation.
+  echo "==> Installing in example/ (yarn.lock will be rewritten — file: dep added)"
+  (cd "$EXAMPLE" && YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install)
 
   SETUP_PROGRESS="done"
 
@@ -225,8 +229,10 @@ cmd_restore() {
   rm -f "$INSTALL_STATE"
   clear_metro_caches
 
-  echo "==> Reinstalling dependencies"
-  (cd "$EXAMPLE" && yarn install)
+  # Same `enableImmutableInstalls` carve-out as setup — we just restored
+  # example/package.json from backup so the lockfile flips back too.
+  echo "==> Reinstalling dependencies (yarn.lock reverts to workspace state)"
+  (cd "$EXAMPLE" && YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install)
 
   rm -rf "$TARBALL_DIR"
 
