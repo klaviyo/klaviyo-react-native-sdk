@@ -41,6 +41,7 @@
     - [Setup](#setup-1)
       - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
     - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
+    - [Monitoring Form Lifecycle Events](#monitoring-form-lifecycle-events)
 
   - [Geofencing](#geofencing)
     - [Prerequisites](#prerequisites-2)
@@ -605,6 +606,47 @@ Klaviyo.unregisterFromInAppForms(config);
 ```
 
 Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
+
+### Monitoring Form Lifecycle Events
+
+> Form lifecycle events are available in SDK version 2.4.0 and higher.
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#monitoring-form-lifecycle-events)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#monitoring-form-lifecycle-events)
+
+The SDK can notify your app when key form interactions occur, which is useful for forwarding engagement data to third-party analytics platforms like Amplitude, Segment, or Mixpanel.
+
+To subscribe, call `Klaviyo.registerFormLifecycleHandler` with a callback. The function returns an unsubscribe handle — call it when you no longer need events (e.g. on component unmount or user logout).
+
+```typescript
+import { Klaviyo, FormLifecycleEventType } from 'klaviyo-react-native-sdk';
+
+const unsubscribe = Klaviyo.registerFormLifecycleHandler((event) => {
+  switch (event.type) {
+    case FormLifecycleEventType.Shown:
+      console.log(`Form shown — id: ${event.formId}, name: ${event.formName}`);
+      break;
+
+    case FormLifecycleEventType.Dismissed:
+      console.log(
+        `Form dismissed — id: ${event.formId}, name: ${event.formName}`
+      );
+      break;
+
+    case FormLifecycleEventType.CtaClicked:
+      console.log(
+        `CTA clicked — id: ${event.formId}, name: ${event.formName}, ` +
+          `button: ${event.buttonLabel}, url: ${event.deepLinkUrl}`
+      );
+      break;
+  }
+});
+
+// Later, when you no longer need events:
+unsubscribe();
+```
+
+The handler is invoked on the JavaScript thread. Only one handler can be active at a time — calling `registerFormLifecycleHandler` a second time automatically removes the previous subscription before registering the new one.
 
 ## Geofencing
 
