@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "a1b3783a919993533ea5b131e418809f0d9543a9",
+  "prompts": {
+    "3da633ed47c31908": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5839bbbc-8f30-4640-8a81-ed4a1bf5ffaf",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 6,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
