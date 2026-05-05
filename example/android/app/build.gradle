@@ -88,7 +88,7 @@ android {
         // so CI can inject a monotonic value from github.run_number. Local
         // builds default to 1.
         versionCode Integer.parseInt(project.findProperty("releaseVersionCode")?.toString() ?: "1")
-        versionName "2.4.0"
+        versionName "2.4.1"
         manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {
