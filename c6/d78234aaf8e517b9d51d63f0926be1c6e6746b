@@ -1,0 +1,55 @@
+android/src/main/res/values/strings.xml
+  3f585898defd3988 2
+ios/klaviyo-sdk-configuration.plist
+  3f585898defd3988 8
+example/android/app/build.gradle
+  3f585898defd3988 91
+package.json
+  3f585898defd3988 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.1",
+  "base_commit_sha": "c6d78234aaf8e517b9d51d63f0926be1c6e6746b",
+  "prompts": {
+    "38ce6e7f634a0ffc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5f4154f2-e5c0-4b0d-b631-8e462a026f3f",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 83,
+      "overriden_lines": 0
+    },
+    "3f585898defd3988": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7099c0f8-a928-4d11-ab77-c1e2b73b52c9",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 8,
+      "accepted_lines": 381,
+      "overriden_lines": 0
+    },
+    "58891989a659eb02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "45865050-9428-45ff-8b2e-54e7fa95cb20",
+        "model": "<synthetic>"
+      },
+      "human_author": "Evan Masseau",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1092,
+      "overriden_lines": 0
+    }
+  }
+}
