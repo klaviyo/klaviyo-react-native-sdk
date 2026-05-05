@@ -8,6 +8,8 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
@@ -19,9 +21,12 @@ import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
+import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
+import com.klaviyo.forms.registerFormLifecycleHandler
+import com.klaviyo.forms.unregisterFormLifecycleHandler
 import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.location.GeofencingProvider
 import com.klaviyo.location.LocationManager
@@ -38,6 +43,31 @@ class KlaviyoReactNativeSdkModule(
     const val NAME = "KlaviyoReactNativeSdk"
     private const val LOCATION = "location"
     private const val PROPERTIES = "properties"
+  }
+
+  private fun sendEvent(
+    eventName: String,
+    params: WritableMap?,
+  ) {
+    // Form lifecycle callbacks fire from the native SDK and can race the
+    // host Activity/Process being torn down (background → low-memory kill,
+    // config change, deep-link launch from CTA, dev-mode HMR/fast-refresh).
+    // `getJSModule` throws `RuntimeException: Catalyst Instance has already
+    // disappeared` in that window, so guard the call. Pattern mirrors RN's
+    // own AppStateModule.sendEvent fix.
+    // Using `hasActiveCatalystInstance` (deprecated alias of
+    // `hasActiveReactInstance`) for broader peer-dep range — the SDK's
+    // peerDependencies allow any react-native version.
+    if (!reactContext.hasActiveCatalystInstance()) return
+    try {
+      reactContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(eventName, params)
+    } catch (e: Exception) {
+      // TOCTOU race: catalyst instance was alive at the check above but is
+      // being torn down by the time we call. Drop the event quietly.
+      Registry.log.error("Failed to emit $eventName: catalyst instance unavailable", e)
+    }
   }
 
   override fun getName(): String = NAME
@@ -288,4 +318,56 @@ class KlaviyoReactNativeSdkModule(
 
     Klaviyo.createEvent(event = klaviyoEvent)
   }
+
+  @ReactMethod
+  fun registerFormLifecycleHandler() {
+    UiThreadUtil.runOnUiThread {
+      try {
+        Klaviyo.registerFormLifecycleHandler { event ->
+          val params =
+            Arguments.createMap().apply {
+              putString("formId", event.formId)
+              putString("formName", event.formName)
+              when (event) {
+                is FormLifecycleEvent.FormShown -> {
+                  putString("type", "formShown")
+                }
+
+                is FormLifecycleEvent.FormDismissed -> {
+                  putString("type", "formDismissed")
+                }
+
+                is FormLifecycleEvent.FormCtaClicked -> {
+                  putString("type", "formCtaClicked")
+                  putString("buttonLabel", event.buttonLabel)
+                  putString("deepLinkUrl", event.deepLinkUrl.toString())
+                }
+              }
+            }
+
+          sendEvent("FormLifecycleEvent", params)
+        }
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun unregisterFormLifecycleHandler() {
+    UiThreadUtil.runOnUiThread {
+      try {
+        Klaviyo.unregisterFormLifecycleHandler()
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      }
+    }
+  }
+
+  // Required by NativeEventEmitter on the JS side
+  @ReactMethod
+  fun addListener(eventName: String) {}
+
+  @ReactMethod
+  fun removeListeners(count: Int) {}
 }

@@ -1,6 +1,6 @@
 {
   "name": "klaviyo-react-native-sdk",
-  "version": "2.3.1",
+  "version": "2.4.1",
   "description": "Official Klaviyo React Native SDK",
   "source": "./src/index.tsx",
   "main": "./lib/module/index.js",
@@ -16,10 +16,8 @@
   "files": [
     "src",
     "lib",
-    "docs",
     "android",
     "ios",
-    "cpp",
     "*.podspec",
     "react-native.config.js",
     "!ios/build",
@@ -100,7 +98,8 @@
     "typescript": "^5.8.3"
   },
   "resolutions": {
-    "@types/react": "^19.1.0"
+    "@types/react": "^19.1.0",
+    "protobufjs": "^7.5.5"
   },
   "peerDependencies": {
     "react": "*",

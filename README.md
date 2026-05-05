@@ -30,6 +30,7 @@
       - [Native Token Collection](#native-token-collection)
     - [Receiving Push Notifications](#receiving-push-notifications)
     - [Rich Push](#rich-push)
+    - [Push Action Buttons](#push-action-buttons)
     - [Badge Count](#badge-count)
     - [Tracking Open Events](#tracking-open-events)
     - [Deep Linking](#deep-linking)
@@ -40,6 +41,7 @@
     - [Setup](#setup-1)
       - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
     - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
+    - [Monitoring Form Lifecycle Events](#monitoring-form-lifecycle-events)
 
   - [Geofencing](#geofencing)
     - [Prerequisites](#prerequisites-2)
@@ -103,29 +105,9 @@ yarn add klaviyo-react-native-sdk
 
 ### Example App
 
-We have included an example app in this repository for reference of how to integrate with our SDK.
-It is primarily intended to give code samples such as how and where to `initialize`, implement notification
-delegate methods on iOS, and handle an opened notification intent on Android. We've commented the sample app
-code to call out key setup steps, search for `iOS Installation Step` and `Android Installation Step`.
-
-To run the example app:
-
-- Clone this repository
-- From the root directory, run `yarn example setup`. This is an alias that will do the following:
-  - Run `yarn install --immutable` from the root directory
-  - Navigate to the `example` directory and run `bundle install`
-  - Navigate to the `example/ios` directory and run `bundle exec pod install`
-- Android configuration:
-  - To initialize Klaviyo from the native layer, open `example/android/gradle.properties` and follow the
-    instructions to set your `publicApiKey` and verify `initializeKlaviyoFromNative` is enabled.
-  - If you wish to run the Android example app with push/firebase, you'll need to copy a `google-services.json`
-    file into `example/android/app/src` and update the `applicationId` in `app/build.gradle` to match your application ID.
-    Then, open `example/android/gradle.properties` and follow the instructions to enable `useNativeFirebase`.
-    This is disabled by default because the app will crash on launch without a `google-services.json` file.
-- From the project's root directory, use the following commands start a metro server and run the example app.
-  - `yarn example start` - to start the metro server
-  - `yarn example android` - to run the example app on an Android emulator or device
-  - `yarn example ios` - to run the example app on an iOS simulator
+The [example app](./example) is a reference integration demonstrating SDK setup and
+exercising the public API surface. See [`example/README.md`](./example/README.md) for
+setup instructions, Firebase configuration, and a walkthrough of the demonstrated features.
 
 ### Android
 
@@ -433,6 +415,15 @@ No additional setup is needed to support rich push on Android.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Rich-Push)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Rich-Push)
 
+#### Push Action Buttons
+
+[Push Action Buttons](https://help.klaviyo.com/hc/en-us/article/46285872166683) provide the ability to add clickable buttons to
+push notification messages. These buttons can show custom text, and, when clicked, deep link or open your app.
+A notification can include up to 3 buttons. No additional SDK setup is required.
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#push-action-buttons)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#push-action-buttons)
+
 #### Badge Count
 
 Klaviyo supports setting or incrementing the badge count on iOS when you send a push notification.
@@ -615,6 +606,47 @@ Klaviyo.unregisterFromInAppForms(config);
 ```
 
 Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
+
+### Monitoring Form Lifecycle Events
+
+> Form lifecycle events are available in SDK version 2.4.0 and higher.
+
+- [Android](https://github.com/klaviyo/klaviyo-android-sdk#monitoring-form-lifecycle-events)
+- [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#monitoring-form-lifecycle-events)
+
+The SDK can notify your app when key form interactions occur, which is useful for forwarding engagement data to third-party analytics platforms like Amplitude, Segment, or Mixpanel.
+
+To subscribe, call `Klaviyo.registerFormLifecycleHandler` with a callback. The function returns an unsubscribe handle — call it when you no longer need events (e.g. on component unmount or user logout).
+
+```typescript
+import { Klaviyo, FormLifecycleEventType } from 'klaviyo-react-native-sdk';
+
+const unsubscribe = Klaviyo.registerFormLifecycleHandler((event) => {
+  switch (event.type) {
+    case FormLifecycleEventType.Shown:
+      console.log(`Form shown — id: ${event.formId}, name: ${event.formName}`);
+      break;
+
+    case FormLifecycleEventType.Dismissed:
+      console.log(
+        `Form dismissed — id: ${event.formId}, name: ${event.formName}`
+      );
+      break;
+
+    case FormLifecycleEventType.CtaClicked:
+      console.log(
+        `CTA clicked — id: ${event.formId}, name: ${event.formName}, ` +
+          `button: ${event.buttonLabel}, url: ${event.deepLinkUrl}`
+      );
+      break;
+  }
+});
+
+// Later, when you no longer need events:
+unsubscribe();
+```
+
+The handler is invoked on the JavaScript thread. Only one handler can be active at a time — calling `registerFormLifecycleHandler` a second time automatically removes the previous subscription before registering the new one.
 
 ## Geofencing
 

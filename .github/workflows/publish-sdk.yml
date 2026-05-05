@@ -12,11 +12,22 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup
         uses: ./.github/actions/setup
 
+      # Explicit `yarn prepare` IS load-bearing — do not remove without
+      # rewiring the publish path. Two reasons:
+      #   1. Yarn Berry 3 does not run the `prepare` lifecycle hook (yarn
+      #      manifest docs only list preinstall/install/postinstall/
+      #      prepack/postpack), so `yarn install` above does NOT build `lib/`.
+      #   2. JS-DevTools/npm-publish defaults to `--ignore-scripts` as a
+      #      security precaution, so `npm publish` does NOT run `prepare`
+      #      either. Setting `ignore-scripts: false` would let it, but
+      #      explicit-build-then-publish is clearer and matches local dev.
+      # Without this step, `lib/` is empty when the tarball gets uploaded
+      # and every consumer's `import 'klaviyo-react-native-sdk'` breaks.
       - name: Prepare
         run: yarn prepare
 

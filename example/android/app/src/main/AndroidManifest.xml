@@ -1,4 +1,3 @@
-<!-- Android Installation Step 2: Configure manifest.xml ... -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -23,18 +22,18 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
 
-        <!-- Android Installation Step 2a: Configure deep links, if your push notifications will contain them -->
+        <!-- Android Installation Step: Configure deep links, if your push notifications will contain them -->
         <intent-filter android:label="deep_link_filter">
           <action android:name="android.intent.action.VIEW"/>
 
           <category android:name="android.intent.category.DEFAULT"/>
           <category android:name="android.intent.category.BROWSABLE"/>
 
-          <!-- Accepts URIs that begin with "klaviyosample://” -->
-          <data android:scheme="klaviyosample"/>
+          <!-- Accepts URIs that begin with "klaviyotest://” -->
+          <data android:scheme="klaviyotest"/>
         </intent-filter>
 
-        <!-- Android Installation Step 2b: Configure verified app links for Universal Link Click Tracking -->
+        <!-- Android Installation Step: Configure verified app links for Universal Link Click Tracking -->
         <intent-filter android:label="app_link_handler" android:autoVerify="true">
           <action android:name="android.intent.action.VIEW" />
           <category android:name="android.intent.category.DEFAULT" />
@@ -46,7 +45,7 @@
 
       </activity>
 
-      <!-- Android Installation Step 2b: Register KlaviyoPushService to receive MESSAGING_EVENT intents. -->
+      <!-- Android Installation Step: Register KlaviyoPushService to receive MESSAGING_EVENT intents. -->
       <service
           android:name="com.klaviyo.pushFcm.KlaviyoPushService"
           android:exported="false">
@@ -55,14 +54,14 @@
           </intent-filter>
       </service>
 
-      <!-- Optional Android Installation Step 2c: Specify an icon for Klaviyo notifications  -->
+      <!-- Optional Android Installation Step: Specify an icon for Klaviyo notifications  -->
       <!-- Absent this key, Klaviyo SDK will look for com.google.firebase.messaging.default_notification_icon -->
       <!-- and absent that, use the default launcher icon for your app -->
       <meta-data
           android:name="com.klaviyo.push.default_notification_icon"
           android:resource="@drawable/ic_notification" />
 
-      <!-- Optional Android Installation Step 2d: Specify a notification color for Klaviyo notifications  -->
+      <!-- Optional Android Installation Step: Specify a notification color for Klaviyo notifications  -->
       <!-- Absent this key, Klaviyo SDK will look for com.google.firebase.messaging.default_notification_color -->
       <!-- and absent that, omit specifying a color -->
       <meta-data android:name="com.klaviyo.push.default_notification_color"

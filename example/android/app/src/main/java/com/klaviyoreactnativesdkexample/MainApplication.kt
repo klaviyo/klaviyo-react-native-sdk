@@ -1,7 +1,6 @@
 package com.klaviyoreactnativesdkexample
 
 import android.app.Application
-import android.util.Log
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
@@ -10,8 +9,13 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.google.firebase.messaging.FirebaseMessaging
-import com.klaviyo.analytics.Klaviyo
+
+// OPTIONAL: Imports required for the native Klaviyo initialization pattern
+// shown in the commented reference block inside onCreate() below. Uncomment
+// these alongside the code in onCreate() if you want to initialize the
+// Klaviyo SDK and collect the FCM push token from Kotlin instead of JS.
+// import com.klaviyo.analytics.Klaviyo
+// import com.google.firebase.messaging.FirebaseMessaging
 
 class MainApplication :
   Application(),
@@ -39,17 +43,14 @@ class MainApplication :
     super.onCreate()
     loadReactNative(this)
 
-    if (BuildConfig.INITIALIZE_KLAVIYO_FROM_NATIVE) {
-      // Android Installation Step 3: Initialize the SDK with public key and context, if initializing from native code
-      Klaviyo.initialize(BuildConfig.PUBLIC_API_KEY, this)
-
-      if (BuildConfig.USE_NATIVE_FIREBASE) {
-        // Android Installation Step 4a: Collect push token and pass it to Klaviyo, if handling push tokens natively
-        FirebaseMessaging.getInstance().token.addOnSuccessListener {
-          Log.d("KlaviyoSampleApp", "Push token set: $it")
-          Klaviyo.setPushToken(it)
-        }
-      }
-    }
+    // OPTIONAL: Native Klaviyo initialization. The example app initializes
+    // Klaviyo from JS via .env (see example/src/App.tsx). If you'd rather
+    // initialize from Kotlin, uncomment the imports at the top of this file
+    // and the block below. See example/README.md for trade-offs.
+    //
+    // Klaviyo.initialize("YOUR_KLAVIYO_PUBLIC_API_KEY", this)
+    // FirebaseMessaging.getInstance().token.addOnSuccessListener {
+    //   Klaviyo.setPushToken(it)
+    // }
   }
 }

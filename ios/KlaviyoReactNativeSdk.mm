@@ -14,6 +14,10 @@ RCT_EXPORT_MODULE()
     return YES;
 }
 
+- (NSArray<NSString *> *)supportedEvents {
+    return @[@"FormLifecycleEvent"];
+}
+
 // The values here eventually should come from the iOS SDK once exposed there.
 - (NSDictionary *)constantsToExport {
     return @{
@@ -139,6 +143,24 @@ RCT_EXPORT_METHOD(getCurrentGeofences: (RCTResponseSenderBlock)callback) {
         [KlaviyoBridge getCurrentGeofencesWithCallback:^(NSDictionary *result) {
             callback(@[result]);
         }];
+    });
+}
+
+RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
+    __weak __typeof__(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge registerFormLifecycleHandlerWithCallback:^(NSDictionary *eventData) {
+            __strong __typeof__(weakSelf) strongSelf = weakSelf;
+            if (strongSelf) {
+                [strongSelf sendEventWithName:@"FormLifecycleEvent" body:eventData];
+            }
+        }];
+    });
+}
+
+RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge unregisterFormLifecycleHandler];
     });
 }
 

@@ -71,15 +71,6 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
-def localProperties = new Properties()
-if (rootProject.file("local.properties").canRead()) {
-    localProperties.load(new FileInputStream(rootProject.file("local.properties")))
-}
-
-//Local properties that will be declared as build config fields:
-def apiKey = localProperties['publicApiKey'] ?: publicApiKey
-def initializeKlaviyoFromNative = localProperties['initializeKlaviyoFromNative'] ?: initializeKlaviyoFromNative
-def useNativeFirebase = localProperties['useNativeFirebase'] ?: useNativeFirebase
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -93,8 +84,11 @@ android {
         applicationId "com.klaviyoreactnativesdkexample"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // versionCode is overridable at build time via `-PreleaseVersionCode=N`
+        // so CI can inject a monotonic value from github.run_number. Local
+        // builds default to 1.
+        versionCode Integer.parseInt(project.findProperty("releaseVersionCode")?.toString() ?: "1")
+        versionName "2.4.1"
         manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {
@@ -108,9 +102,6 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
-            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
-            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -118,9 +109,6 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            buildConfigField "String", "PUBLIC_API_KEY", "\"${apiKey}\""
-            buildConfigField "Boolean", "INITIALIZE_KLAVIYO_FROM_NATIVE", "${initializeKlaviyoFromNative}"
-            buildConfigField "Boolean", "USE_NATIVE_FIREBASE", "${useNativeFirebase}"
         }
     }
 }
@@ -129,7 +117,7 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    // Android Installation Step 1b - add firebase dependency if using push
+    // Android Installation Step - add firebase dependency if using push
     implementation 'com.google.firebase:firebase-messaging-ktx:24.0.0'
 
     if (hermesEnabled.toBoolean()) {
@@ -139,8 +127,14 @@ dependencies {
     }
 }
 
-if (useNativeFirebase.toBoolean()) {
-  // Note: this auto-initializes firebase from your google-services.json file.
-  // You'll need to set applicationId to match your firebase project, see above
-  apply plugin: "com.google.gms.google-services"
+// For the example app we only apply the google-services plugin
+// when google-services.json is present. This lets the example app build out of
+// the box without a Firebase project. To enable push: drop your Firebase
+// project's google-services.json into example/android/app/, and make sure its
+// package_name matches applicationId above. See example/README.md for full
+// setup details. The equivalent on iOS is the `#if __has_include(...)` +
+// `if (plistPath)` guard in example/ios/.../AppDelegate.mm.
+if (file('google-services.json').exists()) {
+    // Optional Android Installation Step: Apply the google-services plugin to enable push
+    apply plugin: "com.google.gms.google-services"
 }

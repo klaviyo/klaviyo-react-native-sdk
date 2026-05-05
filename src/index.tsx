@@ -6,8 +6,10 @@ import {
   formatProfile,
 } from './Profile';
 import type { Event } from './Event';
-import type { FormConfiguration } from './Forms';
+import type { FormConfiguration, FormLifecycleHandler } from './Forms';
+import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
   'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build. ' +
@@ -35,6 +37,9 @@ function isLocationAvailable(): boolean {
   }
   return true;
 }
+
+// Track active lifecycle subscription to prevent duplicate listeners
+let activeLifecycleSubscription: { remove: () => void } | null = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -136,6 +141,38 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
     return true;
   },
+  registerFormLifecycleHandler(handler: FormLifecycleHandler): () => void {
+    if (!isFormsAvailable()) return () => {};
+
+    // Clean up any existing subscription before re-registering
+    if (activeLifecycleSubscription) {
+      activeLifecycleSubscription.remove();
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
+      activeLifecycleSubscription = null;
+    }
+
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    activeLifecycleSubscription = eventEmitter.addListener(
+      'FormLifecycleEvent',
+      (data: Record<string, unknown>) => {
+        const event = parseFormLifecycleEvent(data);
+        if (event !== null) {
+          handler(event);
+        }
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerFormLifecycleHandler();
+
+    return () => {
+      activeLifecycleSubscription?.remove();
+      activeLifecycleSubscription = null;
+      KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
+    };
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -147,6 +184,11 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
-export type { FormConfiguration } from './Forms';
+export { FormLifecycleEventType } from './Forms';
+export type {
+  FormConfiguration,
+  FormLifecycleEvent,
+  FormLifecycleHandler,
+} from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';

@@ -1,9 +1,61 @@
 #!/bin/bash
 
-# Prompt for the new React SDK version
-read -rp "Enter the new React SDK version: " new_version
+set -euo pipefail
 
-# Update SDK version in package.json
+usage() {
+  local exit_code="${1:-0}"
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Bump SDK version numbers and update dependencies.
+
+Options:
+  -v, --version VERSION       React SDK version (skips interactive prompt)
+  -a, --android VERSION       Android SDK version (skips interactive prompt)
+  -s, --swift VERSION         Swift SDK version (skips interactive prompt)
+  --skip-native               Skip native dependency bumps entirely
+  --skip-install              Skip yarn install and pod update steps
+  -h, --help                  Show this help message
+
+Examples:
+  $(basename "$0")                              # Fully interactive (original behavior)
+  $(basename "$0") -v 2.4.0 --skip-native       # Bump RN SDK only, no native deps
+  $(basename "$0") -v 2.4.0 -a 3.2.0 -s 4.1.0  # Bump everything non-interactively
+EOF
+  exit "$exit_code"
+}
+
+new_version=""
+android_version=""
+swift_version=""
+skip_native=false
+skip_install=false
+
+require_arg() {
+  if [[ -z "${2:-}" || "$2" =~ ^- ]]; then
+    echo "Error: $1 requires a version argument" >&2
+    exit 1
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -v|--version)   require_arg "$1" "${2:-}"; new_version="$2"; shift 2 ;;
+    -a|--android)   require_arg "$1" "${2:-}"; android_version="$2"; shift 2 ;;
+    -s|--swift)     require_arg "$1" "${2:-}"; swift_version="$2"; shift 2 ;;
+    --skip-native)  skip_native=true; shift ;;
+    --skip-install) skip_install=true; shift ;;
+    -h|--help)      usage 0 ;;
+    *)              echo "Error: Unknown option: $1" >&2; usage 1 ;;
+  esac
+done
+
+# --- React SDK version ---
+
+if [[ -z "$new_version" ]]; then
+  read -rp "Enter the new React SDK version: " new_version
+fi
+
 if [[ -f "package.json" ]]; then
   jq --arg newVersion "$new_version" '.version = $newVersion' package.json > tmp.json && mv tmp.json package.json
   echo "Updated SDK version in package.json."
@@ -32,35 +84,94 @@ else
   exit 1
 fi
 
-# Prompt for the Android SDK version
-read -rp "Enter the Android SDK version: " android_version
-
-# Update Android SDK version in gradle.properties
-gradle_properties="./android/gradle.properties"
-if [[ -f "$gradle_properties" ]]; then
-  sed -i '' "s/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=.*/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=$android_version/" "$gradle_properties"
-  echo "Updated Android SDK version in $gradle_properties."
+# Keep the example app's user-facing version (Android versionName + iOS
+# MARKETING_VERSION) in sync with the SDK version so TestFlight / Play Store
+# uploads carry the SDK version they're demonstrating.
+example_android_gradle="example/android/app/build.gradle"
+if [[ -f "$example_android_gradle" ]]; then
+  sed -i '' "s/versionName \"[^\"]*\"/versionName \"$new_version\"/" "$example_android_gradle"
+  echo "Updated example app versionName in $example_android_gradle."
 else
-  echo "Error: $gradle_properties not found."
+  echo "Error: $example_android_gradle not found."
   exit 1
 fi
 
-# Prompt for the Swift SDK version
-read -rp "Enter the Swift SDK version: " swift_version
-
-# Update Swift SDK version in the podspec
-podspec_file="klaviyo-react-native-sdk.podspec"
-if [[ -f "$podspec_file" ]]; then
-  sed -i '' "s/\"KlaviyoSwift\", \".*\"/\"KlaviyoSwift\", \"$swift_version\"/" "$podspec_file"
-  sed -i '' "s/\"KlaviyoForms\", \".*\"/\"KlaviyoForms\", \"$swift_version\"/" "$podspec_file"
-  sed -i '' "s/\"KlaviyoLocation\", \".*\"/\"KlaviyoLocation\", \"$swift_version\"/" "$podspec_file"
-  echo "Updated KlaviyoSwift, KlaviyoForms, and KlaviyoLocation version in $podspec_file."
+example_ios_pbxproj="example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj"
+if [[ -f "$example_ios_pbxproj" ]]; then
+  sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $new_version;/g" "$example_ios_pbxproj"
+  echo "Updated example app MARKETING_VERSION in $example_ios_pbxproj."
 else
-  echo "Error: $podspec_file not found."
+  echo "Error: $example_ios_pbxproj not found."
   exit 1
 fi
 
-# Run yarn install or npm install in the example app directory
+# --- Native dependencies (skippable) ---
+
+if [[ "$skip_native" == true ]]; then
+  echo "Skipping native dependency updates."
+else
+  # Android SDK version
+  if [[ -z "$android_version" ]]; then
+    read -rp "Enter the Android SDK version: " android_version
+  fi
+
+  # Swift SDK version
+  if [[ -z "$swift_version" ]]; then
+    read -rp "Enter the Swift SDK version: " swift_version
+  fi
+
+  # Reset any local SDK overrides before re-pinning. Re-uses configure-sdk.sh
+  # as the single source of truth for cleanup logic. This handles:
+  #   - Android: stale `# saved:` comments, localCompositeBuild flags
+  #   - iOS: Podfile pod entries, commented podspec pins, KlaviyoSwiftExtension overrides
+  echo "Resetting iOS and Android overrides via configure-sdk.sh..."
+  ./configure-sdk.sh --android gradle.properties --ios podspec --skip-pod-install
+
+  gradle_properties="./android/gradle.properties"
+  if [[ -f "$gradle_properties" ]]; then
+    sed -i '' "s/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=.*/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=$android_version/" "$gradle_properties"
+    echo "Updated Android SDK version in $gradle_properties."
+  else
+    echo "Error: $gradle_properties not found."
+    exit 1
+  fi
+
+  # Pin KlaviyoSwift, KlaviyoForms, KlaviyoLocation in the podspec.
+  # Accepts any of these starting forms per dep line (configure-sdk.sh can leave
+  # the second form behind when overriding to a branch/path; the bare form is
+  # what lands when working against an unreleased native version):
+  #   s.dependency "Name"
+  #   s.dependency "Name" ##, "old"
+  #   s.dependency "Name", "old"
+  # All three are normalized to: s.dependency "Name", "$swift_version"
+  podspec_file="klaviyo-react-native-sdk.podspec"
+  if [[ -f "$podspec_file" ]]; then
+    for dep in KlaviyoSwift KlaviyoForms KlaviyoLocation; do
+      # 1. Strip any existing pin or commented pin -> bare
+      sed -i '' -E "s/(s\\.dependency \"$dep\")( ##)?, \"[^\"]*\"/\\1/" "$podspec_file"
+      # 2. Append the new pin to the bare line
+      sed -i '' -E "s/(s\\.dependency \"$dep\")\$/\\1, \"$swift_version\"/" "$podspec_file"
+      # 3. Verify -- fail loud rather than silently shipping unpinned
+      if ! grep -qE "s\\.dependency \"$dep\", \"$swift_version\"" "$podspec_file"; then
+        echo "Error: failed to pin $dep to $swift_version in $podspec_file." >&2
+        exit 1
+      fi
+    done
+    echo "Pinned KlaviyoSwift, KlaviyoForms, and KlaviyoLocation to $swift_version in $podspec_file."
+  else
+    echo "Error: $podspec_file not found."
+    exit 1
+  fi
+fi
+
+# --- Install steps (skippable) ---
+
+if [[ "$skip_install" == true ]]; then
+  echo "Skipping install steps."
+  echo "All tasks completed successfully."
+  exit 0
+fi
+
 example_dir="example"
 if [[ -d "$example_dir" ]]; then
   echo "Running yarn install in $example_dir..."
@@ -75,20 +186,22 @@ else
   exit 1
 fi
 
-# Run bundle install and pod update in the iOS directory
-ios_dir="$example_dir/ios"
-if [[ -d "$ios_dir" ]]; then
-  cd "$ios_dir" || exit
-  if [[ -f "Gemfile" ]]; then
-    echo "Running bundle install..."
-    bundle install || { echo "Error: Failed to run bundle install."; exit 1; }
+# Run bundle install and pod update in the iOS directory (only if native deps were bumped)
+if [[ "$skip_native" == false ]]; then
+  ios_dir="$example_dir/ios"
+  if [[ -d "$ios_dir" ]]; then
+    cd "$ios_dir" || exit
+    if [[ -f "Gemfile" ]]; then
+      echo "Running bundle install..."
+      bundle install || { echo "Error: Failed to run bundle install."; exit 1; }
+    fi
+    echo "Running pod update for Klaviyo pods..."
+    bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension || { echo "Error: Failed to update pods."; exit 1; }
+    cd - || exit
+  else
+    echo "Error: $ios_dir not found."
+    exit 1
   fi
-  echo "Running pod update for KlaviyoSwift, KlaviyoForms, and KlaviyoLocation..."
-  bundle exec pod update KlaviyoSwift KlaviyoForms KlaviyoLocation || { echo "Error: Failed to update pods."; exit 1; }
-  cd - || exit
-else
-  echo "Error: $ios_dir not found."
-  exit 1
 fi
 
 echo "All tasks completed successfully."
