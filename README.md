@@ -624,22 +624,16 @@ import { Klaviyo, FormLifecycleEventType } from 'klaviyo-react-native-sdk';
 const unsubscribe = Klaviyo.registerFormLifecycleHandler((event) => {
   switch (event.type) {
     case FormLifecycleEventType.Shown:
-      // Fires when the SDK presents a form to the user.
       console.log(`Form shown — id: ${event.formId}, name: ${event.formName}`);
       break;
 
     case FormLifecycleEventType.Dismissed:
-      // Fires only on user-initiated dismissals (e.g. tapping outside the form
-      // or pressing the close button). Does NOT fire when the SDK tears down a
-      // form internally (session timeout, programmatic unregister).
       console.log(
         `Form dismissed — id: ${event.formId}, name: ${event.formName}`
       );
       break;
 
     case FormLifecycleEventType.CtaClicked:
-      // Fires only when the tapped CTA button has a deep link URL configured.
-      // Not emitted for CTA buttons without a deep link.
       console.log(
         `CTA clicked — id: ${event.formId}, name: ${event.formName}, ` +
           `button: ${event.buttonLabel}, url: ${event.deepLinkUrl}`
