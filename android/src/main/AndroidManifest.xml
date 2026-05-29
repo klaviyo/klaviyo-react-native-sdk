@@ -1,3 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="com.klaviyoreactnativesdk">
+    <application>
+        <!--
+          Legacy manifest used when the consumer builds this module with AGP < 7.3
+          (supportsNamespace() == false in android/build.gradle). Mirror of the
+          KlaviyoPushService declaration in AndroidManifestNew.xml so older-AGP consumers
+          get the same FCM service-resolution benefit. Keep the two in sync. See
+          AndroidManifestNew.xml and the "Push notifications not displaying when another push SDK
+          is installed" section of Troubleshooting.md for the full rationale.
+        -->
+        <service
+            android:name="com.klaviyo.pushFcm.KlaviyoPushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+    </application>
 </manifest>
