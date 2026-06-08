@@ -7,7 +7,6 @@ reviews:
     - "!**/Pods/**"
     - "!**/*.xcodeproj/**"
     - "!**/yarn.lock"
-    - "!example/**"
   auto_review:
     drafts: false
     base_branches:
