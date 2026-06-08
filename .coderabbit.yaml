@@ -17,3 +17,8 @@ reviews:
       config_file: ".swiftlint.yml"
     eslint:
       enabled: true
+
+  path_instructions:
+    - path: "**"
+      instructions: |
+        For context on this project, review `/AGENTS.md`.
