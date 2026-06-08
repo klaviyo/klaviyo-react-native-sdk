@@ -1,0 +1,19 @@
+reviews:
+  profile: assertive
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/lib/**"
+    - "!**/build/**"
+    - "!**/Pods/**"
+    - "!**/*.xcodeproj/**"
+    - "!**/yarn.lock"
+  auto_review:
+    drafts: false
+    base_branches:
+      - ".*"
+  tools:
+    swiftlint:
+      enabled: true
+      config_file: ".swiftlint.yml"
+    eslint:
+      enabled: true
