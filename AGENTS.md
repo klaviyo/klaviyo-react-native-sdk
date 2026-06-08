@@ -104,3 +104,9 @@ native Android and iOS SDKs. Essential for testing changes across all three SDKs
 If prompted to create a pull request, favor starting it in draft unless asked otherwise.
 You **MUST** follow the pull request template used by this repository, including important details
 in the relevant subsections of the template.
+
+## Code Review
+
+CodeRabbit is active on this repo and auto-reviews PRs. It reads this file as a code guidelines
+source. When performing code reviews, avoid re-surfacing findings CodeRabbit may have already flagged.
+If you notice patterns worth encoding as review guidance, suggest adding them to `.coderabbit.yaml`.
