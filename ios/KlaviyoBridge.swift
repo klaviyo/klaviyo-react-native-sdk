@@ -266,6 +266,24 @@ public class KlaviyoBridge: NSObject {
     }
 
     @objc
+    public static func registerDeepLinkHandler(callback: @escaping ([String: Any]) -> Void) {
+        // When a custom handler is registered, the Swift SDK invokes it with the
+        // resolved deep link URL instead of calling its default URL opener. This
+        // is what lets consumers avoid iOS's universal-link anti-loop, which
+        // sends the user to Safari when the SDK opens a universal link on the
+        // app's own associated domain.
+        KlaviyoSDK().registerDeepLinkHandler { url in
+            callback(["url": url.absoluteString])
+        }
+    }
+
+    @objc
+    public static func unregisterDeepLinkHandler() {
+        // Reverts the SDK to its default link-opening behavior.
+        KlaviyoSDK().unregisterDeepLinkHandler()
+    }
+
+    @objc
     public static func createEvent(event: [String: AnyObject]) {
         guard let name = event["name"] as? String,
               !name.isEmpty,

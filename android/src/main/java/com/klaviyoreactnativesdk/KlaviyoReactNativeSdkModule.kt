@@ -273,6 +273,28 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun registerDeepLinkHandler() {
+    // When a handler is registered, the native SDK invokes it with the resolved
+    // deep link URL instead of broadcasting an Intent back to the host app. This
+    // gives consumers full control over navigation for resolved universal
+    // tracking links, keeping parity with iOS (where it also avoids the Safari
+    // universal-link anti-loop).
+    Klaviyo.registerDeepLinkHandler { uri ->
+      val params =
+        Arguments.createMap().apply {
+          putString("url", uri.toString())
+        }
+      sendEvent("KlaviyoOnDeepLinkResolved", params)
+    }
+  }
+
+  @ReactMethod
+  fun unregisterDeepLinkHandler() {
+    // Reverts the SDK to its default behavior of broadcasting a deep link Intent.
+    Klaviyo.unregisterDeepLinkHandler()
+  }
+
+  @ReactMethod
   fun createEvent(event: ReadableMap) {
     val metric =
       event
