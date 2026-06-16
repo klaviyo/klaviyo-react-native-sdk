@@ -77,10 +77,25 @@ export default function App() {
   const [settingsVisible, setSettingsVisible] = useState(false);
 
   useEffect(() => {
+    // Register a Klaviyo deep link handler. When registered, Klaviyo delivers
+    // the *resolved* destination URL of any deep link it opens — push deep
+    // links, In-App Form CTAs, and resolved universal tracking links — directly
+    // here, instead of opening it itself. This is the recommended approach when
+    // your destination URLs are universal links on your own associated domain:
+    // on iOS, letting the SDK open a self-owned universal link triggers Apple's
+    // anti-loop protection and bounces the user out to Safari. Taking control of
+    // navigation here avoids that. The returned function unsubscribes.
+    const unsubscribeDeepLink = Klaviyo.registerDeepLinkHandler((url) => {
+      console.log('[App] Klaviyo resolved deep link:', url);
+      // Route however your app navigates, e.g. with React Navigation:
+      // navigationRef.navigate(parseUrl(url));
+    });
+
     // Deep linking handler
     const handleUrl = (url: string) => {
       if (Klaviyo.handleUniversalTrackingLink(url)) {
-        // Klaviyo is handling a universal click tracking link
+        // Klaviyo is handling a universal click tracking link. The resolved
+        // destination URL will be delivered to the deep link handler above.
         console.log('[App] Klaviyo tracking link:', url);
         return;
       }
@@ -99,7 +114,10 @@ export default function App() {
 
     // Listen for deep link events while the app is running; return cleanup to prevent listener leak
     const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      unsubscribeDeepLink();
+    };
   }, []);
 
   return (
