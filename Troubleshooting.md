@@ -2,6 +2,50 @@
 
 ## Android Troubleshooting
 
+### Push notifications not displaying when another push SDK is installed
+
+On Android, Klaviyo receives push through a `FirebaseMessagingService` (`KlaviyoPushService`) registered for the
+`com.google.firebase.MESSAGING_EVENT` intent. Android delivers each FCM message to only one such service. If your
+app also includes another library that registers its own `FirebaseMessagingService` — for example
+[`@react-native-firebase/messaging`](https://www.npmjs.com/package/@react-native-firebase/messaging) or another
+third-party push SDK — only one of those services will receive a given message; the other is not invoked, so its
+notifications silently do not display (no error is logged). If Klaviyo notifications do not appear while another
+push library is installed, this is the likely cause.
+
+The Klaviyo SDK declares `KlaviyoPushService` from its own module so that it takes precedence in most setups, but
+that is not guaranteed — which service takes precedence is determined at build time by Android manifest merge order,
+which among libraries follows React Native autolinking order. Use whichever option fits your app — options 1 and 2
+make Klaviyo's service take precedence (option 1 is the most reliable), while option 3 lets both SDKs receive their
+own messages:
+
+1. **Declare `KlaviyoPushService` in your app's `AndroidManifest.xml`.** A declaration in your app's own manifest
+   always takes precedence over one contributed by a library, regardless of dependency order. This is the most
+   reliable option, and is what the [Klaviyo Expo plugin](https://github.com/klaviyo/klaviyo-expo-plugin) does
+   automatically:
+
+   ```xml
+   <!-- android/app/src/main/AndroidManifest.xml, inside the <application> element -->
+   <service
+       android:name="com.klaviyo.pushFcm.KlaviyoPushService"
+       android:exported="false">
+       <intent-filter>
+           <action android:name="com.google.firebase.MESSAGING_EVENT" />
+       </intent-filter>
+   </service>
+   ```
+
+2. **List `klaviyo-react-native-sdk` before the other push library in your `package.json` `dependencies`.**
+   React Native autolinking preserves dependency order, so listing Klaviyo first registers its service ahead of the
+   other library's. This is lighter-weight but more fragile — tooling that alphabetizes `package.json` can undo it —
+   so prefer option 1 if you need a reliable result.
+
+3. **Implement a custom `FirebaseMessagingService` that routes to each SDK.** If you need _both_ Klaviyo and
+   another push SDK to receive their own messages (rather than one simply taking precedence), register a single
+   service in your app and route each `RemoteMessage` to the appropriate SDK (use `RemoteMessage.isKlaviyoMessage`
+   to identify Klaviyo messages). See the Android SDK's
+   [Advanced Setup](https://github.com/klaviyo/klaviyo-android-sdk#advanced-setup) for how to subclass or delegate
+   to `KlaviyoPushService`.
+
 ### `minSdkVersion` Issues
 
 We have seen projects, particularly on react-native versions `0.72.x` and `0.71.x`, that required a `minSdkVersion`
@@ -114,4 +158,3 @@ This might have no impact on your use case, but is something to consider when de
 ### iOS Geofencing Events not Firing
 
 The delivery of geofence events to the Klaviyo SDK requires registering for geofences in the native iOS layer in `didFinishLaunchingWithOptions`. If you only call `Klaviyo.registerGeofencing()` in the React Native layer or any later in the lifecycle, triggered enter/exit events may not get delivered in a reliable manner as the native monitoring service relies on that AppDelegate entry point.
-
