@@ -99,7 +99,7 @@
   },
   "resolutions": {
     "@types/react": "^19.1.0",
-    "protobufjs": "^7.6.1"
+    "protobufjs": "^7.6.4"
   },
   "peerDependencies": {
     "react": "*",
