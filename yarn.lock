@@ -2981,13 +2981,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@protobufjs/inquire@npm:^1.1.2":
-  version: 1.1.2
-  resolution: "@protobufjs/inquire@npm:1.1.2"
-  checksum: 6515cd6d884e16aa1f78df479f43860a492cf79450e0e8a35838da2a59d5fc08bd63f9a5daf752e7c4b0999f7ac6cdc44419a36f916af40cbf5831e8a8856949
-  languageName: node
-  linkType: hard
-
 "@protobufjs/path@npm:^1.1.2":
   version: 1.1.2
   resolution: "@protobufjs/path@npm:1.1.2"
@@ -11165,9 +11158,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^7.6.1":
-  version: 7.6.1
-  resolution: "protobufjs@npm:7.6.1"
+"protobufjs@npm:^7.6.4":
+  version: 7.6.4
+  resolution: "protobufjs@npm:7.6.4"
   dependencies:
     "@protobufjs/aspromise": ^1.1.2
     "@protobufjs/base64": ^1.1.2
@@ -11175,13 +11168,12 @@ __metadata:
     "@protobufjs/eventemitter": ^1.1.1
     "@protobufjs/fetch": ^1.1.1
     "@protobufjs/float": ^1.0.2
-    "@protobufjs/inquire": ^1.1.2
     "@protobufjs/path": ^1.1.2
     "@protobufjs/pool": ^1.1.0
     "@protobufjs/utf8": ^1.1.1
     "@types/node": ">=13.7.0"
     long: ^5.3.2
-  checksum: d143b02ae73d3d777f7239e1025e7b8a9b6e1234ee7fbcda4f6ca1e06902e0bd019475e8e26710e1e2b127ad4452b35dcec4815330ba2fa957c9c13c52501701
+  checksum: 2cee14aa83c6688bf3c2d80ce9a6b904dfdaf10294fd131c388b94aed8028fc6ad74aea9b56aad4e2db3d278e36e40d5e15ba76925ba846bd654ffef218ee8fc
   languageName: node
   linkType: hard
 
