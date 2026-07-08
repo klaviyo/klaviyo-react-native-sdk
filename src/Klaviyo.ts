@@ -25,4 +25,25 @@ export interface KlaviyoInterface
    * @param apiKey Your public API key
    */
   initialize(apiKey: string): void;
+
+  /**
+   * Enable or disable all Klaviyo SDK logging at runtime.
+   *
+   * Logging is enabled by default. Disabling silences all log output from the
+   * native Klaviyo SDKs on both platforms; re-enabling restores the previous
+   * log verbosity.
+   *
+   * Note: on iOS this does not affect logging from `KlaviyoSwiftExtension`,
+   * which runs in a separate app extension process.
+   *
+   * @param enabled - Whether SDK logging should be enabled
+   */
+  setLoggingEnabled(enabled: boolean): void;
+
+  /**
+   * Retrieve whether Klaviyo SDK logging is currently enabled.
+   *
+   * @param callback - The callback function to handle the response
+   */
+  isLoggingEnabled(callback: (enabled: boolean) => void): void;
 }

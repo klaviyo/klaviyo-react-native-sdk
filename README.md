@@ -47,6 +47,7 @@
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
+  - [SDK Logging](#sdk-logging)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -712,6 +713,35 @@ Klaviyo.unregisterGeofencing();
 ```
 
 After unregistering, the SDK will stop monitoring geofences and will no longer report geofence transition events. You can call `registerGeofencing()` again to resume monitoring.
+
+## SDK Logging
+
+The SDK logs diagnostic information to the system console (Logcat on Android, unified logging on iOS).
+Logging is enabled by default. To silence all Klaviyo SDK log output at runtime, or turn it back on:
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+// Disable all SDK logging
+Klaviyo.setLoggingEnabled(false);
+
+// Re-enable SDK logging
+Klaviyo.setLoggingEnabled(true);
+
+// Read the current logging state
+Klaviyo.isLoggingEnabled((enabled: boolean) => {
+  console.log(`Klaviyo SDK logging enabled: ${enabled}`);
+});
+```
+
+Platform notes:
+
+- **iOS**: The toggle does not affect logging from `KlaviyoSwiftExtension`, which runs in a separate
+  app extension process for rich push notifications.
+- **Android**: Log verbosity can also be configured statically via the `com.klaviyo.core.log_level`
+  manifest metadata tag; see the
+  [Android SDK documentation](https://github.com/klaviyo/klaviyo-android-sdk#troubleshooting) for details.
+  Re-enabling logging at runtime restores the previously configured log level.
 
 ## Troubleshooting
 
