@@ -878,7 +878,50 @@ describe('Klaviyo SDK', () => {
 
       expect(
         NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
-      ).toHaveBeenCalledWith('req-2', { error: 'auth server down' });
+      ).toHaveBeenCalledWith('req-2', {
+        error: 'auth server down',
+        isConnectivityError: false,
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('flags connectivity errors so native can arm retry', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest
+        .fn()
+        .mockRejectedValue(new TypeError('Network request failed'));
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-net' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-net', {
+        error: 'Network request failed',
+        isConnectivityError: true,
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('honors an explicit isConnectivityError marker on the rejection', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new Error('offline'), { isConnectivityError: true })
+        );
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-marker' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-marker', {
+        error: 'offline',
+        isConnectivityError: true,
+      });
       consoleErrorSpy.mockRestore();
     });
 

@@ -44,6 +44,20 @@ export interface KlaviyoAuthTokenApi {
  * Invoked by the native SDK when it needs a token. Returns a `Promise` that
  * resolves with the current end-user's JWT, or rejects if a token cannot be
  * obtained.
+ *
+ * **Connectivity failures:** if the provider rejects because the device is
+ * offline, the SDK can wait for connectivity to return and retry — but only
+ * when it can recognize the failure as a network error. The bridge auto-detects
+ * React Native's `fetch` network failure (`TypeError: Network request failed`)
+ * and `AbortError`. If the host uses a different HTTP client, it can opt in
+ * explicitly by rejecting with an error carrying `isConnectivityError === true`:
+ *
+ * ```ts
+ * throw Object.assign(new Error('offline'), { isConnectivityError: true });
+ * ```
+ *
+ * All other rejections are treated as non-connectivity failures (no
+ * connectivity-driven retry), matching the native SDKs' error classification.
  */
 export type AuthTokenProvider = () => Promise<string>;
 
@@ -95,4 +109,56 @@ export function parseAuthTokenRequestedEvent(
   }
 
   return { id };
+}
+
+/**
+ * Result of classifying a provider rejection before it is sent back to native.
+ */
+export interface ClassifiedProviderError {
+  /** Human-readable failure message (never a token). */
+  message: string;
+  /**
+   * Whether the failure is a connectivity error. When `true`, the native bridge
+   * reconstitutes a typed network error (`URLError` on iOS, `IOException` on
+   * Android) that the SDK's connectivity-driven refresh retry recognizes.
+   */
+  isConnectivityError: boolean;
+}
+
+/**
+ * Classifies a rejected {@link AuthTokenProvider} into a message plus a
+ * connectivity flag for the native bridge.
+ *
+ * A rejection is classified as a connectivity error when either:
+ *  - it carries an explicit `isConnectivityError === true` marker (host opt-in,
+ *    HTTP-client-agnostic), or
+ *  - it matches a well-known React Native network-failure signature: `fetch`
+ *    throwing `TypeError: Network request failed`, or an `AbortError`.
+ *
+ * Everything else is a non-connectivity failure. Token contents are never part
+ * of a rejection and are never logged.
+ */
+export function classifyProviderError(error: unknown): ClassifiedProviderError {
+  const message = error instanceof Error ? error.message : String(error);
+
+  let isConnectivityError = false;
+
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { isConnectivityError?: unknown; name?: unknown };
+    if (err.isConnectivityError === true || err.name === 'AbortError') {
+      isConnectivityError = true;
+    }
+  }
+
+  // React Native's `fetch` throws `TypeError: Network request failed` when the
+  // request cannot reach the network.
+  if (
+    !isConnectivityError &&
+    error instanceof TypeError &&
+    /network request failed/i.test(message)
+  ) {
+    isConnectivityError = true;
+  }
+
+  return { message, isConnectivityError };
 }

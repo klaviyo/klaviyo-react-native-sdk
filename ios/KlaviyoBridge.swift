@@ -174,8 +174,14 @@ public class KlaviyoBridge: NSObject {
     /// Resolves a pending auth token request. Called from JS once the host
     /// provider has produced a token (`jwt`) or failed (`error`). Unknown or
     /// already-resolved IDs are ignored.
+    ///
+    /// When `isConnectivityError` is `true`, the failure is surfaced as a
+    /// `URLError` with a connectivity code so the SDK's connectivity-driven
+    /// refresh retry (which classifies via `URLError.isConnectivityError`)
+    /// recognizes it. Other failures use a generic error, which the SDK treats
+    /// as non-retryable.
     @objc
-    public static func respondToAuthTokenRequest(id: String, jwt: String?, error: String?) {
+    public static func respondToAuthTokenRequest(id: String, jwt: String?, error: String?, isConnectivityError: Bool) {
         authTokenLock.lock()
         let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
         authTokenLock.unlock()
@@ -189,11 +195,18 @@ public class KlaviyoBridge: NSObject {
             continuation.resume(returning: jwt)
         } else {
             let message = error ?? "Auth token provider returned no token"
-            continuation.resume(throwing: NSError(
-                domain: "KlaviyoReactNativeSdk",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            if isConnectivityError {
+                continuation.resume(throwing: URLError(
+                    .notConnectedToInternet,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
+            } else {
+                continuation.resume(throwing: NSError(
+                    domain: "KlaviyoReactNativeSdk",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
+            }
         }
     }
 

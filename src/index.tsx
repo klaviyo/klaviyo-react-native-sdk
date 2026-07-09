@@ -12,6 +12,7 @@ import type { Geofence } from './Geofencing';
 import type { AuthTokenProvider } from './AuthToken';
 import {
   AUTH_TOKEN_REQUESTED_EVENT,
+  classifyProviderError,
   parseAuthTokenRequestedEvent,
 } from './AuthToken';
 import { NativeEventEmitter, NativeModules } from 'react-native';
@@ -206,13 +207,15 @@ export const Klaviyo: KlaviyoInterface = {
           // NOTE: never log token contents; native side owns token logging.
           KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, { jwt });
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
+          const { message, isConnectivityError } = classifyProviderError(error);
           console.error(
             `[Klaviyo] Auth token provider failed for request ${event.id}: ${message}`
           );
+          // Forward the connectivity flag so native can reconstitute a typed
+          // network error the SDK's connectivity-driven retry recognizes.
           KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, {
             error: message,
+            isConnectivityError,
           });
         }
       }

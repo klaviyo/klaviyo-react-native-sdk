@@ -181,7 +181,10 @@ RCT_EXPORT_METHOD(unregisterAuthTokenProvider) {
 RCT_EXPORT_METHOD(respondToAuthTokenRequest: (NSString *)identifier response:(NSDictionary *)response) {
     NSString *jwt = [response[@"jwt"] isKindOfClass:[NSString class]] ? response[@"jwt"] : nil;
     NSString *error = [response[@"error"] isKindOfClass:[NSString class]] ? response[@"error"] : nil;
-    [KlaviyoBridge respondToAuthTokenRequestWithId:identifier jwt:jwt error:error];
+    BOOL isConnectivityError = [response[@"isConnectivityError"] isKindOfClass:[NSNumber class]]
+        ? [response[@"isConnectivityError"] boolValue]
+        : NO;
+    [KlaviyoBridge respondToAuthTokenRequestWithId:identifier jwt:jwt error:error isConnectivityError:isConnectivityError];
 }
 
 @end
