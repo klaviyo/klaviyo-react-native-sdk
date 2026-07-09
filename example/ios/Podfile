@@ -39,6 +39,9 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
+  # TODO(MAGE-874): temporary pin to the rel/5.4.0 branch until KlaviyoSwift 5.4.0
+  # is released — then remove these overrides and restore the podspec version pins
+  # via `./configure-sdk.sh -r --ios=5.4.0`.
   pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
   pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
   pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
@@ -82,6 +85,7 @@ end
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
+  # TODO(MAGE-874): temporary rel/5.4.0 branch pin — see note on the main target above.
   pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
 end
 
