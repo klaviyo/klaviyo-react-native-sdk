@@ -48,6 +48,12 @@ export const Klaviyo: KlaviyoInterface = {
   initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
+  setLoggingEnabled(enabled: boolean): void {
+    KlaviyoReactNativeSdk.setLoggingEnabled(enabled);
+  },
+  isLoggingEnabled(callback: (enabled: boolean) => void): void {
+    KlaviyoReactNativeSdk.isLoggingEnabled(callback);
+  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
