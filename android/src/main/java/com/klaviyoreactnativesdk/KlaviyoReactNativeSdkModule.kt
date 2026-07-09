@@ -19,6 +19,7 @@ import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
+import com.klaviyo.core.auth.AuthTokenProvider
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
@@ -33,6 +34,8 @@ import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
@@ -361,6 +364,76 @@ class KlaviyoReactNativeSdkModule(
       } catch (e: MissingKlaviyoModule) {
         Registry.log.error("Forms module is not available", e)
       }
+    }
+  }
+
+  /**
+   * Pending auth token requests keyed by correlation ID. The native SDK invokes
+   * the provider on a background dispatcher and hands us a [AuthTokenProvider.Callback]
+   * to complete once the JS side responds via [respondToAuthTokenRequest]. The
+   * token itself is never logged; all token logging happens in the native SDK.
+   */
+  private val pendingAuthCallbacks = ConcurrentHashMap<String, AuthTokenProvider.Callback>()
+
+  @ReactMethod
+  fun registerAuthTokenProvider() {
+    try {
+      Klaviyo.registerAuthTokenProvider { callback ->
+        val id = UUID.randomUUID().toString()
+        pendingAuthCallbacks[id] = callback
+        sendEvent(
+          "klaviyo:authTokenRequested",
+          Arguments.createMap().apply { putString("id", id) },
+        )
+      }
+    } catch (e: Exception) {
+      Registry.log.error("Failed to register auth token provider", e)
+    }
+  }
+
+  @ReactMethod
+  fun unregisterAuthTokenProvider() {
+    try {
+      Klaviyo.unregisterAuthTokenProvider()
+    } catch (e: Exception) {
+      Registry.log.error("Failed to unregister auth token provider", e)
+    } finally {
+      // Fail and drop any requests still awaiting a JS response so no callbacks
+      // dangle after the provider is torn down.
+      val abandoned = ArrayList(pendingAuthCallbacks.values)
+      pendingAuthCallbacks.clear()
+      abandoned.forEach {
+        it.onFailure(IllegalStateException("Auth token provider was unregistered"))
+      }
+    }
+  }
+
+  @ReactMethod
+  fun respondToAuthTokenRequest(
+    id: String,
+    response: ReadableMap,
+  ) {
+    val callback = pendingAuthCallbacks.remove(id)
+    if (callback == null) {
+      // Unknown, already-resolved, or timed-out request. Nothing to do.
+      Registry.log.verbose("No pending auth token request for id $id")
+      return
+    }
+
+    val jwt =
+      response
+        .takeIf { it.hasKey("jwt") && it.getType("jwt") == ReadableType.String }
+        ?.getString("jwt")
+
+    if (jwt != null) {
+      callback.onSuccess(jwt)
+    } else {
+      val error =
+        response
+          .takeIf { it.hasKey("error") && it.getType("error") == ReadableType.String }
+          ?.getString("error")
+          ?: "Auth token provider returned no token"
+      callback.onFailure(Throwable(error))
     }
   }
 

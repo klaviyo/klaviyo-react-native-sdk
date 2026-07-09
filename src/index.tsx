@@ -9,6 +9,11 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import type { AuthTokenProvider } from './AuthToken';
+import {
+  AUTH_TOKEN_REQUESTED_EVENT,
+  parseAuthTokenRequestedEvent,
+} from './AuthToken';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -40,6 +45,9 @@ function isLocationAvailable(): boolean {
 
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
+
+// Track active auth token request subscription to prevent duplicate listeners
+let activeAuthTokenSubscription: { remove: () => void } | null = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -173,6 +181,50 @@ export const Klaviyo: KlaviyoInterface = {
       KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
     };
   },
+  registerAuthTokenProvider(provider: AuthTokenProvider): void {
+    // Clean up any existing subscription before re-registering so the new
+    // provider replaces the previous one (matches native SDK semantics).
+    if (activeAuthTokenSubscription) {
+      activeAuthTokenSubscription.remove();
+      activeAuthTokenSubscription = null;
+    }
+
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    activeAuthTokenSubscription = eventEmitter.addListener(
+      AUTH_TOKEN_REQUESTED_EVENT,
+      async (data: Record<string, unknown>) => {
+        const event = parseAuthTokenRequestedEvent(data);
+        if (event === null) {
+          return;
+        }
+
+        try {
+          const jwt = await provider();
+          // NOTE: never log token contents; native side owns token logging.
+          KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, { jwt });
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `[Klaviyo] Auth token provider failed for request ${event.id}: ${message}`
+          );
+          KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, {
+            error: message,
+          });
+        }
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerAuthTokenProvider();
+  },
+  unregisterAuthTokenProvider(): void {
+    activeAuthTokenSubscription?.remove();
+    activeAuthTokenSubscription = null;
+    KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -192,3 +244,4 @@ export type {
 } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
+export type { AuthTokenProvider, KlaviyoAuthTokenApi } from './AuthToken';

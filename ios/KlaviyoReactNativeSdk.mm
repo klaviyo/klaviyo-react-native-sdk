@@ -15,7 +15,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"FormLifecycleEvent"];
+    return @[@"FormLifecycleEvent", @"klaviyo:authTokenRequested"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -162,6 +162,26 @@ RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge unregisterFormLifecycleHandler];
     });
+}
+
+RCT_EXPORT_METHOD(registerAuthTokenProvider) {
+    __weak __typeof__(self) weakSelf = self;
+    [KlaviyoBridge registerAuthTokenProviderWithEmit:^(NSDictionary *body) {
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
+        if (strongSelf) {
+            [strongSelf sendEventWithName:@"klaviyo:authTokenRequested" body:body];
+        }
+    }];
+}
+
+RCT_EXPORT_METHOD(unregisterAuthTokenProvider) {
+    [KlaviyoBridge unregisterAuthTokenProvider];
+}
+
+RCT_EXPORT_METHOD(respondToAuthTokenRequest: (NSString *)identifier response:(NSDictionary *)response) {
+    NSString *jwt = [response[@"jwt"] isKindOfClass:[NSString class]] ? response[@"jwt"] : nil;
+    NSString *error = [response[@"error"] isKindOfClass:[NSString class]] ? response[@"error"] : nil;
+    [KlaviyoBridge respondToAuthTokenRequestWithId:identifier jwt:jwt error:error];
 }
 
 @end

@@ -30,6 +30,9 @@ jest.mock('react-native', () => {
         unregisterFromInAppForms: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
+        registerAuthTokenProvider: jest.fn(),
+        unregisterAuthTokenProvider: jest.fn(),
+        respondToAuthTokenRequest: jest.fn(),
         registerGeofencing: jest.fn(),
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
@@ -833,6 +836,139 @@ describe('Klaviyo SDK', () => {
         expect.stringContaining('missing required field(s): deepLinkUrl')
       );
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('auth token provider', () => {
+    // The event listener is async (awaits the host provider), so tests must
+    // flush the microtask queue after emitting before asserting on the
+    // resulting `respondToAuthTokenRequest` call.
+    const flushPromises = () => new Promise(process.nextTick);
+
+    it('registers the native provider and subscribes to the request event', () => {
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('jwt-123'));
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('invokes the provider and responds with the jwt on success', async () => {
+      const provider = jest.fn().mockResolvedValue('jwt-abc');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-1' });
+      await flushPromises();
+
+      expect(provider).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-1', { jwt: 'jwt-abc' });
+    });
+
+    it('responds with an error message when the provider rejects', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest
+        .fn()
+        .mockRejectedValue(new Error('auth server down'));
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-2' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-2', { error: 'auth server down' });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not log the token contents on success', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('secret-jwt'));
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-3' });
+      await flushPromises();
+
+      for (const spy of [consoleWarnSpy, consoleErrorSpy, consoleLogSpy]) {
+        for (const call of spy.mock.calls) {
+          expect(call.join(' ')).not.toContain('secret-jwt');
+        }
+      }
+      consoleWarnSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('ignores requests with a missing or empty id', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', {});
+      emitNativeEvent('klaviyo:authTokenRequested', { id: '' });
+      await flushPromises();
+
+      expect(provider).not.toHaveBeenCalled();
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid id')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('unregisters the native provider and removes the listener', () => {
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+      mockRemove.mockClear();
+
+      Klaviyo.unregisterAuthTokenProvider();
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops forwarding requests after unregistering', async () => {
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+      Klaviyo.unregisterAuthTokenProvider();
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-4' });
+      await flushPromises();
+
+      expect(provider).not.toHaveBeenCalled();
+    });
+
+    it('replaces the previous listener when re-registering', () => {
+      const provider1 = jest.fn().mockResolvedValue('jwt-1');
+      const provider2 = jest.fn().mockResolvedValue('jwt-2');
+
+      Klaviyo.registerAuthTokenProvider(provider1);
+      mockRemove.mockClear();
+
+      Klaviyo.registerAuthTokenProvider(provider2);
+
+      // The previous subscription is torn down before the new one is added.
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes a request to only the most recently registered provider', async () => {
+      const provider1 = jest.fn().mockResolvedValue('jwt-1');
+      const provider2 = jest.fn().mockResolvedValue('jwt-2');
+
+      Klaviyo.registerAuthTokenProvider(provider1);
+      Klaviyo.registerAuthTokenProvider(provider2);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-5' });
+      await flushPromises();
+
+      expect(provider1).not.toHaveBeenCalled();
+      expect(provider2).toHaveBeenCalledTimes(1);
     });
   });
 });
