@@ -204,44 +204,53 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
       </View>
 
       {outcome.kind === 'customToken' && (
-        <View style={sharedStyles.section}>
-          <SectionHeader title="Custom token" />
-          <View style={styles.secureFieldRow}>
-            <TextInput
-              style={[
-                styles.secureInput,
-                tokenRevealed && styles.secureInputRevealed,
-              ]}
-              value={outcome.token}
-              onChangeText={(text) =>
-                setDraft((prev) =>
-                  prev && prev.outcome.kind === 'customToken'
-                    ? { ...prev, outcome: { kind: 'customToken', token: text } }
-                    : prev
-                )
-              }
-              secureTextEntry={!tokenRevealed}
-              autoCapitalize="none"
-              autoCorrect={false}
-              multiline
-              placeholder="Paste a JWT"
-              placeholderTextColor={colors.placeholderText}
-            />
-            <TouchableOpacity
-              onPress={() => setTokenRevealed((prev) => !prev)}
-              hitSlop={8}
-            >
-              <Text style={styles.eyeToggle}>
-                {tokenRevealed ? 'Hide' : 'Show'}
-              </Text>
-            </TouchableOpacity>
+        <>
+          <View style={sharedStyles.section}>
+            <SectionHeader title="Custom token" />
+            <View style={styles.secureFieldRow}>
+              <TextInput
+                style={[
+                  styles.secureInput,
+                  tokenRevealed && styles.secureInputRevealed,
+                ]}
+                value={outcome.token}
+                onChangeText={(text) =>
+                  setDraft((prev) =>
+                    prev && prev.outcome.kind === 'customToken'
+                      ? {
+                          ...prev,
+                          outcome: { kind: 'customToken', token: text },
+                        }
+                      : prev
+                  )
+                }
+                secureTextEntry={!tokenRevealed}
+                autoCapitalize="none"
+                autoCorrect={false}
+                multiline
+                placeholder="Paste a JWT"
+                placeholderTextColor={colors.placeholderText}
+              />
+              <TouchableOpacity
+                onPress={() => setTokenRevealed((prev) => !prev)}
+                hitSlop={8}
+              >
+                <Text style={styles.eyeToggle}>
+                  {tokenRevealed ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <TokenLifetimeSummary
-            status={getTokenStatus(outcome.token)}
-            claims={readJwtClaims(outcome.token)}
-            nowSeconds={nowSeconds}
-          />
-        </View>
+
+          <View style={sharedStyles.section}>
+            <SectionHeader title="Token status" />
+            <TokenLifetimeSummary
+              status={getTokenStatus(outcome.token)}
+              claims={readJwtClaims(outcome.token)}
+              nowSeconds={nowSeconds}
+            />
+          </View>
+        </>
       )}
 
       {outcome.kind === 'mockToken' && (
