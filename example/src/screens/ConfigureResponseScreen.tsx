@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -119,6 +119,43 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   // `expEpochMs` so incomplete/in-progress keystrokes aren't clobbered by a
   // re-derived value on every render.
   const [dateInputText, setDateInputText] = useState<string | null>(null);
+
+  // Dependency inputs for the mock-token preview anchor below. Computed with
+  // optional chaining (rather than after the `!draft` early-return) so this
+  // hook always runs, regardless of outcome kind or whether `draft` is null.
+  const draftOutcome = draft?.outcome;
+  const previewMockKind =
+    draftOutcome?.kind === 'mockToken' ? draftOutcome.mockKind : undefined;
+  const previewExpirationMode =
+    draftOutcome?.kind === 'mockToken'
+      ? draftOutcome.expirationMode
+      : undefined;
+  const previewDurationSeconds =
+    draftOutcome?.kind === 'mockToken'
+      ? draftOutcome.durationSeconds
+      : undefined;
+  const previewExpEpochMs =
+    draftOutcome?.kind === 'mockToken' ? draftOutcome.expEpochMs : undefined;
+
+  // Freezes the mock-token preview's "issued at" instant so the live
+  // countdown actually counts down. Recomputing `Date.now()` on every render
+  // (the screen re-renders every second via `nowMs`) would make a
+  // Duration-mode preview's `exp` chase "now + durationSeconds" forever —
+  // "Expires" would never look fixed and "Expires in"/"Refresh in" would
+  // never decrease. This only re-anchors when the user actually changes the
+  // mock-token settings, not on every tick. (Date.now() intentionally
+  // doesn't read the deps below -- they exist purely to force a fresh
+  // anchor when the user changes a mock-token setting.)
+  const previewAnchorMs = useMemo(
+    () => Date.now(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      previewMockKind,
+      previewExpirationMode,
+      previewDurationSeconds,
+      previewExpEpochMs,
+    ]
+  );
 
   useLayoutEffect(() => {
     const handleDone = () => {
@@ -338,10 +375,11 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
               <TokenLifetimeSummary
                 status="well-formed"
                 claims={{
-                  iat: Math.floor(Date.now() / 1000),
+                  iat: Math.floor(previewAnchorMs / 1000),
                   exp:
                     outcome.expirationMode === 'duration'
-                      ? Math.floor(Date.now() / 1000) + outcome.durationSeconds
+                      ? Math.floor(previewAnchorMs / 1000) +
+                        outcome.durationSeconds
                       : Math.floor(outcome.expEpochMs / 1000),
                 }}
                 nowSeconds={nowSeconds}
