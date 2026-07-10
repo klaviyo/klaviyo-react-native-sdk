@@ -19,22 +19,33 @@ export interface MockJwtOptions {
   sub?: string;
 }
 
+// Bumped on every mint so two calls with the same iat/exp (e.g. a repeating
+// response with 0s delay, where two provider calls land in the same
+// wall-clock second) still produce distinct token strings via a unique
+// `jti` claim, rather than an identical payload -> identical JWT.
+let mockJwtSequence = 0;
+
 /**
  * Mints a structurally-valid but deliberately **unsigned** mock JWT
- * (`alg: HS256`, `sub`, `iat`, `exp`, dummy signature).
+ * (`alg: HS256`, `sub`, `iat`, `exp`, `jti`, dummy signature).
  *
  * Used by the Configure Response screen's "Return mock token" outcome so
- * testers can exercise the SDK without needing a real signed token.
+ * testers can exercise the SDK without needing a real signed token. Each
+ * call mints a distinct token (unique `jti`), even when called repeatedly
+ * with the same `iat`/`exp` -- e.g. a repeating last-row response, where
+ * every subsequent provider call reuses the same scripted duration/date.
  */
 export function mintMockJwt({
   exp,
   iat = Math.floor(Date.now() / 1000),
   sub = 'example-app-mock-user',
 }: MockJwtOptions): string {
+  mockJwtSequence += 1;
   const payload = {
     sub,
     iat: Math.round(iat),
     exp: Math.round(exp),
+    jti: `mock-${mockJwtSequence}-${Date.now().toString(36)}`,
   };
 
   const header = base64UrlEncodeFromLatin1(JSON.stringify(MOCK_JWT_HEADER));
