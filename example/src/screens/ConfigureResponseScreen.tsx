@@ -122,13 +122,16 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   const [dateInputText, setDateInputText] = useState<string | null>(null);
 
   useLayoutEffect(() => {
+    // Closes directly over the current `draft` (this effect re-runs on every
+    // `draft` change, so it's always the latest) rather than reading it back
+    // out via a `setDraft` updater-as-getter. The latter is unreliable here:
+    // React doesn't guarantee the updater callback runs before the very next
+    // line (`navigation.goBack()`), so `auth.updateResponse` could lose the
+    // race with the navigation and the edit would silently not commit.
     const handleDone = () => {
-      setDraft((current) => {
-        if (current) {
-          auth.updateResponse(current.id, current);
-        }
-        return current;
-      });
+      if (draft) {
+        auth.updateResponse(draft.id, draft);
+      }
       navigation.goBack();
     };
 
