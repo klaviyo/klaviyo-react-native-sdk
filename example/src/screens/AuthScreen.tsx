@@ -93,7 +93,12 @@ export function AuthScreen() {
 
       {/* 2. Provider responses */}
       <View style={sharedStyles.section}>
-        <SectionHeader title="Provider responses" />
+        <SectionHeader
+          title="Provider responses"
+          actionIcon={'+'}
+          actionAccessibilityLabel="Add response"
+          onActionPress={auth.addResponse}
+        />
         {auth.responses.map((response, index) => {
           const served = auth.isServed(response.id);
           const locked = isResponseLocked(index, auth.responses.length, served);
@@ -167,11 +172,6 @@ export function AuthScreen() {
             </View>
           );
         })}
-        <ActionButton
-          title="Add response"
-          onPress={auth.addResponse}
-          withTopSpacing
-        />
       </View>
 
       {/* 3. Current token */}
