@@ -25,31 +25,79 @@ import {
   type ProviderResponse,
 } from '../hooks/useAuth';
 import { useNowMs } from '../hooks/useNowMs';
-import { readJwtClaims, getTokenStatus } from '../auth/jwt';
+import { readJwtClaims, getTokenStatus, type TokenStatus } from '../auth/jwt';
 
-function getResponseSubtitle(response: ProviderResponse): string {
-  const parts: string[] = [];
+/**
+ * Provider-response row subtitle: "Well-formed"/"Malformed" (green/red),
+ * plus for well-formed tokens " | exp: <±seconds from iat>s" (secondary
+ * color when the expiry is at/after iat, red with a leading "-" when it's
+ * before iat — e.g. the mock-token "already expired" preset), plus an
+ * optional " · delay: Xs" suffix. Network/other-error outcomes show no
+ * status text (they don't have a token), matching the row's "outcome
+ * label" already covering that case.
+ */
+function ResponseSubtitle({
+  response,
+  nowSeconds,
+}: {
+  response: ProviderResponse;
+  nowSeconds: number;
+}) {
+  const outcome = response.outcome;
+  const hasTokenOutcome =
+    outcome.kind === 'customToken' || outcome.kind === 'mockToken';
 
-  if (response.outcome.kind === 'customToken') {
-    const status = getTokenStatus(response.outcome.token);
-    parts.push(
-      status === 'well-formed'
-        ? 'Well-formed'
-        : status === 'malformed'
-          ? 'Malformed'
-          : '--'
-    );
-  } else if (response.outcome.kind === 'mockToken') {
-    parts.push(
-      response.outcome.mockKind === 'malformed' ? 'Malformed' : 'Well-formed'
-    );
+  let tokenStatus: TokenStatus | null = null;
+  let deltaSeconds: number | null = null;
+
+  if (outcome.kind === 'customToken') {
+    tokenStatus = getTokenStatus(outcome.token);
+    const claims = readJwtClaims(outcome.token);
+    if (claims?.iat != null && claims?.exp != null) {
+      deltaSeconds = Math.round(claims.exp - claims.iat);
+    }
+  } else if (outcome.kind === 'mockToken') {
+    if (outcome.mockKind === 'malformed') {
+      tokenStatus = 'malformed';
+    } else {
+      tokenStatus = 'well-formed';
+      const iat = Math.floor(nowSeconds);
+      const exp =
+        outcome.expirationMode === 'duration'
+          ? iat + outcome.durationSeconds
+          : Math.floor(outcome.expEpochMs / 1000);
+      deltaSeconds = Math.round(exp - iat);
+    }
   }
 
-  if (response.delaySeconds > 0) {
-    parts.push(`delay: ${response.delaySeconds}s`);
-  }
+  const isFutureExpiry = deltaSeconds != null && deltaSeconds >= 0;
+  const hasDelay = response.delaySeconds > 0;
+  const hasAnyContent = hasTokenOutcome || hasDelay;
 
-  return parts.length > 0 ? parts.join(' · ') : '—';
+  return (
+    <Text style={styles.responseRowSubtitle}>
+      {tokenStatus === 'malformed' && (
+        <Text style={styles.errorText}>Malformed</Text>
+      )}
+      {tokenStatus === 'well-formed' && (
+        <>
+          <Text style={styles.statusWellFormed}>Well-formed</Text>
+          {deltaSeconds != null && (
+            <>
+              <Text>{' | exp: '}</Text>
+              <Text style={!isFutureExpiry ? styles.errorText : undefined}>
+                {`${isFutureExpiry ? '+' : '-'}${Math.abs(deltaSeconds)}s`}
+              </Text>
+            </>
+          )}
+        </>
+      )}
+      {tokenStatus === 'empty' && '--'}
+      {hasDelay &&
+        `${hasTokenOutcome ? ' · ' : ''}delay: ${response.delaySeconds}s`}
+      {!hasAnyContent && '—'}
+    </Text>
+  );
 }
 
 /**
@@ -134,9 +182,7 @@ export function AuthScreen() {
                 <Text style={styles.responseRowTitle} numberOfLines={1}>
                   {getOutcomeLabel(response.outcome)}
                 </Text>
-                <Text style={styles.responseRowSubtitle}>
-                  {getResponseSubtitle(response)}
-                </Text>
+                <ResponseSubtitle response={response} nowSeconds={nowSeconds} />
               </TouchableOpacity>
               <View style={styles.responseRowActions}>
                 <TouchableOpacity
@@ -334,6 +380,9 @@ const styles = StyleSheet.create({
 
   errorText: {
     color: colors.destructive,
+  },
+  statusWellFormed: {
+    color: colors.success,
   },
   dimmedText: {
     color: colors.secondaryText,
