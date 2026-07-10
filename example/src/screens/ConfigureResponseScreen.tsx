@@ -245,19 +245,21 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
       )}
 
       {outcome.kind === 'mockToken' && (
-        <View style={sharedStyles.section}>
-          <SectionHeader title="Mock token" />
-          <ToggleButtons
-            leftLabel="Valid token"
-            rightLabel="Malformed token"
-            isLeftActive={outcome.mockKind === 'valid'}
-            onLeftPress={() => updateMockOutcome({ mockKind: 'valid' })}
-            onRightPress={() => updateMockOutcome({ mockKind: 'malformed' })}
-          />
+        <>
+          <View style={sharedStyles.section}>
+            <SectionHeader title="Mock token" />
+            <ToggleButtons
+              leftLabel="Valid token"
+              rightLabel="Malformed token"
+              isLeftActive={outcome.mockKind === 'valid'}
+              onLeftPress={() => updateMockOutcome({ mockKind: 'valid' })}
+              onRightPress={() => updateMockOutcome({ mockKind: 'malformed' })}
+            />
+          </View>
 
           {outcome.mockKind === 'valid' && (
-            <>
-              <View style={styles.spacerSm} />
+            <View style={sharedStyles.section}>
+              <SectionHeader title="Expiration" />
               <ToggleButtons
                 leftLabel="Duration"
                 rightLabel="Date"
@@ -271,7 +273,7 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
               />
 
               {outcome.expirationMode === 'duration' ? (
-                <View style={styles.pillRow}>
+                <View style={[styles.pillRow, styles.spacerSmTop]}>
                   {MOCK_TOKEN_DURATION_PRESETS.map((preset) => {
                     const isActive = outcome.durationSeconds === preset.seconds;
                     return (
@@ -318,8 +320,12 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                   />
                 </View>
               )}
+            </View>
+          )}
 
-              <Text style={styles.previewLabel}>Token lifetime preview</Text>
+          <View style={sharedStyles.section}>
+            <SectionHeader title="Token status" />
+            {outcome.mockKind === 'valid' ? (
               <TokenLifetimeSummary
                 status="well-formed"
                 claims={{
@@ -331,9 +337,15 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                 }}
                 nowSeconds={nowSeconds}
               />
-            </>
-          )}
-        </View>
+            ) : (
+              <TokenLifetimeSummary
+                status="malformed"
+                claims={null}
+                nowSeconds={nowSeconds}
+              />
+            )}
+          </View>
+        </>
       )}
 
       {outcome.kind === 'networkError' && (
@@ -458,8 +470,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
 
-  spacerSm: {
-    height: spacing.sm,
+  spacerSmTop: {
+    marginTop: spacing.sm,
   },
   dateFieldContainer: {
     marginTop: spacing.sm,
@@ -476,12 +488,6 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     color: colors.text,
     fontFamily: Platform.select({ ios: 'Courier', android: 'monospace' }),
-  },
-  previewLabel: {
-    ...typography.label,
-    color: colors.secondaryText,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
   },
 
   helperText: {

@@ -95,7 +95,7 @@ export function AuthScreen() {
       <View style={sharedStyles.section}>
         <SectionHeader
           title="Provider responses"
-          actionIcon={'+'}
+          actionIcon={'➕'}
           actionAccessibilityLabel="Add response"
           onActionPress={auth.addResponse}
         />
@@ -220,12 +220,6 @@ export function AuthScreen() {
             </View>
           ))
         )}
-        <ActionButton
-          title="Clear"
-          onPress={auth.clearLogs}
-          withTopSpacing
-          disabled={auth.logs.length === 0}
-        />
       </View>
 
       <BaseModal
