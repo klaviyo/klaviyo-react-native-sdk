@@ -87,7 +87,7 @@ export function AuthScreen() {
         <Text style={styles.footerText}>
           {auth.providerEnabled
             ? 'Next flip calls Klaviyo.unregisterAuthTokenProvider()'
-            : 'Next flip calls Klaviyo.registerAuthTokenProvider() (registers an eager fetch)'}
+            : 'Next flip calls Klaviyo.registerAuthTokenProvider()'}
         </Text>
       </View>
 
@@ -187,7 +187,13 @@ export function AuthScreen() {
 
       {/* 4. Auth logs */}
       <View style={sharedStyles.section}>
-        <SectionHeader title="Auth logs" />
+        <SectionHeader
+          title="Auth logs"
+          actionIcon={'🗑'}
+          actionAccessibilityLabel="Clear auth logs"
+          actionDisabled={auth.logs.length === 0}
+          onActionPress={auth.clearLogs}
+        />
         <Text style={styles.logsNote}>
           These are the wrapper&apos;s JS-side bridge diagnostics, not the
           native SDK&apos;s own &quot;Auth&quot;-category logs.
