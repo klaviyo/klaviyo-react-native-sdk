@@ -346,6 +346,7 @@ const styles = StyleSheet.create({
   },
   responseRowSubtitle: {
     ...typography.label,
+    fontSize: 12,
     color: colors.secondaryText,
     marginTop: 2,
   },
