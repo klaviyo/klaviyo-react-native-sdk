@@ -228,10 +228,15 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                       : prev
                   )
                 }
+                // `secureTextEntry` is silently ignored by RN when
+                // `multiline` is also true (on both platforms) -- so
+                // multiline is only enabled once revealed, when there's
+                // nothing left to obscure. Hidden, it's a single obscured
+                // line (scrolls horizontally for long tokens).
                 secureTextEntry={!tokenRevealed}
                 autoCapitalize="none"
                 autoCorrect={false}
-                multiline
+                multiline={tokenRevealed}
                 placeholder="Paste a JWT"
                 placeholderTextColor={colors.placeholderText}
               />
