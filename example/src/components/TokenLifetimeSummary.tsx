@@ -12,6 +12,15 @@ interface TokenLifetimeSummaryProps {
   nowSeconds: number;
   /** Shows an info button next to "Refresh in" when provided (MAGE-794's refresh-estimate explainer). */
   onInfoPress?: () => void;
+  /**
+   * Overrides "Expires in" instead of deriving it from `claims.exp - nowSeconds`.
+   * For the Configure Response screen's Duration-mode preview, where the
+   * token's lifetime is fixed relative to whenever "Done" gets tapped (not
+   * to the preview's current render time) — see `fixedRefreshInSeconds`.
+   */
+  fixedExpiresInSeconds?: number;
+  /** Overrides "Refresh in" instead of deriving it from the refresh-target estimate minus `nowSeconds`. */
+  fixedRefreshInSeconds?: number;
 }
 
 /**
@@ -26,14 +35,25 @@ export function TokenLifetimeSummary({
   claims,
   nowSeconds,
   onInfoPress,
+  fixedExpiresInSeconds,
+  fixedRefreshInSeconds,
 }: TokenLifetimeSummaryProps) {
-  const expiresInSeconds = claims?.exp != null ? claims.exp - nowSeconds : null;
+  const expiresInSeconds =
+    fixedExpiresInSeconds !== undefined
+      ? fixedExpiresInSeconds
+      : claims?.exp != null
+        ? claims.exp - nowSeconds
+        : null;
   const refreshTargetSeconds =
     claims?.exp != null && claims?.iat != null
       ? estimateRefreshTarget(claims.iat, claims.exp)
       : null;
   const refreshInSeconds =
-    refreshTargetSeconds != null ? refreshTargetSeconds - nowSeconds : null;
+    fixedRefreshInSeconds !== undefined
+      ? fixedRefreshInSeconds
+      : refreshTargetSeconds != null
+        ? refreshTargetSeconds - nowSeconds
+        : null;
 
   return (
     <View>

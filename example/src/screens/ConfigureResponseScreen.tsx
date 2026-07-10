@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
 import { useNowMs } from '../hooks/useNowMs';
 import { readJwtClaims, getTokenStatus } from '../auth/jwt';
 import { MOCK_TOKEN_DURATION_PRESETS } from '../auth/mockToken';
+import { estimateRefreshTarget } from '../auth/refreshEstimate';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ConfigureResponse'>;
 
@@ -119,43 +120,6 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   // `expEpochMs` so incomplete/in-progress keystrokes aren't clobbered by a
   // re-derived value on every render.
   const [dateInputText, setDateInputText] = useState<string | null>(null);
-
-  // Dependency inputs for the mock-token preview anchor below. Computed with
-  // optional chaining (rather than after the `!draft` early-return) so this
-  // hook always runs, regardless of outcome kind or whether `draft` is null.
-  const draftOutcome = draft?.outcome;
-  const previewMockKind =
-    draftOutcome?.kind === 'mockToken' ? draftOutcome.mockKind : undefined;
-  const previewExpirationMode =
-    draftOutcome?.kind === 'mockToken'
-      ? draftOutcome.expirationMode
-      : undefined;
-  const previewDurationSeconds =
-    draftOutcome?.kind === 'mockToken'
-      ? draftOutcome.durationSeconds
-      : undefined;
-  const previewExpEpochMs =
-    draftOutcome?.kind === 'mockToken' ? draftOutcome.expEpochMs : undefined;
-
-  // Freezes the mock-token preview's "issued at" instant so the live
-  // countdown actually counts down. Recomputing `Date.now()` on every render
-  // (the screen re-renders every second via `nowMs`) would make a
-  // Duration-mode preview's `exp` chase "now + durationSeconds" forever —
-  // "Expires" would never look fixed and "Expires in"/"Refresh in" would
-  // never decrease. This only re-anchors when the user actually changes the
-  // mock-token settings, not on every tick. (Date.now() intentionally
-  // doesn't read the deps below -- they exist purely to force a fresh
-  // anchor when the user changes a mock-token setting.)
-  const previewAnchorMs = useMemo(
-    () => Date.now(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      previewMockKind,
-      previewExpirationMode,
-      previewDurationSeconds,
-      previewExpEpochMs,
-    ]
-  );
 
   useLayoutEffect(() => {
     const handleDone = () => {
@@ -372,18 +336,45 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
           <View style={sharedStyles.section}>
             <SectionHeader title="Token status" />
             {outcome.mockKind === 'valid' ? (
-              <TokenLifetimeSummary
-                status="well-formed"
-                claims={{
-                  iat: Math.floor(previewAnchorMs / 1000),
-                  exp:
-                    outcome.expirationMode === 'duration'
-                      ? Math.floor(previewAnchorMs / 1000) +
-                        outcome.durationSeconds
-                      : Math.floor(outcome.expEpochMs / 1000),
-                }}
-                nowSeconds={nowSeconds}
-              />
+              outcome.expirationMode === 'duration' ? (
+                <>
+                  {/* Duration mode: the real token doesn't exist yet, so
+                      there's nothing to count down. "Expires" instead shows
+                      what it *would* be if "Done" were tapped right now —
+                      it ticks forward with the clock rather than counting
+                      down, and "Expires in"/"Refresh in" reflect the fixed
+                      configured duration, not a countdown against this
+                      preview's render time. */}
+                  <TokenLifetimeSummary
+                    status="well-formed"
+                    claims={{
+                      iat: Math.floor(nowSeconds),
+                      exp: Math.floor(nowSeconds) + outcome.durationSeconds,
+                    }}
+                    nowSeconds={nowSeconds}
+                    fixedExpiresInSeconds={outcome.durationSeconds}
+                    fixedRefreshInSeconds={
+                      outcome.durationSeconds <= 0
+                        ? outcome.durationSeconds
+                        : estimateRefreshTarget(0, outcome.durationSeconds)
+                    }
+                  />
+                  <Text style={styles.durationNote}>
+                    Expiration begins counting from the moment you tap Done —
+                    &quot;Expires&quot; above shows what it would be if you
+                    tapped it right now.
+                  </Text>
+                </>
+              ) : (
+                <TokenLifetimeSummary
+                  status="well-formed"
+                  claims={{
+                    iat: Math.floor(nowSeconds),
+                    exp: Math.floor(outcome.expEpochMs / 1000),
+                  }}
+                  nowSeconds={nowSeconds}
+                />
+              )
             ) : (
               <TokenLifetimeSummary
                 status="malformed"
@@ -540,6 +531,13 @@ const styles = StyleSheet.create({
   helperText: {
     ...typography.body,
     color: colors.secondaryText,
+  },
+  durationNote: {
+    ...typography.label,
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: colors.secondaryText,
+    marginTop: spacing.sm,
   },
 
   delayRow: {
