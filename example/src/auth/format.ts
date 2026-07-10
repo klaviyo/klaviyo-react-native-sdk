@@ -25,3 +25,10 @@ export function formatDurationHms(totalSeconds: number): string {
 export function formatAbsoluteDateTime(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toLocaleString();
 }
+
+/** Formats an absolute instant (seconds since epoch) as local `HH:MM:SS` (24-hour, zero-padded), with no date portion. */
+export function formatTimeOfDay(epochSeconds: number): string {
+  const d = new Date(epochSeconds * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}

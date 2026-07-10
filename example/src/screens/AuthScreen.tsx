@@ -26,15 +26,19 @@ import {
 } from '../hooks/useAuth';
 import { useNowMs } from '../hooks/useNowMs';
 import { readJwtClaims, getTokenStatus, type TokenStatus } from '../auth/jwt';
+import { formatTimeOfDay } from '../auth/format';
 
 /**
  * Provider-response row subtitle: "Well-formed"/"Malformed" (green/red),
- * plus for well-formed tokens " | exp: <±seconds from iat>s" (secondary
- * color when the expiry is at/after iat, red with a leading "-" when it's
- * before iat — e.g. the mock-token "already expired" preset), plus an
- * optional " · delay: Xs" suffix. Network/other-error outcomes show no
- * status text (they don't have a token), matching the row's "outcome
- * label" already covering that case.
+ * plus for well-formed tokens an appended " | exp: ..." (secondary color
+ * when the expiry is at/after iat, red when it's before iat — e.g. the
+ * mock-token "already expired" preset). Custom tokens show the actual
+ * absolute expiration time (`HH:MM:SS`, local time); mock tokens show a
+ * "±seconds from iat" delta instead, since a mock token's absolute exp
+ * isn't fixed until it's actually served (see Configure Response's
+ * Duration-mode note). Also appends an optional " · delay: Xs" suffix.
+ * Network/other-error outcomes show no status text (they don't have a
+ * token), matching the row's "outcome label" already covering that case.
  */
 function ResponseSubtitle({
   response,
@@ -49,12 +53,14 @@ function ResponseSubtitle({
 
   let tokenStatus: TokenStatus | null = null;
   let deltaSeconds: number | null = null;
+  let expDisplayText: string | null = null;
 
   if (outcome.kind === 'customToken') {
     tokenStatus = getTokenStatus(outcome.token);
     const claims = readJwtClaims(outcome.token);
     if (claims?.iat != null && claims?.exp != null) {
       deltaSeconds = Math.round(claims.exp - claims.iat);
+      expDisplayText = formatTimeOfDay(claims.exp);
     }
   } else if (outcome.kind === 'mockToken') {
     if (outcome.mockKind === 'malformed') {
@@ -67,6 +73,8 @@ function ResponseSubtitle({
           ? iat + outcome.durationSeconds
           : Math.floor(outcome.expEpochMs / 1000);
       deltaSeconds = Math.round(exp - iat);
+      const isFuture = deltaSeconds >= 0;
+      expDisplayText = `${isFuture ? '+' : '-'}${Math.abs(deltaSeconds)}s`;
     }
   }
 
@@ -82,11 +90,11 @@ function ResponseSubtitle({
       {tokenStatus === 'well-formed' && (
         <>
           <Text style={styles.statusWellFormed}>Well-formed</Text>
-          {deltaSeconds != null && (
+          {expDisplayText != null && (
             <>
               <Text>{' | exp: '}</Text>
               <Text style={!isFutureExpiry ? styles.errorText : undefined}>
-                {`${isFutureExpiry ? '+' : '-'}${Math.abs(deltaSeconds)}s`}
+                {expDisplayText}
               </Text>
             </>
           )}
