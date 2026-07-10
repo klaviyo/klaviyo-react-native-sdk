@@ -22,8 +22,6 @@ import {
   getOutcomeLabel,
   isResponseLocked,
   canDeleteResponse,
-  canMoveResponseUp,
-  canMoveResponseDown,
   type ProviderResponse,
 } from '../hooks/useAuth';
 import { useNowMs } from '../hooks/useNowMs';
@@ -100,12 +98,6 @@ export function AuthScreen() {
           const served = auth.isServed(response.id);
           const locked = isResponseLocked(index, auth.responses.length, served);
           const canDelete = canDeleteResponse(served);
-          const canMoveUp = canMoveResponseUp(index, auth.firstMovableIndex);
-          const canMoveDown = canMoveResponseDown(
-            index,
-            auth.responses.length,
-            auth.firstMovableIndex
-          );
           const isLast = index === auth.responses.length - 1;
           const isCurrent = auth.currentCallId === response.id;
 
@@ -125,48 +117,23 @@ export function AuthScreen() {
               >
                 <View style={styles.responseRowHeader}>
                   {isCurrent && <View style={styles.currentDot} />}
-                  <Text style={styles.responseRowTitle} numberOfLines={1}>
-                    {`Call ${index + 1}${isLast ? '+' : ''} — ${getOutcomeLabel(response.outcome)}`}
+                  <Text style={styles.callNumberText}>
+                    {`Call ${index + 1}${isLast ? '+' : ''}`}
                   </Text>
                   {isLast && (
                     <View style={styles.repeatsBadge}>
-                      <Text style={styles.repeatsBadgeText}>repeats</Text>
+                      <Text style={styles.repeatsBadgeText}>{'↻ repeats'}</Text>
                     </View>
                   )}
                 </View>
+                <Text style={styles.responseRowTitle} numberOfLines={1}>
+                  {getOutcomeLabel(response.outcome)}
+                </Text>
                 <Text style={styles.responseRowSubtitle}>
                   {getResponseSubtitle(response)}
                 </Text>
               </TouchableOpacity>
               <View style={styles.responseRowActions}>
-                <TouchableOpacity
-                  disabled={!canMoveUp}
-                  onPress={() => auth.moveResponseUp(response.id)}
-                  hitSlop={8}
-                >
-                  <Text
-                    style={[
-                      styles.actionIcon,
-                      !canMoveUp && styles.actionIconDisabled,
-                    ]}
-                  >
-                    {'▲'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={!canMoveDown}
-                  onPress={() => auth.moveResponseDown(response.id)}
-                  hitSlop={8}
-                >
-                  <Text
-                    style={[
-                      styles.actionIcon,
-                      !canMoveDown && styles.actionIconDisabled,
-                    ]}
-                  >
-                    {'▼'}
-                  </Text>
-                </TouchableOpacity>
                 <TouchableOpacity
                   disabled={locked}
                   onPress={() => auth.duplicateResponse(response.id)}
@@ -312,6 +279,7 @@ const styles = StyleSheet.create({
   responseRowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 2,
   },
   currentDot: {
     width: 8,
@@ -320,8 +288,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     marginRight: spacing.xs,
   },
+  callNumberText: {
+    fontSize: 12,
+    color: colors.secondaryText,
+  },
   responseRowTitle: {
     ...typography.body,
+    fontWeight: '600',
     color: colors.text,
     flexShrink: 1,
   },

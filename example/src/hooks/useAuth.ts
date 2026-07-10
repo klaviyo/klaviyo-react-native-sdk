@@ -134,7 +134,7 @@ export function getOutcomeKindLabel(kind: ProviderOutcome['kind']): string {
 }
 
 // ---------------------------------------------------------------------------
-// Reorder / lock helpers (exported for reuse by the Auth screen's row UI)
+// Lock helpers (exported for reuse by the Auth screen's row UI)
 // ---------------------------------------------------------------------------
 
 /**
@@ -166,37 +166,6 @@ export function isResponseLocked(
 /** Cannot delete a response that has already occurred — including the last row. */
 export function canDeleteResponse(served: boolean): boolean {
   return !served;
-}
-
-/**
- * First index that is not part of the served (locked) prefix — mirrors the
- * iOS reference's `firstMovable` used to restrict reordering to the
- * not-yet-served region. Returns `responses.length` if everything is served.
- */
-export function getFirstMovableIndex(
-  responses: readonly ProviderResponse[],
-  providerEnabled: boolean,
-  servedIds: ReadonlySet<string>
-): number {
-  const idx = responses.findIndex(
-    (r) => !isServedEffective(r.id, providerEnabled, servedIds)
-  );
-  return idx === -1 ? responses.length : idx;
-}
-
-export function canMoveResponseUp(
-  index: number,
-  firstMovable: number
-): boolean {
-  return index > firstMovable;
-}
-
-export function canMoveResponseDown(
-  index: number,
-  total: number,
-  firstMovable: number
-): boolean {
-  return index >= firstMovable && index < total - 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -495,54 +464,6 @@ function deleteResponse(id: string): void {
   setResponses(state.responses.filter((r) => r.id !== id));
 }
 
-function moveResponseUp(id: string): void {
-  const idx = state.responses.findIndex((r) => r.id === id);
-  if (idx === -1) {
-    return;
-  }
-  const firstMovable = getFirstMovableIndex(
-    state.responses,
-    state.providerEnabled,
-    state.servedIds
-  );
-  if (!canMoveResponseUp(idx, firstMovable)) {
-    return;
-  }
-  const next = [...state.responses];
-  const above = next[idx - 1];
-  const current = next[idx];
-  if (!above || !current) {
-    return;
-  }
-  next[idx - 1] = current;
-  next[idx] = above;
-  setResponses(next);
-}
-
-function moveResponseDown(id: string): void {
-  const idx = state.responses.findIndex((r) => r.id === id);
-  if (idx === -1) {
-    return;
-  }
-  const firstMovable = getFirstMovableIndex(
-    state.responses,
-    state.providerEnabled,
-    state.servedIds
-  );
-  if (!canMoveResponseDown(idx, state.responses.length, firstMovable)) {
-    return;
-  }
-  const next = [...state.responses];
-  const below = next[idx + 1];
-  const current = next[idx];
-  if (!below || !current) {
-    return;
-  }
-  next[idx + 1] = current;
-  next[idx] = below;
-  setResponses(next);
-}
-
 function updateResponse(id: string, next: ProviderResponse): void {
   setResponses(state.responses.map((r) => (r.id === id ? next : r)));
 }
@@ -572,16 +493,6 @@ export function useAuth() {
     [snapshot.responses]
   );
 
-  const firstMovableIndex = useMemo(
-    () =>
-      getFirstMovableIndex(
-        snapshot.responses,
-        snapshot.providerEnabled,
-        snapshot.servedIds
-      ),
-    [snapshot.responses, snapshot.providerEnabled, snapshot.servedIds]
-  );
-
   return {
     providerEnabled: snapshot.providerEnabled,
     responses: snapshot.responses,
@@ -594,13 +505,10 @@ export function useAuth() {
     logs: visibleLogs,
     isServed,
     getResponse,
-    firstMovableIndex,
     toggleProvider,
     addResponse,
     duplicateResponse,
     deleteResponse,
-    moveResponseUp,
-    moveResponseDown,
     updateResponse,
     clearLogs,
   };
