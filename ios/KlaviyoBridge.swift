@@ -176,6 +176,30 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func unregisterAuthTokenProvider() {
         KlaviyoSDK().unregisterAuthTokenProvider()
+        // Defense-in-depth + parity with Android: proactively fail any pending
+        // requests. The SDK's unregister cancels the in-flight fetch (which
+        // trips the `onCancel` above), but draining here doesn't rely on that
+        // cross-module behavior. The lock-guarded remove keeps resolution
+        // exactly-once — whichever path claims a continuation first wins.
+        failAllPendingAuthTokenRequests(reason: "Auth token provider was unregistered")
+    }
+
+    private static func failAllPendingAuthTokenRequests(reason: String) {
+        authTokenLock.lock()
+        let pending = pendingAuthTokenRequests
+        pendingAuthTokenRequests.removeAll()
+        authTokenLock.unlock()
+        for (_, continuation) in pending {
+            continuation.resume(throwing: authTokenError(reason))
+        }
+    }
+
+    private static func authTokenError(_ message: String) -> NSError {
+        NSError(
+            domain: "KlaviyoReactNativeSdk",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
     }
 
     /// Resolves a pending auth token request. Called from JS once the host
@@ -208,11 +232,7 @@ public class KlaviyoBridge: NSObject {
                     userInfo: [NSLocalizedDescriptionKey: message]
                 ))
             } else {
-                continuation.resume(throwing: NSError(
-                    domain: "KlaviyoReactNativeSdk",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: message]
-                ))
+                continuation.resume(throwing: authTokenError(message))
             }
         }
     }

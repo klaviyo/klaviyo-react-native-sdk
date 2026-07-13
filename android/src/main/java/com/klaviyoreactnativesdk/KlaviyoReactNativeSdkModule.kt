@@ -52,7 +52,7 @@ class KlaviyoReactNativeSdkModule(
   private fun sendEvent(
     eventName: String,
     params: WritableMap?,
-  ) {
+  ): Boolean {
     // Form lifecycle callbacks fire from the native SDK and can race the
     // host Activity/Process being torn down (background → low-memory kill,
     // config change, deep-link launch from CTA, dev-mode HMR/fast-refresh).
@@ -62,15 +62,20 @@ class KlaviyoReactNativeSdkModule(
     // Using `hasActiveCatalystInstance` (deprecated alias of
     // `hasActiveReactInstance`) for broader peer-dep range — the SDK's
     // peerDependencies allow any react-native version.
-    if (!reactContext.hasActiveCatalystInstance()) return
-    try {
+    // Returns whether the event was actually emitted, so callers that must
+    // guarantee delivery (e.g. auth-token requests awaiting a JS response) can
+    // fail fast when the bridge is unavailable rather than hang.
+    if (!reactContext.hasActiveCatalystInstance()) return false
+    return try {
       reactContext
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         .emit(eventName, params)
+      true
     } catch (e: Exception) {
       // TOCTOU race: catalyst instance was alive at the check above but is
       // being torn down by the time we call. Drop the event quietly.
       Registry.log.error("Failed to emit $eventName: catalyst instance unavailable", e)
+      false
     }
   }
 
@@ -382,10 +387,19 @@ class KlaviyoReactNativeSdkModule(
       Klaviyo.registerAuthTokenProvider { callback ->
         val id = UUID.randomUUID().toString()
         pendingAuthCallbacks[id] = callback
-        sendEvent(
-          "klaviyo:authTokenRequested",
-          Arguments.createMap().apply { putString("id", id) },
-        )
+        val emitted =
+          sendEvent(
+            "klaviyo:authTokenRequested",
+            Arguments.createMap().apply { putString("id", id) },
+          )
+        if (!emitted) {
+          // The JS bridge is unavailable (catalyst torn down), so no response
+          // will ever arrive. Fail fast instead of leaving the callback pending
+          // until the native SDK's timeout, and don't leak the map entry.
+          pendingAuthCallbacks.remove(id)?.onFailure(
+            IllegalStateException("Unable to reach the JS auth token provider (bridge unavailable)"),
+          )
+        }
       }
     } catch (e: Exception) {
       Registry.log.error("Failed to register auth token provider", e)
