@@ -145,7 +145,7 @@ public class KlaviyoBridge: NSObject {
     /// The token itself never crosses through here in a loggable form and is
     /// never logged; all token logging happens in the native SDK.
     @objc
-    public static func registerAuthTokenProvider(emit: @escaping @Sendable ([String: Any]) -> Void) {
+    public static func registerAuthTokenProvider(emit: @escaping @Sendable ([String: Any]) -> Bool) {
         KlaviyoSDK().registerAuthTokenProvider { () async throws -> String in
             let id = UUID().uuidString
             return try await withTaskCancellationHandler {
@@ -153,7 +153,17 @@ public class KlaviyoBridge: NSObject {
                     authTokenLock.lock()
                     pendingAuthTokenRequests[id] = continuation
                     authTokenLock.unlock()
-                    emit(["id": id])
+                    if !emit(["id": id]) {
+                        // The JS bridge is unavailable (module deallocated), so
+                        // no response will arrive. Fail fast instead of waiting
+                        // for the SDK timeout, and evict so nothing leaks.
+                        authTokenLock.lock()
+                        let pending = pendingAuthTokenRequests.removeValue(forKey: id)
+                        authTokenLock.unlock()
+                        pending?.resume(throwing: authTokenError(
+                            "Unable to reach the JS auth token provider (bridge unavailable)"
+                        ))
+                    }
                 }
             } onCancel: {
                 // The SDK cancels the provider task on timeout. Resolve the

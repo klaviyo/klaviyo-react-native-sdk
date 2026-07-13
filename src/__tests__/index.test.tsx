@@ -984,7 +984,14 @@ describe('Klaviyo SDK', () => {
     it('unregisters the native provider and removes the listener', () => {
       const provider = jest.fn().mockResolvedValue('jwt');
       Klaviyo.registerAuthTokenProvider(provider);
+      // Clear counts from registration (which may tear down a leftover
+      // subscription from a prior test) so we assert only the explicit
+      // unregister call below.
       mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterAuthTokenProvider as jest.Mock
+      ).mockClear();
 
       Klaviyo.unregisterAuthTokenProvider();
 
@@ -1011,11 +1018,19 @@ describe('Klaviyo SDK', () => {
 
       Klaviyo.registerAuthTokenProvider(provider1);
       mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterAuthTokenProvider as jest.Mock
+      ).mockClear();
 
       Klaviyo.registerAuthTokenProvider(provider2);
 
-      // The previous subscription is torn down before the new one is added.
+      // The previous subscription is torn down before the new one is added,
+      // and the native side is unregistered so pending requests are drained.
       expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('routes a request to only the most recently registered provider', async () => {

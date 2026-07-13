@@ -184,9 +184,13 @@ export const Klaviyo: KlaviyoInterface = {
   },
   registerAuthTokenProvider(provider: AuthTokenProvider): void {
     // Clean up any existing subscription before re-registering so the new
-    // provider replaces the previous one (matches native SDK semantics).
+    // provider replaces the previous one. Mirror the native teardown done on
+    // re-registration for form lifecycle handlers: also unregister on the
+    // native side so pending token requests are drained and a prior provider's
+    // in-flight handler can't resolve a stale request.
     if (activeAuthTokenSubscription) {
       activeAuthTokenSubscription.remove();
+      KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
       activeAuthTokenSubscription = null;
     }
 

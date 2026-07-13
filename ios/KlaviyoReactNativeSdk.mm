@@ -166,11 +166,15 @@ RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
 
 RCT_EXPORT_METHOD(registerAuthTokenProvider) {
     __weak __typeof__(self) weakSelf = self;
-    [KlaviyoBridge registerAuthTokenProviderWithEmit:^(NSDictionary *body) {
+    [KlaviyoBridge registerAuthTokenProviderWithEmit:^BOOL(NSDictionary *body) {
         __strong __typeof__(weakSelf) strongSelf = weakSelf;
-        if (strongSelf) {
-            [strongSelf sendEventWithName:@"klaviyo:authTokenRequested" body:body];
+        if (strongSelf == nil) {
+            // Module deallocated — the event can't be delivered to JS, so
+            // report failure to emit and let the bridge fail the request fast.
+            return NO;
         }
+        [strongSelf sendEventWithName:@"klaviyo:authTokenRequested" body:body];
+        return YES;
     }];
 }
 
