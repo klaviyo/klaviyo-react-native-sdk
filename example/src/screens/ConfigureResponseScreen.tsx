@@ -53,8 +53,8 @@ function createOutcomeOfKind(kind: ProviderOutcome['kind']): ProviderOutcome {
         kind: 'mockToken',
         mockKind: 'valid',
         expirationMode: 'duration',
-        durationSeconds: 90,
-        expEpochMs: Date.now() + 90_000,
+        durationSeconds: 45,
+        expEpochMs: Date.now() + 45_000,
       };
     case 'networkError':
       return { kind: 'networkError' };
