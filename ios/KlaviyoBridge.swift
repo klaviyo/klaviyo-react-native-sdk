@@ -158,6 +158,13 @@ public class KlaviyoBridge: NSObject {
             } onCancel: {
                 // The SDK cancels the provider task on timeout. Resolve the
                 // continuation with cancellation and evict it so nothing leaks.
+                //
+                // If cancellation lands in the narrow window before the
+                // operation stores the continuation, this finds nothing to
+                // remove (a safe no-op) and the operation still stores + emits
+                // afterward. That only costs a spurious `authTokenRequested`
+                // event: the SDK re-checks cancellation after the provider
+                // returns and discards the stale token before caching it.
                 authTokenLock.lock()
                 let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
                 authTokenLock.unlock()

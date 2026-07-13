@@ -32,8 +32,10 @@ export interface KlaviyoAuthTokenApi {
    * Detaches a previously-registered auth token provider — e.g. on user logout.
    *
    * Forwards to the native SDK, which clears the provider reference and tears
-   * down all associated token state (cached token, scheduled refresh, in-flight
-   * fetch). Re-registering after unregister works normally.
+   * down its own token state (cached token, scheduled refresh, and the native
+   * side of any in-flight fetch). A host `provider()` call that is already
+   * running is not aborted — it runs to completion and its late response is
+   * ignored. Re-registering after unregister works normally.
    */
   unregisterAuthTokenProvider(): void;
 }
@@ -129,36 +131,40 @@ export interface ClassifiedProviderError {
  * Classifies a rejected {@link AuthTokenProvider} into a message plus a
  * connectivity flag for the native bridge.
  *
- * A rejection is classified as a connectivity error when either:
- *  - it carries an explicit `isConnectivityError === true` marker (host opt-in,
- *    HTTP-client-agnostic), or
- *  - it matches a well-known React Native network-failure signature: `fetch`
- *    throwing `TypeError: Network request failed`, or an `AbortError`.
+ * Classification order:
+ *  - An explicit boolean `isConnectivityError` marker on the error is
+ *    authoritative in both directions — `true` forces connectivity, `false`
+ *    opts out — regardless of the heuristics below (HTTP-client-agnostic).
+ *  - Otherwise, well-known React Native network-failure signatures are
+ *    auto-detected: an `AbortError`, or `fetch` throwing
+ *    `TypeError: Network request failed`.
+ *  - Everything else is a non-connectivity failure.
  *
- * Everything else is a non-connectivity failure. Token contents are never part
- * of a rejection and are never logged.
+ * Token contents are never part of a rejection and are never logged.
  */
 export function classifyProviderError(error: unknown): ClassifiedProviderError {
   const message = error instanceof Error ? error.message : String(error);
 
-  let isConnectivityError = false;
-
+  // An explicit boolean marker wins over the auto-detect heuristics.
   if (typeof error === 'object' && error !== null) {
-    const err = error as { isConnectivityError?: unknown; name?: unknown };
-    if (err.isConnectivityError === true || err.name === 'AbortError') {
-      isConnectivityError = true;
+    const marker = (error as { isConnectivityError?: unknown })
+      .isConnectivityError;
+    if (typeof marker === 'boolean') {
+      return { message, isConnectivityError: marker };
     }
   }
 
+  const isAbortError =
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'AbortError';
   // React Native's `fetch` throws `TypeError: Network request failed` when the
   // request cannot reach the network.
-  if (
-    !isConnectivityError &&
-    error instanceof TypeError &&
-    /network request failed/i.test(message)
-  ) {
-    isConnectivityError = true;
-  }
+  const isFetchNetworkFailure =
+    error instanceof TypeError && /network request failed/i.test(message);
 
-  return { message, isConnectivityError };
+  return {
+    message,
+    isConnectivityError: isAbortError || isFetchNetworkFailure,
+  };
 }

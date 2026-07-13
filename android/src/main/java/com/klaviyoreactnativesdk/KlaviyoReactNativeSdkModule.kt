@@ -400,11 +400,13 @@ class KlaviyoReactNativeSdkModule(
       Registry.log.error("Failed to unregister auth token provider", e)
     } finally {
       // Fail and drop any requests still awaiting a JS response so no callbacks
-      // dangle after the provider is torn down.
-      val abandoned = ArrayList(pendingAuthCallbacks.values)
-      pendingAuthCallbacks.clear()
-      abandoned.forEach {
-        it.onFailure(IllegalStateException("Auth token provider was unregistered"))
+      // dangle after the provider is torn down. Remove-then-fail per key so a
+      // concurrent respondToAuthTokenRequest can't also resolve the same
+      // callback (preserves the callback's "invoke exactly once" contract).
+      pendingAuthCallbacks.keys.toList().forEach { id ->
+        pendingAuthCallbacks.remove(id)?.onFailure(
+          IllegalStateException("Auth token provider was unregistered"),
+        )
       }
     }
   }

@@ -204,6 +204,11 @@ export const Klaviyo: KlaviyoInterface = {
 
         try {
           const jwt = await provider();
+          if (typeof jwt !== 'string' || jwt.length === 0) {
+            // Route an empty / non-string resolution through the failure path
+            // so native gets a clear signal rather than a bogus "success".
+            throw new Error('Auth token provider resolved without a token');
+          }
           // NOTE: never log token contents; native side owns token logging.
           KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, { jwt });
         } catch (error) {

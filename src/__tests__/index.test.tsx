@@ -866,6 +866,24 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalledWith('req-1', { jwt: 'jwt-abc' });
     });
 
+    it('routes an empty-string resolution through the failure path', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest.fn().mockResolvedValue('');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-empty' });
+      await flushPromises();
+
+      const call = (
+        NativeModules.KlaviyoReactNativeSdk
+          .respondToAuthTokenRequest as jest.Mock
+      ).mock.calls[0];
+      expect(call[0]).toBe('req-empty');
+      expect(call[1]).not.toHaveProperty('jwt');
+      expect(call[1].error).toEqual(expect.stringContaining('without a token'));
+      consoleErrorSpy.mockRestore();
+    });
+
     it('responds with an error message when the provider rejects', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       const provider = jest

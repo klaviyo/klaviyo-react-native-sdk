@@ -127,6 +127,16 @@ describe('classifyProviderError', () => {
     expect(classifyProviderError(error).isConnectivityError).toBe(false);
   });
 
+  it('lets an explicit false marker opt out of auto-detection', () => {
+    // A fetch-style network failure that the host explicitly marks as
+    // non-connectivity must be honored (explicit boolean wins).
+    const error = Object.assign(new TypeError('Network request failed'), {
+      isConnectivityError: false,
+    });
+
+    expect(classifyProviderError(error).isConnectivityError).toBe(false);
+  });
+
   it('does not classify an unrelated error as connectivity', () => {
     expect(
       classifyProviderError(new Error('HTTP 500')).isConnectivityError
