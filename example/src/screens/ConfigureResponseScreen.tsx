@@ -170,6 +170,11 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   }
 
   function selectOutcomeKind(kind: ProviderOutcome['kind']) {
+    // Tapping the already-active outcome is a no-op — recreating the outcome or
+    // clearing buffers here would discard in-progress token/expiration edits.
+    if (draft?.outcome.kind === kind) {
+      return;
+    }
     // Clear the Date-mode text buffer so switching away and back to
     // mockToken -> Date shows the freshly-initialized expiry rather than a
     // stale string from the previous outcome.
