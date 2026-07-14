@@ -303,12 +303,20 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                 leftLabel="Duration"
                 rightLabel="Date"
                 isLeftActive={outcome.expirationMode === 'duration'}
-                onLeftPress={() =>
-                  updateMockOutcome({ expirationMode: 'duration' })
-                }
-                onRightPress={() =>
-                  updateMockOutcome({ expirationMode: 'date' })
-                }
+                onLeftPress={() => {
+                  setDateInputText(null);
+                  updateMockOutcome({ expirationMode: 'duration' });
+                }}
+                onRightPress={() => {
+                  // Seed the absolute expiry from the current duration so the
+                  // Date field reflects what was just configured in Duration
+                  // mode, rather than a stale expEpochMs that Done would serve.
+                  setDateInputText(null);
+                  updateMockOutcome({
+                    expirationMode: 'date',
+                    expEpochMs: Date.now() + outcome.durationSeconds * 1000,
+                  });
+                }}
               />
 
               {outcome.expirationMode === 'duration' ? (
