@@ -68,10 +68,18 @@ function createOutcomeOfKind(kind: ProviderOutcome['kind']): ProviderOutcome {
  * `navigation.setOptions`) so the header-right *component type* stays
  * stable across renders — only the `onPress` closure changes.
  */
-function HeaderDoneButton({ onPress }: { onPress: () => void }) {
+function HeaderDoneButton({
+  onPress,
+  disabled,
+}: {
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <TouchableOpacity onPress={onPress} hitSlop={8}>
-      <Text style={styles.doneButton}>Done</Text>
+    <TouchableOpacity onPress={onPress} hitSlop={8} disabled={disabled}>
+      <Text style={[styles.doneButton, disabled && styles.doneButtonDisabled]}>
+        Done
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -133,6 +141,18 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   // re-derived value on every render.
   const [dateInputText, setDateInputText] = useState<string | null>(null);
 
+  // In mock-token Date mode, `expEpochMs` only updates when the field parses,
+  // so a cleared/partial/invalid entry would otherwise let Done commit the
+  // previous (stale) expiry that no longer matches the visible input. Detect
+  // that state so we can block Done until it's corrected.
+  const draftOutcome = draft?.outcome;
+  const dateInputInvalid =
+    draftOutcome?.kind === 'mockToken' &&
+    draftOutcome.mockKind === 'valid' &&
+    draftOutcome.expirationMode === 'date' &&
+    dateInputText != null &&
+    parseDateTimeLocalInputValue(dateInputText) === null;
+
   useLayoutEffect(() => {
     // Closes directly over the current `draft` (this effect re-runs on every
     // `draft` change, so it's always the latest) rather than reading it back
@@ -141,6 +161,11 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
     // line (`navigation.goBack()`), so `auth.updateResponse` could lose the
     // race with the navigation and the edit would silently not commit.
     const handleDone = () => {
+      // Guard against committing a stale expiry when the visible date field is
+      // invalid (Done is also disabled in this state, but guard defensively).
+      if (dateInputInvalid) {
+        return;
+      }
       if (draft) {
         auth.updateResponse(draft.id, draft);
       }
@@ -153,11 +178,14 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
       // can close over the latest `handleDone`, but the component it
       // renders (`HeaderDoneButton`) is a stable, module-scope component.
       // eslint-disable-next-line react/no-unstable-nested-components
-      headerRight: () => <HeaderDoneButton onPress={handleDone} />,
+      headerRight: () => (
+        <HeaderDoneButton onPress={handleDone} disabled={dateInputInvalid} />
+      ),
     });
-    // Re-bind whenever the draft changes so Done always commits the latest edits.
+    // Re-bind whenever the draft (or date-field validity) changes so Done
+    // always commits the latest edits and reflects the current validity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, draft]);
+  }, [navigation, draft, dateInputInvalid]);
 
   if (!draft) {
     return (
@@ -365,6 +393,11 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
+                  {dateInputInvalid && (
+                    <Text style={styles.dateError}>
+                      Enter a valid date (YYYY-MM-DDTHH:mm) to save.
+                    </Text>
+                  )}
                 </View>
               )}
             </View>
@@ -479,6 +512,14 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.primary,
     paddingHorizontal: spacing.sm,
+  },
+  doneButtonDisabled: {
+    color: colors.disabled,
+  },
+  dateError: {
+    ...typography.label,
+    color: colors.destructive,
+    marginTop: spacing.xs,
   },
   missingContainer: {
     alignItems: 'center',
