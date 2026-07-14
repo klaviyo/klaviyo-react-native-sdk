@@ -99,7 +99,19 @@ function parseDateTimeLocalInputValue(value: string): number | null {
     Number(h),
     Number(mi)
   );
-  return Number.isNaN(date.getTime()) ? null : date.getTime();
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  // Reject out-of-range field values that `Date` silently rolls over (e.g.
+  // month 13 or day 32 normalize to a different date) instead of erroring, so
+  // a typo can't be accepted as a valid-but-wrong expiry.
+  const inRange =
+    date.getFullYear() === Number(y) &&
+    date.getMonth() === Number(mo) - 1 &&
+    date.getDate() === Number(d) &&
+    date.getHours() === Number(h) &&
+    date.getMinutes() === Number(mi);
+  return inRange ? date.getTime() : null;
 }
 
 /**
@@ -158,6 +170,10 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
   }
 
   function selectOutcomeKind(kind: ProviderOutcome['kind']) {
+    // Clear the Date-mode text buffer so switching away and back to
+    // mockToken -> Date shows the freshly-initialized expiry rather than a
+    // stale string from the previous outcome.
+    setDateInputText(null);
     setDraft((prev) =>
       prev ? { ...prev, outcome: createOutcomeOfKind(kind) } : prev
     );

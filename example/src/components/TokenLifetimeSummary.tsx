@@ -98,7 +98,12 @@ export function TokenLifetimeSummary({
         <View style={styles.refreshLabelRow}>
           <Text style={styles.label}>Refresh in</Text>
           {onInfoPress && (
-            <TouchableOpacity onPress={onInfoPress} hitSlop={8}>
+            <TouchableOpacity
+              onPress={onInfoPress}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="About refresh timing"
+            >
               <Text style={styles.infoIcon}>{'ⓘ'}</Text>
             </TouchableOpacity>
           )}

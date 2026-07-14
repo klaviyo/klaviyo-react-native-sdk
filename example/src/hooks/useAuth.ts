@@ -310,22 +310,34 @@ function mintTokenForOutcome(outcome: MockTokenOutcome): string {
   return mintMockJwt({ iat, exp });
 }
 
-/** Polls every 100ms so a mid-delay generation change (reset/unregister) is caught promptly rather than after the full delay elapses. */
+/**
+ * Waits `ms` then resolves. Fires at the exact configured delay via `setTimeout`
+ * (so sub-second 0.25s-step delays don't overshoot to the next tick), while a
+ * lightweight 100ms poll still catches a mid-delay generation change
+ * (reset/unregister) promptly rather than only after the full delay elapses.
+ */
 function cancellableDelay(ms: number, isStale: () => boolean): Promise<void> {
   return new Promise((resolve) => {
     if (ms <= 0 || isStale()) {
       resolve();
       return;
     }
-    const stepMs = 100;
-    let elapsed = 0;
-    const timer = setInterval(() => {
-      elapsed += stepMs;
-      if (isStale() || elapsed >= ms) {
-        clearInterval(timer);
-        resolve();
+    let settled = false;
+    const finish = () => {
+      if (settled) {
+        return;
       }
-    }, stepMs);
+      settled = true;
+      clearTimeout(timer);
+      clearInterval(poll);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    const poll = setInterval(() => {
+      if (isStale()) {
+        finish();
+      }
+    }, 100);
   });
 }
 

@@ -14,6 +14,8 @@
  * display-only tooling and never participates in signature verification.
  */
 
+/* eslint-disable no-bitwise -- bit manipulation is inherent to base64 encode/decode */
+
 const BASE64URL_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
