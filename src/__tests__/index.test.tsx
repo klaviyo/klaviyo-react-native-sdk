@@ -880,15 +880,20 @@ describe('Klaviyo SDK', () => {
       ).mock.calls[0];
       expect(call[0]).toBe('req-empty');
       expect(call[1]).not.toHaveProperty('jwt');
-      expect(call[1].error).toEqual(expect.stringContaining('without a token'));
+      // The empty resolution is routed through the failure path; the forwarded
+      // error is the redacted type (the thrown Error), not raw text.
+      expect(call[1].error).toBe('Error');
+      expect(call[1].isConnectivityError).toBe(false);
       consoleErrorSpy.mockRestore();
     });
 
-    it('responds with an error message when the provider rejects', async () => {
+    it('responds with a redacted error type when the provider rejects', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      // Host error text (which could contain the JWT) must not be forwarded —
+      // only the error type is sent to native.
       const provider = jest
         .fn()
-        .mockRejectedValue(new Error('auth server down'));
+        .mockRejectedValue(new Error('auth server down token=secret'));
       Klaviyo.registerAuthTokenProvider(provider);
 
       emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-2' });
@@ -897,7 +902,7 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
       ).toHaveBeenCalledWith('req-2', {
-        error: 'auth server down',
+        error: 'Error',
         isConnectivityError: false,
       });
       consoleErrorSpy.mockRestore();
@@ -916,7 +921,7 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
       ).toHaveBeenCalledWith('req-net', {
-        error: 'Network request failed',
+        error: 'TypeError',
         isConnectivityError: true,
       });
       consoleErrorSpy.mockRestore();
@@ -937,7 +942,7 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
       ).toHaveBeenCalledWith('req-marker', {
-        error: 'offline',
+        error: 'Error',
         isConnectivityError: true,
       });
       consoleErrorSpy.mockRestore();
@@ -1010,6 +1015,30 @@ describe('Klaviyo SDK', () => {
       await flushPromises();
 
       expect(provider).not.toHaveBeenCalled();
+    });
+
+    it('drops a token fetched after the provider is unregistered mid-flight', async () => {
+      // A slow provider that resolves after the user has logged out
+      // (unregister) must not hand the now-stale token to native.
+      let resolveProvider!: (value: string) => void;
+      const provider = jest.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveProvider = resolve;
+          })
+      );
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-inflight' });
+      // provider() is now in flight; log out before it resolves.
+      Klaviyo.unregisterAuthTokenProvider();
+      resolveProvider('jwt-after-logout');
+      await flushPromises();
+
+      expect(provider).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).not.toHaveBeenCalled();
     });
 
     it('replaces the previous listener when re-registering', () => {
