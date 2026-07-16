@@ -52,6 +52,15 @@ describe('parseAuthTokenRequestedEvent', () => {
       );
     });
 
+    it('returns null when id is whitespace-only', () => {
+      const result = parseAuthTokenRequestedEvent({ id: '   ' });
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid id')
+      );
+    });
+
     it('returns null when id is not a string', () => {
       const result = parseAuthTokenRequestedEvent({ id: 42 });
 
