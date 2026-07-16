@@ -385,6 +385,13 @@ class KlaviyoReactNativeSdkModule(
   fun registerAuthTokenProvider() {
     try {
       Klaviyo.registerAuthTokenProvider { callback ->
+        // The native SDK keeps at most one token fetch in flight, so any entries
+        // still pending when a NEW request arrives belong to a previous fetch the
+        // SDK has already abandoned (e.g. it timed out). Android's callback API
+        // gives no per-request timeout hook (unlike iOS withTaskCancellationHandler
+        // onCancel), so this is where stale ids are reclaimed — failing them here
+        // bounds the map and honors the "timed-out ids don't resolve" contract.
+        failAndDrainPendingAuthCallbacks("Superseded by a newer auth token request")
         val id = UUID.randomUUID().toString()
         pendingAuthCallbacks[id] = callback
         val emitted =
@@ -414,14 +421,20 @@ class KlaviyoReactNativeSdkModule(
       Registry.log.error("Failed to unregister auth token provider", e)
     } finally {
       // Fail and drop any requests still awaiting a JS response so no callbacks
-      // dangle after the provider is torn down. Remove-then-fail per key so a
-      // concurrent respondToAuthTokenRequest can't also resolve the same
-      // callback (preserves the callback's "invoke exactly once" contract).
-      pendingAuthCallbacks.keys.toList().forEach { id ->
-        pendingAuthCallbacks.remove(id)?.onFailure(
-          IllegalStateException("Auth token provider was unregistered"),
-        )
-      }
+      // dangle after the provider is torn down.
+      failAndDrainPendingAuthCallbacks("Auth token provider was unregistered")
+    }
+  }
+
+  /**
+   * Fails and evicts every pending auth token callback with [reason]. Uses
+   * remove-then-fail per key so a concurrent [respondToAuthTokenRequest] can't
+   * also resolve the same callback (preserves the callback's "invoke exactly
+   * once" contract).
+   */
+  private fun failAndDrainPendingAuthCallbacks(reason: String) {
+    pendingAuthCallbacks.keys.toList().forEach { id ->
+      pendingAuthCallbacks.remove(id)?.onFailure(IllegalStateException(reason))
     }
   }
 
