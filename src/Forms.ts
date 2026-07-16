@@ -1,3 +1,5 @@
+import { isNonEmptyString } from './validation';
+
 /**
  * Interface for the Klaviyo Forms API
  */
@@ -122,13 +124,6 @@ export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
 
 const FORM_LIFECYCLE_EVENT_TYPES: readonly FormLifecycleEventType[] =
   Object.values(FormLifecycleEventType);
-
-/**
- * Validates that a value is a non-empty string.
- */
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
 
 /**
  * Parses a raw native event payload into a validated {@link FormLifecycleEvent}.

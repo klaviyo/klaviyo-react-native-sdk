@@ -1,3 +1,5 @@
+import { isNonEmptyString } from './validation';
+
 /**
  * Interface for the Klaviyo Auth Token API.
  *
@@ -79,13 +81,6 @@ export const AUTH_TOKEN_REQUESTED_EVENT = 'klaviyo:authTokenRequested';
 export interface AuthTokenRequestedEvent {
   /** Correlation ID identifying this token request. */
   id: string;
-}
-
-/**
- * Validates that a value is a non-empty string.
- */
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
 }
 
 /**
