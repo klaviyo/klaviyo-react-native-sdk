@@ -124,6 +124,129 @@ public class KlaviyoBridge: NSObject {
         #endif
     }
 
+    // MARK: - Auth token bridging
+
+    /// Pending auth token requests keyed by correlation ID. The native SDK's
+    /// async provider closure suspends on a continuation stored here until the
+    /// JS side responds (or the request is cancelled by the SDK's timeout).
+    ///
+    /// A `CheckedContinuation` must be resumed exactly once. All access is
+    /// serialized through `authTokenLock`, and every resume path first removes
+    /// the entry from the dictionary — whichever path removes it wins and
+    /// resumes; any later path finds nothing and is a no-op.
+    private static var pendingAuthTokenRequests: [String: CheckedContinuation<String, Error>] = [:]
+    private static let authTokenLock = NSLock()
+
+    /// Registers a wrapper-owned auth token provider with the native SDK. When
+    /// the SDK invokes the provider, this generates a correlation ID, emits it
+    /// to JS via `emit`, and suspends until the JS side responds through
+    /// `respondToAuthTokenRequest(id:jwt:error:)`.
+    ///
+    /// The token itself never crosses through here in a loggable form and is
+    /// never logged; all token logging happens in the native SDK.
+    @objc
+    public static func registerAuthTokenProvider(emit: @escaping @Sendable ([String: Any]) -> Bool) {
+        KlaviyoSDK().registerAuthTokenProvider { () async throws -> String in
+            let id = UUID().uuidString
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    authTokenLock.lock()
+                    pendingAuthTokenRequests[id] = continuation
+                    authTokenLock.unlock()
+                    if !emit(["id": id]) {
+                        // The JS bridge is unavailable (module deallocated), so
+                        // no response will arrive. Fail fast instead of waiting
+                        // for the SDK timeout, and evict so nothing leaks.
+                        authTokenLock.lock()
+                        let pending = pendingAuthTokenRequests.removeValue(forKey: id)
+                        authTokenLock.unlock()
+                        pending?.resume(throwing: authTokenError(
+                            "Unable to reach the JS auth token provider (bridge unavailable)"
+                        ))
+                    }
+                }
+            } onCancel: {
+                // The SDK cancels the provider task on timeout. Resolve the
+                // continuation with cancellation and evict it so nothing leaks.
+                //
+                // If cancellation lands in the narrow window before the
+                // operation stores the continuation, this finds nothing to
+                // remove (a safe no-op) and the operation still stores + emits
+                // afterward. That only costs a spurious `authTokenRequested`
+                // event: the SDK re-checks cancellation after the provider
+                // returns and discards the stale token before caching it.
+                authTokenLock.lock()
+                let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
+                authTokenLock.unlock()
+                continuation?.resume(throwing: CancellationError())
+            }
+        }
+    }
+
+    @objc
+    public static func unregisterAuthTokenProvider() {
+        KlaviyoSDK().unregisterAuthTokenProvider()
+        // Defense-in-depth + parity with Android: proactively fail any pending
+        // requests. The SDK's unregister cancels the in-flight fetch (which
+        // trips the `onCancel` above), but draining here doesn't rely on that
+        // cross-module behavior. The lock-guarded remove keeps resolution
+        // exactly-once — whichever path claims a continuation first wins.
+        failAllPendingAuthTokenRequests(reason: "Auth token provider was unregistered")
+    }
+
+    private static func failAllPendingAuthTokenRequests(reason: String) {
+        authTokenLock.lock()
+        let pending = pendingAuthTokenRequests
+        pendingAuthTokenRequests.removeAll()
+        authTokenLock.unlock()
+        for (_, continuation) in pending {
+            continuation.resume(throwing: authTokenError(reason))
+        }
+    }
+
+    private static func authTokenError(_ message: String) -> NSError {
+        NSError(
+            domain: "KlaviyoReactNativeSdk",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    /// Resolves a pending auth token request. Called from JS once the host
+    /// provider has produced a token (`jwt`) or failed (`error`). Unknown or
+    /// already-resolved IDs are ignored.
+    ///
+    /// When `isConnectivityError` is `true`, the failure is surfaced as a
+    /// `URLError` with a connectivity code so the SDK's connectivity-driven
+    /// refresh retry (which classifies via `URLError.isConnectivityError`)
+    /// recognizes it. Other failures use a generic error, which the SDK treats
+    /// as non-retryable.
+    @objc
+    public static func respondToAuthTokenRequest(id: String, jwt: String?, error: String?, isConnectivityError: Bool) {
+        authTokenLock.lock()
+        let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
+        authTokenLock.unlock()
+
+        guard let continuation else {
+            // Already resolved/cancelled, or never existed. Nothing to do.
+            return
+        }
+
+        if let jwt {
+            continuation.resume(returning: jwt)
+        } else {
+            let message = error ?? "Auth token provider returned no token"
+            if isConnectivityError {
+                continuation.resume(throwing: URLError(
+                    .notConnectedToInternet,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
+            } else {
+                continuation.resume(throwing: authTokenError(message))
+            }
+        }
+    }
+
     @MainActor
     @objc
     public static func registerGeofencing() {

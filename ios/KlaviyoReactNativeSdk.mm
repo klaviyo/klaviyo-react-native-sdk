@@ -15,7 +15,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"FormLifecycleEvent"];
+    return @[@"FormLifecycleEvent", @"klaviyo:authTokenRequested"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -162,6 +162,33 @@ RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge unregisterFormLifecycleHandler];
     });
+}
+
+RCT_EXPORT_METHOD(registerAuthTokenProvider) {
+    __weak __typeof__(self) weakSelf = self;
+    [KlaviyoBridge registerAuthTokenProviderWithEmit:^BOOL(NSDictionary *body) {
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            // Module deallocated — the event can't be delivered to JS, so
+            // report failure to emit and let the bridge fail the request fast.
+            return NO;
+        }
+        [strongSelf sendEventWithName:@"klaviyo:authTokenRequested" body:body];
+        return YES;
+    }];
+}
+
+RCT_EXPORT_METHOD(unregisterAuthTokenProvider) {
+    [KlaviyoBridge unregisterAuthTokenProvider];
+}
+
+RCT_EXPORT_METHOD(respondToAuthTokenRequest: (NSString *)identifier response:(NSDictionary *)response) {
+    NSString *jwt = [response[@"jwt"] isKindOfClass:[NSString class]] ? response[@"jwt"] : nil;
+    NSString *error = [response[@"error"] isKindOfClass:[NSString class]] ? response[@"error"] : nil;
+    BOOL isConnectivityError = [response[@"isConnectivityError"] isKindOfClass:[NSNumber class]]
+        ? [response[@"isConnectivityError"] boolValue]
+        : NO;
+    [KlaviyoBridge respondToAuthTokenRequestWithId:identifier jwt:jwt error:error isConnectivityError:isConnectivityError];
 }
 
 @end
