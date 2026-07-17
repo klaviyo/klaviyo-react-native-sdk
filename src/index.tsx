@@ -50,6 +50,11 @@ let activeLifecycleSubscription: { remove: () => void } | null = null;
 // Track active auth token request subscription to prevent duplicate listeners
 let activeAuthTokenSubscription: { remove: () => void } | null = null;
 
+// The currently-registered provider. Captured so an in-flight provider() call
+// that resolves after unregister/re-register (e.g. logout) can be detected and
+// its now-stale result dropped rather than delivered to native.
+let activeAuthTokenProvider: AuthTokenProvider | null = null;
+
 /**
  * Implementation of the {@link KlaviyoInterface}
  */
@@ -194,6 +199,8 @@ export const Klaviyo: KlaviyoInterface = {
       activeAuthTokenSubscription = null;
     }
 
+    activeAuthTokenProvider = provider;
+
     const eventEmitter = new NativeEventEmitter(
       NativeModules.KlaviyoReactNativeSdk
     );
@@ -208,6 +215,13 @@ export const Klaviyo: KlaviyoInterface = {
 
         try {
           const jwt = await provider();
+          // If the provider was unregistered or replaced while this fetch was
+          // in flight (e.g. logout), drop the result — do not deliver a token
+          // acquired for a now-inactive provider. Native already drained this
+          // request's continuation on unregister, so no response is owed.
+          if (activeAuthTokenProvider !== provider) {
+            return;
+          }
           if (typeof jwt !== 'string' || jwt.length === 0) {
             // Route an empty / non-string resolution through the failure path
             // so native gets a clear signal rather than a bogus "success".
@@ -216,6 +230,11 @@ export const Klaviyo: KlaviyoInterface = {
           // NOTE: never log token contents; native side owns token logging.
           KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, { jwt });
         } catch (error) {
+          // Same in-flight guard for the rejection path: a late failure for an
+          // inactive provider is dropped rather than forwarded.
+          if (activeAuthTokenProvider !== provider) {
+            return;
+          }
           const { message, isConnectivityError } = classifyProviderError(error);
           console.error(
             `[Klaviyo] Auth token provider failed for request ${event.id}: ${message}`
@@ -235,6 +254,7 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterAuthTokenProvider(): void {
     activeAuthTokenSubscription?.remove();
     activeAuthTokenSubscription = null;
+    activeAuthTokenProvider = null;
     KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
   },
 };

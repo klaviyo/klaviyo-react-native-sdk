@@ -52,6 +52,15 @@ describe('parseAuthTokenRequestedEvent', () => {
       );
     });
 
+    it('returns null when id is whitespace-only', () => {
+      const result = parseAuthTokenRequestedEvent({ id: '   ' });
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid id')
+      );
+    });
+
     it('returns null when id is not a string', () => {
       const result = parseAuthTokenRequestedEvent({ id: 42 });
 
@@ -73,16 +82,29 @@ describe('parseAuthTokenRequestedEvent', () => {
 });
 
 describe('classifyProviderError', () => {
-  it('extracts the message from an Error', () => {
+  it('reports the error type, not host-controlled text', () => {
+    // The message must be redacted to the error's type — never error.message,
+    // which could contain the JWT.
     expect(classifyProviderError(new Error('boom'))).toEqual({
-      message: 'boom',
+      message: 'Error',
       isConnectivityError: false,
     });
   });
 
-  it('stringifies a non-Error rejection', () => {
+  it('never surfaces host-controlled exception text', () => {
+    const error = new Error(
+      'failed with token=eyJhbGciOiJIUzI1NiJ9.secret.sig'
+    );
+
+    const { message } = classifyProviderError(error);
+    expect(message).not.toContain('secret');
+    expect(message).not.toContain('eyJ');
+    expect(message).toBe('Error');
+  });
+
+  it('reports the typeof for a non-Error rejection', () => {
     expect(classifyProviderError('plain string')).toEqual({
-      message: 'plain string',
+      message: 'string',
       isConnectivityError: false,
     });
   });
@@ -93,7 +115,7 @@ describe('classifyProviderError', () => {
     });
 
     expect(classifyProviderError(error)).toEqual({
-      message: 'offline',
+      message: 'Error',
       isConnectivityError: true,
     });
   });
@@ -109,8 +131,10 @@ describe('classifyProviderError', () => {
   it("auto-detects React Native's fetch network failure", () => {
     const error = new TypeError('Network request failed');
 
+    // Message is redacted to the type, but connectivity detection still keys
+    // off the raw text internally, so the flag must remain true.
     expect(classifyProviderError(error)).toEqual({
-      message: 'Network request failed',
+      message: 'TypeError',
       isConnectivityError: true,
     });
   });

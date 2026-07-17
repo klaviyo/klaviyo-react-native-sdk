@@ -1,3 +1,5 @@
+import { isNonEmptyString } from './validation';
+
 /**
  * Interface for the Klaviyo Auth Token API.
  *
@@ -82,13 +84,6 @@ export interface AuthTokenRequestedEvent {
 }
 
 /**
- * Validates that a value is a non-empty string.
- */
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
-
-/**
  * Parses a raw native event payload into a validated {@link AuthTokenRequestedEvent}.
  *
  * Returns `null` and logs a warning if the required `id` correlation field is
@@ -143,7 +138,12 @@ export interface ClassifiedProviderError {
  * Token contents are never part of a rejection and are never logged.
  */
 export function classifyProviderError(error: unknown): ClassifiedProviderError {
-  const message = error instanceof Error ? error.message : String(error);
+  // Raw host text is used ONLY for internal connectivity auto-detection below;
+  // it is never returned/logged/forwarded (it could contain the JWT).
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  // The reported message is redacted to the error's type — safe to log and
+  // forward to native, and still useful for diagnosis.
+  const message = redactErrorType(error);
 
   // An explicit boolean marker wins over the auto-detect heuristics.
   if (typeof error === 'object' && error !== null) {
@@ -161,10 +161,23 @@ export function classifyProviderError(error: unknown): ClassifiedProviderError {
   // React Native's `fetch` throws `TypeError: Network request failed` when the
   // request cannot reach the network.
   const isFetchNetworkFailure =
-    error instanceof TypeError && /network request failed/i.test(message);
+    error instanceof TypeError && /network request failed/i.test(rawMessage);
 
   return {
     message,
     isConnectivityError: isAbortError || isFetchNetworkFailure,
   };
+}
+
+/**
+ * Returns a safe, non-sensitive descriptor of an error: its runtime type name
+ * (e.g. `Error`, `TypeError`, or a custom class name), or `typeof` for
+ * non-object rejections. Never returns host-controlled text such as
+ * `error.message`, which could contain the JWT or other credentials.
+ */
+function redactErrorType(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    return error.constructor?.name ?? 'Object';
+  }
+  return typeof error;
 }
