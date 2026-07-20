@@ -21,11 +21,13 @@ yourself:
 
 - **Android** — disable automatic forwarding by adding this `meta-data` to the `<application>`
   element of your `AndroidManifest.xml`, then continue calling `Klaviyo.setPushToken(...)` yourself:
+
   ```xml
   <meta-data
       android:name="com.klaviyo.push.automatic_push_token_forwarding"
       android:value="false" />
   ```
+
 - **iOS** — nothing to do; automatic forwarding is off unless you opt in via `Info.plist` (see the
   native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications)).
 
