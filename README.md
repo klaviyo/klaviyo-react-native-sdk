@@ -295,6 +295,42 @@ Push tokens can be collected either from your app's react native code or in the 
 Below sections discuss both approaches, and you are free to pick one that best suits your app's architecture.
 Note that doing this in one location is sufficient.
 
+#### Automatic Token Forwarding (Platform Defaults)
+
+Before choosing an approach, note that the underlying native SDKs handle automatic push-token
+forwarding differently by default:
+
+- **Android — on by default.** The native Android SDK auto-registers its `KlaviyoPushService`
+  (a `FirebaseMessagingService`) via manifest merge, so it forwards the FCM token to Klaviyo
+  automatically, without any React Native code. You do not need to collect the token yourself on
+  Android — though doing so is harmless (duplicate tokens are deduplicated and cause no extra
+  network request).
+- **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
+  which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
+  APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see
+  the native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications).
+
+The flag's semantics are identical on both platforms (`false` = no automatic collection); only the
+default differs, for these platform-specific reasons. Manual token collection (documented below)
+remains the recommended baseline and works on both platforms — automatic forwarding is additive, not
+a replacement.
+
+To **opt out** of automatic forwarding on Android, add the following `meta-data` to the
+`<application>` element of your app's `AndroidManifest.xml` (which your app owns), then register the
+token yourself via `Klaviyo.setPushToken(...)`:
+
+```xml
+<meta-data
+    android:name="com.klaviyo.push.automatic_push_token_forwarding"
+    android:value="false" />
+```
+
+This is the single, complete opt-out — with it set, the SDK never auto-collects the token. iOS has
+nothing to opt out of: automatic forwarding is off unless you opt in via `Info.plist`. For full
+details, see the native
+[Android](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications) and
+[iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications) push documentation.
+
 #### React Native Token Collection
 
 In order to collect the APNs push token in your React Native code you need to:
