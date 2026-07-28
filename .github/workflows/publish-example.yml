@@ -360,29 +360,52 @@ jobs:
         shell: bash
         run: xcrun agvtool new-version -all "$BUILD_NUMBER"
 
-      # Team ID is stamped from a secret (checked-in plist uses a placeholder).
-      # signingCertificate is forced to "Apple Distribution" so exportArchive
-      # doesn't fall back to the legacy "iOS Distribution" cert family.
+      # Pull the shared App Store cert + provisioning profiles from the
+      # mobile-certificates match repo into an ephemeral keychain. readonly =>
+      # git-only, no Apple portal calls, so no certificate is ever generated
+      # (replaces cloud-managed signing that was exhausting the cert cap).
+      # ssh-agent is started inline because its env can't cross workflow steps,
+      # and `fastlane` is preinstalled on the macOS runner.
+      - name: Sync signing assets (match, readonly)
+        working-directory: example
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$MATCH_DEPLOY_KEY" | ssh-add -
+          fastlane ios sync_signing
+
+      # Manual signing driven by the match-installed profiles. Profile names
+      # follow match's convention ("match AppStore <bundle-id>"); the single
+      # distribution identity match imported is auto-selected, so no
+      # signingCertificate override is needed. Team ID is stamped from a secret
+      # (the checked-in plist uses a placeholder).
       - name: Stamp signing config into ExportOptions.plist
         working-directory: example/ios
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
         run: |
-          /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
-          # PlistBuddy errors on Add when the key exists, so try Add then Set.
-          /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
-            || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
+          PB=/usr/libexec/PlistBuddy
+          P=ExportOptions.plist
+          $PB -c "Set :teamID ${APPLE_TEAM_ID}" $P
+          $PB -c "Set :signingStyle manual" $P
+          $PB -c 'Add :provisioningProfiles dict' $P 2>/dev/null || true
+          $PB -c 'Add :provisioningProfiles:com.klaviyoreactnativesdkexample string "match AppStore com.klaviyoreactnativesdkexample"' $P
+          $PB -c 'Add :provisioningProfiles:com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension string "match AppStore com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension"' $P
 
-      # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
-      # register/refresh the distribution cert and provisioning profiles
-      # via App Store Connect using the API key flags.
+      # Manual signing using the match-installed identity + profiles. No
+      # -allowProvisioningUpdates / auth-key flags, so xcodebuild cannot reach
+      # App Store Connect to mint a certificate — it must use what match placed
+      # in the keychain and ~/Library/MobileDevice/Provisioning Profiles.
       - name: Archive
         working-directory: example/ios
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           # RN build-phase scripts read this directly to wire codegen outputs.
           RCT_NEW_ARCH_ENABLED: '1'
           # Prevent Metro from starting a dev server.
@@ -402,27 +425,17 @@ jobs:
             -configuration Release \
             -destination "generic/platform=iOS" \
             archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       - name: Export IPA
         working-directory: example/ios
-        env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
         shell: bash
         run: |
           xcodebuild -exportArchive \
             -archivePath KlaviyoReactNativeSdkExample.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+            -exportPath ./build
 
       # altool with the API key — no Apple ID / app-specific password / 2FA dance.
       - name: Upload to TestFlight
