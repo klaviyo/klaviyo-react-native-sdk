@@ -49,6 +49,12 @@ platform :ios do
       configuration: "Release",
       destination: "generic/platform=iOS",
       export_method: "app-store",
+      # Force the signing identity on the xcodebuild command line. The RN
+      # template sets CODE_SIGN_IDENTITY[sdk=iphoneos*] (legacy "iOS
+      # Distribution"), which overrides the per-target value set above for
+      # device builds. A command-line assignment outranks that SDK-conditional
+      # setting, so archive uses the "Apple Distribution" cert match installed.
+      codesigning_identity: "Apple Distribution",
       # pod install writes new-arch codegen headers into ./build/generated/ios;
       # gym must not wipe them.
       clean: false,
