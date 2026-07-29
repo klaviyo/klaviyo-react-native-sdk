@@ -43,6 +43,16 @@ platform :ios do
       )
     end
 
+    # The RN template pins CODE_SIGN_IDENTITY[sdk=iphoneos*] to a legacy value
+    # that can override the command-line identity for device builds. Rewrite that
+    # SDK-conditional entry to the shared distribution identity so archive
+    # resolves to the "Apple Distribution" cert match installs.
+    pbxproj = File.expand_path("../ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj", __dir__)
+    content = File.read(pbxproj)
+    content.gsub!(/("CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = )"[^"]*"/, '\1"Apple Distribution"')
+    File.write(pbxproj, content)
+    UI.message("Pinned CODE_SIGN_IDENTITY[sdk=iphoneos*] -> Apple Distribution")
+
     build_app(
       workspace: "ios/KlaviyoReactNativeSdkExample.xcworkspace",
       scheme: "KlaviyoReactNativeSdkExample",
