@@ -1,19 +1,66 @@
 default_platform(:ios)
 
+TEAM_ID = ENV["APPLE_TEAM_ID"]
+APP_ID = "com.klaviyoreactnativesdkexample"
+EXT_ID = "com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension"
+
 platform :ios do
-  # Installs the shared App Store distribution certificate + provisioning
-  # profiles from the klaviyo/mobile-certificates match repo into an ephemeral
-  # CI keychain. `readonly: true` means match only pulls from git and never
-  # contacts Apple — so it can never generate a new certificate. This replaces
-  # the previous cloud-managed signing (`xcodebuild -allowProvisioningUpdates`),
-  # which minted a fresh Apple Development cert on every run and exhausted the
-  # developer account's certificate cap.
+  # Build + sign the example app for TestFlight using fastlane match.
   #
-  # `setup_ci` creates the temporary keychain, unlocks it, and adds it to the
-  # search list so later archive/export steps can use the imported identity.
-  desc "Install App Store signing assets from match (read-only)"
-  lane :sync_signing do
+  # Why a single lane instead of raw xcodebuild steps: match installs the
+  # shared App Store distribution identity + profiles into an ephemeral
+  # keychain, but the app and its notification-service extension each need a
+  # *different* provisioning profile — which can't be expressed as global
+  # `xcodebuild` command-line build settings. Doing match + per-target signing
+  # config + build in one process lets gym apply the correct profile to each
+  # target and export a signed IPA.
+  #
+  # `readonly: true` => match only pulls from the mobile-certificates git repo
+  # and never contacts Apple, so it can never generate a certificate (the whole
+  # point: cloud-managed signing was exhausting the account's cert cap).
+  desc "Build + sign the example app IPA for TestFlight (match, read-only)"
+  lane :release_ipa do
     setup_ci
+
     match(type: "appstore", readonly: true)
+
+    # Pin each target to manual signing with its match profile + the shared
+    # distribution identity. Without this the project's default
+    # `CODE_SIGN_IDENTITY = "iPhone Developer"` would make archive look for a
+    # development cert that match never installs.
+    [
+      { targets: ["KlaviyoReactNativeSdkExample"], profile: "match AppStore #{APP_ID}" },
+      { targets: ["KlaviyoReactNativeSdkExampleExtension"], profile: "match AppStore #{EXT_ID}" },
+    ].each do |cfg|
+      update_code_signing_settings(
+        path: "ios/KlaviyoReactNativeSdkExample.xcodeproj",
+        use_automatic_signing: false,
+        team_id: TEAM_ID,
+        code_sign_identity: "Apple Distribution",
+        targets: cfg[:targets],
+        profile_name: cfg[:profile],
+        build_configurations: ["Release"]
+      )
+    end
+
+    build_app(
+      workspace: "ios/KlaviyoReactNativeSdkExample.xcworkspace",
+      scheme: "KlaviyoReactNativeSdkExample",
+      configuration: "Release",
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      # pod install writes new-arch codegen headers into ./build/generated/ios;
+      # gym must not wipe them.
+      clean: false,
+      output_directory: "ios/build",
+      output_name: "KlaviyoReactNativeSdkExample.ipa",
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: {
+          APP_ID => "match AppStore #{APP_ID}",
+          EXT_ID => "match AppStore #{EXT_ID}",
+        },
+      }
+    )
   end
 end

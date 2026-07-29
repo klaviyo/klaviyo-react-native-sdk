@@ -234,6 +234,14 @@ jobs:
           working-directory: example
           bundler-cache: true
 
+      # setup-ruby switches the job to the example's pinned Ruby, which hides the
+      # runner's preinstalled fastlane and doesn't have it as a gem. Install it
+      # explicitly into the active Ruby so `fastlane` resolves deterministically.
+      # Kept out of example/Gemfile to avoid bloating the CocoaPods-only bundle.
+      - name: Install fastlane
+        shell: bash
+        run: gem install fastlane -v 2.237.0 --no-document
+
       # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
       # push delivery works against the published build.
       - name: Inject GoogleService-Info.plist
@@ -360,82 +368,29 @@ jobs:
         shell: bash
         run: xcrun agvtool new-version -all "$BUILD_NUMBER"
 
-      # Pull the shared App Store cert + provisioning profiles from the
-      # mobile-certificates match repo into an ephemeral keychain. readonly =>
-      # git-only, no Apple portal calls, so no certificate is ever generated
-      # (replaces cloud-managed signing that was exhausting the cert cap).
-      # ssh-agent is started inline because its env can't cross workflow steps,
-      # and `fastlane` is preinstalled on the macOS runner.
-      - name: Sync signing assets (match, readonly)
+      # Build + sign the IPA via fastlane. The `release_ipa` lane runs
+      # match(readonly) to install the shared App Store cert + profiles from the
+      # mobile-certificates repo (git-only, never contacts Apple, so no cert is
+      # generated), pins each target to its match profile, and exports a signed
+      # IPA to example/ios/build/. ssh-agent is started inline because its env
+      # can't cross workflow steps, and match runs in this same step.
+      - name: Build & sign IPA (fastlane match + gym)
         working-directory: example
         env:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # RN build-phase scripts read this directly to wire codegen outputs.
+          RCT_NEW_ARCH_ENABLED: '1'
+          # Prevent Metro from starting a dev server.
+          CI: 'true'
         shell: bash
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           eval "$(ssh-agent -s)"
           printf '%s\n' "$MATCH_DEPLOY_KEY" | ssh-add -
-          fastlane ios sync_signing
-
-      # Manual signing driven by the match-installed profiles. Profile names
-      # follow match's convention ("match AppStore <bundle-id>"); the single
-      # distribution identity match imported is auto-selected, so no
-      # signingCertificate override is needed. Team ID is stamped from a secret
-      # (the checked-in plist uses a placeholder).
-      - name: Stamp signing config into ExportOptions.plist
-        working-directory: example/ios
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        shell: bash
-        run: |
-          PB=/usr/libexec/PlistBuddy
-          P=ExportOptions.plist
-          $PB -c "Set :teamID ${APPLE_TEAM_ID}" $P
-          $PB -c "Set :signingStyle manual" $P
-          $PB -c 'Add :provisioningProfiles dict' $P 2>/dev/null || true
-          $PB -c 'Add :provisioningProfiles:com.klaviyoreactnativesdkexample string "match AppStore com.klaviyoreactnativesdkexample"' $P
-          $PB -c 'Add :provisioningProfiles:com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension string "match AppStore com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension"' $P
-
-      # Manual signing using the match-installed identity + profiles. No
-      # -allowProvisioningUpdates / auth-key flags, so xcodebuild cannot reach
-      # App Store Connect to mint a certificate — it must use what match placed
-      # in the keychain and ~/Library/MobileDevice/Provisioning Profiles.
-      - name: Archive
-        working-directory: example/ios
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # RN build-phase scripts read this directly to wire codegen outputs.
-          RCT_NEW_ARCH_ENABLED: '1'
-          # Prevent Metro from starting a dev server.
-          CI: true
-        shell: bash
-        run: |
-          # DO NOT `rm -rf ./build` — pod install writes new-arch codegen
-          # headers (RCTAppDependencyProvider.h etc.) into ./build/generated/ios
-          # and xcodebuild reads them from there during archive.
-          rm -rf KlaviyoReactNativeSdkExample.xcarchive
-          # `-destination "generic/platform=iOS"` pins archive to iOS device.
-          # Without it, xcodebuild picks "My Mac" (Designed-for-iPad scheme
-          # on Apple Silicon advertises it as valid) and uses Development
-          # signing rules.
-          xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
-            -scheme KlaviyoReactNativeSdkExample \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
-
-      - name: Export IPA
-        working-directory: example/ios
-        shell: bash
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build
+          fastlane ios release_ipa
 
       # altool with the API key — no Apple ID / app-specific password / 2FA dance.
       - name: Upload to TestFlight
