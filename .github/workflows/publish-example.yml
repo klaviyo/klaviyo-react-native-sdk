@@ -380,6 +380,11 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Password-protected distribution key: match imports keys with an empty
+          # password, which macOS 26's `security import` rejects, so the lane
+          # imports this one itself. See example/fastlane/Fastfile.
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           # RN build-phase scripts read this directly to wire codegen outputs.
           RCT_NEW_ARCH_ENABLED: '1'
           # Prevent Metro from starting a dev server.
@@ -390,6 +395,9 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           eval "$(ssh-agent -s)"
           printf '%s\n' "$MATCH_DEPLOY_KEY" | ssh-add -
+          CERT_P12_PATH="$RUNNER_TEMP/dist.p12"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 -d > "$CERT_P12_PATH"
+          export CERT_P12_PATH
           fastlane ios release_ipa
 
       # altool with the API key — no Apple ID / app-specific password / 2FA dance.

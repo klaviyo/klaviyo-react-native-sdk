@@ -24,6 +24,18 @@ platform :ios do
 
     match(type: "appstore", readonly: true)
 
+    # macOS 26's `security import` rejects empty-password .p12 files, and match
+    # imports keys with an empty password — so match's own key install silently
+    # fails on this runner (MAC verification failed). Bring the private key in
+    # ourselves from a password-protected .p12 (decoded from a secret by the
+    # workflow) into the same keychain match/setup_ci created.
+    import_certificate(
+      certificate_path: ENV.fetch("CERT_P12_PATH"),
+      certificate_password: ENV.fetch("P12_PASSWORD"),
+      keychain_name: ENV.fetch("MATCH_KEYCHAIN_NAME", "fastlane_tmp_keychain"),
+      keychain_password: ENV.fetch("MATCH_KEYCHAIN_PASSWORD", "")
+    )
+
     # Pin each target to manual signing with its match profile + the shared
     # distribution identity. Without this the project's default
     # `CODE_SIGN_IDENTITY = "iPhone Developer"` would make archive look for a
