@@ -143,7 +143,10 @@ dependencies {
     implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
   }
 
-  // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
-  implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
+  // We use reflection to enumerate keywords in the Klaviyo Android SDK dynamically.
+  // kotlin-reflect must resolve to the same version as the Kotlin stdlib above,
+  // otherwise it fails at runtime, so track $kotlin_version instead of pinning it
+  // independently. Consuming apps override this via rootProject.ext.kotlinVersion.
+  implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
 
