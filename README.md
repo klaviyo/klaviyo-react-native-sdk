@@ -303,17 +303,18 @@ forwarding differently by default:
 - **Android — on by default.** The native Android SDK auto-registers its `KlaviyoPushService`
   (a `FirebaseMessagingService`) via manifest merge, so it forwards the FCM token to Klaviyo
   automatically, without any React Native code. You do not need to collect the token yourself on
-  Android — though doing so is harmless (duplicate tokens are deduplicated and cause no extra
-  network request).
+  Android — though doing so is harmless: repeated registrations with the same push request state are
+  suppressed by the native SDK.
 - **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
   which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
   APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see
   the native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications).
 
-The flag's semantics are identical on both platforms (`false` = no automatic collection); only the
-default differs, for these platform-specific reasons. Manual token collection (documented below)
-remains the recommended baseline and works on both platforms — automatic forwarding is additive, not
-a replacement.
+Each platform has its own key — `klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
+`com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
+(`false` = no automatic collection) but different defaults, for these platform-specific reasons.
+Manual token collection (documented below) remains the recommended baseline and works on both
+platforms — automatic forwarding is additive, not a replacement.
 
 To **opt out** of automatic forwarding on Android, add the following `meta-data` to the
 `<application>` element of your app's `AndroidManifest.xml` (which your app owns), then register the
@@ -325,9 +326,9 @@ token yourself via `Klaviyo.setPushToken(...)`:
     android:value="false" />
 ```
 
-This is the single, complete opt-out — with it set, the SDK never auto-collects the token. iOS has
-nothing to opt out of: automatic forwarding is off unless you opt in via `Info.plist`. For full
-details, see the native
+On Android this is the complete opt-out — with it set, the native SDK never auto-collects the token,
+though any token already registered remains until you replace it. iOS has nothing to opt out of:
+automatic forwarding is off unless you opt in via `Info.plist`. For full details, see the native
 [Android](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications) and
 [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications) push documentation.
 

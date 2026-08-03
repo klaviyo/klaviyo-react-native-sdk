@@ -12,9 +12,10 @@ push token to Klaviyo **automatically by default**. This formalizes behavior the
 behavior.
 
 **iOS is unchanged:** automatic forwarding remains opt-in (off by default), because iOS token
-collection relies on the more invasive app-delegate method swizzling. The flag's semantics are
-identical across platforms (`false` = no automatic collection); only the per-platform default
-differs, for these platform-specific reasons.
+collection relies on the more invasive app-delegate method swizzling. Each platform has its own key —
+`klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
+`com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
+(`false` = no automatic collection) but different defaults, for these platform-specific reasons.
 
 **No action is required** to keep current behavior. If you prefer to own the push-token pipeline
 yourself:
@@ -31,8 +32,8 @@ yourself:
 - **iOS** — nothing to do; automatic forwarding is off unless you opt in via `Info.plist` (see the
   native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications)).
 
-If you already collect and set the token manually on Android, no change is needed — duplicate tokens
-are deduplicated and cause no extra network request. See the
+If you already collect and set the token manually on Android, no change is needed — repeated
+registrations with the same push request state are suppressed by the native SDK. See the
 [README](./README.md#collecting-push-tokens) for full token-collection guidance.
 
 > **Looking ahead:** a future **major** release may enable **both** `automatic_push_open_tracking`
