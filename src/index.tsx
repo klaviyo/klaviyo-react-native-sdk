@@ -9,6 +9,8 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import type { DeepLinkHandler } from './KlaviyoDeepLinkAPI';
+import { DEEP_LINK_RESOLVED_EVENT } from './KlaviyoDeepLinkAPI';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -40,6 +42,9 @@ function isLocationAvailable(): boolean {
 
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
+
+// Track active deep link subscription to prevent duplicate listeners
+let activeDeepLinkSubscription: { remove: () => void } | null = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -141,6 +146,40 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.handleUniversalTrackingLink(urlStr);
     return true;
   },
+  registerDeepLinkHandler(handler: DeepLinkHandler): () => void {
+    // Clean up any existing subscription before re-registering
+    if (activeDeepLinkSubscription) {
+      activeDeepLinkSubscription.remove();
+      KlaviyoReactNativeSdk.unregisterDeepLinkHandler();
+      activeDeepLinkSubscription = null;
+    }
+
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    activeDeepLinkSubscription = eventEmitter.addListener(
+      DEEP_LINK_RESOLVED_EVENT,
+      (data: { url?: unknown }) => {
+        const url = data?.url;
+        if (typeof url === 'string' && url.length > 0) {
+          handler(url);
+        } else {
+          console.warn(
+            '[Klaviyo] Ignoring deep link event with missing or invalid url'
+          );
+        }
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerDeepLinkHandler();
+
+    return () => {
+      activeDeepLinkSubscription?.remove();
+      activeDeepLinkSubscription = null;
+      KlaviyoReactNativeSdk.unregisterDeepLinkHandler();
+    };
+  },
   registerFormLifecycleHandler(handler: FormLifecycleHandler): () => void {
     if (!isFormsAvailable()) return () => {};
 
@@ -190,5 +229,5 @@ export type {
   FormLifecycleEvent,
   FormLifecycleHandler,
 } from './Forms';
-export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
+export type { KlaviyoDeepLinkAPI, DeepLinkHandler } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';

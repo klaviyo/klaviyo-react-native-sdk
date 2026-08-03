@@ -513,6 +513,59 @@ The `Klaviyo.handleUniversalTrackingLink()` method will:
 
 If the link is not a Klaviyo tracking link, you should handle it as a regular deep link in your app.
 
+##### Taking Control of Resolved Deep Link Navigation
+
+> The `registerDeepLinkHandler` API is available in SDK version 2.5.0 and higher.
+
+By default, after `handleUniversalTrackingLink()` resolves a tracking link, the SDK
+opens the resolved destination URL for you. On iOS this uses `UIApplication.open(_:)`.
+**If your destination URL is itself a universal link on your own app's associated
+domain, iOS will refuse to reopen your app and will send the user to Safari instead.**
+This is Apple's anti-loop protection for auto-triggered universal links, and it cannot
+be worked around through `Linking` alone.
+
+To avoid this, register a deep link handler. When a handler is registered, the SDK
+delivers the **resolved destination URL** directly to your JavaScript code instead of
+opening it itself — for push notification deep links, In-App Form CTAs, and resolved
+universal tracking links alike. You then navigate however your app prefers (e.g. with
+React Navigation), keeping the user inside the app.
+
+```typescript
+import { useEffect } from 'react';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+export default function App() {
+  useEffect(() => {
+    // Register first, so resolved links are delivered here instead of being
+    // opened by the SDK. Returns an unsubscribe function.
+    const unsubscribe = Klaviyo.registerDeepLinkHandler((url) => {
+      console.log('Klaviyo resolved deep link:', url);
+      // Take full control of navigation, e.g.:
+      // navigationRef.navigate(parseUrl(url));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Rest of your app code
+}
+```
+
+Notes:
+
+- The handler receives the resolved destination URL as a string.
+- The handler is invoked on the JavaScript thread.
+- Only one handler can be active at a time — calling `registerDeepLinkHandler` again
+  removes the previous subscription before registering the new one.
+- When no handler is registered, the SDK falls back to its default link-opening
+  behavior, so existing `handleUniversalTrackingLink` integrations keep working
+  unchanged.
+- This API is available on both iOS and Android for parity. Android is not affected by
+  the iOS universal-link anti-loop, but registering a handler still lets you centralize
+  navigation for all Klaviyo deep links.
+
 #### Silent Push Notifications
 
 Silent push notifications (also known as background pushes) allow your app to receive payloads from Klaviyo without displaying a visible alert to the user. These are typically used to trigger background behavior, such as displaying content, personalizing the app interface, or downloading new information from a server. To receive silent push notifications, follow the platform-specific instructions below:

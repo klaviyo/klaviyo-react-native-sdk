@@ -15,7 +15,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"FormLifecycleEvent"];
+    return @[@"FormLifecycleEvent", @"KlaviyoOnDeepLinkResolved"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -107,6 +107,20 @@ RCT_EXPORT_METHOD(handleUniversalTrackingLink: (NSString *)trackingLinkString)
     }
     
     [KlaviyoBridge handleUniversalTrackingLink:trackingLink];
+}
+
+RCT_EXPORT_METHOD(registerDeepLinkHandler) {
+    __weak __typeof__(self) weakSelf = self;
+    [KlaviyoBridge registerDeepLinkHandlerWithCallback:^(NSDictionary *eventData) {
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
+        if (strongSelf) {
+            [strongSelf sendEventWithName:@"KlaviyoOnDeepLinkResolved" body:eventData];
+        }
+    }];
+}
+
+RCT_EXPORT_METHOD(unregisterDeepLinkHandler) {
+    [KlaviyoBridge unregisterDeepLinkHandler];
 }
 
 RCT_EXPORT_METHOD(createEvent: (NSDictionary *) event)

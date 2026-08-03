@@ -34,6 +34,8 @@ jest.mock('react-native', () => {
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
         handleUniversalTrackingLink: jest.fn(),
+        registerDeepLinkHandler: jest.fn(),
+        unregisterDeepLinkHandler: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
             FIRST_NAME: 'first_name',
@@ -534,6 +536,138 @@ describe('Klaviyo SDK', () => {
       );
 
       // Restore console.error
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('deep link handler', () => {
+    it('should register the native handler and forward resolved deep link urls', () => {
+      const handler = jest.fn();
+      Klaviyo.registerDeepLinkHandler(handler);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerDeepLinkHandler
+      ).toHaveBeenCalledTimes(1);
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', {
+        url: 'https://example.com/products/123',
+      });
+
+      expect(handler).toHaveBeenCalledWith('https://example.com/products/123');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should unsubscribe and unregister the native handler when cleanup is called', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerDeepLinkHandler(handler);
+
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterDeepLinkHandler as jest.Mock
+      ).mockClear();
+
+      unsubscribe();
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterDeepLinkHandler
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not forward events after unsubscribing', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerDeepLinkHandler(handler);
+
+      unsubscribe();
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', {
+        url: 'https://example.com/products/123',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should be safe to call the unsubscribe function more than once', () => {
+      const handler = jest.fn();
+      const unsubscribe = Klaviyo.registerDeepLinkHandler(handler);
+
+      unsubscribe();
+      expect(() => unsubscribe()).not.toThrow();
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', {
+        url: 'https://example.com/products/123',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should clean up the previous subscription when re-registering', () => {
+      const handler1 = jest.fn();
+      const handler2 = jest.fn();
+
+      Klaviyo.registerDeepLinkHandler(handler1);
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterDeepLinkHandler as jest.Mock
+      ).mockClear();
+
+      // Re-registering should remove the previous listener and native handler
+      // before adding the new one.
+      Klaviyo.registerDeepLinkHandler(handler2);
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterDeepLinkHandler
+      ).toHaveBeenCalledTimes(1);
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', {
+        url: 'https://example.com/products/123',
+      });
+
+      expect(handler1).not.toHaveBeenCalled();
+      expect(handler2).toHaveBeenCalledWith('https://example.com/products/123');
+    });
+
+    it('should ignore events with a missing url', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerDeepLinkHandler(handler);
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', {});
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing or invalid url')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should ignore events with an empty string url', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerDeepLinkHandler(handler);
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', { url: '' });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing or invalid url')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should ignore events with a non-string url', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const handler = jest.fn();
+      Klaviyo.registerDeepLinkHandler(handler);
+
+      emitNativeEvent('KlaviyoOnDeepLinkResolved', { url: 42 });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('missing or invalid url')
+      );
       consoleWarnSpy.mockRestore();
     });
   });
