@@ -8,8 +8,9 @@ This guide outlines how developers can migrate from older versions of our SDK to
 
 As of v2.5.0 (which pins the native Android SDK to 4.5.0), the Klaviyo SDK forwards the Android FCM
 push token to Klaviyo **automatically by default**. This formalizes behavior the bundled
-`KlaviyoPushService` already performed, and is **non-breaking** — the default preserves existing
-behavior.
+`KlaviyoPushService` already performed — see the native
+[Android SDK README](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications) for details —
+and is **non-breaking**, because the default preserves existing behavior.
 
 **iOS is unchanged:** automatic forwarding remains opt-in (off by default), because iOS token
 collection relies on the more invasive app-delegate method swizzling. Each platform has its own key —
