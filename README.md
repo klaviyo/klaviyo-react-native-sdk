@@ -479,9 +479,9 @@ us from bridging this functionality into the React Native SDK code.
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
 
-As an alternative to the handler-based setup in those guides, the native SDKs offer an **opt-in
-automatic push-open tracking mode**, declared in your native configuration rather than written in
-code: `klaviyo_automatic_push_open_tracking` in the iOS `Info.plist` and
+As an alternative to the handler-based setup in those guides, the native SDKs pinned by v2.5.0 offer
+an **opt-in automatic push-open tracking mode**, declared in your native configuration rather than
+written in code: `klaviyo_automatic_push_open_tracking` in the iOS `Info.plist` and
 `com.klaviyo.push.automatic_push_open_tracking` in the Android manifest. It is off by default, and is
 independent of automatic token forwarding — you can enable either, both, or neither. See the
 platform guides above for how each mode works and what it changes.
