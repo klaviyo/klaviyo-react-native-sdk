@@ -39,6 +39,10 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
+  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
+  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
+  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
+  pod 'KlaviyoLocation', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
 
   # Setup permissions for react-native-permissions
   setup_permissions([
@@ -78,6 +82,6 @@ end
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
-  pod 'KlaviyoSwiftExtension'
+  pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
 end
 
