@@ -303,8 +303,8 @@ forwarding differently by default:
 - **Android — on by default.** The native Android SDK auto-registers its `KlaviyoPushService`
   (a `FirebaseMessagingService`) via manifest merge, so it forwards the FCM token to Klaviyo
   automatically, without any React Native code. You do not need to collect the token yourself on
-  Android — though doing so is harmless: repeated registrations with the same push request state are
-  suppressed by the native SDK.
+  Android — though doing so is harmless: the native SDK only sends a request when the complete push
+  request state has changed.
 - **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
   which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
   APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see

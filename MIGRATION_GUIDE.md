@@ -32,8 +32,8 @@ yourself:
 - **iOS** — nothing to do; automatic forwarding is off unless you opt in via `Info.plist` (see the
   native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications)).
 
-If you already collect and set the token manually on Android, no change is needed — repeated
-registrations with the same push request state are suppressed by the native SDK. See the
+If you already collect and set the token manually on Android, no change is needed — the native SDK
+only sends a request when the complete push request state has changed. See the
 [README](./README.md#collecting-push-tokens) for full token-collection guidance.
 
 > **Looking ahead:** a future **major** release may enable **both** `automatic_push_open_tracking`
