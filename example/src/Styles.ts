@@ -253,6 +253,23 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  // Consent toggle styles
+  consentToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  consentToggleLabel: {
+    ...typography.body,
+    color: colors.text,
+    flexShrink: 1,
+    paddingRight: spacing.sm,
+  },
+  consentToggleLabelDisabled: {
+    color: colors.secondaryText,
+  },
+
   // Warning message styles
   warningContainer: {
     backgroundColor: colors.warningBackground,
