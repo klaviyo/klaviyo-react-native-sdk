@@ -9,7 +9,11 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
-import { type Subscription, formatSubscription } from './Subscription';
+import {
+  type Subscription,
+  formatSubscription,
+  validateSubscription,
+} from './Subscription';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -95,17 +99,11 @@ export const Klaviyo: KlaviyoInterface = {
     KlaviyoReactNativeSdk.createEvent(event);
   },
   createSubscription(subscription: Subscription): void {
-    if (!subscription.listId || subscription.listId.trim() === '') {
-      console.error('[Klaviyo] Error: Subscription listId is required');
-      return;
-    }
-    // `channels` is required by the type, but untyped JS callers can still omit it. Report it
-    // rather than throwing, and never silently fall back to the broad grant.
-    if (subscription.channels == null) {
-      console.error(
-        '[Klaviyo] Error: Subscription channels is required. Pass per-channel consent, or ' +
-          'allAvailableMarketing(listId) to request marketing consent on every identified channel.'
-      );
+    // Validate the whole shape up front: TypeScript can't police plain-JS callers, and reporting
+    // here beats throwing mid-marshalling or handing native a malformed payload.
+    const error = validateSubscription(subscription);
+    if (error !== null) {
+      console.error(`[Klaviyo] Error: ${error}`);
       return;
     }
     KlaviyoReactNativeSdk.createSubscription(formatSubscription(subscription));

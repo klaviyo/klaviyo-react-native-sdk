@@ -344,13 +344,20 @@ class KlaviyoReactNativeSdkModule(
           it.hasKey(CUSTOM_SOURCE) && it.getType(CUSTOM_SOURCE) == ReadableType.String
         }?.getString(CUSTOM_SOURCE)
 
-    // An absent channels key means "all available marketing" — the broad grant is only reachable
-    // through the named factory on both this SDK and the JS layer.
+    // Only a *missing* channels key means "all available marketing" — the broad grant is reachable
+    // solely through the named factory on this SDK and the JS layer. A key that is present but not
+    // an object is malformed, and is rejected rather than quietly widening consent.
     val channelsMap =
-      subscription
-        .takeIf {
-          it.hasKey(CHANNELS) && it.getType(CHANNELS) == ReadableType.Map
-        }?.getMap(CHANNELS)
+      if (subscription.hasKey(CHANNELS)) {
+        subscription.takeIf { it.getType(CHANNELS) == ReadableType.Map }?.getMap(CHANNELS) ?: run {
+          Registry.log.error(
+            "Klaviyo React Native SDK: Subscription channels must be an object when present",
+          )
+          return
+        }
+      } else {
+        null
+      }
 
     val parsed = channelsMap?.let { parseSubscriptionChannels(it) }
 

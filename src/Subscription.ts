@@ -118,6 +118,92 @@ type BridgedSubscription = {
   };
 };
 
+const EMAIL_CONSENT_VALUES: readonly string[] = Object.values(EmailConsent);
+const MESSAGING_CONSENT_VALUES: readonly string[] =
+  Object.values(MessagingConsent);
+
+/**
+ * Validates one channel's consent list, returning an error message or `null` when it is valid.
+ */
+function validateConsentList(
+  channel: string,
+  value: unknown,
+  allowed: readonly string[]
+): string | null {
+  if (!Array.isArray(value)) {
+    return `Subscription channels.${channel} must be an array of consent types`;
+  }
+
+  const unsupported = value.filter(
+    (consent) => typeof consent !== 'string' || !allowed.includes(consent)
+  );
+  if (unsupported.length > 0) {
+    return `Subscription channels.${channel} contains unsupported consent types: ${unsupported.join(
+      ', '
+    )}. Supported: ${allowed.join(', ')}`;
+  }
+
+  return null;
+}
+
+/**
+ * Validates a subscription's runtime shape, returning an error message or `null` when it is valid.
+ *
+ * TypeScript can't police plain-JavaScript callers, and this data crosses the native bridge — so an
+ * invalid payload has to be reported here rather than throwing mid-marshalling or reaching native
+ * malformed. Note that a `channels` value which is present but not a valid object is an **error**,
+ * never a silent fall-through to the broad grant.
+ *
+ * @param subscription {@link Subscription} - the subscription to validate
+ */
+export function validateSubscription(
+  subscription: Subscription
+): string | null {
+  if (typeof subscription !== 'object' || subscription === null) {
+    return 'Subscription must be an object';
+  }
+
+  const { listId, channels, customSource } = subscription;
+
+  if (typeof listId !== 'string' || listId.trim() === '') {
+    return 'Subscription listId is required and must be a non-empty string';
+  }
+
+  if (customSource !== undefined && typeof customSource !== 'string') {
+    return 'Subscription customSource must be a string when provided';
+  }
+
+  if (channels === ALL_AVAILABLE_MARKETING) {
+    return null;
+  }
+
+  // Array.isArray matters: arrays are objects, so `channels: ['email']` would otherwise pass the
+  // typeof check, destructure to all-undefined, and reach native as an empty channels object.
+  if (
+    typeof channels !== 'object' ||
+    channels === null ||
+    Array.isArray(channels)
+  ) {
+    return (
+      'Subscription channels is required, and must be an object of per-channel consent or ' +
+      'ALL_AVAILABLE_MARKETING. Use allAvailableMarketing(listId) to request marketing consent ' +
+      'on every identified channel.'
+    );
+  }
+
+  const { email, sms, whatsapp } = channels;
+
+  return (
+    (email !== undefined &&
+      validateConsentList('email', email, EMAIL_CONSENT_VALUES)) ||
+    (sms !== undefined &&
+      validateConsentList('sms', sms, MESSAGING_CONSENT_VALUES)) ||
+    (whatsapp !== undefined &&
+      validateConsentList('whatsapp', whatsapp, MESSAGING_CONSENT_VALUES)) ||
+    null
+  );
+}
+
 /**
  * Converts a {@link Subscription} into its bridge payload, dropping absent optional fields so the
  * native side can distinguish "not requested" from "requested empty".
@@ -125,6 +211,8 @@ type BridgedSubscription = {
  * An absent channel key stays absent (leave that channel untouched), while an empty array is passed
  * through so the native SDK's own validation reports it rather than this bridge silently dropping
  * the channel.
+ *
+ * Expects data that has already passed {@link validateSubscription}.
  *
  * @param subscription {@link Subscription} - the subscription to convert
  */

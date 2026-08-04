@@ -89,6 +89,22 @@ repositories {
 }
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
+
+// A JitPack branch snapshot is a moving target and must never ship. Development against an
+// unreleased Android SDK sets klaviyoAndroidSdkVersion to e.g. "rel~4.5.0-SNAPSHOT"; this fails the
+// release assembly rather than relying on someone remembering to pin it back before publishing.
+tasks.matching { it.name.toLowerCase().contains("release") }.configureEach {
+  doFirst {
+    if (klaviyoAndroidSdkVersion.endsWith("-SNAPSHOT")) {
+      throw new GradleException(
+          "Refusing to build a release against the klaviyo-android-sdk snapshot " +
+          "'${klaviyoAndroidSdkVersion}'. Set KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion in " +
+          "android/gradle.properties to a published version before releasing."
+      )
+    }
+  }
+}
+
 def kotlin_version = getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {

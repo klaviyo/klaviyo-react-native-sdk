@@ -981,5 +981,109 @@ describe('Klaviyo SDK', () => {
       );
       consoleErrorSpy.mockRestore();
     });
+
+    // A `channels` value that is present but malformed must never fall through to the broad grant —
+    // that would hand out marketing consent on every identified channel by accident, which is the
+    // exact failure mode the required-`channels` design exists to prevent.
+    it.each([
+      ['a string', 'allAvailable'],
+      ['a number', 7],
+      ['an array', ['email']],
+      ['null', null],
+      ['a boolean', true],
+    ])(
+      'should reject channels that is %s rather than granting broad consent',
+      (_label, channels) => {
+        const consoleErrorSpy = jest
+          .spyOn(console, 'error')
+          .mockImplementation();
+
+        expect(() =>
+          Klaviyo.createSubscription({ listId: 'ABC123', channels } as never)
+        ).not.toThrow();
+
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.createSubscription
+        ).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('channels')
+        );
+        consoleErrorSpy.mockRestore();
+      }
+    );
+
+    it('should reject a non-string listId rather than throwing on .trim()', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 12345,
+          channels: { email: [EmailConsent.Marketing] },
+        } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('listId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject a consent list passed as a bare string', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Without validation this spread into ['m','a','r','k',...] and reached native as garbage.
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 'ABC123',
+          channels: { email: 'marketing' },
+        } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('email')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject unsupported consent values', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { sms: ['open_tracking'] },
+      } as never);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('open_tracking')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject a non-string customSource', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+        customSource: 42,
+      } as never);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('customSource')
+      );
+      consoleErrorSpy.mockRestore();
+    });
   });
 });

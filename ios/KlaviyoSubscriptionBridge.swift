@@ -16,12 +16,19 @@ public extension KlaviyoBridge {
 
         let customSource = subscription["customSource"] as? String
 
-        // An absent channels key means "all available marketing" — the broad grant is only
-        // reachable through the named factory on both this SDK and the JS layer.
-        guard let channelsDict = subscription["channels"] as? [String: AnyObject] else {
+        // Only a *missing* channels key means "all available marketing" — the broad grant is
+        // reachable solely through the named factory on this SDK and the JS layer.
+        let channelsValue = subscription["channels"]
+        guard let channelsValue, !(channelsValue is NSNull) else {
             KlaviyoSDK().create(
                 subscription: .allAvailableMarketing(listId: listId, customSource: customSource)
             )
+            return
+        }
+
+        // Present but not an object is malformed, and is rejected rather than quietly widening
+        // consent to every identified channel.
+        guard let channelsDict = channelsValue as? [String: AnyObject] else {
             return
         }
 
