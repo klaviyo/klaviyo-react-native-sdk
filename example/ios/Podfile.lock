@@ -64,20 +64,10 @@ PODS:
     - hermes-engine/Pre-built (= 0.81.5)
   - hermes-engine/Pre-built (0.81.5)
   - klaviyo-react-native-sdk (2.4.0):
-    - KlaviyoForms (= 5.3.1)
-    - KlaviyoLocation (= 5.3.1)
-    - KlaviyoSwift (= 5.3.1)
+    - KlaviyoForms (= 5.4.0)
+    - KlaviyoLocation (= 5.4.0)
+    - KlaviyoSwift (= 5.4.0)
     - React-Core
-  - KlaviyoCore (5.3.1):
-    - AnyCodable-FlightSchool
-  - KlaviyoForms (5.3.1):
-    - KlaviyoSwift (~> 5.3.1)
-  - KlaviyoLocation (5.3.1):
-    - KlaviyoSwift (~> 5.3.1)
-  - KlaviyoSwift (5.3.1):
-    - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.3.1)
-  - KlaviyoSwiftExtension (5.3.1)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -2628,11 +2618,6 @@ SPEC REPOS:
     - FirebaseMessaging
     - GoogleDataTransport
     - GoogleUtilities
-    - KlaviyoCore
-    - KlaviyoForms
-    - KlaviyoLocation
-    - KlaviyoSwift
-    - KlaviyoSwiftExtension
     - nanopb
     - PromisesObjC
     - SocketRocket
@@ -2812,11 +2797,6 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   klaviyo-react-native-sdk: 021a6341807e8cbc03e595e5b499276cb115c641
-  KlaviyoCore: 37750d289e7113277899f6a2c9f8f088e732d869
-  KlaviyoForms: 7e69da16880700be263b819e542255d2b639507a
-  KlaviyoLocation: 07b9a74ebcef661310b22f4be6ebd0e03c816793
-  KlaviyoSwift: 5406447e2e594c47c80d9442c67ac088b92cc77e
-  KlaviyoSwiftExtension: cf8257a28734e076224560fe7379a8eb6aa94270
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
@@ -2890,6 +2870,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: cc4a6600d61e4e9276e860d4d68eebb834a050ba
 
-PODFILE CHECKSUM: 1ab968cc8cc5357131b42b0efa05d7865588a201
+PODFILE CHECKSUM: 934faec582b795821b78db9bd26a5ae0216242c3
 
 COCOAPODS: 1.16.2
