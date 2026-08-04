@@ -9,6 +9,7 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import { type Subscription, formatSubscription } from './Subscription';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -92,6 +93,22 @@ export const Klaviyo: KlaviyoInterface = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
+  },
+  createSubscription(subscription: Subscription): void {
+    if (!subscription.listId || subscription.listId.trim() === '') {
+      console.error('[Klaviyo] Error: Subscription listId is required');
+      return;
+    }
+    // `channels` is required by the type, but untyped JS callers can still omit it. Report it
+    // rather than throwing, and never silently fall back to the broad grant.
+    if (subscription.channels == null) {
+      console.error(
+        '[Klaviyo] Error: Subscription channels is required. Pass per-channel consent, or ' +
+          'allAvailableMarketing(listId) to request marketing consent on every identified channel.'
+      );
+      return;
+    }
+    KlaviyoReactNativeSdk.createSubscription(formatSubscription(subscription));
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     if (!isFormsAvailable()) return;
@@ -192,3 +209,14 @@ export type {
 } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
+export {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from './Subscription';
+export type {
+  KlaviyoSubscriptionApi,
+  Subscription,
+  SubscriptionChannels,
+} from './Subscription';

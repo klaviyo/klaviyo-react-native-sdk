@@ -2,6 +2,12 @@ import { NativeModules } from 'react-native';
 import { Klaviyo } from '../index';
 import { EventName } from '../Event';
 import { ProfileProperty } from '../Profile';
+import {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from '../Subscription';
 
 // Store event listeners for testing NativeEventEmitter
 const eventListeners: Record<string, Array<(data: any) => void>> = {};
@@ -26,6 +32,7 @@ jest.mock('react-native', () => {
         setPushToken: jest.fn(),
         getPushToken: jest.fn(),
         createEvent: jest.fn(),
+        createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
@@ -833,6 +840,146 @@ describe('Klaviyo SDK', () => {
         expect.stringContaining('missing required field(s): deepLinkUrl')
       );
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('subscriptions', () => {
+    it('should bridge per-channel consent as wire-format arrays', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: {
+          email: [EmailConsent.Marketing, EmailConsent.OpenTracking],
+          sms: [MessagingConsent.Marketing],
+          whatsapp: [MessagingConsent.Transactional],
+        },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: {
+          email: ['marketing', 'open_tracking'],
+          sms: ['marketing'],
+          whatsapp: ['transactional'],
+        },
+      });
+    });
+
+    it('should include customSource when provided', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+        customSource: 'Checkout screen',
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: { email: ['marketing'] },
+        customSource: 'Checkout screen',
+      });
+    });
+
+    it('should omit customSource when absent', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      const payload = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(payload).not.toHaveProperty('customSource');
+    });
+
+    it('should omit the channels key entirely for the all-available-marketing sentinel', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: ALL_AVAILABLE_MARKETING,
+      });
+
+      const payload = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(payload).not.toHaveProperty('channels');
+      expect(payload).toEqual({ listId: 'ABC123' });
+    });
+
+    it('should omit the channels key for the allAvailableMarketing factory', () => {
+      Klaviyo.createSubscription(
+        allAvailableMarketing('ABC123', 'Signup form')
+      );
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        customSource: 'Signup form',
+      });
+    });
+
+    it('should leave an omitted channel absent rather than sending an empty array', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      const { channels } = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(channels).not.toHaveProperty('sms');
+      expect(channels).not.toHaveProperty('whatsapp');
+    });
+
+    it('should pass an explicitly empty channel through for native validation', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [] },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: { email: [] },
+      });
+    });
+
+    it('should not bridge a blank listId', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: '   ',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('listId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should report rather than throw when an untyped caller omits channels', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // `channels` is required by the type, but plain-JS consumers can still omit it. Throwing a
+      // TypeError out of a fire-and-forget SDK method would be worse than reporting it.
+      expect(() =>
+        Klaviyo.createSubscription({ listId: 'ABC123' } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('channels')
+      );
+      consoleErrorSpy.mockRestore();
     });
   });
 });
