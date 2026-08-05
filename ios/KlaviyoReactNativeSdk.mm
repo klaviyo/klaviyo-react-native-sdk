@@ -33,6 +33,15 @@ RCT_EXPORT_METHOD(initialize: (NSString *)apiKey)
     [KlaviyoBridge initialize: apiKey];
 }
 
+RCT_EXPORT_METHOD(setLoggingEnabled: (BOOL)enabled)
+{
+    [KlaviyoBridge setLoggingEnabled: enabled];
+}
+
+RCT_EXPORT_METHOD(isLoggingEnabled: (RCTResponseSenderBlock)callback) {
+    callback(@[@([KlaviyoBridge isLoggingEnabled])]);
+}
+
 RCT_EXPORT_METHOD(setProfileAttribute: (NSString *)key value:(NSString *)value)
 {
     [KlaviyoBridge setProfileAttribute:key value:value];

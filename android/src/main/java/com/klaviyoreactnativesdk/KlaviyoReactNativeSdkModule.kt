@@ -20,6 +20,7 @@ import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
+import com.klaviyo.core.config.Log
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
@@ -101,6 +102,33 @@ class KlaviyoReactNativeSdkModule(
     // The native SDK will track Activity changes internally from here on.
     reactApplicationContext.currentActivity?.let(Registry.lifecycleMonitor::assignCurrentActivity)
     Klaviyo.initialize(apiKey, reactContext)
+  }
+
+  // The Android SDK has no dedicated logging on/off API (log verbosity is set via
+  // manifest metadata), so the toggle is implemented on top of the SDK's mutable
+  // log level: `None` silences all logging, and the prior level is captured here
+  // so re-enabling restores the configured verbosity.
+  private var logLevelToRestore: Log.Level? = null
+
+  @ReactMethod
+  fun setLoggingEnabled(enabled: Boolean) {
+    if (enabled) {
+      if (Registry.log.logLevel == Log.Level.None) {
+        // Fall back to the SDK's default level if logging was already disabled
+        // before this module captured a level (e.g. via manifest metadata).
+        Registry.log.logLevel = logLevelToRestore ?: Log.Level.Error
+      }
+    } else {
+      if (Registry.log.logLevel != Log.Level.None) {
+        logLevelToRestore = Registry.log.logLevel
+      }
+      Registry.log.logLevel = Log.Level.None
+    }
+  }
+
+  @ReactMethod
+  fun isLoggingEnabled(callback: Callback) {
+    callback.invoke(Registry.log.logLevel != Log.Level.None)
   }
 
   @ReactMethod

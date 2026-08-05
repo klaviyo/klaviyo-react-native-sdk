@@ -13,6 +13,8 @@ jest.mock('react-native', () => {
     NativeModules: {
       KlaviyoReactNativeSdk: {
         initialize: jest.fn(),
+        setLoggingEnabled: jest.fn(),
+        isLoggingEnabled: jest.fn(),
         setProfile: jest.fn(),
         setExternalId: jest.fn(),
         getExternalId: jest.fn(),
@@ -117,6 +119,38 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.initialize
       ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('SDK logging', () => {
+    it('should call the native setLoggingEnabled method with the provided value', () => {
+      Klaviyo.setLoggingEnabled(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledWith(false);
+
+      Klaviyo.setLoggingEnabled(true);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledWith(true);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it('should get logging state through callback correctly', () => {
+      const callback = jest.fn();
+      Klaviyo.isLoggingEnabled(callback);
+
+      // Simulate the native callback invocation
+      const isLoggingEnabledCall =
+        NativeModules.KlaviyoReactNativeSdk.isLoggingEnabled.mock.calls[0][0];
+      isLoggingEnabledCall(true);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.isLoggingEnabled
+      ).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledWith(true);
     });
   });
 
