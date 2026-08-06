@@ -28,8 +28,12 @@ jobs:
           # (2.2.0-alpha.1 is a real tag), but '4.5.0-SNAPSHOT' is a JitPack build that
           # configure-sdk.sh writes through verbatim because it already looks like a semver.
           # android/gradle.properties ships in the npm package, so this must not leak.
-          android_version=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties)
-          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || [[ "$android_version" == *SNAPSHOT* ]]; then
+          # tr strips a stray CR so a CRLF checkout doesn't trip a false rejection; the SNAPSHOT
+          # test is case-insensitive because the prerelease pattern above would otherwise accept
+          # a hand-written '4.5.0-snapshot' as a legitimate version.
+          android_version=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties | tr -d '\r')
+          android_upper=$(printf '%s' "$android_version" | tr '[:lower:]' '[:upper:]')
+          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || [[ "$android_upper" == *SNAPSHOT* ]]; then
             echo "::error file=android/gradle.properties::Android SDK pin '$android_version' is not a published version. Restore it before releasing."
             fail=1
           fi

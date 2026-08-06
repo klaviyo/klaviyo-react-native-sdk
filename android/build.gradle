@@ -98,8 +98,10 @@ def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 // publish-sdk.yml applies the equivalent check at the release gate, covering iOS too.
 tasks.matching { it.name.toLowerCase().contains("release") }.configureEach {
   doFirst {
-    def published = klaviyoAndroidSdkVersion ==~ /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/
-    if (!published || klaviyoAndroidSdkVersion.contains("SNAPSHOT")) {
+    // Case-insensitive: the prerelease group above would otherwise accept "4.5.0-snapshot".
+    def pin = klaviyoAndroidSdkVersion?.trim() ?: ""
+    def published = pin ==~ /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/
+    if (!published || pin.toUpperCase().contains("SNAPSHOT")) {
       throw new GradleException(
           "Refusing to build a release against the unpublished klaviyo-android-sdk pin " +
           "'${klaviyoAndroidSdkVersion}'. Set KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion in " +
