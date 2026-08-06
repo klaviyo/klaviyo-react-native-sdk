@@ -24,8 +24,12 @@ jobs:
           fail=0
           podspec=klaviyo-react-native-sdk.podspec
 
+          # Fully anchored, and SNAPSHOT rejected separately: a prerelease suffix is legitimate
+          # (2.2.0-alpha.1 is a real tag), but '4.5.0-SNAPSHOT' is a JitPack build that
+          # configure-sdk.sh writes through verbatim because it already looks like a semver.
+          # android/gradle.properties ships in the npm package, so this must not leak.
           android_version=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties)
-          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || [[ "$android_version" == *SNAPSHOT* ]]; then
             echo "::error file=android/gradle.properties::Android SDK pin '$android_version' is not a published version. Restore it before releasing."
             fail=1
           fi

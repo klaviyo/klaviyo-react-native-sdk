@@ -90,14 +90,18 @@ repositories {
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
 
-// A JitPack branch snapshot is a moving target and must never ship. Development against an
-// unreleased Android SDK sets klaviyoAndroidSdkVersion to e.g. "rel~4.5.0-SNAPSHOT"; this fails the
-// release assembly rather than relying on someone remembering to pin it back before publishing.
+// A development pin is a moving target and must never ship. configure-sdk.sh sets
+// klaviyoAndroidSdkVersion to a JitPack snapshot ("rel~4.5.0-SNAPSHOT"), a commit hash, or a local
+// path while developing against an unreleased Android SDK; this fails the release assembly rather
+// than relying on someone remembering to restore it. A prerelease suffix is allowed because
+// "2.2.0-alpha.1" is a real published version, but SNAPSHOT never is.
+// publish-sdk.yml applies the equivalent check at the release gate, covering iOS too.
 tasks.matching { it.name.toLowerCase().contains("release") }.configureEach {
   doFirst {
-    if (klaviyoAndroidSdkVersion.endsWith("-SNAPSHOT")) {
+    def published = klaviyoAndroidSdkVersion ==~ /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/
+    if (!published || klaviyoAndroidSdkVersion.contains("SNAPSHOT")) {
       throw new GradleException(
-          "Refusing to build a release against the klaviyo-android-sdk snapshot " +
+          "Refusing to build a release against the unpublished klaviyo-android-sdk pin " +
           "'${klaviyoAndroidSdkVersion}'. Set KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion in " +
           "android/gradle.properties to a published version before releasing."
       )
