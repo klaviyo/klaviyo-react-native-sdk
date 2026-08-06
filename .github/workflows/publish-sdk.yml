@@ -14,6 +14,36 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # A release must never ship a development pin. configure-sdk.sh rewrites these files to point
+      # at a branch, commit, or local path while developing against an unreleased native SDK, and
+      # restoring them is easy to forget. Checked here so one gate covers both platforms;
+      # android/build.gradle carries an equivalent guard for local release builds.
+      - name: Verify no development SDK pins
+        run: |
+          set -uo pipefail
+          fail=0
+          podspec=klaviyo-react-native-sdk.podspec
+
+          android_version=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties)
+          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error file=android/gradle.properties::Android SDK pin '$android_version' is not a published version. Restore it before releasing."
+            fail=1
+          fi
+
+          # configure-sdk.sh comments out the version constraint as: s.dependency "KlaviyoSwift" ##, "5.3.1"
+          if grep -qE '^\s*s\.dependency\s+"Klaviyo[A-Za-z]*"\s*##' "$podspec"; then
+            echo "::error file=$podspec::Klaviyo pod version constraints are commented out (configure-sdk.sh local mode). Restore them before releasing."
+            fail=1
+          fi
+
+          # Scoped to dependency lines: s.source legitimately uses :git for this repo itself.
+          if grep -E '^\s*s\.dependency' "$podspec" | grep -qE ':git|:branch|:commit|:path'; then
+            echo "::error file=$podspec::A Klaviyo pod resolves from git or a local path instead of a published version. Restore it before releasing."
+            fail=1
+          fi
+
+          exit $fail
+
       - name: Setup
         uses: ./.github/actions/setup
 
