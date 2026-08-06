@@ -291,4 +291,11 @@ export const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     marginTop: spacing.xs / 2,
   },
+  // Opt-in spacing for a warning that sits above other content. Matches
+  // profileFieldContainer's bottom margin so the vertical rhythm lines up.
+  // Not folded into warningContainer, which renders as the only child in
+  // PushSection and would gain a trailing gap.
+  warningContainerWithBottomSpacing: {
+    marginBottom: spacing.md,
+  },
 });

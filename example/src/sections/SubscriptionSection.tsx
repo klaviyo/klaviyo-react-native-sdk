@@ -12,7 +12,12 @@ export function SubscriptionSection() {
 
   return (
     <View style={styles.section}>
-      <View style={styles.warningContainer}>
+      <View
+        style={[
+          styles.warningContainer,
+          styles.warningContainerWithBottomSpacing,
+        ]}
+      >
         <Text style={styles.warningText}>
           Set an email or phone number before subscribing.
         </Text>
