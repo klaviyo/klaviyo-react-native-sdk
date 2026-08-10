@@ -38,15 +38,16 @@ jobs:
             fail=1
           fi
 
-          # configure-sdk.sh comments out the version constraint as: s.dependency "KlaviyoSwift" ##, "5.3.1"
-          if grep -qE '^\s*s\.dependency\s+"Klaviyo[A-Za-z]*"\s*##' "$podspec"; then
-            echo "::error file=$podspec::Klaviyo pod version constraints are commented out (configure-sdk.sh local mode). Restore them before releasing."
-            fail=1
-          fi
-
-          # Scoped to dependency lines: s.source legitimately uses :git for this repo itself.
-          if grep -E '^\s*s\.dependency' "$podspec" | grep -qE ':git|:branch|:commit|:path'; then
-            echo "::error file=$podspec::A Klaviyo pod resolves from git or a local path instead of a published version. Restore it before releasing."
+          # Assert the good shape rather than blacklisting the bad ones. bump-version.sh documents
+          # three forms it normalizes — `s.dependency "Name"`, `s.dependency "Name" ##, "old"` and
+          # `s.dependency "Name", "old"` — and the first two both resolve unconstrained, since ##
+          # opens a Ruby comment. Requiring a quoted version covers those plus :git / :path sources
+          # and anything else. Scoped to Klaviyo pods, so a bare `s.dependency "React-Core"` is fine.
+          unpinned=$(grep -nE '^[[:space:]]*s\.dependency[[:space:]]+"Klaviyo[A-Za-z]*"' "$podspec" \
+            | grep -vE '^[0-9]+:[[:space:]]*s\.dependency[[:space:]]+"Klaviyo[A-Za-z]*"[[:space:]]*,[[:space:]]*"[^"]+"[[:space:]]*(#.*)?$' || true)
+          if [ -n "$unpinned" ]; then
+            echo "::error file=$podspec::Every Klaviyo pod must declare a published version. Offending lines:"
+            echo "$unpinned"
             fail=1
           fi
 
