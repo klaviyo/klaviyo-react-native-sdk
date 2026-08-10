@@ -4,6 +4,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { styles } from '../Styles';
 import { ActionButton } from '../components/ActionButton';
 import { Collapsible } from '../components/Collapsible';
+import { CollapsibleWarning } from '../components/CollapsibleWarning';
 import { ConsentToggle } from '../components/ConsentToggle';
 import { ProfileTextField } from '../components/ProfileTextField';
 
@@ -12,20 +13,12 @@ export function SubscriptionSection() {
 
   return (
     <View style={styles.section}>
-      <View
-        style={[
-          styles.warningContainer,
-          styles.warningContainerWithBottomSpacing,
-        ]}
-      >
-        <Text style={styles.warningText}>
-          Set an email or phone number before subscribing.
-        </Text>
+      <CollapsibleWarning title="Set an email or phone number first">
         <Text style={styles.warningSubtext}>
           The native SDK drops a subscription whose channel has no matching
           identifier on the profile. Use Profile &amp; Events above to set one.
         </Text>
-      </View>
+      </CollapsibleWarning>
       <ProfileTextField
         label="List ID"
         value={subscription.listId}
