@@ -57,6 +57,11 @@ export const CollapsibleWarning: React.FC<CollapsibleWarningProps> = ({
         style={styles.warningHeaderRow}
         onPress={toggle}
         activeOpacity={0.7}
+        // The row is a single line of text, so extend the touch target to ~44pt
+        // via hitSlop rather than minHeight: it reaches into the container's
+        // padding, which is dead space anyway, without making the collapsed
+        // warning taller — the point of collapsing it was to take up less room.
+        hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded }}
