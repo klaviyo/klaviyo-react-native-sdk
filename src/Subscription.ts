@@ -177,8 +177,7 @@ export function validateSubscription(
     return null;
   }
 
-  // Array.isArray matters: arrays are objects, so `channels: ['email']` would otherwise pass the
-  // typeof check, destructure to all-undefined, and reach native as an empty channels object.
+  // Arrays are objects, so the Array.isArray check is load-bearing here.
   if (
     typeof channels !== 'object' ||
     channels === null ||

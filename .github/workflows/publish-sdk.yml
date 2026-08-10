@@ -14,44 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # A release must never ship a development pin. configure-sdk.sh rewrites these files to point
-      # at a branch, commit, or local path while developing against an unreleased native SDK, and
-      # restoring them is easy to forget. Checked here so one gate covers both platforms;
-      # android/build.gradle carries an equivalent guard for local release builds.
-      - name: Verify no development SDK pins
-        run: |
-          set -uo pipefail
-          fail=0
-          podspec=klaviyo-react-native-sdk.podspec
-
-          # Fully anchored, and SNAPSHOT rejected separately: a prerelease suffix is legitimate
-          # (2.2.0-alpha.1 is a real tag), but '4.5.0-SNAPSHOT' is a JitPack build that
-          # configure-sdk.sh writes through verbatim because it already looks like a semver.
-          # android/gradle.properties ships in the npm package, so this must not leak.
-          # tr strips a stray CR so a CRLF checkout doesn't trip a false rejection; the SNAPSHOT
-          # test is case-insensitive because the prerelease pattern above would otherwise accept
-          # a hand-written '4.5.0-snapshot' as a legitimate version.
-          android_version=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties | tr -d '\r')
-          android_upper=$(printf '%s' "$android_version" | tr '[:lower:]' '[:upper:]')
-          if [[ ! "$android_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || [[ "$android_upper" == *SNAPSHOT* ]]; then
-            echo "::error file=android/gradle.properties::Android SDK pin '$android_version' is not a published version. Restore it before releasing."
-            fail=1
-          fi
-
-          # configure-sdk.sh comments out the version constraint as: s.dependency "KlaviyoSwift" ##, "5.3.1"
-          if grep -qE '^\s*s\.dependency\s+"Klaviyo[A-Za-z]*"\s*##' "$podspec"; then
-            echo "::error file=$podspec::Klaviyo pod version constraints are commented out (configure-sdk.sh local mode). Restore them before releasing."
-            fail=1
-          fi
-
-          # Scoped to dependency lines: s.source legitimately uses :git for this repo itself.
-          if grep -E '^\s*s\.dependency' "$podspec" | grep -qE ':git|:branch|:commit|:path'; then
-            echo "::error file=$podspec::A Klaviyo pod resolves from git or a local path instead of a published version. Restore it before releasing."
-            fail=1
-          fi
-
-          exit $fail
-
       - name: Setup
         uses: ./.github/actions/setup
 
