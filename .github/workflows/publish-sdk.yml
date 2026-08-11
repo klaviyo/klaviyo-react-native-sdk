@@ -23,6 +23,7 @@ jobs:
           set -uo pipefail
           fail=0
           podspec=klaviyo-react-native-sdk.podspec
+          podfile=example/ios/Podfile
 
           # Fully anchored, and SNAPSHOT rejected separately: a prerelease suffix is legitimate
           # (2.2.0-alpha.1 is a real tag), but '4.5.0-SNAPSHOT' is a JitPack build that
@@ -48,6 +49,20 @@ jobs:
           if [ -n "$unpinned" ]; then
             echo "::error file=$podspec::Every Klaviyo pod must declare a published version. Offending lines:"
             echo "$unpinned"
+            fail=1
+          fi
+
+          # The example app's Podfile never reaches integrators, so this one is not about what
+          # ships: a release tag would leave the example resolving pods from a branch that gets
+          # deleted once it merges, and `pod install` on that tag then fails for good. Good shape
+          # asserted rather than grepping for :git / :branch, because the source can sit on another
+          # line entirely via a splatted hash (`pod 'KlaviyoCore', **klaviyo_swift_sdk`). A bare
+          # `pod 'KlaviyoSwiftExtension'` or a quoted version is what a released tree looks like.
+          dev_pods=$(grep -nE "^[[:space:]]*pod[[:space:]]+'Klaviyo[A-Za-z]*'" "$podfile" \
+            | grep -vE "^[0-9]+:[[:space:]]*pod[[:space:]]+'Klaviyo[A-Za-z]*'([[:space:]]*,[[:space:]]*'[^']+')?[[:space:]]*(#.*)?$" || true)
+          if [ -n "$dev_pods" ]; then
+            echo "::error file=$podfile::The example app must not pin Klaviyo pods to a branch, commit, or local path. Restore them before releasing. Offending lines:"
+            echo "$dev_pods"
             fail=1
           fi
 
