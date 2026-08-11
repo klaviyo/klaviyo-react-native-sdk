@@ -40,6 +40,17 @@ target 'KlaviyoReactNativeSdkExample' do
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
 
+  # TEMPORARY - REMOVE ONCE KlaviyoSwift 5.4.0 PUBLISHES TO COCOAPODS TRUNK (MAGE-856)
+  # create(subscription:) ships in 5.4.0, which is cut on rel/5.4.0 but not yet released.
+  # The branch podspecs already declare 5.4.0, so these satisfy the podspec's "5.4.0"
+  # constraint from git in the meantime. Declared here rather than in
+  # klaviyo-react-native-sdk.podspec so the override can never reach integrators.
+  klaviyo_swift_sdk = { :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0' }
+  pod 'KlaviyoCore', **klaviyo_swift_sdk
+  pod 'KlaviyoSwift', **klaviyo_swift_sdk
+  pod 'KlaviyoForms', **klaviyo_swift_sdk
+  pod 'KlaviyoLocation', **klaviyo_swift_sdk
+
   # Setup permissions for react-native-permissions
   setup_permissions([
     'LocationWhenInUse',
@@ -78,6 +89,7 @@ end
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
-  pod 'KlaviyoSwiftExtension'
+  # TEMPORARY - REMOVE ALONGSIDE THE OVERRIDES ABOVE ONCE 5.4.0 PUBLISHES (MAGE-856)
+  pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
 end
 
