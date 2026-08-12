@@ -19,6 +19,7 @@ import { useCompanyId } from './hooks/useCompanyId';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { FormsSection } from './sections/FormsSection';
 import { GeofencingSection } from './sections/GeofencingSection';
+import { LoggingSection } from './sections/LoggingSection';
 import { PushSection } from './sections/PushSection';
 import { SubscriptionSection } from './sections/SubscriptionSection';
 
@@ -49,7 +50,8 @@ type SectionKey =
   | 'subscriptions'
   | 'forms'
   | 'geofencing'
-  | 'push';
+  | 'push'
+  | 'logging';
 
 // SectionList data — each section corresponds to a feature domain. Each
 // section has a single item (the section key) whose content is rendered by
@@ -61,6 +63,7 @@ const SECTIONS: { title: string; data: SectionKey[] }[] = [
   { title: 'In-App Forms', data: ['forms'] },
   { title: 'Geofencing & Location', data: ['geofencing'] },
   { title: 'Push Notifications', data: ['push'] },
+  { title: 'SDK Logging', data: ['logging'] },
 ];
 
 const renderSection = (sectionKey: SectionKey) => {
@@ -75,6 +78,8 @@ const renderSection = (sectionKey: SectionKey) => {
       return <GeofencingSection />;
     case 'push':
       return <PushSection />;
+    case 'logging':
+      return <LoggingSection />;
     default:
       return null;
   }

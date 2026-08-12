@@ -72,6 +72,16 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().initialize(with: apiKey)
     }
 
+    @objc
+    public static func setLoggingEnabled(_ enabled: Bool) {
+        _ = KlaviyoSDK().setLoggingEnabled(enabled)
+    }
+
+    @objc
+    public static func isLoggingEnabled() -> Bool {
+        return KlaviyoSDK().isLoggingEnabled
+    }
+
     @MainActor
     @objc
     public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
