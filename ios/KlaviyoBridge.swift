@@ -301,6 +301,7 @@ public class KlaviyoBridge: NSObject {
     public static func createSubscription(subscription: [String: AnyObject]) {
         guard let listId = subscription["listId"] as? String,
               !listId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            NSLog("[Klaviyo] Error: Subscription listId is required")
             return
         }
 
@@ -321,13 +322,14 @@ public class KlaviyoBridge: NSObject {
         // quietly widening consent to every identified channel. Matches Android, which rejects a
         // present non-Map channels value.
         guard let channelsDict = channelsValue as? [String: AnyObject] else {
+            NSLog("[Klaviyo] Error: Subscription channels must be an object when present")
             return
         }
 
         let channels = Subscription.Channels(
-            email: emailConsent(from: channelsDict["email"]),
-            sms: messagingConsent(from: channelsDict["sms"]),
-            whatsapp: messagingConsent(from: channelsDict["whatsapp"])
+            email: emailConsent(from: channelsDict, key: "email"),
+            sms: messagingConsent(from: channelsDict, key: "sms"),
+            whatsapp: messagingConsent(from: channelsDict, key: "whatsapp")
         )
 
         KlaviyoSDK().create(
@@ -335,37 +337,65 @@ public class KlaviyoBridge: NSObject {
         )
     }
 
-    /// Maps one channel's JS consent array onto ``Subscription/Channels/Email``, or `nil` when the
-    /// key is absent so that channel is left untouched. An empty array stays empty, so the native
-    /// SDK's own validation reports it rather than this bridge silently dropping the channel.
+    /// Reads one channel's consent array off the JS payload, or `nil` when the key is absent so
+    /// that channel is left untouched. An empty array stays empty, so the native SDK's own
+    /// validation reports it rather than this bridge silently dropping the channel.
+    ///
+    /// A non-string entry is skipped individually rather than discarding the whole channel, so a
+    /// partially malformed array still applies the consent values it does carry. Only a direct
+    /// native caller can reach this — the TypeScript layer rejects the input first. Android drops
+    /// entries the same way.
+    private static func consentValues(from channels: [String: AnyObject], key: String) -> [String]? {
+        guard let rawValues = channels[key] as? [AnyObject] else { return nil }
+
+        return rawValues.compactMap { rawValue in
+            guard let stringValue = rawValue as? String else {
+                NSLog("[Klaviyo] Warning: Ignoring non-string \(key) consent entry")
+                return nil
+            }
+            return stringValue
+        }
+    }
+
+    /// Maps one channel's JS consent array onto ``Subscription/Channels/Email``.
     ///
     /// An unrecognized value is skipped rather than failing the whole request: skipping only ever
     /// narrows the consent granted, and it keeps a newer JS layer from breaking against an older
     /// native SDK. Android skips unknown values the same way.
-    private static func emailConsent(from value: AnyObject?) -> Subscription.Channels.Email? {
-        guard let rawValues = value as? [String] else { return nil }
+    private static func emailConsent(
+        from channels: [String: AnyObject],
+        key: String
+    ) -> Subscription.Channels.Email? {
+        guard let rawValues = consentValues(from: channels, key: key) else { return nil }
 
         var consent: Subscription.Channels.Email = []
         for rawValue in rawValues {
             switch rawValue {
             case "marketing": consent.insert(.marketing)
             case "open_tracking": consent.insert(.openTracking)
-            default: continue
+            default:
+                NSLog("[Klaviyo] Warning: Ignoring unrecognized \(key) consent type '\(rawValue)'")
+                continue
             }
         }
         return consent
     }
 
-    /// SMS/WhatsApp counterpart to ``emailConsent(from:)``.
-    private static func messagingConsent(from value: AnyObject?) -> Subscription.Channels.Messaging? {
-        guard let rawValues = value as? [String] else { return nil }
+    /// SMS/WhatsApp counterpart to ``emailConsent(from:key:)``.
+    private static func messagingConsent(
+        from channels: [String: AnyObject],
+        key: String
+    ) -> Subscription.Channels.Messaging? {
+        guard let rawValues = consentValues(from: channels, key: key) else { return nil }
 
         var consent: Subscription.Channels.Messaging = []
         for rawValue in rawValues {
             switch rawValue {
             case "marketing": consent.insert(.marketing)
             case "transactional": consent.insert(.transactional)
-            default: continue
+            default:
+                NSLog("[Klaviyo] Warning: Ignoring unrecognized \(key) consent type '\(rawValue)'")
+                continue
             }
         }
         return consent

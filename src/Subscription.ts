@@ -101,7 +101,14 @@ export function allAvailableMarketing(
   listId: string,
   customSource?: string
 ): Subscription {
-  return { listId, channels: ALL_AVAILABLE_MARKETING, customSource };
+  // Spread rather than assigning `customSource` unconditionally, so an omitted argument produces
+  // an object without the key rather than one carrying `undefined` — the two differ under
+  // `Object.keys` and deep-equality checks a consumer might run on the result.
+  return {
+    listId,
+    channels: ALL_AVAILABLE_MARKETING,
+    ...(customSource !== undefined && { customSource }),
+  };
 }
 
 /**

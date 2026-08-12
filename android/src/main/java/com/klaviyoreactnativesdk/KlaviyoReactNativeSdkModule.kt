@@ -416,7 +416,7 @@ class KlaviyoReactNativeSdkModule(
    * The JS wire values are the lowercased enum names, so [valueOf] covers the mapping. An
    * unrecognized value is warned about and skipped rather than failing the whole request: skipping
    * only ever narrows the consent granted, and it keeps a newer JS layer from breaking against an
-   * older native SDK. iOS skips unknown values the same way.
+   * older native SDK. A non-string entry is skipped the same way. iOS drops both the same way.
    */
   private fun <T : Enum<T>> ReadableMap.parseConsentSet(
     key: String,
@@ -425,8 +425,14 @@ class KlaviyoReactNativeSdkModule(
     takeIf { it.hasKey(key) && it.getType(key) == ReadableType.Array }
       ?.getArray(key)
       ?.toArrayList()
-      ?.mapNotNull { it as? String }
-      ?.mapNotNull { rawValue ->
+      ?.mapNotNull { entry ->
+        entry as? String ?: run {
+          Registry.log.warning(
+            "Klaviyo React Native SDK: Ignoring non-string $key consent entry",
+          )
+          null
+        }
+      }?.mapNotNull { rawValue ->
         runCatching { valueOf(rawValue.uppercase()) }.getOrElse {
           Registry.log.warning(
             "Klaviyo React Native SDK: Ignoring unrecognized $key consent type '$rawValue'",
