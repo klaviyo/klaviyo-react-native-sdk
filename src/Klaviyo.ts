@@ -4,6 +4,7 @@ import type { KlaviyoPushApi } from './Push';
 import type { KlaviyoFormsApi } from './Forms';
 import type { KlaviyoGeofencingApi } from './Geofencing';
 import type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
+import type { KlaviyoSubscriptionApi } from './Subscription';
 
 /**
  * The Klaviyo React Native SDK Interface
@@ -18,7 +19,8 @@ export interface KlaviyoInterface
     KlaviyoPushApi,
     KlaviyoGeofencingApi,
     KlaviyoFormsApi,
-    KlaviyoDeepLinkAPI {
+    KlaviyoDeepLinkAPI,
+    KlaviyoSubscriptionApi {
   /**
    * Initializes the Klaviyo SDK with the given API key.
    *

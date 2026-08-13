@@ -68,16 +68,16 @@ PODS:
     - KlaviyoLocation
     - KlaviyoSwift
     - React-Core
-  - KlaviyoCore (5.3.1):
+  - KlaviyoCore (5.4.0):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.3.1):
-    - KlaviyoSwift (~> 5.3.1)
-  - KlaviyoLocation (5.3.1):
-    - KlaviyoSwift (~> 5.3.1)
-  - KlaviyoSwift (5.3.1):
+  - KlaviyoForms (5.4.0):
+    - KlaviyoCore (~> 5.4.0)
+  - KlaviyoLocation (5.4.0):
+    - KlaviyoSwift (~> 5.4.0)
+  - KlaviyoSwift (5.4.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.3.1)
-  - KlaviyoSwiftExtension (5.3.1)
+    - KlaviyoCore (~> 5.4.0)
+  - KlaviyoSwiftExtension (5.4.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -2810,19 +2810,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: 3b5fd16ca370cd357b6ed17ab94b8cc2e5c70a3c
+    :commit: 09f8892461e9891636914e5b4bf464f162a49ec2
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 3b5fd16ca370cd357b6ed17ab94b8cc2e5c70a3c
+    :commit: 09f8892461e9891636914e5b4bf464f162a49ec2
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 3b5fd16ca370cd357b6ed17ab94b8cc2e5c70a3c
+    :commit: 09f8892461e9891636914e5b4bf464f162a49ec2
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 3b5fd16ca370cd357b6ed17ab94b8cc2e5c70a3c
+    :commit: 09f8892461e9891636914e5b4bf464f162a49ec2
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: 3b5fd16ca370cd357b6ed17ab94b8cc2e5c70a3c
+    :commit: 09f8892461e9891636914e5b4bf464f162a49ec2
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2843,11 +2843,11 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   klaviyo-react-native-sdk: 2ed29cc71394d083f15b05a2e99cbbe284f6bb34
-  KlaviyoCore: ca55389d93ba15a56ca00591c3a9041259b55f4f
-  KlaviyoForms: 7e69da16880700be263b819e542255d2b639507a
-  KlaviyoLocation: 07b9a74ebcef661310b22f4be6ebd0e03c816793
-  KlaviyoSwift: 08a6252cca7a59f80345a7622d7bbe69aafe5ca6
-  KlaviyoSwiftExtension: cf8257a28734e076224560fe7379a8eb6aa94270
+  KlaviyoCore: a28031c37a32e4d22550004c407d88c561a6e67b
+  KlaviyoForms: f0849550a57dcf9b70515bfac6bbce7d12b7515b
+  KlaviyoLocation: bfe9010a9da0c4535943a6ba1ee6a5a571dd790c
+  KlaviyoSwift: 8fd0bf6732e042dd06b52108d3eeae7960868192
+  KlaviyoSwiftExtension: deb2f4d76a30b7b13bc592a0ece1a6cb2c1e8422
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
@@ -2921,6 +2921,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: cc4a6600d61e4e9276e860d4d68eebb834a050ba
 
-PODFILE CHECKSUM: 22f6892b0883611a95bea697fe6ab86e87f98a2d
+PODFILE CHECKSUM: f60dc2836360857c50c15882dba49fe0de4eeba5
 
 COCOAPODS: 1.16.2

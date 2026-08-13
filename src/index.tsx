@@ -9,6 +9,11 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import {
+  type Subscription,
+  formatSubscription,
+  validateSubscription,
+} from './Subscription';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -98,6 +103,16 @@ export const Klaviyo: KlaviyoInterface = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
+  },
+  createSubscription(subscription: Subscription): void {
+    // Validate the whole shape up front: TypeScript can't police plain-JS callers, and reporting
+    // here beats throwing mid-marshalling or handing native a malformed payload.
+    const error = validateSubscription(subscription);
+    if (error !== null) {
+      console.error(`[Klaviyo] Error: ${error}`);
+      return;
+    }
+    KlaviyoReactNativeSdk.createSubscription(formatSubscription(subscription));
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     if (!isFormsAvailable()) return;
@@ -198,3 +213,14 @@ export type {
 } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
+export {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from './Subscription';
+export type {
+  KlaviyoSubscriptionApi,
+  Subscription,
+  SubscriptionChannels,
+} from './Subscription';

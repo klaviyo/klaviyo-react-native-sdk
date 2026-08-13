@@ -22,6 +22,7 @@
     - [Reset Profile](#reset-profile)
     - [Anonymous Tracking](#anonymous-tracking)
   - [Event Tracking](#event-tracking)
+  - [Subscriptions](#subscriptions)
   - [Push Notifications](#push-notifications)
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
@@ -272,6 +273,60 @@ Klaviyo.createEvent({
   name: 'My Custom Event',
 });
 ```
+
+## Subscriptions
+
+Subscribe the current profile to a Klaviyo list and record its consent via the
+[Create Client Subscription API](https://developers.klaviyo.com/en/reference/create_client_subscription).
+
+Set the profile's email and/or phone number **before** subscribing — a request whose channel has no
+matching identifier on the profile is dropped with a warning from the native SDK.
+
+Push subscriptions are not created through this API. See [Push Notifications](#push-notifications).
+
+```typescript
+import {
+  Klaviyo,
+  EmailConsent,
+  MessagingConsent,
+} from 'klaviyo-react-native-sdk';
+
+// Request specific consent per channel
+Klaviyo.createSubscription({
+  listId: 'ABC123',
+  channels: {
+    email: [EmailConsent.Marketing, EmailConsent.OpenTracking],
+    sms: [MessagingConsent.Marketing],
+  },
+});
+```
+
+```typescript
+// Attach a signup source label, stored as the consent record's $source
+Klaviyo.createSubscription({
+  listId: 'ABC123',
+  channels: {
+    sms: [MessagingConsent.Marketing],
+    whatsapp: [MessagingConsent.Transactional],
+  },
+  customSource: 'Checkout screen',
+});
+```
+
+```typescript
+import { Klaviyo, allAvailableMarketing } from 'klaviyo-react-native-sdk';
+
+// Request marketing consent on every channel the profile has an identifier for
+Klaviyo.createSubscription(allAvailableMarketing('ABC123'));
+```
+
+Each channel accepts only the consent types the API supports for it: email takes `Marketing` and
+`OpenTracking`, while SMS and WhatsApp take `Marketing` and `Transactional`. Omitting a channel
+leaves it untouched.
+
+`channels` is required so that granting marketing consent on every identified channel is always an
+explicit choice. Use `allAvailableMarketing(...)` as above, or import `ALL_AVAILABLE_MARKETING` and
+set `channels: ALL_AVAILABLE_MARKETING` directly.
 
 ## Push Notifications
 
