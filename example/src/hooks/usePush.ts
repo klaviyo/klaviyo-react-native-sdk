@@ -64,6 +64,11 @@ export function usePush() {
     // ignore the FCM token itself. The refresh also covers server-initiated
     // token rotation and the "APNs ready" moment after the user grants
     // notification permission on first launch.
+    //
+    // AUTOMATIC INTEGRATION VARIANT: `klaviyo_automatic_push_token_forwarding` is
+    // enabled natively (see Info.plist / AndroidManifest.xml), so the native SDK
+    // re-registers the token on its own (Android: initialize() + every foreground).
+    // Klaviyo.setPushToken(fcmToken) is commented out to avoid a redundant call.
     const unsubscribeTokenRefresh = messaging.onTokenRefresh(
       (fcmToken: string) => {
         if (Platform.OS === 'ios') {
@@ -71,7 +76,7 @@ export function usePush() {
             if (apnsToken) setPushToken(apnsToken);
           });
         } else if (fcmToken) {
-          Klaviyo.setPushToken(fcmToken);
+          // Klaviyo.setPushToken(fcmToken); // handled automatically by the native SDK
           setPushToken(fcmToken);
         }
       }

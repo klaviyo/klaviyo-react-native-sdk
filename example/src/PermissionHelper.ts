@@ -1,6 +1,5 @@
 import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
 import { PERMISSIONS, RESULTS, check, request } from 'react-native-permissions';
-import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 export type LocationPermissionState = 'none' | 'inUse' | 'background';
 
@@ -357,6 +356,12 @@ export const requestPushPermission = async (): Promise<boolean> => {
  *   returns null — the Request Push Permission button flow calls this
  *   function again post-grant to populate it.
  *
+ * AUTOMATIC INTEGRATION VARIANT: `klaviyo_automatic_push_token_forwarding` is enabled
+ * natively on both platforms (see Info.plist / AndroidManifest.xml), so the native SDK
+ * already forwards the token to Klaviyo. `Klaviyo.setPushToken(deviceToken)` below is
+ * commented out to avoid a redundant call — the token is still fetched and returned so
+ * the UI can display it.
+ *
  * @returns Promise<string | null> - the push token or null if unavailable
  */
 export const fetchAndSetPushToken = async (): Promise<string | null> => {
@@ -370,7 +375,7 @@ export const fetchAndSetPushToken = async (): Promise<string | null> => {
         : await messaging.getAPNSToken();
 
     if (deviceToken != null && deviceToken.length > 0) {
-      Klaviyo.setPushToken(deviceToken);
+      // Klaviyo.setPushToken(deviceToken); // handled automatically by the native SDK
       return deviceToken;
     }
     return null;

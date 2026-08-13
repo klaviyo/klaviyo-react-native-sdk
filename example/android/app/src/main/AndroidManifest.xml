@@ -73,5 +73,21 @@
           android:name="com.klaviyo.core.log_level"
           android:value="1" />
 
+      <!-- Android Installation Step (Automatic / Option A): opt into automatic push-open
+           tracking. The SDK detects notification taps and reports the open for you, so
+           Klaviyo.handlePush(intent) in MainActivity.kt is no longer required. Off by
+           default; this flag turns it on. -->
+      <meta-data
+          android:name="com.klaviyo.push.automatic_push_open_tracking"
+          android:value="true" />
+
+      <!-- Android Installation Step (Automatic / Option A): automatic push-token
+           forwarding is already ON by default on Android (KlaviyoPushService
+           auto-registers the FCM token) — this entry is here for posterity /
+           parity with the iOS Info.plist flag below, not because it changes behavior. -->
+      <meta-data
+          android:name="com.klaviyo.push.automatic_push_token_forwarding"
+          android:value="true" />
+
     </application>
 </manifest>
