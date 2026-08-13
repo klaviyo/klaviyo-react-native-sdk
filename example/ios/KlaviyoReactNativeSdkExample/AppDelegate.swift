@@ -10,7 +10,7 @@ import KlaviyoSwift
 // https://github.com/klaviyo/klaviyo-swift-sdk#push-notifications
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate {
 
   // Change to false if you don't want debug alerts or logs.
   private let isDebug = true
@@ -23,8 +23,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // iOS Installation Step: Set the UNUserNotificationCenter delegate to self
-    UNUserNotificationCenter.current().delegate = self
+    // AUTOMATIC INTEGRATION VARIANT: no host UNUserNotificationCenterDelegate is set here
+    // (and none is implemented below) on purpose — this proves push-open tracking works
+    // end-to-end from the SDK's own proxy delegate alone, with zero host delegate code.
+    // KlaviyoSDK().initialize(with:) installs the proxy as UNUserNotificationCenter's
+    // delegate because klaviyo_automatic_push_open_tracking is enabled (see Info.plist).
+    // UNUserNotificationCenter.current().delegate = self
 
     // Initialize Firebase. See example/README.md for GoogleService-Info.plist
     // setup (real config for push, or a stub to let the build/launch succeed
@@ -100,74 +104,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     }
   }
 
-  // iOS Installation Step: Implement the delegate
-  // didReceiveNotificationResponse to respond to user actions (tapping on push)
-  // when the app is in the background. NOTE: this delegate will NOT be called
-  // if the UNUserNotificationCenter delegate isn't set.
-  func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    didReceive response: UNNotificationResponse,
-    withCompletionHandler completionHandler: @escaping () -> Void
-  ) {
-    // AUTOMATIC INTEGRATION VARIANT: klaviyo_automatic_push_open_tracking is enabled
-    // (see Info.plist), so the SDK installs its own UNUserNotificationCenterDelegate
-    // proxy that already recorded this open before forwarding here — no
-    // Push.handleReceivingPush(...) call needed. If you want to intercept urls instead
-    // of them being routed to the system (which would call `application:openURL:options:`),
-    // register a deep link handler via KlaviyoSDK().registerDeepLinkHandler(_:) instead.
-    // Push.handleReceivingPush(
-    //   response: response,
-    //   completionHandler: completionHandler,
-    //   deepLinkHandler: { url in
-    //     print("URL is \(url)")
-    //     RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
-    //   }
-    // )
-    completionHandler()
-
-    // iOS Installation Step: update the badge count to current - 1. You can
-    // also set this to 0 if you no longer want the badge to show.
-    Push.updateBadgeCount(UIApplication.shared.applicationIconBadgeNumber - 1)
-
-    if isDebug {
-      let alert = UIAlertController(
-        title: "Push Notification",
-        message: "handled background notifications",
-        preferredStyle: .alert
-      )
-      alert.addAction(UIAlertAction(title: "OK", style: .default))
-      window?.rootViewController?.present(alert, animated: true)
-    }
-  }
-
-  // iOS Installation Step: Implement the delegate willPresentNotification to
-  // handle push notifications when the app is in the foreground. NOTE: this
-  // delegate will NOT be called if the UNUserNotificationCenter delegate isn't
-  // set.
-  func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-  ) {
-    if isDebug {
-      let userInfo = notification.request.content.userInfo
-      print("Received Push Notification: \(userInfo)")
-      let message = ((userInfo["aps"] as? [String: Any])?["alert"] as? [String: Any])?["body"] as? String
-      let alert = UIAlertController(
-        title: "Push Notification",
-        message: message,
-        preferredStyle: .alert
-      )
-      alert.addAction(UIAlertAction(title: "OK", style: .default))
-      window?.rootViewController?.present(alert, animated: true)
-    }
-
-    // iOS Installation Step: call the completion handler with presentation
-    // options here, such as showing a banner or playing a sound. `.list` keeps
-    // the notification in Notification Center (equivalent to the iOS 13
-    // `.alert` option used by the previous Objective-C AppDelegate).
-    completionHandler([.banner, .list, .badge, .sound])
-  }
+  // AUTOMATIC INTEGRATION VARIANT: the UNUserNotificationCenterDelegate methods that
+  // used to live here (didReceive response:, willPresent notification:) are removed
+  // entirely, not just their bodies — this AppDelegate no longer conforms to
+  // UNUserNotificationCenterDelegate at all (see the class declaration above). With
+  // klaviyo_automatic_push_open_tracking enabled (see Info.plist), the SDK installs its
+  // own proxy as UNUserNotificationCenter's delegate; removing the host delegate
+  // entirely proves push-open tracking and foreground presentation both work purely
+  // through that SDK-owned proxy, with zero host delegate code.
+  //
+  // func userNotificationCenter(
+  //   _ center: UNUserNotificationCenter,
+  //   didReceive response: UNNotificationResponse,
+  //   withCompletionHandler completionHandler: @escaping () -> Void
+  // ) {
+  //   Push.handleReceivingPush(
+  //     response: response,
+  //     completionHandler: completionHandler,
+  //     deepLinkHandler: { url in
+  //       print("URL is \(url)")
+  //       RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+  //     }
+  //   )
+  //   Push.updateBadgeCount(UIApplication.shared.applicationIconBadgeNumber - 1)
+  // }
+  //
+  // func userNotificationCenter(
+  //   _ center: UNUserNotificationCenter,
+  //   willPresent notification: UNNotification,
+  //   withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  // ) {
+  //   completionHandler([.banner, .list, .badge, .sound])
+  // }
 
   // iOS Installation Step: Implement this method to receive deep links. See
   // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
