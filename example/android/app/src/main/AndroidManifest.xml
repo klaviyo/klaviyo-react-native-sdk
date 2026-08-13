@@ -76,10 +76,16 @@
       <!-- Android Installation Step (Manual / Option B): automatic push-token forwarding
            is ON by default on Android — opt out here so this variant demonstrates the
            fully manual integration path (RN code in PermissionHelper.ts /
-           usePush.ts calls Klaviyo.setPushToken(...) explicitly). Automatic push-open
-           tracking is opt-in and already off by default, so no entry is needed for it. -->
+           usePush.ts calls Klaviyo.setPushToken(...) explicitly). -->
       <meta-data
           android:name="com.klaviyo.push.automatic_push_token_forwarding"
+          android:value="false" />
+
+      <!-- Android Installation Step (Manual / Option B): automatic push-open tracking is
+           opt-in and already off by default. Declared here for posterity / parity with
+           the flag above, not because it changes behavior. -->
+      <meta-data
+          android:name="com.klaviyo.push.automatic_push_open_tracking"
           android:value="false" />
 
     </application>
