@@ -109,18 +109,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    // iOS Installation Step: call `handleReceivingPush` and pass the arguments
-    // below. If you want to intercept urls instead of them being routed to the
-    // system (which would call `application:openURL:options:`), implement the
-    // `deepLinkHandler` below.
-    Push.handleReceivingPush(
-      response: response,
-      completionHandler: completionHandler,
-      deepLinkHandler: { url in
-        print("URL is \(url)")
-        RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
-      }
-    )
+    // AUTOMATIC INTEGRATION VARIANT: klaviyo_automatic_push_open_tracking is enabled
+    // (see Info.plist), so the SDK installs its own UNUserNotificationCenterDelegate
+    // proxy that already recorded this open before forwarding here — no
+    // Push.handleReceivingPush(...) call needed. If you want to intercept urls instead
+    // of them being routed to the system (which would call `application:openURL:options:`),
+    // register a deep link handler via KlaviyoSDK().registerDeepLinkHandler(_:) instead.
+    // Push.handleReceivingPush(
+    //   response: response,
+    //   completionHandler: completionHandler,
+    //   deepLinkHandler: { url in
+    //     print("URL is \(url)")
+    //     RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+    //   }
+    // )
+    completionHandler()
 
     // iOS Installation Step: update the badge count to current - 1. You can
     // also set this to 0 if you no longer want the badge to show.

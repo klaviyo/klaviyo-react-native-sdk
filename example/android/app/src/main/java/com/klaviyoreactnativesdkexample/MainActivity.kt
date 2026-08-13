@@ -6,7 +6,6 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-import com.klaviyo.analytics.Klaviyo
 
 class MainActivity : ReactActivity() {
   /**
@@ -24,9 +23,9 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    // Android Installation Step: Depending on the state of your application when the notification is tapped,
-    // the intent have started this activity, or it might be received via onNewIntent if the app was already running.
-    // We recommend passing all intents through Klaviyo.handlePush to make sure you don't miss a use case.
+    // AUTOMATIC INTEGRATION VARIANT: com.klaviyo.push.automatic_push_open_tracking is
+    // enabled (see AndroidManifest.xml), so the SDK detects notification taps and
+    // reports the open for you — no Klaviyo.handlePush(intent) call needed here.
     onNewIntent(intent)
   }
 
@@ -37,6 +36,6 @@ class MainActivity : ReactActivity() {
     // Note: due to platform differences, this step must be implemented in native code.
     // Tapping on a notification broadcasts an intent to your app. This method detects if the
     // intent originated from a Klaviyo push notification and registers a special Opened Push event
-    Klaviyo.handlePush(intent)
+    // Klaviyo.handlePush(intent) // handled automatically by the native SDK
   }
 }
