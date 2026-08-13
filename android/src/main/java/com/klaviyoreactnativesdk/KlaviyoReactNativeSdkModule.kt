@@ -17,9 +17,11 @@ import com.klaviyo.analytics.model.EventMetric
 import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
+import com.klaviyo.analytics.model.Subscription
 import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
+import com.klaviyo.core.config.Log
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
@@ -43,6 +45,12 @@ class KlaviyoReactNativeSdkModule(
     const val NAME = "KlaviyoReactNativeSdk"
     private const val LOCATION = "location"
     private const val PROPERTIES = "properties"
+    private const val LIST_ID = "listId"
+    private const val CUSTOM_SOURCE = "customSource"
+    private const val CHANNELS = "channels"
+    private const val EMAIL = "email"
+    private const val SMS = "sms"
+    private const val WHATSAPP = "whatsapp"
   }
 
   private fun sendEvent(
@@ -101,6 +109,33 @@ class KlaviyoReactNativeSdkModule(
     // The native SDK will track Activity changes internally from here on.
     reactApplicationContext.currentActivity?.let(Registry.lifecycleMonitor::assignCurrentActivity)
     Klaviyo.initialize(apiKey, reactContext)
+  }
+
+  // The Android SDK has no dedicated logging on/off API (log verbosity is set via
+  // manifest metadata), so the toggle is implemented on top of the SDK's mutable
+  // log level: `None` silences all logging, and the prior level is captured here
+  // so re-enabling restores the configured verbosity.
+  private var logLevelToRestore: Log.Level? = null
+
+  @ReactMethod
+  fun setLoggingEnabled(enabled: Boolean) {
+    if (enabled) {
+      if (Registry.log.logLevel == Log.Level.None) {
+        // Fall back to the SDK's default level if logging was already disabled
+        // before this module captured a level (e.g. via manifest metadata).
+        Registry.log.logLevel = logLevelToRestore ?: Log.Level.Error
+      }
+    } else {
+      if (Registry.log.logLevel != Log.Level.None) {
+        logLevelToRestore = Registry.log.logLevel
+      }
+      Registry.log.logLevel = Log.Level.None
+    }
+  }
+
+  @ReactMethod
+  fun isLoggingEnabled(callback: Callback) {
+    callback.invoke(Registry.log.logLevel != Log.Level.None)
   }
 
   @ReactMethod
@@ -318,6 +353,93 @@ class KlaviyoReactNativeSdkModule(
 
     Klaviyo.createEvent(event = klaviyoEvent)
   }
+
+  @ReactMethod
+  fun createSubscription(subscription: ReadableMap) {
+    val listId =
+      subscription
+        .takeIf {
+          it.hasKey(LIST_ID) && it.getType(LIST_ID) == ReadableType.String
+        }?.getString(LIST_ID)
+        ?.takeIf { it.isNotBlank() } ?: run {
+        Registry.log.error("Klaviyo React Native SDK: Subscription listId is required")
+        return
+      }
+
+    val customSource =
+      subscription
+        .takeIf {
+          it.hasKey(CUSTOM_SOURCE) && it.getType(CUSTOM_SOURCE) == ReadableType.String
+        }?.getString(CUSTOM_SOURCE)
+
+    // Only a *missing* channels key means "all available marketing" — the broad grant is reachable
+    // solely through the named factory on this SDK and the JS layer. A key that is present but not
+    // an object is malformed, and is rejected rather than quietly widening consent.
+    val channelsMap =
+      if (subscription.hasKey(CHANNELS)) {
+        subscription.takeIf { it.getType(CHANNELS) == ReadableType.Map }?.getMap(CHANNELS) ?: run {
+          Registry.log.error(
+            "Klaviyo React Native SDK: Subscription channels must be an object when present",
+          )
+          return
+        }
+      } else {
+        null
+      }
+
+    val parsed = channelsMap?.let { parseSubscriptionChannels(it) }
+
+    Klaviyo.createSubscription(
+      if (parsed == null) {
+        Subscription.allAvailableMarketing(listId, customSource)
+      } else {
+        Subscription(listId, parsed, customSource)
+      },
+    )
+  }
+
+  /**
+   * Maps the JS channels payload onto [Subscription.Channels]. An absent channel stays null (leave
+   * it untouched); an empty array stays empty, so the native SDK's own validation reports it rather
+   * than this bridge silently dropping the channel.
+   */
+  private fun parseSubscriptionChannels(channels: ReadableMap): Subscription.Channels =
+    Subscription.Channels(
+      email = channels.parseConsentSet(EMAIL) { Subscription.Channels.Email.valueOf(it) },
+      sms = channels.parseConsentSet(SMS) { Subscription.Channels.Messaging.valueOf(it) },
+      whatsapp = channels.parseConsentSet(WHATSAPP) { Subscription.Channels.Messaging.valueOf(it) },
+    )
+
+  /**
+   * Reads one channel's consent array off the JS payload, or null when the key is absent.
+   *
+   * The JS wire values are the lowercased enum names, so [valueOf] covers the mapping. An
+   * unrecognized value is warned about and skipped rather than failing the whole request: skipping
+   * only ever narrows the consent granted, and it keeps a newer JS layer from breaking against an
+   * older native SDK. A non-string entry is skipped the same way. iOS drops both the same way.
+   */
+  private fun <T : Enum<T>> ReadableMap.parseConsentSet(
+    key: String,
+    valueOf: (String) -> T,
+  ): Set<T>? =
+    takeIf { it.hasKey(key) && it.getType(key) == ReadableType.Array }
+      ?.getArray(key)
+      ?.toArrayList()
+      ?.mapNotNull { entry ->
+        entry as? String ?: run {
+          Registry.log.warning(
+            "Klaviyo React Native SDK: Ignoring non-string $key consent entry",
+          )
+          null
+        }
+      }?.mapNotNull { rawValue ->
+        runCatching { valueOf(rawValue.uppercase()) }.getOrElse {
+          Registry.log.warning(
+            "Klaviyo React Native SDK: Ignoring unrecognized $key consent type '$rawValue'",
+          )
+          null
+        }
+      }?.toSet()
 
   @ReactMethod
   fun registerFormLifecycleHandler() {

@@ -19,7 +19,9 @@ import { useCompanyId } from './hooks/useCompanyId';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { FormsSection } from './sections/FormsSection';
 import { GeofencingSection } from './sections/GeofencingSection';
+import { LoggingSection } from './sections/LoggingSection';
 import { PushSection } from './sections/PushSection';
+import { SubscriptionSection } from './sections/SubscriptionSection';
 
 // RN Installation Step: Source your public API key.
 // This example uses `react-native-dotenv` to inline `KLAVIYO_API_KEY` from
@@ -43,7 +45,13 @@ if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
 // commented references in the iOS AppDelegate and Android MainApplication
 Klaviyo.initialize(API_KEY);
 
-type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push';
+type SectionKey =
+  | 'analytics'
+  | 'subscriptions'
+  | 'forms'
+  | 'geofencing'
+  | 'push'
+  | 'logging';
 
 // SectionList data — each section corresponds to a feature domain. Each
 // section has a single item (the section key) whose content is rendered by
@@ -51,21 +59,27 @@ type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push';
 // Defined at module scope so the reference is stable across renders.
 const SECTIONS: { title: string; data: SectionKey[] }[] = [
   { title: 'Profile & Events', data: ['analytics'] },
+  { title: 'Subscriptions', data: ['subscriptions'] },
   { title: 'In-App Forms', data: ['forms'] },
   { title: 'Geofencing & Location', data: ['geofencing'] },
   { title: 'Push Notifications', data: ['push'] },
+  { title: 'SDK Logging', data: ['logging'] },
 ];
 
 const renderSection = (sectionKey: SectionKey) => {
   switch (sectionKey) {
     case 'analytics':
       return <AnalyticsSection />;
+    case 'subscriptions':
+      return <SubscriptionSection />;
     case 'forms':
       return <FormsSection />;
     case 'geofencing':
       return <GeofencingSection />;
     case 'push':
       return <PushSection />;
+    case 'logging':
+      return <LoggingSection />;
     default:
       return null;
   }

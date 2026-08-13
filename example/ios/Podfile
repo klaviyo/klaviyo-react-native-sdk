@@ -39,10 +39,18 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
-  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
-  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
-  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
-  pod 'KlaviyoLocation', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
+  # TODO(MAGE-874, MAGE-856): temporary pin to the rel/5.4.0 branch until KlaviyoSwift
+  # 5.4.0 is released. Both setLoggingEnabled/isLoggingEnabled (MAGE-874) and
+  # create(subscription:) (MAGE-856) ship in 5.4.0, which is cut on rel/5.4.0 but not
+  # yet published to CocoaPods trunk. Declared here rather than in
+  # klaviyo-react-native-sdk.podspec so the override can never reach integrators.
+  # Once 5.4.0 releases, remove these overrides and restore the podspec version pins
+  # via `./configure-sdk.sh -r --ios=5.4.0`.
+  klaviyo_swift_sdk = { :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0' }
+  pod 'KlaviyoCore', **klaviyo_swift_sdk
+  pod 'KlaviyoSwift', **klaviyo_swift_sdk
+  pod 'KlaviyoForms', **klaviyo_swift_sdk
+  pod 'KlaviyoLocation', **klaviyo_swift_sdk
 
   # Setup permissions for react-native-permissions
   setup_permissions([
@@ -82,6 +90,8 @@ end
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
+  # TODO(MAGE-874, MAGE-856): temporary rel/5.4.0 branch pin — remove alongside the
+  # overrides on the main target above once 5.4.0 publishes. See the note there.
   pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.4.0'
 end
 
