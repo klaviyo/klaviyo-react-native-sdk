@@ -35,6 +35,7 @@ import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
+import java.util.Locale
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
@@ -445,7 +446,7 @@ class KlaviyoReactNativeSdkModule(
           null
         }
       }?.mapNotNull { rawValue ->
-        runCatching { valueOf(rawValue.uppercase()) }.getOrElse {
+        runCatching { valueOf(rawValue.uppercase(Locale.ROOT)) }.getOrElse {
           Registry.log.warning(
             "Klaviyo React Native SDK: Ignoring unrecognized $key consent type '$rawValue'",
           )
