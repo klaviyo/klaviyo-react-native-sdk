@@ -1,12 +1,14 @@
 // React / React Native
 import { useEffect, useState } from 'react';
-import { SectionList, SafeAreaView, Linking } from 'react-native';
+import { SectionList, View, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Klaviyo SDK
 import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 // Local components / styles
 import { styles } from './Styles';
+import { spacing } from './theme';
 import { SectionHeader } from './components/SectionHeader';
 import { AppHeader } from './components/AppHeader';
 import { CompanyIdModal } from './components/CompanyIdModal';
@@ -89,6 +91,7 @@ export default function App() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
     useCompanyId();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     // Deep linking handler
@@ -117,11 +120,20 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
       <SectionList
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // Keeps list content clear of the gesture nav bar, and of the
+            // cutout in landscape.
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: spacing.md + insets.left,
+            paddingRight: spacing.md + insets.right,
+          },
+        ]}
         sections={SECTIONS}
         keyExtractor={(item) => item}
         renderItem={({ item }) => renderSection(item)}
@@ -144,6 +156,6 @@ export default function App() {
         }}
         onClose={() => setSettingsVisible(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }

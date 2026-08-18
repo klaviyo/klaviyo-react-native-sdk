@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../theme';
 
 interface AppHeaderProps {
@@ -7,8 +8,24 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ onSettingsPress }) => {
+  // Android draws content under the system bars for apps targeting SDK 35+,
+  // so the header has to inset itself or its controls end up beneath the
+  // status bar and cutout. Applied here rather than on a parent so the
+  // header stays correct wherever it's composed; left/right are included for
+  // landscape on cutout devices.
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.header}>
+    <View
+      style={[
+        styles.header,
+        {
+          paddingTop: spacing.smmd + insets.top,
+          paddingLeft: spacing.md + insets.left,
+          paddingRight: spacing.md + insets.right,
+        },
+      ]}
+    >
       <Text style={styles.title}>Klaviyo SDK Example</Text>
       <TouchableOpacity
         onPress={onSettingsPress}
