@@ -341,12 +341,21 @@ public class KlaviyoBridge: NSObject {
     /// that channel is left untouched. An empty array stays empty, so the native SDK's own
     /// validation reports it rather than this bridge silently dropping the channel.
     ///
+    /// A present-but-wrong-type value (e.g. a string instead of an array) is also treated as an
+    /// omitted channel, but unlike a genuinely absent key, it's warned about first: silently
+    /// applying the same behavior as "not specified" could otherwise mask a caller mistake.
+    ///
     /// A non-string entry is skipped individually rather than discarding the whole channel, so a
     /// partially malformed array still applies the consent values it does carry. Only a direct
     /// native caller can reach this — the TypeScript layer rejects the input first. Android drops
     /// entries the same way.
     private static func consentValues(from channels: [String: AnyObject], key: String) -> [String]? {
-        guard let rawValues = channels[key] as? [AnyObject] else { return nil }
+        guard let rawValue = channels[key] else { return nil }
+
+        guard let rawValues = rawValue as? [AnyObject] else {
+            NSLog("[Klaviyo] Warning: Ignoring non-array \(key) consent value")
+            return nil
+        }
 
         return rawValues.compactMap { rawValue in
             guard let stringValue = rawValue as? String else {

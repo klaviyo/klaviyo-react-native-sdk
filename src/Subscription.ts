@@ -129,6 +129,9 @@ const EMAIL_CONSENT_VALUES: readonly string[] = Object.values(EmailConsent);
 const MESSAGING_CONSENT_VALUES: readonly string[] =
   Object.values(MessagingConsent);
 
+/** Keys {@link SubscriptionChannels} recognizes; anything else is a caller mistake. */
+const SUPPORTED_CHANNELS = ['email', 'sms', 'whatsapp'] as const;
+
 /**
  * Validates one channel's consent list, returning an error message or `null` when it is valid.
  */
@@ -194,6 +197,30 @@ export function validateSubscription(
       'Subscription channels is required, and must be an object of per-channel consent or ' +
       'ALL_AVAILABLE_MARKETING. Use allAvailableMarketing(listId) to request marketing consent ' +
       'on every identified channel.'
+    );
+  }
+
+  // Channels is an object, so a caller can still hand it zero recognized keys (`{}`) or a
+  // misspelled one (`{ smss: [...] }`). Both would otherwise pass through as "no channel
+  // requested" and reach native as a subscription that grants no consent at all, with the caller
+  // never told why. Catch both here rather than validating only the keys we happen to recognize.
+  const channelKeys = Object.keys(channels);
+  type SupportedChannel = (typeof SUPPORTED_CHANNELS)[number];
+  const isSupportedChannel = (key: string): key is SupportedChannel =>
+    (SUPPORTED_CHANNELS as readonly string[]).includes(key);
+  const unsupportedChannels = channelKeys.filter(
+    (key) => !isSupportedChannel(key)
+  );
+  if (unsupportedChannels.length > 0) {
+    return `Subscription channels contains unsupported channels: ${unsupportedChannels.join(
+      ', '
+    )}. Supported: ${SUPPORTED_CHANNELS.join(', ')}`;
+  }
+
+  if (channelKeys.length === 0) {
+    return (
+      'Subscription channels must request consent on at least one channel, or use ' +
+      'ALL_AVAILABLE_MARKETING to request marketing consent on every identified channel.'
     );
   }
 
