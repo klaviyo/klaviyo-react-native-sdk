@@ -35,6 +35,7 @@ import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
+import java.util.Locale
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
@@ -417,13 +418,25 @@ class KlaviyoReactNativeSdkModule(
    * unrecognized value is warned about and skipped rather than failing the whole request: skipping
    * only ever narrows the consent granted, and it keeps a newer JS layer from breaking against an
    * older native SDK. A non-string entry is skipped the same way. iOS drops both the same way.
+   *
+   * A present-but-wrong-type value (e.g. a string instead of an array) is also treated as an
+   * omitted channel, but unlike a genuinely absent key, it's warned about first: silently applying
+   * the same behavior as "not specified" could otherwise mask a caller mistake.
    */
   private fun <T : Enum<T>> ReadableMap.parseConsentSet(
     key: String,
     valueOf: (String) -> T,
-  ): Set<T>? =
-    takeIf { it.hasKey(key) && it.getType(key) == ReadableType.Array }
-      ?.getArray(key)
+  ): Set<T>? {
+    if (!hasKey(key)) return null
+
+    if (getType(key) != ReadableType.Array) {
+      Registry.log.warning(
+        "Klaviyo React Native SDK: Ignoring non-array $key consent value",
+      )
+      return null
+    }
+
+    return getArray(key)
       ?.toArrayList()
       ?.mapNotNull { entry ->
         entry as? String ?: run {
@@ -433,13 +446,14 @@ class KlaviyoReactNativeSdkModule(
           null
         }
       }?.mapNotNull { rawValue ->
-        runCatching { valueOf(rawValue.uppercase()) }.getOrElse {
+        runCatching { valueOf(rawValue.uppercase(Locale.ROOT)) }.getOrElse {
           Registry.log.warning(
             "Klaviyo React Native SDK: Ignoring unrecognized $key consent type '$rawValue'",
           )
           null
         }
       }?.toSet()
+  }
 
   @ReactMethod
   fun registerFormLifecycleHandler() {

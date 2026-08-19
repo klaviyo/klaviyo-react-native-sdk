@@ -4,45 +4,33 @@ This guide outlines how developers can migrate from older versions of our SDK to
 
 ## Migrating to v2.5.0
 
-### Automatic push token forwarding is now the default on Android
+### Android's `automatic_push_token_forwarding` flag is now three-valued
 
-As of v2.5.0 (which pins the native Android SDK to 4.5.0), the Klaviyo SDK forwards the Android FCM
-push token to Klaviyo **automatically by default**. This formalizes behavior the bundled
-`KlaviyoPushService` already performed — see the native
-[Android SDK README](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications) for details —
-and is **non-breaking**, because the default preserves existing behavior.
+On Android, `automatic_push_token_forwarding` has three states, because leaving it unset is
+different from setting it to `false`:
 
-**iOS is unchanged:** automatic forwarding remains opt-in (off by default), because iOS token
-collection relies on the more invasive app-delegate method swizzling. Each platform has its own key —
-`klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
-`com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
-(`false` = no automatic collection) but different defaults, for these platform-specific reasons.
+| Value | Behavior |
+|---|---|
+| **not set** (default) | The native SDK forwards a token whenever FCM delivers one to its bundled `KlaviyoPushService`. This is the SDK's original behavior and requires no manifest changes. On React Native, `Klaviyo.initialize()` runs from JS after `Application.onCreate`, so a token FCM delivers before that call is silently dropped. |
+| **`true`** | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground. |
+| **`false`** | No automatic forwarding at all — call `Klaviyo.setPushToken(...)` yourself. |
 
-**No action is required** to keep current behavior. If you prefer to own the push-token pipeline
-yourself:
+**No action is required** to keep current behavior — the unset default matches what this SDK has
+always done. If you prefer to own the push-token pipeline entirely, set the flag to `false` and
+continue calling `Klaviyo.setPushToken(...)` yourself:
 
-- **Android** — disable automatic forwarding by adding this `meta-data` to the `<application>`
-  element of your `AndroidManifest.xml`, then continue calling `Klaviyo.setPushToken(...)` yourself:
+```xml
+<meta-data
+    android:name="com.klaviyo.push.automatic_push_token_forwarding"
+    android:value="false" />
+```
 
-  ```xml
-  <meta-data
-      android:name="com.klaviyo.push.automatic_push_token_forwarding"
-      android:value="false" />
-  ```
+See the [README](./README.md#collecting-push-tokens) for full token-collection guidance.
 
-- **iOS** — nothing to do; automatic forwarding is off unless you opt in via `Info.plist` (see the
-  native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications)).
-
-If you already collect and set the token manually on Android, no change is needed — the native SDK
-only sends a request when the complete push request state has changed. See the
-[README](./README.md#collecting-push-tokens) for full token-collection guidance.
-
-> **Looking ahead:** a future **major** release may enable **both** `automatic_push_open_tracking`
-> and `automatic_push_token_forwarding` by default on all platforms, bringing automatic push
-> integration to parity. If that happens, apps that prefer to manage push integration manually would
-> need to **opt out** of the enabled defaults (as described above for Android), rather than opt in.
-> This is a non-breaking, forward-looking heads-up — nothing changes until that release, and we will
-> document the exact opt-out steps in its migration guide.
+> **Looking ahead:** a future **major** release may default `automatic_push_token_forwarding` to
+> `true` (in addition to enabling `automatic_push_open_tracking` by default), bringing automatic
+> push integration to parity across platforms. This is a non-breaking, forward-looking heads-up —
+> nothing changes until that release.
 
 ## Migrating to v2.0.0
 
