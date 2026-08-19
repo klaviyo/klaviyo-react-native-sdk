@@ -356,15 +356,24 @@ Note that doing this in one location is sufficient.
 Before choosing an approach, note that the underlying native SDKs handle automatic push-token
 forwarding differently by default:
 
-- **Android — on by default.** The native Android SDK auto-registers its `KlaviyoPushService`
-  (a `FirebaseMessagingService`) via manifest merge, so it forwards the FCM token to Klaviyo
-  automatically, without any React Native code. You do not need to collect the token yourself on
-  Android — though doing so is harmless: the native SDK only sends a request when the complete push
-  request state has changed.
+- **Android — reactive forwarding by default, proactive fetch opt-in.** The native Android SDK
+  auto-registers its `KlaviyoPushService` (a `FirebaseMessagingService`) via manifest merge, so it
+  forwards a token to Klaviyo whenever FCM delivers one, without any React Native code. You do not
+  need to collect the token yourself on Android — though doing so is harmless: the native SDK only
+  sends a request when the complete push request state has changed.
 - **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
   which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
   APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see
   the native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications).
+
+On Android, `com.klaviyo.push.automatic_push_token_forwarding` is three-valued, because leaving it
+unset is different from setting it to `false`:
+
+| Value | Behavior |
+|---|---|
+| **not set** (default) | Forwards a token whenever FCM delivers one to `KlaviyoPushService`. |
+| **`true`** | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground. |
+| **`false`** | No automatic forwarding at all — a complete opt-out. |
 
 Each platform has its own key — `klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
 `com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
