@@ -234,6 +234,14 @@ jobs:
           working-directory: example
           bundler-cache: true
 
+      # setup-ruby switches the job to the example's pinned Ruby, which hides the
+      # runner's preinstalled fastlane and doesn't have it as a gem. Install it
+      # explicitly into the active Ruby so `fastlane` resolves deterministically.
+      # Kept out of example/Gemfile to avoid bloating the CocoaPods-only bundle.
+      - name: Install fastlane
+        shell: bash
+        run: gem install fastlane -v 2.237.0 --no-document
+
       # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
       # push delivery works against the published build.
       - name: Inject GoogleService-Info.plist
@@ -360,69 +368,37 @@ jobs:
         shell: bash
         run: xcrun agvtool new-version -all "$BUILD_NUMBER"
 
-      # Team ID is stamped from a secret (checked-in plist uses a placeholder).
-      # signingCertificate is forced to "Apple Distribution" so exportArchive
-      # doesn't fall back to the legacy "iOS Distribution" cert family.
-      - name: Stamp signing config into ExportOptions.plist
-        working-directory: example/ios
+      # Build + sign the IPA via fastlane. The `release_ipa` lane runs
+      # match(readonly) to install the shared App Store cert + profiles from the
+      # mobile-certificates repo (git-only, never contacts Apple, so no cert is
+      # generated), pins each target to its match profile, and exports a signed
+      # IPA to example/ios/build/. ssh-agent is started inline because its env
+      # can't cross workflow steps, and match runs in this same step.
+      - name: Build & sign IPA (fastlane match + gym)
+        working-directory: example
         env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        shell: bash
-        run: |
-          /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
-          # PlistBuddy errors on Add when the key exists, so try Add then Set.
-          /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
-            || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
-
-      # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
-      # register/refresh the distribution cert and provisioning profiles
-      # via App Store Connect using the API key flags.
-      - name: Archive
-        working-directory: example/ios
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          # Password-protected distribution key: match imports keys with an empty
+          # password, which macOS 26's `security import` rejects, so the lane
+          # imports this one itself. See example/fastlane/Fastfile.
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           # RN build-phase scripts read this directly to wire codegen outputs.
           RCT_NEW_ARCH_ENABLED: '1'
           # Prevent Metro from starting a dev server.
-          CI: true
+          CI: 'true'
         shell: bash
         run: |
-          # DO NOT `rm -rf ./build` — pod install writes new-arch codegen
-          # headers (RCTAppDependencyProvider.h etc.) into ./build/generated/ios
-          # and xcodebuild reads them from there during archive.
-          rm -rf KlaviyoReactNativeSdkExample.xcarchive
-          # `-destination "generic/platform=iOS"` pins archive to iOS device.
-          # Without it, xcodebuild picks "My Mac" (Designed-for-iPad scheme
-          # on Apple Silicon advertises it as valid) and uses Development
-          # signing rules.
-          xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
-            -scheme KlaviyoReactNativeSdkExample \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
-
-      - name: Export IPA
-        working-directory: example/ios
-        env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-        shell: bash
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$MATCH_DEPLOY_KEY" | ssh-add -
+          CERT_P12_PATH="$RUNNER_TEMP/dist.p12"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 -d > "$CERT_P12_PATH"
+          export CERT_P12_PATH
+          fastlane ios release_ipa
 
       # altool with the API key — no Apple ID / app-specific password / 2FA dance.
       - name: Upload to TestFlight
