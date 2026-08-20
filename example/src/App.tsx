@@ -1,7 +1,6 @@
 // React / React Native
 import { useEffect, useState } from 'react';
-import { SectionList, View, Linking } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SectionList, Linking } from 'react-native';
 
 // Klaviyo SDK
 import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -9,6 +8,7 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 // Local components / styles
 import { styles } from './Styles';
 import { spacing } from './theme';
+import { SafeAreaContainer, useSafeAreaPadding } from './safeArea';
 import { SectionHeader } from './components/SectionHeader';
 import { AppHeader } from './components/AppHeader';
 import { CompanyIdModal } from './components/CompanyIdModal';
@@ -91,7 +91,7 @@ export default function App() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
     useCompanyId();
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaPadding();
 
   useEffect(() => {
     // Deep linking handler
@@ -120,7 +120,7 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaContainer style={styles.container}>
       <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
       <SectionList
         style={styles.container}
@@ -156,6 +156,6 @@ export default function App() {
         }}
         onClose={() => setSettingsVisible(false)}
       />
-    </View>
+    </SafeAreaContainer>
   );
 }

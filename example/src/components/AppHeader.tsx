@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaPadding } from '../safeArea';
 import { colors, spacing, typography } from '../theme';
 
 interface AppHeaderProps {
@@ -12,8 +12,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onSettingsPress }) => {
   // so the header has to inset itself or its controls end up beneath the
   // status bar and cutout. Applied here rather than on a parent so the
   // header stays correct wherever it's composed; left/right are included for
-  // landscape on cutout devices.
-  const insets = useSafeAreaInsets();
+  // landscape on cutout devices. Zero on iOS, where SafeAreaContainer has
+  // already done the insetting — see src/safeArea.tsx.
+  const insets = useSafeAreaPadding();
 
   return (
     <View

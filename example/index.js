@@ -1,15 +1,16 @@
 import { AppRegistry } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaRoot } from './src/safeArea';
 import App from './src/App';
 import { name as appName } from './app.json';
 
-// SafeAreaProvider must wrap App (rather than live inside it) so any
-// descendant — including AppHeader — can call useSafeAreaInsets().
+// SafeAreaRoot must wrap App (rather than live inside it) so any descendant —
+// including AppHeader — can read safe-area insets. It resolves per platform;
+// see src/safeArea.tsx.
 function Root() {
   return (
-    <SafeAreaProvider>
+    <SafeAreaRoot>
       <App />
-    </SafeAreaProvider>
+    </SafeAreaRoot>
   );
 }
 
