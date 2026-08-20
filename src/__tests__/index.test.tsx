@@ -1046,6 +1046,44 @@ describe('Klaviyo SDK', () => {
       }
     );
 
+    // A validly-typed channels object can still request nothing, either because every key was
+    // omitted or because a key was misspelled. Either way the request would otherwise reach
+    // native as a subscription that grants no consent, with the caller never told why.
+    it('should reject an empty channels object rather than granting no consent silently', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({ listId: 'ABC123', channels: {} })
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('at least one channel')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject an unrecognized channel key rather than silently dropping it', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 'ABC123',
+          channels: { smss: [MessagingConsent.Marketing] } as never,
+        })
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('smss')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
     it('should reject a non-string listId rather than throwing on .trim()', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
