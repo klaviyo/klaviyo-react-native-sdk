@@ -8,7 +8,14 @@ buildscript {
   }
 
   dependencies {
-    // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version
+    // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version.
+    //
+    // Deliberately held at 8.x while the Gradle wrapper is on 9.3.1. Gradle's own
+    // compatibility matrix does not list AGP 8.x as tested against Gradle 9.x, so this
+    // pairing is empirically validated here rather than officially supported. It is kept
+    // because this file is published to consumers and its buildscript classpath is
+    // consumer-visible, so raising AGP would push that change onto host apps.
+    // Revisit when RN raises its own AGP floor.
     classpath "com.android.tools.build:gradle:8.10.1"
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"

@@ -2,8 +2,12 @@
 ENV['KLAVIYO_INCLUDE_FORMS'] = 'true'
 ENV['KLAVIYO_INCLUDE_LOCATION'] = 'true'
 
-# Build React-Core from source rather than using the prebuilt binary React Native
-# 0.86 ships by default.
+# Build React-Core from source rather than using the prebuilt binary.
+#
+# Prebuilt React-Core became the default in React Native 0.84, not 0.86:
+# react_native_pods.rb forces ENV['RCT_USE_PREBUILT_RNCORE'] = '1' inside
+# use_react_native! unless it is explicitly '0'. This repo went 0.81 -> 0.86
+# in one step, so the change surfaced here even though it landed in 0.84.
 #
 # The prebuilt React-Core exposes its headers non-modularly. Because this Podfile
 # builds pods as static frameworks, every `#import <React/...>` from a pod that
@@ -16,6 +20,9 @@ ENV['KLAVIYO_INCLUDE_LOCATION'] = 'true'
 # avoids patching a third-party pod's build settings from here. The cost is a
 # slower clean iOS build. Adopting prebuilt React-Core is tracked separately and
 # needs @react-native-firebase to declare Photos and support modular imports.
+#
+# The header incompatibility is confirmed upstream:
+# https://github.com/invertase/react-native-firebase/issues/8883
 ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
 
 # Force @react-native-firebase pods to build as static frameworks.
