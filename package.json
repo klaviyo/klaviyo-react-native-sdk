@@ -1,6 +1,6 @@
 {
   "name": "klaviyo-react-native-sdk",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Official Klaviyo React Native SDK",
   "source": "./src/index.tsx",
   "main": "./lib/module/index.js",
@@ -101,7 +101,7 @@
   },
   "resolutions": {
     "@types/react": "^19.2.0",
-    "protobufjs": "^7.6.4"
+    "protobufjs": "^7.6.5"
   },
   "peerDependencies": {
     "react": ">=17.0.0",

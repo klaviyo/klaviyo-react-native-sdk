@@ -22,6 +22,7 @@
     - [Reset Profile](#reset-profile)
     - [Anonymous Tracking](#anonymous-tracking)
   - [Event Tracking](#event-tracking)
+  - [Subscriptions](#subscriptions)
   - [Push Notifications](#push-notifications)
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
@@ -47,6 +48,7 @@
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
+  - [SDK Logging](#sdk-logging)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -272,6 +274,60 @@ Klaviyo.createEvent({
 });
 ```
 
+## Subscriptions
+
+Subscribe the current profile to a Klaviyo list and record its consent via the
+[Create Client Subscription API](https://developers.klaviyo.com/en/reference/create_client_subscription).
+
+Set the profile's email and/or phone number **before** subscribing — a request whose channel has no
+matching identifier on the profile is dropped with a warning from the native SDK.
+
+Push subscriptions are not created through this API. See [Push Notifications](#push-notifications).
+
+```typescript
+import {
+  Klaviyo,
+  EmailConsent,
+  MessagingConsent,
+} from 'klaviyo-react-native-sdk';
+
+// Request specific consent per channel
+Klaviyo.createSubscription({
+  listId: 'ABC123',
+  channels: {
+    email: [EmailConsent.Marketing, EmailConsent.OpenTracking],
+    sms: [MessagingConsent.Marketing],
+  },
+});
+```
+
+```typescript
+// Attach a signup source label, stored as the consent record's $source
+Klaviyo.createSubscription({
+  listId: 'ABC123',
+  channels: {
+    sms: [MessagingConsent.Marketing],
+    whatsapp: [MessagingConsent.Transactional],
+  },
+  customSource: 'Checkout screen',
+});
+```
+
+```typescript
+import { Klaviyo, allAvailableMarketing } from 'klaviyo-react-native-sdk';
+
+// Request marketing consent on every channel the profile has an identifier for
+Klaviyo.createSubscription(allAvailableMarketing('ABC123'));
+```
+
+Each channel accepts only the consent types the API supports for it: email takes `Marketing` and
+`OpenTracking`, while SMS and WhatsApp take `Marketing` and `Transactional`. Omitting a channel
+leaves it untouched.
+
+`channels` is required so that granting marketing consent on every identified channel is always an
+explicit choice. Use `allAvailableMarketing(...)` as above, or import `ALL_AVAILABLE_MARKETING` and
+set `channels: ALL_AVAILABLE_MARKETING` directly.
+
 ## Push Notifications
 
 ### Prerequisites
@@ -294,6 +350,52 @@ Refer to the following README sections on push setup:
 Push tokens can be collected either from your app's react native code or in the native code.
 Below sections discuss both approaches, and you are free to pick one that best suits your app's architecture.
 Note that doing this in one location is sufficient.
+
+#### Automatic Token Forwarding (Platform Defaults)
+
+Before choosing an approach, note that the underlying native SDKs handle automatic push-token
+forwarding differently by default:
+
+- **Android — reactive forwarding by default, proactive fetch opt-in.** The native Android SDK
+  auto-registers its `KlaviyoPushService` (a `FirebaseMessagingService`) via manifest merge, so it
+  forwards a token to Klaviyo whenever FCM delivers one, without any React Native code. You do not
+  need to collect the token yourself on Android — though doing so is harmless: the native SDK only
+  sends a request when the complete push request state has changed.
+- **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
+  which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
+  APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see
+  the native [iOS README](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications).
+
+On Android, `com.klaviyo.push.automatic_push_token_forwarding` is three-valued, because leaving it
+unset is different from setting it to `false`:
+
+| Value | Behavior |
+|---|---|
+| **not set** (default) | Forwards a token whenever FCM delivers one to `KlaviyoPushService`. On React Native, `Klaviyo.initialize()` runs from JS after `Application.onCreate`, so a token FCM delivers before that call is silently dropped. |
+| **`true`** | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground. |
+| **`false`** | No automatic forwarding at all — a complete opt-out. |
+
+Each platform has its own key — `klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
+`com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
+(`false` = no automatic collection) but different defaults, for these platform-specific reasons.
+Manual token collection (documented below) remains the recommended baseline and works on both
+platforms — automatic forwarding is additive, not a replacement.
+
+To **opt out** of automatic forwarding on Android, add the following `meta-data` to the
+`<application>` element of your app's `AndroidManifest.xml` (which your app owns), then register the
+token yourself via `Klaviyo.setPushToken(...)`:
+
+```xml
+<meta-data
+    android:name="com.klaviyo.push.automatic_push_token_forwarding"
+    android:value="false" />
+```
+
+On Android this is the complete opt-out — with it set, the native SDK never auto-collects the token,
+though any token already registered remains until you replace it. iOS has nothing to opt out of:
+automatic forwarding is off unless you opt in via `Info.plist`. For full details, see the native
+[Android](https://github.com/klaviyo/klaviyo-android-sdk#Push-Notifications) and
+[iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Push-Notifications) push documentation.
 
 #### React Native Token Collection
 
@@ -441,6 +543,13 @@ us from bridging this functionality into the React Native SDK code.
 
 - [Android](https://github.com/klaviyo/klaviyo-android-sdk#Tracking-Open-Events)
 - [iOS](https://github.com/klaviyo/klaviyo-swift-sdk#Tracking-Open-Events)
+
+As an alternative to the handler-based setup in those guides, the native SDKs pinned by v2.5.0 offer
+an **opt-in automatic push-open tracking mode**, declared in your native configuration rather than
+written in code: `klaviyo_automatic_push_open_tracking` in the iOS `Info.plist` and
+`com.klaviyo.push.automatic_push_open_tracking` in the Android manifest. It is off by default, and is
+independent of automatic token forwarding — you can enable either, both, or neither. See the
+platform guides above for how each mode works and what it changes.
 
 > Note: If you initialize Klaviyo from React Native code, be aware that on both platforms the timing of when
 > an `Opened Push` event gets triggered can sometimes occur before your React Native code to initialize our SDK
@@ -712,6 +821,35 @@ Klaviyo.unregisterGeofencing();
 ```
 
 After unregistering, the SDK will stop monitoring geofences and will no longer report geofence transition events. You can call `registerGeofencing()` again to resume monitoring.
+
+## SDK Logging
+
+The SDK logs diagnostic information to the system console (Logcat on Android, unified logging on iOS).
+Logging is enabled by default. To silence all Klaviyo SDK log output at runtime, or turn it back on:
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+// Disable all SDK logging
+Klaviyo.setLoggingEnabled(false);
+
+// Re-enable SDK logging
+Klaviyo.setLoggingEnabled(true);
+
+// Read the current logging state
+Klaviyo.isLoggingEnabled((enabled: boolean) => {
+  console.log(`Klaviyo SDK logging enabled: ${enabled}`);
+});
+```
+
+Platform notes:
+
+- **iOS**: The toggle does not affect logging from `KlaviyoSwiftExtension`, which runs in a separate
+  app extension process for rich push notifications.
+- **Android**: Log verbosity can also be configured statically via the `com.klaviyo.core.log_level`
+  manifest metadata tag; see the
+  [Android SDK documentation](https://github.com/klaviyo/klaviyo-android-sdk#troubleshooting) for details.
+  Re-enabling logging at runtime restores the previously configured log level.
 
 ## Troubleshooting
 

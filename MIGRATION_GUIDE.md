@@ -2,6 +2,36 @@
 
 This guide outlines how developers can migrate from older versions of our SDK to newer ones.
 
+## Migrating to v2.5.0
+
+### Android's `automatic_push_token_forwarding` flag is now three-valued
+
+On Android, `automatic_push_token_forwarding` has three states, because leaving it unset is
+different from setting it to `false`:
+
+| Value | Behavior |
+|---|---|
+| **not set** (default) | The native SDK forwards a token whenever FCM delivers one to its bundled `KlaviyoPushService`. This is the SDK's original behavior and requires no manifest changes. On React Native, `Klaviyo.initialize()` runs from JS after `Application.onCreate`, so a token FCM delivers before that call is silently dropped. |
+| **`true`** | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground. |
+| **`false`** | No automatic forwarding at all — call `Klaviyo.setPushToken(...)` yourself. |
+
+**No action is required** to keep current behavior — the unset default matches what this SDK has
+always done. If you prefer to own the push-token pipeline entirely, set the flag to `false` and
+continue calling `Klaviyo.setPushToken(...)` yourself:
+
+```xml
+<meta-data
+    android:name="com.klaviyo.push.automatic_push_token_forwarding"
+    android:value="false" />
+```
+
+See the [README](./README.md#collecting-push-tokens) for full token-collection guidance.
+
+> **Looking ahead:** a future **major** release may default `automatic_push_token_forwarding` to
+> `true` (in addition to enabling `automatic_push_open_tracking` by default), bringing automatic
+> push integration to parity across platforms. This is a non-breaking, forward-looking heads-up —
+> nothing changes until that release.
+
 ## Migrating to v2.0.0
 
 ### In-App Forms
