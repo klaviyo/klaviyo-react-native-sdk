@@ -1,6 +1,24 @@
 buildscript {
-  // Buildscript is evaluated before everything else so we can't use getExtOrDefault
-  def kotlin_version = rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["KlaviyoReactNativeSdk_kotlinVersion"]
+  // Buildscript is evaluated before everything else so we can't use getExtOrDefault.
+  //
+  // Two independent selections, because two different builds evaluate this file:
+  //
+  //   - Standalone, with this folder as its own root project. Nothing else supplies plugins
+  //     and the wrapper here is Gradle 9.3.1, so it needs a Kotlin plugin that can drive
+  //     that. React Native's own @react-native/gradle-plugin runs exactly this pairing --
+  //     it pins kotlin 2.1.20 and ships a gradle-9.3.1 wrapper -- so we match it.
+  //
+  //   - Inside a host app. Plugins load parent-first, so a host declaring its own Kotlin
+  //     plugin wins and neither value below applies. Only hosts declaring none reach the
+  //     fallback, and those are React Native 0.72 and older, whose templates ship Gradle
+  //     7.5.1 and set no ext.kotlinVersion. That value must stay low enough for 7.5.1,
+  //     which rules out 2.1.20 (it needs Gradle >= 7.6.3).
+  //
+  // Collapsing these into one property is what broke old consumers: the version the
+  // standalone build needs is far above the version an RN 0.70 host can accept.
+  def kotlin_version = project == rootProject
+    ? project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
+    : (rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["KlaviyoReactNativeSdk_kotlinVersion"])
 
   repositories {
     google()
@@ -100,7 +118,11 @@ repositories {
 }
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
-def kotlin_version = getExtOrDefault("kotlinVersion")
+// Mirrors the split in the buildscript block above, so kotlin-reflect always matches the
+// stdlib that the Kotlin plugin actually applied for this build.
+def kotlin_version = (project == rootProject)
+  ? getExtOrDefault("standaloneKotlinVersion")
+  : getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
   localProperties.load(new FileInputStream(rootProject.file("local.properties")))
