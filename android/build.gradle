@@ -118,10 +118,15 @@ repositories {
 }
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
-// Mirrors the split in the buildscript block above, so kotlin-reflect always matches the
-// stdlib that the Kotlin plugin actually applied for this build.
+// Must resolve to exactly the same value as the buildscript block above, so kotlin-reflect
+// always matches the stdlib that the Kotlin plugin actually applied. That means reading the
+// standalone property directly rather than through getExtOrDefault: the helper consults
+// rootProject.ext first, which the buildscript ternary never does for this branch, and a
+// divergence between the two would reintroduce the version skew this split exists to remove.
+// The ext lookup would be meaningless here anyway -- in a standalone build rootProject *is*
+// this project, so only this file could have set it.
 def kotlin_version = (project == rootProject)
-  ? getExtOrDefault("standaloneKotlinVersion")
+  ? project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
   : getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
