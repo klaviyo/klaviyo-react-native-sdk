@@ -104,8 +104,8 @@
     "protobufjs": "^7.6.5"
   },
   "peerDependencies": {
-    "react": ">=17.0.0",
-    "react-native": ">=0.68.0"
+    "react": "*",
+    "react-native": "*"
   },
   "workspaces": [
     "example"
