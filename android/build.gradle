@@ -8,15 +8,19 @@ buildscript {
   }
 
   dependencies {
-    // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version.
-    //
-    // Deliberately held at 8.x while the Gradle wrapper is on 9.3.1. Gradle's own
-    // compatibility matrix does not list AGP 8.x as tested against Gradle 9.x, so this
-    // pairing is empirically validated here rather than officially supported. It is kept
-    // because this file is published to consumers and its buildscript classpath is
-    // consumer-visible, so raising AGP would push that change onto host apps.
-    // Revisit when RN raises its own AGP floor.
-    classpath "com.android.tools.build:gradle:8.10.1"
+    // The Android Gradle Plugin is only required when this folder is opened as its own root
+    // project. Every React Native app template declares AGP in its own root build.gradle, and
+    // Gradle loads plugins parent-first, so inside a host app that declaration wins and this
+    // entry is never used. Declaring it unconditionally only resolves a version the host discards.
+    if (project == rootProject) {
+      classpath "com.android.tools.build:gradle:8.10.1"
+    }
+
+    // The Kotlin plugin, by contrast, must stay unconditional. React Native templates only began
+    // declaring kotlin-gradle-plugin at 0.73, and a subproject's buildscript classpath is not
+    // shared with its siblings, so on 0.72 and older this entry is the only thing that supplies
+    // `kotlin-android` to this module. A host that declares its own Kotlin plugin still wins,
+    // parent-first; kotlin_version above only takes effect when the host declares none.
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
   }
@@ -129,8 +133,6 @@ dependencies {
     implementation "com.facebook.react:react-native:+"
   }
 
-  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
   // Klaviyo Android SDK
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
@@ -151,9 +153,13 @@ dependencies {
   }
 
   // We use reflection to enumerate keywords in the Klaviyo Android SDK dynamically.
-  // kotlin-reflect must resolve to the same version as the Kotlin stdlib above,
-  // otherwise it fails at runtime, so track $kotlin_version instead of pinning it
-  // independently. Consuming apps override this via rootProject.ext.kotlinVersion.
+  // kotlin-reflect must resolve to the same version as the Kotlin stdlib, otherwise it fails at
+  // runtime. We do not declare the stdlib ourselves: kotlin.stdlib.default.dependency defaults to
+  // true, so the Kotlin plugin injects one matching the compiler that actually runs. Declaring a
+  // stdlib here would instead set a floor for the whole graph -- Gradle resolves version conflicts
+  // highest-wins, so an explicit 2.1.20 drags every transitive 1.8.x request up with it and can
+  // leave a newer stdlib under an older compiler. Track $kotlin_version so reflect follows the
+  // same selection. Consuming apps override it via rootProject.ext.kotlinVersion.
   implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
 
