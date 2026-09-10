@@ -17,8 +17,26 @@
  *                         as OK here. A previous run reported "108 calls, zero
  *                         failures" while producing no native evidence at all.
  */
-import { SafeAreaView, ScrollView, Text } from 'react-native';
+import { NativeModules, SafeAreaView, ScrollView, Text } from 'react-native';
 import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+// The constants the native bridge exports, sorted so the comparison is
+// order-insensitive. Map iteration order is not specified, so an
+// order-sensitive capture would be a bad baseline.
+try {
+  const c = (NativeModules as any).KlaviyoReactNativeSdk.getConstants();
+  console.log(
+    'KLAVIYO_CONSTANTS ' +
+      JSON.stringify({
+        PROFILE_KEYS: Object.entries(c.PROFILE_KEYS).sort(),
+        EVENT_NAMES: Object.entries(c.EVENT_NAMES).sort(),
+        FORMS_AVAILABLE: c.FORMS_AVAILABLE,
+        LOCATION_AVAILABLE: c.LOCATION_AVAILABLE,
+      })
+  );
+} catch (e: any) {
+  console.log('KLAVIYO_CONSTANTS_FAIL ' + (e && e.message));
+}
 
 const results: string[] = [];
 

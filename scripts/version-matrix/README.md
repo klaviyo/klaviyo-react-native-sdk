@@ -99,8 +99,12 @@ release builds silently used it.
 successfully edited the Gradle file. It verifies the outcome rather than the attempt.
 
 **`native log lines`** counts lines tagged `Klaviyo.<Class>` by the Android SDK's logger.
-R8 renames the class but the `Klaviyo.` prefix survives, so this works in minified builds
-too. It is independent confirmation of what `round trip` claims.
+R8 renames the class but the `Klaviyo.` prefix survives, so this works in minified builds too.
+**Read it as a one-way signal only.** `setLoggingEnabled(true)` restores the log level to
+`Log.Level.Error`, not to verbose — so a run where nothing goes wrong logs nothing, and this
+column correctly reads `0`. A non-zero value means something errored and the raw log is worth
+opening. A `0` tells you nothing in either direction: it is neither confirmation that the bridge
+worked nor evidence that it did not. `round trip` is the column that answers that question.
 
 ---
 
@@ -114,7 +118,7 @@ Every one of these is a real incident from MAGE-919, not a hypothetical.
 | Tarball filename contains a hash of its **contents**                 | npm caches `file:` dependencies by path. A repack under the same filename was silently ignored and a stale tarball installed. The resulting crash looked real and meant nothing.                                                                                                                                 |
 | `diff -r` of the installed package against the packed tarball        | Nothing used to check this. A fix was once "verified" against an installed package that did not contain the fix.                                                                                                                                                                                                 |
 | `rm -rf app/build/outputs` before every release build                | A build failed in 3 seconds, the script installed the _previous_ APK, and the result voided an entire matrix cell.                                                                                                                                                                                               |
-| `isLoggingEnabled` round-trip call                                   | "108 calls, zero failures" was measuring nothing. The JS try/catch only sees synchronous throws, and there were zero native log lines in any run.                                                                                                                                                                |
+| `isLoggingEnabled` round-trip call                                   | "108 calls, zero failures" was measuring nothing. The JS try/catch only sees synchronous throws, so a call that never reaches native still counts as OK.                                                                                                                                                         |
 | `mapping.txt` existence check                                        | Confirms minification actually ran, rather than trusting that a `sed` matched.                                                                                                                                                                                                                                   |
 | `pidof` after launch                                                 | Distinguishes "the bridge produced no evidence" from "the app was never running". These look identical in the columns and mean completely different things.                                                                                                                                                      |
 | Pure ASCII, bash 3.2 idioms                                          | macOS ships bash 3.2. It folds a multibyte character following `$var` into the variable _name_; a stray U+2192 arrow killed a whole run under `set -u`. `${VAR,,}` also does not exist there.                                                                                                                    |
@@ -134,6 +138,11 @@ the JSON both derive from it.
 
 When MAGE-1203 lands and `kotlin-reflect` is gone, delete its line from `TRACKED`. The
 skew detection compares whatever is left, so it keeps working with one entry or five.
+
+**The smoke app** also dumps the native constants. It logs a single `KLAVIYO_CONSTANTS` line
+holding `getConstants()` with its entries sorted, which makes a before/after comparison of the
+bridge contract a plain `diff`. Sorting matters: map iteration order is not specified on either
+side, so an order-sensitive capture would fail for no reason.
 
 **The smoke app** is `smoke/App.tsx`, copied over the scaffold at tier 4 before the
 release build. Add API calls there, not in the shell script.
