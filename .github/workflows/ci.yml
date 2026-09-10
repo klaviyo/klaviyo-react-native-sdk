@@ -27,6 +27,12 @@ jobs:
         run: |
           yarn lint
 
+          # The version matrix tool is 600+ lines of bash that CI never runs.
+          # A syntax gate is the cheapest thing that stops it rotting silently.
+          # It catches parse errors only -- bash 3.2 semantics such as ${VAR,,}
+          # still parse cleanly here, so this is not a 3.2 compatibility check.
+          bash -n scripts/version-matrix/version-matrix.sh
+
           if [ -f "package-lock.json" ];
             then echo "package-lock.json is not allowed";
             exit 1;
