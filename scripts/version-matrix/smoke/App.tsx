@@ -50,8 +50,9 @@ const run = (label: string, fn: () => void) => {
   }
 };
 
-// Logging first: the native SDK stays silent otherwise, and the native log lines
-// are the independent confirmation that the JS-side counters cannot give us.
+// Logging first. This is a no-op in a release build -- the level is already
+// Log.Level.Error and setLoggingEnabled only acts when logging was previously
+// turned off -- but it keeps the sequence honest if the harness ever runs debug.
 run('setLoggingEnabled', () => Klaviyo.setLoggingEnabled(true));
 run('initialize', () => Klaviyo.initialize('TESTKY'));
 run('setEmail', () => Klaviyo.setEmail('t@example.com'));

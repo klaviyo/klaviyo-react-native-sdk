@@ -19,27 +19,37 @@ you run when you have a reason to.
 
 ## Why this exists
 
-Our CI builds exactly one thing: `example/` at one React Native version, debug only.
+CI covers exactly one React Native version.
 
-Two properties of that setup make whole categories of bug invisible:
+**PR CI is debug-only and workspace-linked.** `android-ci.yml` builds `example/` in
+debug, resolving the SDK through a yarn-workspace symlink rather than the `files[]`
+allowlist a customer installs.
 
-**`example/android/build.gradle` sets `ext.kotlinVersion`.** Every CI build therefore
-takes the host branch of our Kotlin version selection. The fallback that older
-consumers get is never executed — not once, ever.
+**`publish-example.yml` does more, but not on PRs.** It runs `./pack-and-test.sh setup`
+and then `:app:bundleRelease` — a genuine packed install — but only on push to master,
+on release, and on labelled PRs. Still one version, and
+`example/android/app/build.gradle:60` leaves `enableProguardInReleaseBuilds = false`,
+so R8 never runs there either.
 
-**`example/` resolves the SDK through a yarn-workspace symlink.** Customers install a
-tarball built from the `files[]` allowlist. Those are different file sets. A file
-missing from `files[]` is invisible to CI and fatal to customers.
+**`example/android/build.gradle` sets `ext.kotlinVersion`.** So every CI build takes the
+host branch of our Kotlin version selection, and the fallback older consumers get is
+never executed — not once, ever.
 
-So CI cannot see version-selection bugs, packaging bugs, consumer-side AAR metadata
-rejections, or anything that only appears in a minified release build. All four have
-bitten us. This script closes that gap.
+What is left uncovered, and what this script is for: **the version axis and
+minification.** Version-selection bugs across releases, consumer-side AAR metadata
+rejections, and anything that only appears under R8.
+
+Packaging fidelity is _not_ the gap — `pack-and-test.sh` already installs from a real
+tarball. This tool applies the same idea across several versions. The two scripts hash
+the tarball differently (`pack-and-test.sh:134` hashes the archive bytes, which is
+always a cache miss; this one hashes the decompressed stream). Worth unifying.
 
 ---
 
 ## Tiers
 
-Each tier is a superset of the one below it.
+Each tier runs everything the tier below does, with one exception: tier 4 swaps the
+smoke app in _before_ the release build, so tiers 3 and 4 build different inputs.
 
 | Tier | Adds                                                                         | Roughly            | Needs                |
 | ---- | ---------------------------------------------------------------------------- | ------------------ | -------------------- |
@@ -58,7 +68,7 @@ which is the largest class, and it needs no toolchain cooperation.
 
 ## Reading the output
 
-Three files land in `~/.klaviyo-rn-version-matrix/`:
+These land in `~/.klaviyo-rn-version-matrix/` (override with `WORK=`):
 
 | File              | What it is                                        |
 | ----------------- | ------------------------------------------------- |
@@ -80,7 +90,10 @@ diff <(jq -S . /tmp/before.json) <(jq -S . /tmp/after.json)
 **`AGP (ours)` reading `none (guarded)` is the expected, correct result.** Gradle loads
 plugins parent-first, so a host app's own AGP always wins over the one our module's
 buildscript declares. That absence is the evidence the guard works. A version number
-here would mean something is wrong.
+here means the guard did not hold. Note the script does not _check_ that — it records
+the value and leaves the judgement to you. It does now guarantee the cell is meaningful:
+the Gradle invocation behind it must have succeeded, so `none (guarded)` can no longer be
+produced by a crashed build.
 
 **`round trip` is the column to read first.** Every other public API is fire-and-forget
 on the legacy bridge, so a JS-side try/catch around it catches nothing — a call that
@@ -98,10 +111,20 @@ release builds silently used it.
 **`R8 ran`** is read from whether `mapping.txt` was produced, not from whether the script
 successfully edited the Gradle file. It verifies the outcome rather than the attempt.
 
+**`alive`** is whether the process was still running after launch. `NO` means the app
+crashed or never started, which is a different thing from the bridge producing no
+evidence, and it fails the run.
+
+**`constants`** is a digest of the sorted `getConstants()` payload. Two runs with the same
+digest emitted the same bridge contract, so a `results.json` diff catches contract drift
+on its own. `FAIL` means the probe threw, `NO` means it never ran; both fail the run.
+
 **`native log lines`** counts lines tagged `Klaviyo.<Class>` by the Android SDK's logger.
 R8 renames the class but the `Klaviyo.` prefix survives, so this works in minified builds too.
 **Read it as a one-way signal only.** `setLoggingEnabled(true)` restores the log level to
-`Log.Level.Error`, not to verbose — so a run where nothing goes wrong logs nothing, and this
+`Log.Level.Error` only when logging was previously switched _off_. In a release build the
+level is already `Error` and nothing calls `setLoggingEnabled(false)`, so the call is a
+no-op. Either way a run where nothing goes wrong logs nothing, and this
 column correctly reads `0`. A non-zero value means something errored and the raw log is worth
 opening. A `0` tells you nothing in either direction: it is neither confirmation that the bridge
 worked nor evidence that it did not. `round trip` is the column that answers that question.
@@ -112,17 +135,17 @@ worked nor evidence that it did not. `round trip` is the column that answers tha
 
 Every one of these is a real incident from MAGE-919, not a hypothetical.
 
-| Guard                                                                | What went wrong without it                                                                                                                                                                                                                                                                                       |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scaffolds are snapshotted pristine and restored before **every** run | A cached `App0815` scaffold still carried `kotlinVersion = "2.0.0"` from an earlier experiment and produced a false stdlib/reflect reading. It was caught by luck, because one value contradicted an earlier one. An existence check cannot detect a mutated scaffold; restoring from a snapshot cannot miss it. |
-| Tarball filename contains a hash of its **contents**                 | npm caches `file:` dependencies by path. A repack under the same filename was silently ignored and a stale tarball installed. The resulting crash looked real and meant nothing.                                                                                                                                 |
-| `diff -r` of the installed package against the packed tarball        | Nothing used to check this. A fix was once "verified" against an installed package that did not contain the fix.                                                                                                                                                                                                 |
-| `rm -rf app/build/outputs` before every release build                | A build failed in 3 seconds, the script installed the _previous_ APK, and the result voided an entire matrix cell.                                                                                                                                                                                               |
-| `isLoggingEnabled` round-trip call                                   | "108 calls, zero failures" was measuring nothing. The JS try/catch only sees synchronous throws, so a call that never reaches native still counts as OK.                                                                                                                                                         |
-| `mapping.txt` existence check                                        | Confirms minification actually ran, rather than trusting that a `sed` matched.                                                                                                                                                                                                                                   |
-| `pidof` after launch                                                 | Distinguishes "the bridge produced no evidence" from "the app was never running". These look identical in the columns and mean completely different things.                                                                                                                                                      |
-| Pure ASCII, bash 3.2 idioms                                          | macOS ships bash 3.2. It folds a multibyte character following `$var` into the variable _name_; a stray U+2192 arrow killed a whole run under `set -u`. `${VAR,,}` also does not exist there.                                                                                                                    |
-| Workspace outside `/tmp`                                             | macOS purges `/private/tmp` after a few days. It destroyed a previous run's scaffolds and logs.                                                                                                                                                                                                                  |
+| Guard                                                                | What went wrong without it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scaffolds are snapshotted pristine and restored before **every** run | A cached `App0815` scaffold still carried `kotlinVersion = "2.0.0"` from an earlier experiment and produced a false stdlib/reflect reading. It was caught by luck, because one value contradicted an earlier one. An existence check cannot detect a mutated scaffold. Restoring from a snapshot cannot miss a mutated _config file_ — but the snapshot excludes `node_modules`, and nothing covers `~/.gradle`. Use `--fresh` after any dependency change: `yarn add` does not prune, so a removed native dependency survives in the cached `node_modules` and still autolinks. |
+| Tarball filename contains a hash of its **contents**                 | npm caches `file:` dependencies by path. A repack under the same filename was silently ignored and a stale tarball installed. The resulting crash looked real and meant nothing.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `diff -r` of the installed package against the packed tarball        | Nothing used to check this. A fix was once "verified" against an installed package that did not contain the fix.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `rm -rf app/build/outputs` before every release build                | A build failed in 3 seconds, the script installed the _previous_ APK, and the result voided an entire matrix cell.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `isLoggingEnabled` round-trip call                                   | "108 calls, zero failures" was measuring nothing. The JS try/catch only sees synchronous throws, so a call that never reaches native still counts as OK.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `mapping.txt` existence check                                        | Confirms minification actually ran, rather than trusting that a `sed` matched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `pidof` after launch                                                 | Distinguishes "the bridge produced no evidence" from "the app was never running". These look identical in the columns and mean completely different things.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Pure ASCII, bash 3.2 idioms                                          | macOS ships bash 3.2. It folds a multibyte character following `$var` into the variable _name_; a stray U+2192 arrow killed a whole run under `set -u`. `${VAR,,}` also does not exist there.                                                                                                                                                                                                                                                                                                                                                                                    |
+| Workspace outside `/tmp`                                             | macOS purges `/private/tmp` after a few days. It destroyed a previous run's scaffolds and logs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ---
 
@@ -141,7 +164,10 @@ skew detection compares whatever is left, so it keeps working with one entry or 
 
 **The smoke app** also dumps the native constants. It logs a single `KLAVIYO_CONSTANTS` line
 holding `getConstants()` with its entries sorted, which makes a before/after comparison of the
-bridge contract a plain `diff`. Sorting matters: map iteration order is not specified on either
+bridge contract a plain `diff`. The harness reads that line: the payload is saved to
+`logs/<version>/constants.json`, a digest of it appears in the `constants` column and in
+`results.json`, and a probe that throws sets a non-zero exit. Sorting matters: map
+iteration order is not specified on either
 side, so an order-sensitive capture would fail for no reason.
 
 **The smoke app** is `smoke/App.tsx`, copied over the scaffold at tier 4 before the

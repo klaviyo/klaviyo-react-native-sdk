@@ -5,11 +5,19 @@
 # record what actually happens.
 #
 # WHY THIS EXISTS
-#   Our CI builds one thing: example/ at one React Native version, debug only.
-#   example/android/build.gradle sets ext.kotlinVersion, so every CI build takes
-#   the host branch of our Kotlin selection and never exercises the fallback that
-#   older consumers get. And example/ resolves the SDK through a yarn-workspace
-#   symlink, not through the files[] allowlist a customer installs.
+#   CI covers one React Native version. PR CI (android-ci.yml) builds example/ in
+#   debug through a yarn-workspace symlink. publish-example.yml does more -- it
+#   runs pack-and-test.sh then :app:bundleRelease -- but only on master, on
+#   release, and on labelled PRs, still at one version, and with
+#   enableProguardInReleaseBuilds false, so R8 never runs there either.
+#
+#   example/android/build.gradle also sets ext.kotlinVersion, so every CI build
+#   takes the host branch of our Kotlin selection and the fallback older
+#   consumers get is never executed.
+#
+#   So the gaps this closes are the VERSION AXIS and MINIFICATION. Packaging
+#   fidelity is already covered by pack-and-test.sh; this reuses that idea
+#   across versions rather than introducing it.
 #
 #   So CI cannot see: version-selection bugs, packaging bugs (a file missing from
 #   files[]), consumer-side AAR metadata rejections, or anything that only appears
@@ -49,6 +57,9 @@
 #   multibyte characters following $var straight into the variable NAME. A stray
 #   U+2192 arrow killed an entire run under `set -u`.
 
+# `-e` is deliberately absent. Almost every step here may fail for one version
+# and still let the sweep continue, so failures are handled explicitly and
+# recorded in a row rather than aborting the run. `-u` and `pipefail` stay.
 set -uo pipefail
 
 # ---------------------------------------------------------------- configuration
@@ -64,6 +75,8 @@ SDK_REPO="${SDK_REPO:-$(cd "$HERE/../.." && pwd)}"
 WORK="${WORK:-$HOME/.klaviyo-rn-version-matrix}"
 
 MODULE=":klaviyo-react-native-sdk"
+# Pinned so a cached scaffold and a fresh one are always the same template.
+RN_CLI_VERSION="20.0.2"
 PKG_NAME="klaviyo-react-native-sdk"
 
 # Versions worth testing, and why. Edit this list as the support policy settles.
@@ -80,10 +93,14 @@ ALL_VERSIONS=(0.76.9 0.77.3 0.78.3 0.79.7 0.80.3 0.81.5 \
 # Coordinates whose resolved version we record. Add or remove one line to change
 # a column; nothing else in the script needs touching.
 #   label|gradle coordinate (regex-escaped)
+# Must not be empty. bash 3.2 under `set -u` treats "${ARR[@]}" on an empty array
+# as an unbound variable and dies, so emptying this list would crash the report
+# rather than simply drop a column.
 TRACKED=(
   "kotlin-stdlib|org\.jetbrains\.kotlin:kotlin-stdlib"
   "kotlin-reflect|org\.jetbrains\.kotlin:kotlin-reflect"
 )
+((${#TRACKED[@]})) || { printf '[fail] TRACKED must have at least one entry\n' >&2; exit 1; }
 
 PROBLEM=0
 TIER=1
@@ -103,12 +120,28 @@ sha_short() { shasum -a 256 | cut -c1-12; }
 # Read the version Gradle SETTLED ON, not the highest one mentioned. Gradle writes
 # conflict resolution as "requested -> winner", so an arrow target always beats a
 # bare version. Raw logs are kept so any parsed cell can be checked by hand.
+#
+# The requested half takes several shapes and every one of them appears in real
+# logs from this repo:
+#     coord:1.8.21 -> 2.1.20              a plain conflict
+#     coord:{strictly 2.1.20} -> 2.1.20   a rich version constraint, which the
+#                                         Kotlin plugin emits for kotlin-stdlib
+#     coord -> 2.1.20                     a platform or BOM constraint, no version
+#     coord:+ -> 2.1.20                   a dynamic version
+# So the requested part is matched loosely and only the arrow TARGET is trusted.
+# The target keeps its qualifier: truncating "2.2.0-RC" to "2.2.0" would make it
+# compare equal to a real 2.2.0 and hide exactly the skew this tool looks for.
 resolved_version() {
   local coord="$1" log="$2" v
-  v=$(grep -oE "${coord}:[0-9][0-9.]*[^ ]* -> [0-9][0-9.]*" "$log" 2>/dev/null \
-      | grep -oE '\-> [0-9][0-9.]*' | grep -oE '[0-9][0-9.]*' | sort -Vu | tail -1)
+  # The brace alternative must come first: "{strictly 2.1.20}" contains a space,
+  # so a [^ ]* requested-part can never span it.
+  v=$(grep -oE "${coord}(:\{[^}]*\}|:[^ ]*)? -> [0-9][A-Za-z0-9._-]*" "$log" 2>/dev/null \
+      | sed 's/.*-> //' | sort -Vu | tail -1)
   [[ -n "$v" ]] && { printf '%s' "$v"; return; }
-  grep -oE "${coord}:[0-9][0-9.]*" "$log" 2>/dev/null | sed 's/.*://' | sort -Vu | tail -1
+  # No arrow anywhere: fall back to the requested version, but never read one off
+  # a line Gradle marked FAILED -- that dependency did not resolve at all.
+  grep -E "${coord}:[0-9]" "$log" 2>/dev/null | grep -v 'FAILED' \
+    | grep -oE "${coord}:[0-9][A-Za-z0-9._-]*" | sed "s|.*:||" | sort -Vu | tail -1
 }
 
 # The community CLI prints "Run instructions for Android" and exits 0 even when
@@ -132,9 +165,12 @@ while (($#)); do
     --fresh)    FRESH=1 ;;
     --serial)   shift; SERIAL="${1:-}" ;;
     --serial=*) SERIAL="${1#*=}" ;;
-    --versions) shift; [[ "${1:-}" == "all" ]] && VERSIONS=("${ALL_VERSIONS[@]}") || die "--versions only accepts 'all'" ;;
+    --versions)   shift; [[ "${1:-}" == "all" ]] && VERSIONS=("${ALL_VERSIONS[@]}") || die "--versions only accepts 'all'" ;;
+    --versions=*) [[ "${1#*=}" == "all" ]] && VERSIONS=("${ALL_VERSIONS[@]}") || die "--versions only accepts 'all'" ;;
     --clean)    step "removing $WORK"; rm -rf "$WORK"; exit 0 ;;
-    -h|--help)  sed -n '2,58p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    # Bounded by the header block itself, not a hardcoded line number. The old
+    # form said 2,58p while the header ended at 50, so --help printed shell code.
+    -h|--help)  awk 'NR>1 && /^#/{sub(/^# ?/,"");print;next} NR>1{exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)         die "unknown flag: $1" ;;
     *)          VERSIONS+=("$1") ;;
   esac
@@ -149,6 +185,11 @@ command -v node >/dev/null || die "node not found"
 command -v npm  >/dev/null || die "npm not found"
 command -v npx  >/dev/null || die "npx not found"
 command -v java >/dev/null || die "java not found"
+command -v yarn >/dev/null || die "yarn not found"
+# `sed -i ''` is BSD syntax and appears in five places below. On GNU sed those
+# calls fail, their exit codes are not checked, and the run dies much later with
+# a confusing build error instead of an honest one here.
+[[ "$(uname)" == "Darwin" ]] || die "this script is macOS-only (it uses BSD sed -i)"
 [[ -n "${ANDROID_HOME:-}" && -d "${ANDROID_HOME:-}" ]] || die "ANDROID_HOME unset or missing"
 [[ -f "$SDK_REPO/package.json" ]] || die "SDK_REPO is not the SDK repo: $SDK_REPO"
 grep -q "\"name\": *\"$PKG_NAME\"" "$SDK_REPO/package.json" \
@@ -206,9 +247,15 @@ RAW_TARBALL="$(find "$TARBALL_DIR" -name "$PKG_NAME-*.tgz" -type f | sort | tail
 # crash was meaningless. Naming the tarball after a hash of its CONTENTS makes
 # that structurally impossible: different contents, different path.
 #
-# We hash the extracted contents rather than the archive, because gzip embeds a
-# timestamp, so the .tgz bytes differ on every pack even when nothing changed.
-CONTENT_SHA=$(tar -xzOf "$RAW_TARBALL" 2>/dev/null | sha_short)
+# We hash the decompressed STREAM rather than the .tgz bytes, because gzip embeds
+# a timestamp so the archive differs on every pack even when nothing changed.
+# gzip -dc keeps the tar headers, so filenames and modes are part of the hash --
+# `tar -xzO` would stream contents only, and a pure rename would not change it.
+#
+# Note pack-and-test.sh:134 solves the same problem by hashing the .tgz bytes,
+# which is always a cache miss rather than sometimes a false hit. Two answers to
+# one question in one repo; worth unifying, tracked in the PR body.
+CONTENT_SHA=$(gzip -dc "$RAW_TARBALL" | sha_short)
 TARBALL="$TARBALL_DIR/$PKG_NAME-$CONTENT_SHA.tgz"
 mv "$RAW_TARBALL" "$TARBALL"
 
@@ -233,19 +280,22 @@ for V in "${VERSIONS[@]}"; do
   step "React Native $V"
   APP="App${V//./}"
   DIR="$WORK/$APP"
-  LOG="$WORK/logs/$V"; mkdir -p "$LOG"
+  # Cleared per run. Previously logs/ accumulated across runs, so matrix.md could
+  # describe one run while logs/ held another -- and the README promises the raw
+  # logs back every cell.
+  LOG="$WORK/logs/$V"; rm -rf "$LOG"; mkdir -p "$LOG"
   PRISTINE="$WORK/pristine/$V.tar"
 
   STATUS="ok"
   AGP_HOST="-"; AGP_OURS="-"; KGP="-"
   TRACKED_VALS=""; SKEW_FLAG="-"
   MOD_DBG="-"; APP_DBG="-"; PG_CFG="-"; R8="-"; APP_REL="-"
-  CRASH="-"; JS_SMOKE="-"; ROUNDTRIP="-"; NATIVE="-"
+  CRASH="-"; JS_SMOKE="-"; ROUNDTRIP="-"; NATIVE="-"; ALIVE="-"; CONSTANTS="-"
 
   record_and_continue() {
     STATUS="$1"
     [[ "$STATUS" == "ok" ]] || PROBLEM=1
-    ROWS+=("$V|$STATUS|$AGP_HOST|$AGP_OURS|$KGP|$TRACKED_VALS|$SKEW_FLAG|$MOD_DBG|$APP_DBG|$PG_CFG|$R8|$APP_REL|$CRASH|$JS_SMOKE|$ROUNDTRIP|$NATIVE")
+    ROWS+=("$V|$STATUS|$AGP_HOST|$AGP_OURS|$KGP|$TRACKED_VALS|$SKEW_FLAG|$MOD_DBG|$APP_DBG|$PG_CFG|$R8|$APP_REL|$CRASH|$JS_SMOKE|$ROUNDTRIP|$NATIVE|$ALIVE|$CONSTANTS")
   }
 
   # -- 1. scaffold, once, then snapshot it ------------------------------------
@@ -261,7 +311,11 @@ for V in "${VERSIONS[@]}"; do
     # react-native@latest regardless of X, and current RN ships no template/ dir.
     # Only the community CLI with --version honours the version. Do NOT pass
     # --directory; the verified form is cd into the parent and init by name.
-    ( cd "$WORK" && npx --yes @react-native-community/cli@latest init "$APP" \
+    # Pinned, not @latest. The pristine snapshot is keyed on the React Native
+    # version alone, so a cache built by one CLI and reused under another would
+    # silently compare two different templates. It also means this script can
+    # break with no commit to this repo.
+    ( cd "$WORK" && npx --yes "@react-native-community/cli@$RN_CLI_VERSION" init "$APP" \
         --version "$V" --install-pods false --skip-git-init ) >"$LOG/init.log" 2>&1
     if ! assert_scaffold "$DIR"; then
       warn "scaffold failed for $V (the CLI likely exited 0 anyway) -- see $LOG/init.log"
@@ -354,38 +408,76 @@ for V in "${VERSIONS[@]}"; do
   fi
 
   # -- 6. tier 1: resolution facts, no compilation ----------------------------
+  # Every gradlew exit code below is checked. Before, all three were discarded,
+  # so a Gradle that never ran produced empty parses, a row of "?" cells, an
+  # "ok" status and exit 0 -- on the tier the README calls the default. A tool
+  # that exists to prevent false readings must not produce one about itself.
   say "  querying host buildscript classpath (root)"
-  ( cd "$DIR/android" && ./gradlew buildEnvironment --no-daemon ) >"$LOG/buildEnvironment-root.log" 2>&1
+  if ! ( cd "$DIR/android" && ./gradlew buildEnvironment --no-daemon ) >"$LOG/buildEnvironment-root.log" 2>&1; then
+    warn "gradlew buildEnvironment failed -- see $LOG/buildEnvironment-root.log"
+    grep -m3 -E "FAILURE:|What went wrong|Caused by:" "$LOG/buildEnvironment-root.log" >&2 || true
+    record_and_continue "gradle failed"; continue
+  fi
   AGP_HOST=$(resolved_version 'com\.android\.tools\.build:gradle' "$LOG/buildEnvironment-root.log")
   AGP_HOST="${AGP_HOST:-?}"
 
   say "  querying our module's buildscript classpath"
-  ( cd "$DIR/android" && ./gradlew "$MODULE:buildEnvironment" --no-daemon ) >"$LOG/buildEnvironment.log" 2>&1
+  if ! ( cd "$DIR/android" && ./gradlew "$MODULE:buildEnvironment" --no-daemon ) >"$LOG/buildEnvironment.log" 2>&1; then
+    warn "gradlew $MODULE:buildEnvironment failed -- see $LOG/buildEnvironment.log"
+    record_and_continue "gradle failed"; continue
+  fi
   AGP_OURS=$(resolved_version 'com\.android\.tools\.build:gradle' "$LOG/buildEnvironment.log")
   # Absence is the expected result and is evidence the AGP guard works: plugins
-  # load parent-first, so the host's AGP wins and ours never applies.
+  # load parent-first, so the host's AGP wins and ours never applies. This label
+  # is only safe to print because the invocation above succeeded -- otherwise a
+  # crashed Gradle and a working guard would render identically.
   AGP_OURS="${AGP_OURS:-none (guarded)}"
   KGP=$(resolved_version 'org\.jetbrains\.kotlin:kotlin-gradle-plugin' "$LOG/buildEnvironment.log")
   KGP="${KGP:-?}"
 
   say "  resolving the dependency graph"
-  ( cd "$DIR/android" && ./gradlew "$MODULE:dependencies" \
-      --configuration debugCompileClasspath --no-daemon ) >"$LOG/dependencies.log" 2>&1
+  if ! ( cd "$DIR/android" && ./gradlew "$MODULE:dependencies" \
+      --configuration debugCompileClasspath --no-daemon ) >"$LOG/dependencies.log" 2>&1; then
+    warn "gradlew $MODULE:dependencies failed -- see $LOG/dependencies.log"
+    record_and_continue "gradle failed"; continue
+  fi
 
+  # Three states, not two. "absent" means the coordinate is genuinely not on the
+  # classpath, which is a legitimate answer -- it is what MAGE-1203 produces for
+  # kotlin-reflect. "?" means the log mentions it but nothing parsed, which is a
+  # tool failure and must not be reported as clean. Conflating them meant a
+  # parse regression on the tool's headline column read as a pass.
   TRACKED_VALS=""
   SKEW=""
   PREV_VAL=""
+  UNPARSED=0
   for t in "${TRACKED[@]}"; do
     tlabel="${t%%|*}"; tcoord="${t#*|}"
     tval=$(resolved_version "$tcoord" "$LOG/dependencies.log")
-    tval="${tval:-?}"
+    if [[ -z "$tval" ]]; then
+      # Not parsed. Is the coordinate on the classpath at all?
+      if grep -qE "$tcoord[: ]" "$LOG/dependencies.log" 2>/dev/null; then
+        tval="?"; UNPARSED=1
+        warn "$tlabel appears in the graph but did not parse -- see $LOG/dependencies.log"
+      else
+        tval="absent"
+      fi
+    fi
     TRACKED_VALS="${TRACKED_VALS:+$TRACKED_VALS,}$tval"
     # Any two tracked Kotlin artifacts that disagree is a runtime hazard.
-    if [[ -n "$PREV_VAL" && "$PREV_VAL" != "?" && "$tval" != "?" && "$PREV_VAL" != "$tval" ]]; then
+    # "absent" is a real answer and never skews. "?" is a tool failure, handled
+    # below -- comparing against it would silently disable the check.
+    if [[ -n "$PREV_VAL" && "$PREV_VAL" != "?" && "$PREV_VAL" != "absent" \
+          && "$tval" != "?" && "$tval" != "absent" && "$PREV_VAL" != "$tval" ]]; then
       SKEW="  <-- SKEW"; SKEW_FLAG="yes"; PROBLEM=1
     fi
-    PREV_VAL="$tval"
+    [[ "$tval" == "?" || "$tval" == "absent" ]] || PREV_VAL="$tval"
   done
+  if ((UNPARSED)); then
+    # A column the tool could not read is not a clean result. Say so loudly,
+    # and mark skew "n/a" rather than "-", which reads as checked-and-fine.
+    SKEW_FLAG="n/a"; PROBLEM=1
+  fi
 
   say "  AGP host $AGP_HOST / ours $AGP_OURS | KGP $KGP | ${TRACKED_VALS}$SKEW"
   ((TIER >= 2)) || { record_and_continue "ok"; continue; }
@@ -472,12 +564,19 @@ for V in "${VERSIONS[@]}"; do
     record_and_continue "adb install failed"; continue
   fi
   "$ADB" -s "$SERIAL" shell pm grant "$PKG_ID" android.permission.POST_NOTIFICATIONS >/dev/null 2>&1
+  # `logcat -c` genuinely fails on some devices and its result was discarded, so
+  # a previous version's KLAVIYO_ROUNDTRIP_OK could be credited to the next one.
+  # Record a device-clock timestamp and read only lines after it.
   "$ADB" -s "$SERIAL" logcat -c >/dev/null 2>&1
+  LOGCAT_SINCE=$("$ADB" -s "$SERIAL" shell date '+%m-%d %H:%M:%S.000' 2>/dev/null | tr -d '\r')
   "$ADB" -s "$SERIAL" shell monkey -p "$PKG_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 
   # Wait for a terminal signal rather than sleeping a fixed amount.
   for _ in $(seq 1 20); do
-    if "$ADB" -s "$SERIAL" logcat -d 2>/dev/null | grep -qE 'KLAVIYO_SMOKE_DONE|FATAL EXCEPTION'; then break; fi
+    # Not `| grep -q`: grep exits on first match, adb takes SIGPIPE 141, and
+    # pipefail makes the whole pipeline 141 -- so a match never broke the loop.
+    "$ADB" -s "$SERIAL" logcat -d >"$LOG/wait-probe.log" 2>/dev/null
+    if grep -qE 'KLAVIYO_SMOKE_DONE|FATAL EXCEPTION' "$LOG/wait-probe.log"; then break; fi
     sleep 2
   done
   sleep 3
@@ -486,11 +585,23 @@ for V in "${VERSIONS[@]}"; do
   # from "the app was never running", which look identical in the columns below
   # and mean completely different things.
   if [[ -z "$("$ADB" -s "$SERIAL" shell pidof "$PKG_ID" 2>/dev/null | tr -d '\r\n ')" ]]; then
+    ALIVE="NO"
     warn "process is not running after launch -- it crashed or never started"
+    PROBLEM=1
+  else
+    ALIVE="yes"
   fi
-  "$ADB" -s "$SERIAL" logcat -d >"$LOG/logcat.log" 2>/dev/null
+  if [[ -n "$LOGCAT_SINCE" ]]; then
+    "$ADB" -s "$SERIAL" logcat -d -t "$LOGCAT_SINCE" >"$LOG/logcat.log" 2>/dev/null
+  else
+    "$ADB" -s "$SERIAL" logcat -d >"$LOG/logcat.log" 2>/dev/null
+  fi
 
   CRASH=$(grep -c 'FATAL EXCEPTION' "$LOG/logcat.log" | tr -d ' ')
+  # A crash after the round trip completes still ships a broken app. Counting it
+  # and not acting on it made the script's own "usable as a pre-release gate"
+  # claim false.
+  ((CRASH > 0)) && { warn "$CRASH FATAL EXCEPTION(s) in logcat"; PROBLEM=1; }
   JS_SMOKE=$(grep -oE 'KLAVIYO_SMOKE_DONE [a-z0-9=/ ]*' "$LOG/logcat.log" | head -1)
   JS_SMOKE="${JS_SMOKE#KLAVIYO_SMOKE_DONE }"
   JS_SMOKE="${JS_SMOKE:-no summary}"
@@ -509,6 +620,21 @@ for V in "${VERSIONS[@]}"; do
   # "Klaviyo.<Class>"; R8 renames the class but the prefix survives, so this
   # works in minified builds too.
   NATIVE=$(grep -cE '(^|[[:space:]])Klaviyo\.[A-Za-z]' "$LOG/logcat.log" | tr -d ' ')
+
+  # The smoke app dumps getConstants() as one sorted JSON line. Without this the
+  # probe was logged and read by nothing: a KLAVIYO_CONSTANTS_FAIL, which is what
+  # a broken bridge contract looks like, reported clean.
+  if grep -q 'KLAVIYO_CONSTANTS_FAIL' "$LOG/logcat.log"; then
+    CONSTANTS="FAIL"; warn "the constants probe threw -- see $LOG/logcat.log"; PROBLEM=1
+  elif grep -q 'KLAVIYO_CONSTANTS ' "$LOG/logcat.log"; then
+    grep -oE 'KLAVIYO_CONSTANTS \{.*' "$LOG/logcat.log" | head -1 \
+      | sed 's/^KLAVIYO_CONSTANTS //' >"$LOG/constants.json"
+    # A short digest lands in the table so results.json diffs catch contract
+    # drift on their own. The full payload stays in logs/<version>/constants.json.
+    CONSTANTS=$(sha_short <"$LOG/constants.json")
+  else
+    CONSTANTS="NO"; warn "no constants line -- the probe never ran"; PROBLEM=1
+  fi
 
   say "  crashes=$CRASH js=[$JS_SMOKE] roundtrip=$ROUNDTRIP nativeLogLines=$NATIVE"
   [[ "$ROUNDTRIP" == "NO" ]] && warn "no round trip: the bridge did not reach native code"
@@ -533,7 +659,7 @@ OUT_MD="$WORK/matrix.md"
   echo "| RN | status | AGP (host) | AGP (ours) | Kotlin plugin |$TRACKED_HEADERS skew |"
   printf '|---|---|---|---|---|'; for _ in "${TRACKED[@]}"; do printf -- '---|'; done; printf -- '---|'; echo
   for r in "${ROWS[@]}"; do
-    IFS='|' read -r v st ah ao kg tv sk _md _ad _pg _r8 _rl _cr _js _rt _nt <<<"$r"
+    IFS='|' read -r v st ah ao kg tv sk _md _ad _pg _r8 _rl _cr _js _rt _nt _al _co <<<"$r"
     printf '| %s | %s | %s | %s | %s | ' "$v" "$st" "$ah" "$ao" "$kg"
     printf '%s' "$(printf '%s' "$tv" | sed 's/,/ | /g')"; printf ' | %s |\n' "$sk"
   done
@@ -545,17 +671,21 @@ OUT_MD="$WORK/matrix.md"
     echo
     echo "#### Build and runtime"
     echo
-    echo "| RN | module debug | app debug | proguard cfg | R8 ran | app release | crashes | JS smoke | round trip | native log lines |"
-    echo "|---|---|---|---|---|---|---|---|---|---|"
+    echo "| RN | module debug | app debug | proguard cfg | R8 ran | app release | crashes | JS smoke | round trip | alive | constants | native log lines |"
+    echo "|---|---|---|---|---|---|---|---|---|---|---|---|"
     for r in "${ROWS[@]}"; do
-      IFS='|' read -r v _st _ah _ao _kg _tv _sk md ad pg r8 rl cr js rt nt <<<"$r"
-      echo "| $v | $md | $ad | $pg | $r8 | $rl | $cr | $js | $rt | $nt |"
+      IFS='|' read -r v _st _ah _ao _kg _tv _sk md ad pg r8 rl cr js rt nt al co <<<"$r"
+      echo "| $v | $md | $ad | $pg | $r8 | $rl | $cr | $js | $rt | $al | $co | $nt |"
     done
     echo
     echo '`round trip` is the column to read first. Every other public API is'
     echo 'fire-and-forget on the legacy bridge, so a JS-side `0 failures` can mean the'
     echo 'bridge never reached native at all. `isLoggingEnabled` takes a callback, so'
     echo '`yes` here is the only proof the round trip completed.'
+    echo
+    echo '`constants` is a digest of the sorted `getConstants()` payload. Two runs with'
+    echo 'the same digest emitted the same bridge contract. The full payload is saved to'
+    echo '`logs/<version>/constants.json`.'
   fi
   echo
   echo "<sub>JDK: $(java -version 2>&1 | head -1). Node: $(node --version). Generated by scripts/version-matrix/version-matrix.sh</sub>"
@@ -573,7 +703,7 @@ OUT_JSON="$WORK/results.json"
   printf '  "results": [\n'
   first=1
   for r in "${ROWS[@]}"; do
-    IFS='|' read -r v st ah ao kg tv sk md ad pg r8 rl cr js rt nt <<<"$r"
+    IFS='|' read -r v st ah ao kg tv sk md ad pg r8 rl cr js rt nt al co <<<"$r"
     ((first)) || printf ',\n'; first=0
     printf '    {'
     printf '"version": "%s", ' "$(json_escape "$v")"
@@ -597,6 +727,8 @@ OUT_JSON="$WORK/results.json"
     printf '"crashes": "%s", ' "$(json_escape "$cr")"
     printf '"jsSmoke": "%s", ' "$(json_escape "$js")"
     printf '"roundTrip": "%s", ' "$(json_escape "$rt")"
+    printf '"alive": "%s", ' "$(json_escape "$al")"
+    printf '"constantsDigest": "%s", ' "$(json_escape "$co")"
     printf '"nativeLogLines": "%s"' "$(json_escape "$nt")"
     printf '}'
   done
