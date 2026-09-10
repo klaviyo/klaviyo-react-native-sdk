@@ -117,6 +117,21 @@ die()  { printf '[fail] %s\n' "$*" >&2; exit 1; }
 
 sha_short() { shasum -a 256 | cut -c1-12; }
 
+# Read logcat into $1, bounded by LOGCAT_SINCE when we have it. Both callers must
+# use this: a filtered authoritative read next to an unfiltered probe is how one
+# version's output gets credited to another.
+read_logcat() {
+  local out="$1"
+  if [[ -n "${LOGCAT_SINCE:-}" ]]; then
+    "$ADB" -s "$SERIAL" logcat -d -t "$LOGCAT_SINCE" >"$out" 2>/dev/null
+  else
+    "$ADB" -s "$SERIAL" logcat -d >"$out" 2>/dev/null
+  fi
+  # An empty result can mean the device rejected the -t form rather than that
+  # nothing was logged. Fall back to unfiltered rather than reporting a dead app.
+  [[ -s "$out" ]] || "$ADB" -s "$SERIAL" logcat -d >"$out" 2>/dev/null
+}
+
 # Read the version Gradle SETTLED ON, not the highest one mentioned. Gradle writes
 # conflict resolution as "requested -> winner", so an arrow target always beats a
 # bare version. Raw logs are kept so any parsed cell can be checked by hand.
@@ -135,8 +150,15 @@ resolved_version() {
   local coord="$1" log="$2" v
   # The brace alternative must come first: "{strictly 2.1.20}" contains a space,
   # so a [^ ]* requested-part can never span it.
-  v=$(grep -oE "${coord}(:\{[^}]*\}|:[^ ]*)? -> [0-9][A-Za-z0-9._-]*" "$log" 2>/dev/null \
-      | sed 's/.*-> //' | sort -Vu | tail -1)
+  # grep -v FAILED first: Gradle writes "requested -> selected FAILED" when the
+  # selected version itself does not resolve, and grep -o would happily return
+  # the version while the trailing FAILED fell outside the match.
+  # head -1 rather than `sort -Vu | tail -1`: every arrow target for one
+  # coordinate in one configuration is the same winner, and BSD sort -V ranks
+  # 2.2.0-RC2 ABOVE 2.2.0, the inverse of GNU.
+  v=$(grep -v 'FAILED' "$log" 2>/dev/null \
+      | grep -oE "${coord}(:\{[^}]*\}|:[^ ]*)? -> [0-9][A-Za-z0-9._-]*" \
+      | sed 's/.*-> //' | head -1)
   [[ -n "$v" ]] && { printf '%s' "$v"; return; }
   # No arrow anywhere: fall back to the requested version, but never read one off
   # a line Gradle marked FAILED -- that dependency did not resolve at all.
@@ -271,7 +293,9 @@ say "  packed files: $(find "$REF/package" -type f | wc -l | tr -d ' ')"
 # ------------------------------------------------------------------ result store
 
 # bash 3.2 has no associative arrays, so rows are pipe-delimited strings.
-# fields: ver|status|agp_host|agp_ours|kgp|tracked...|mod_dbg|app_dbg|pg|r8|rel|crash|js|rt|native
+# 18 fields, and three `IFS='|' read` sites must agree with this order:
+#   ver|status|agp_host|agp_ours|kgp|tracked(csv)|skew|mod_dbg|app_dbg|
+#   pg|r8|rel|crash|js|rt|native|alive|constants
 ROWS=()
 
 # ------------------------------------------------------------------- main sweep
@@ -288,7 +312,12 @@ for V in "${VERSIONS[@]}"; do
 
   STATUS="ok"
   AGP_HOST="-"; AGP_OURS="-"; KGP="-"
-  TRACKED_VALS=""; SKEW_FLAG="-"
+  # Seeded with one placeholder per tracked coordinate so a row recorded before
+  # resolution runs still has the right number of cells. An empty field 6 made
+  # the markdown table ragged for exactly the failure rows you most want to read.
+  TRACKED_VALS=""
+  for t in "${TRACKED[@]}"; do TRACKED_VALS="${TRACKED_VALS:+$TRACKED_VALS,}-"; done
+  SKEW_FLAG="-"
   MOD_DBG="-"; APP_DBG="-"; PG_CFG="-"; R8="-"; APP_REL="-"
   CRASH="-"; JS_SMOKE="-"; ROUNDTRIP="-"; NATIVE="-"; ALIVE="-"; CONSTANTS="-"
 
@@ -474,9 +503,11 @@ for V in "${VERSIONS[@]}"; do
     [[ "$tval" == "?" || "$tval" == "absent" ]] || PREV_VAL="$tval"
   done
   if ((UNPARSED)); then
-    # A column the tool could not read is not a clean result. Say so loudly,
-    # and mark skew "n/a" rather than "-", which reads as checked-and-fine.
-    SKEW_FLAG="n/a"; PROBLEM=1
+    # A column the tool could not read is not a clean result. Mark skew "n/a"
+    # rather than "-", which reads as checked-and-fine -- but never overwrite a
+    # skew that WAS detected. A real runtime hazard outranks "unknown".
+    [[ "$SKEW_FLAG" == "yes" ]] || SKEW_FLAG="n/a"
+    PROBLEM=1
   fi
 
   say "  AGP host $AGP_HOST / ours $AGP_OURS | KGP $KGP | ${TRACKED_VALS}$SKEW"
@@ -575,7 +606,11 @@ for V in "${VERSIONS[@]}"; do
   for _ in $(seq 1 20); do
     # Not `| grep -q`: grep exits on first match, adb takes SIGPIPE 141, and
     # pipefail makes the whole pipeline 141 -- so a match never broke the loop.
-    "$ADB" -s "$SERIAL" logcat -d >"$LOG/wait-probe.log" 2>/dev/null
+    # Time-filtered for the same reason the authoritative read below is: on a
+    # device where `logcat -c` fails, an unfiltered probe matches the PREVIOUS
+    # version's line, breaks early, and the filtered read then finds nothing --
+    # turning a healthy build into three red columns.
+    read_logcat "$LOG/wait-probe.log"
     if grep -qE 'KLAVIYO_SMOKE_DONE|FATAL EXCEPTION' "$LOG/wait-probe.log"; then break; fi
     sleep 2
   done
@@ -591,11 +626,7 @@ for V in "${VERSIONS[@]}"; do
   else
     ALIVE="yes"
   fi
-  if [[ -n "$LOGCAT_SINCE" ]]; then
-    "$ADB" -s "$SERIAL" logcat -d -t "$LOGCAT_SINCE" >"$LOG/logcat.log" 2>/dev/null
-  else
-    "$ADB" -s "$SERIAL" logcat -d >"$LOG/logcat.log" 2>/dev/null
-  fi
+  read_logcat "$LOG/logcat.log"
 
   CRASH=$(grep -c 'FATAL EXCEPTION' "$LOG/logcat.log" | tr -d ' ')
   # A crash after the round trip completes still ships a broken app. Counting it
@@ -616,9 +647,11 @@ for V in "${VERSIONS[@]}"; do
     ROUNDTRIP="NO"; PROBLEM=1
   fi
 
-  # Independent confirmation from the native side. KLog tags every line
-  # "Klaviyo.<Class>"; R8 renames the class but the prefix survives, so this
-  # works in minified builds too.
+  # A one-way signal, not confirmation. KLog tags every line "Klaviyo.<Class>"
+  # and R8 keeps the prefix, so >0 means something logged and the raw log is
+  # worth opening. 0 means nothing either way: setLoggingEnabled is a no-op in
+  # a release build, so a clean run logs nothing. `round trip` is the column
+  # that actually answers whether the bridge worked.
   NATIVE=$(grep -cE '(^|[[:space:]])Klaviyo\.[A-Za-z]' "$LOG/logcat.log" | tr -d ' ')
 
   # The smoke app dumps getConstants() as one sorted JSON line. Without this the
@@ -631,7 +664,13 @@ for V in "${VERSIONS[@]}"; do
       | sed 's/^KLAVIYO_CONSTANTS //' >"$LOG/constants.json"
     # A short digest lands in the table so results.json diffs catch contract
     # drift on their own. The full payload stays in logs/<version>/constants.json.
-    CONSTANTS=$(sha_short <"$LOG/constants.json")
+    if [[ -s "$LOG/constants.json" ]]; then
+      CONSTANTS=$(sha_short <"$LOG/constants.json")
+    else
+      # The line was present but the payload did not parse. Digesting an empty
+      # file yields e3b0c44298fc, which looks like a perfectly good result.
+      CONSTANTS="FAIL"; warn "constants line found but the payload was empty"; PROBLEM=1
+    fi
   else
     CONSTANTS="NO"; warn "no constants line -- the probe never ran"; PROBLEM=1
   fi

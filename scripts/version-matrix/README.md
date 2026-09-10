@@ -12,8 +12,9 @@ Android SDK pin, or add a file that has to reach customers.
 ./scripts/version-matrix/version-matrix.sh --tier 4 0.87.1
 ```
 
-Android only. It is not wired into CI and is not meant to be — it is a manual check
-you run when you have a reason to.
+Android only, and manual — you run it when you have a reason to. CI does not run the
+matrix itself; the only automated check is a `bash -n` syntax gate in the lint job, which
+exists so 650 lines of shell cannot rot silently between uses.
 
 ---
 
