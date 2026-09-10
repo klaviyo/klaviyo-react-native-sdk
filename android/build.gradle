@@ -119,16 +119,6 @@ repositories {
 }
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
-// Must resolve to exactly the same value as the buildscript block above, so kotlin-reflect
-// always matches the stdlib that the Kotlin plugin actually applied. That means reading the
-// standalone property directly rather than through getExtOrDefault: the helper consults
-// rootProject.ext first, which the buildscript ternary never does for this branch, and a
-// divergence between the two would reintroduce the version skew this split exists to remove.
-// The ext lookup would be meaningless here anyway -- in a standalone build rootProject *is*
-// this project, so only this file could have set it.
-def kotlin_version = (project == rootProject)
-  ? project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
-  : getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
   localProperties.load(new FileInputStream(rootProject.file("local.properties")))
@@ -179,15 +169,5 @@ dependencies {
   } else {
     implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
   }
-
-  // We use reflection to enumerate keywords in the Klaviyo Android SDK dynamically.
-  // kotlin-reflect must resolve to the same version as the Kotlin stdlib, otherwise it fails at
-  // runtime. We do not declare the stdlib ourselves: kotlin.stdlib.default.dependency defaults to
-  // true, so the Kotlin plugin injects one matching the compiler that actually runs. Declaring a
-  // stdlib here would instead set a floor for the whole graph -- Gradle resolves version conflicts
-  // highest-wins, so an explicit 2.1.20 drags every transitive 1.8.x request up with it and can
-  // leave a newer stdlib under an older compiler. Track $kotlin_version so reflect follows the
-  // same selection. Consuming apps override it via rootProject.ext.kotlinVersion.
-  implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
 
