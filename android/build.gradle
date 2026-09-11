@@ -16,9 +16,17 @@ buildscript {
   //
   // Collapsing these into one property is what broke old consumers: the version the
   // standalone build needs is far above the version an RN 0.70 host can accept.
-  def kotlin_version = project == rootProject
-    ? project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
-    : (rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["KlaviyoReactNativeSdk_kotlinVersion"])
+  def kotlin_version
+  if (project == rootProject) {
+    // Standalone build.
+    kotlin_version = project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
+  } else if (rootProject.ext.has("kotlinVersion")) {
+    // Host app that declares a Kotlin version.
+    kotlin_version = rootProject.ext.get("kotlinVersion")
+  } else {
+    // Host app that declares none -- React Native 0.72 and older.
+    kotlin_version = project.properties["KlaviyoReactNativeSdk_kotlinVersion"]
+  }
 
   repositories {
     google()
