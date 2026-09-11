@@ -14,7 +14,6 @@ import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
 import com.klaviyo.analytics.model.EventMetric
-import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.analytics.model.Subscription
@@ -36,7 +35,6 @@ import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
 import java.util.Locale
-import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
 class KlaviyoReactNativeSdkModule(
@@ -81,26 +79,55 @@ class KlaviyoReactNativeSdkModule(
 
   override fun getName(): String = NAME
 
+  // Mirrors every public singleton of the Android SDK's ProfileKey, in its declaration order.
+  // Values are read from the SDK rather than retyped, so a rename or removal upstream fails
+  // this module's build instead of silently shipping a stale string. An upstream ADDITION is
+  // not caught -- a new public key must be added here by hand. That was already true in
+  // practice: ProfileProperty in src/Profile.ts is a hand-written enum, so a new key never
+  // reached JS without a TypeScript edit either way.
+  //
+  // The SDK's identity and push keys (EXTERNAL_ID, EMAIL, PHONE_NUMBER, ANONYMOUS_ID,
+  // PUSH_TOKEN) are `internal`, not visible here, and were never exported -- JS supplies its
+  // own literals for the three it needs, in Profile.setExternalId, setEmail and setPhoneNumber.
+  // LOCATION and PROPERTIES are wrapper-owned with no SDK equivalent; their keys are
+  // intentionally lowercase to match today's output byte for byte.
+  private val profileKeys: Map<String, String> =
+    mapOf(
+      "FIRST_NAME" to ProfileKey.FIRST_NAME.name,
+      "LAST_NAME" to ProfileKey.LAST_NAME.name,
+      "ORGANIZATION" to ProfileKey.ORGANIZATION.name,
+      "TITLE" to ProfileKey.TITLE.name,
+      "IMAGE" to ProfileKey.IMAGE.name,
+      "ADDRESS1" to ProfileKey.ADDRESS1.name,
+      "ADDRESS2" to ProfileKey.ADDRESS2.name,
+      "CITY" to ProfileKey.CITY.name,
+      "COUNTRY" to ProfileKey.COUNTRY.name,
+      "LATITUDE" to ProfileKey.LATITUDE.name,
+      "LONGITUDE" to ProfileKey.LONGITUDE.name,
+      "REGION" to ProfileKey.REGION.name,
+      "ZIP" to ProfileKey.ZIP.name,
+      "TIMEZONE" to ProfileKey.TIMEZONE.name,
+      LOCATION to LOCATION,
+      PROPERTIES to PROPERTIES,
+    )
+
+  // Public EventMetric singletons, in the SDK's declaration order. The `internal` OPENED_PUSH
+  // metric is not visible here and was never exported.
+  private val eventNames: Map<String, String> =
+    mapOf(
+      "OPENED_APP" to EventMetric.OPENED_APP.name,
+      "VIEWED_PRODUCT" to EventMetric.VIEWED_PRODUCT.name,
+      "ADDED_TO_CART" to EventMetric.ADDED_TO_CART.name,
+      "STARTED_CHECKOUT" to EventMetric.STARTED_CHECKOUT.name,
+    )
+
   override fun getConstants(): MutableMap<String, Any> =
     hashMapOf(
-      "PROFILE_KEYS" to
-        this.extractConstants<ProfileKey>().toMutableMap().apply {
-          this[LOCATION] = LOCATION
-          this[PROPERTIES] = PROPERTIES
-        },
-      "EVENT_NAMES" to this.extractConstants<EventMetric>(),
+      "PROFILE_KEYS" to profileKeys,
+      "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
     )
-
-  private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword =
-    T::class
-      .nestedClasses
-      .filter {
-        it.visibility == KVisibility.PUBLIC && it.objectInstance is T
-      }.associate {
-        it.simpleName.toString() to (it.objectInstance as T).name
-      }
 
   @ReactMethod
   @OptIn(AdvancedAPI::class)
