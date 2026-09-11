@@ -81,11 +81,16 @@ class KlaviyoReactNativeSdkModule(
 
   // Mirrors every public singleton of the Android SDK's ProfileKey, in its declaration order.
   // Values are read from the SDK rather than retyped, so a rename or removal upstream fails
-  // this module's build instead of silently shipping a stale string. The SDK's identity and
-  // push keys (EXTERNAL_ID, EMAIL, PHONE_NUMBER, ANONYMOUS_ID, PUSH_TOKEN) are `internal`,
-  // not visible here, and were never exported — JS supplies its own literals for the three it
-  // needs (see src/Profile.ts:266-276). LOCATION and PROPERTIES are wrapper-owned with no SDK
-  // equivalent; their keys are intentionally lowercase to match today's output byte for byte.
+  // this module's build instead of silently shipping a stale string. An upstream ADDITION is
+  // not caught -- a new public key must be added here by hand. That was already true in
+  // practice: ProfileProperty in src/Profile.ts is a hand-written enum, so a new key never
+  // reached JS without a TypeScript edit either way.
+  //
+  // The SDK's identity and push keys (EXTERNAL_ID, EMAIL, PHONE_NUMBER, ANONYMOUS_ID,
+  // PUSH_TOKEN) are `internal`, not visible here, and were never exported -- JS supplies its
+  // own literals for the three it needs, in Profile.setExternalId, setEmail and setPhoneNumber.
+  // LOCATION and PROPERTIES are wrapper-owned with no SDK equivalent; their keys are
+  // intentionally lowercase to match today's output byte for byte.
   private val profileKeys: Map<String, String> =
     mapOf(
       "FIRST_NAME" to ProfileKey.FIRST_NAME.name,
