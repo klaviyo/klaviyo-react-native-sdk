@@ -1,6 +1,32 @@
 buildscript {
-  // Buildscript is evaluated before everything else so we can't use getExtOrDefault
-  def kotlin_version = rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["KlaviyoReactNativeSdk_kotlinVersion"]
+  // Buildscript is evaluated before everything else so we can't use getExtOrDefault.
+  //
+  // Two independent selections, because two different builds evaluate this file:
+  //
+  //   - Standalone, with this folder as its own root project. Nothing else supplies plugins
+  //     and the wrapper here is Gradle 9.3.1, so it needs a Kotlin plugin that can drive
+  //     that. React Native's own @react-native/gradle-plugin runs exactly this pairing --
+  //     it pins kotlin 2.1.20 and ships a gradle-9.3.1 wrapper -- so we match it.
+  //
+  //   - Inside a host app. Plugins load parent-first, so a host declaring its own Kotlin
+  //     plugin wins and neither value below applies. Only hosts declaring none reach the
+  //     fallback, and those are React Native 0.72 and older, whose templates ship Gradle
+  //     7.5.1 and set no ext.kotlinVersion. That value must stay low enough for 7.5.1,
+  //     which rules out 2.1.20 (it needs Gradle >= 7.6.3).
+  //
+  // Collapsing these into one property is what broke old consumers: the version the
+  // standalone build needs is far above the version an RN 0.70 host can accept.
+  def kotlin_version
+  if (project == rootProject) {
+    // Standalone build.
+    kotlin_version = project.properties["KlaviyoReactNativeSdk_standaloneKotlinVersion"]
+  } else if (rootProject.ext.has("kotlinVersion")) {
+    // Host app that declares a Kotlin version.
+    kotlin_version = rootProject.ext.get("kotlinVersion")
+  } else {
+    // Host app that declares none -- React Native 0.72 and older.
+    kotlin_version = project.properties["KlaviyoReactNativeSdk_kotlinVersion"]
+  }
 
   repositories {
     google()
@@ -8,8 +34,19 @@ buildscript {
   }
 
   dependencies {
-    // Android Gradle Plugin. Best to keep in sync with the klaviyo-android-sdk AGP version
-    classpath "com.android.tools.build:gradle:8.10.1"
+    // The Android Gradle Plugin is only required when this folder is opened as its own root
+    // project. Every React Native app template declares AGP in its own root build.gradle, and
+    // Gradle loads plugins parent-first, so inside a host app that declaration wins and this
+    // entry is never used. Declaring it unconditionally only resolves a version the host discards.
+    if (project == rootProject) {
+      classpath "com.android.tools.build:gradle:8.10.1"
+    }
+
+    // The Kotlin plugin, by contrast, must stay unconditional. React Native templates only began
+    // declaring kotlin-gradle-plugin at 0.73, and a subproject's buildscript classpath is not
+    // shared with its siblings, so on 0.72 and older this entry is the only thing that supplies
+    // `kotlin-android` to this module. A host that declares its own Kotlin plugin still wins,
+    // parent-first; kotlin_version above only takes effect when the host declares none.
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
   }
@@ -66,6 +103,7 @@ android {
   defaultConfig {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    consumerProguardFiles "consumer-rules.pro"
   }
 
   buildFeatures {
@@ -95,7 +133,6 @@ repositories {
 }
 
 def klaviyoAndroidSdkVersion = getExtOrDefault("klaviyoAndroidSdkVersion")
-def kotlin_version = getExtOrDefault("kotlinVersion")
 def localProperties = new Properties()
 if (rootProject.file("local.properties").canRead()) {
   localProperties.load(new FileInputStream(rootProject.file("local.properties")))
@@ -128,8 +165,6 @@ dependencies {
     implementation "com.facebook.react:react-native:+"
   }
 
-  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
   // Klaviyo Android SDK
   api "com.github.klaviyo.klaviyo-android-sdk:analytics:$klaviyoAndroidSdkVersion"
   api "com.github.klaviyo.klaviyo-android-sdk:push-fcm:$klaviyoAndroidSdkVersion"
@@ -148,8 +183,5 @@ dependencies {
   } else {
     implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
   }
-
-  // We used reflection to enumerate keywords in the Klaviyo Android SDK dynamically
-  implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
 }
 
