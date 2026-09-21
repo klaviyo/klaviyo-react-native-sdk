@@ -76,7 +76,7 @@ See the [Klaviyo Expo Plugin](https://github.com/klaviyo/klaviyo-expo-plugin) fo
 
 ## Requirements
 
-This SDK was developed and tested against React Native 0.78, as a new-architecture compatible native module.
+This SDK was developed and tested against React Native 0.86, as a new-architecture-compatible native module.
 
 ### React Native
 
