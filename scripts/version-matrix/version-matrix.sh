@@ -4,58 +4,24 @@
 # install that tarball into stock React Native apps at several versions, and
 # record what actually happens.
 #
-# WHY THIS EXISTS
-#   CI covers one React Native version. PR CI (android-ci.yml) builds example/ in
-#   debug through a yarn-workspace symlink. publish-example.yml does more -- it
-#   runs pack-and-test.sh then :app:bundleRelease -- but only on master, on
-#   release, and on labelled PRs, still at one version, and with
-#   enableProguardInReleaseBuilds false, so R8 never runs there either.
-#
-#   example/android/build.gradle also sets ext.kotlinVersion, so every CI build
-#   takes the host branch of our Kotlin selection and the fallback older
-#   consumers get is never executed.
-#
-#   So the gaps this closes are the VERSION AXIS and MINIFICATION. Packaging
-#   fidelity is already covered by pack-and-test.sh; this reuses that idea
-#   across versions rather than introducing it.
-#
-#   So CI cannot see: version-selection bugs, packaging bugs (a file missing from
-#   files[]), consumer-side AAR metadata rejections, or anything that only appears
-#   in a minified release build. All four have bitten us.
-#
-#   This script closes that gap. Run it when you change a dependency, touch
-#   android/build.gradle, bump the Klaviyo Android SDK pin, or add a file that has
-#   to reach customers.
-#
-# TIERS   Each tier is a superset of the one below it.
-#   1  resolve only    -- AGP, Kotlin plugin, stdlib, reflect. No compilation.
-#   2  + debug build   -- our module, then the consumer app (runs AAR metadata checks)
-#   3  + release build -- R8 on, records which ProGuard config actually applied
-#   4  + device smoke  -- install, launch, exercise the public API, read logcat
-#
 # USAGE
 #   ./version-matrix.sh                        # tier 1, default versions
 #   ./version-matrix.sh --tier 2               # add debug builds
 #   ./version-matrix.sh --tier 4 0.86.3 0.87.1 # full depth, two versions
-#   ./version-matrix.sh --fresh 0.87.1         # discard cached scaffold first
+#   ./version-matrix.sh --versions all         # every version we have verified
+#   ./version-matrix.sh --serial emulator-5554 # pick the device for tier 4
+#   ./version-matrix.sh --fresh                # discard EVERY cached scaffold first
 #   ./version-matrix.sh --clean                # wipe the workspace and exit
 #
-# OUTPUT
-#   <workspace>/matrix.md      human-readable tables
-#   <workspace>/results.json   machine-readable, for diffing runs
-#   <workspace>/logs/<ver>/    every raw log, so any cell can be spot-checked
-#
-#   To compare a run before and after your change:
-#     diff <(jq -S . before.json) <(jq -S . after.json)
-#
-# REQUIREMENTS
-#   node, npm, npx, java, ANDROID_HOME. Tier 4 also needs one attached device or
-#   running emulator (or --serial to pick one).
-#
-# NOTE ON ENCODING
-#   This file is intentionally pure ASCII. macOS ships bash 3.2, which folds
-#   multibyte characters following $var straight into the variable NAME. A stray
-#   U+2192 arrow killed an entire run under `set -u`.
+# Why this exists, what each tier does, how to read every output column, and
+# troubleshooting all live in README.md in this directory.
+
+# Kept in the README and only there. This header used to repeat it, and the two
+# copies drifted.
+
+# This file is intentionally pure ASCII. macOS ships bash 3.2, which folds
+# multibyte characters following $var straight into the variable NAME. A stray
+# U+2192 arrow killed an entire run under `set -u`.
 
 # `-e` is deliberately absent. Almost every step here may fail for one version
 # and still let the sweep continue, so failures are handled explicitly and
@@ -102,7 +68,9 @@ TRACKED=(
 )
 ((${#TRACKED[@]})) || { printf '[fail] TRACKED must have at least one entry\n' >&2; exit 1; }
 
-PROBLEM=0
+# Set by any version that came out wrong, and read once at the end for the exit
+# code. Per-version state lives in PROBLEM, which is reset inside the loop.
+RUN_PROBLEM=0
 TIER=1
 FRESH=0
 SERIAL=""
@@ -311,6 +279,9 @@ for V in "${VERSIONS[@]}"; do
   PRISTINE="$WORK/pristine/$V.tar"
 
   STATUS="ok"
+  # Per-version. Every failure below sets this inline, which is what makes the
+  # row status and the exit code read the same signal.
+  PROBLEM=0
   AGP_HOST="-"; AGP_OURS="-"; KGP="-"
   # Seeded with one placeholder per tracked coordinate so a row recorded before
   # resolution runs still has the right number of cells. An empty field 6 made
@@ -323,7 +294,11 @@ for V in "${VERSIONS[@]}"; do
 
   record_and_continue() {
     STATUS="$1"
-    [[ "$STATUS" == "ok" ]] || PROBLEM=1
+    # STATUS is derived, never trusted from the caller: PROBLEM is the one failure
+    # signal and the exit code reads the same flag. A caller's reason survives; a
+    # caller's "ok" does not.
+    if [[ "$STATUS" == "ok" ]] && ((PROBLEM)); then STATUS="failed"; fi
+    [[ "$STATUS" == "ok" ]] || RUN_PROBLEM=1
     ROWS+=("$V|$STATUS|$AGP_HOST|$AGP_OURS|$KGP|$TRACKED_VALS|$SKEW_FLAG|$MOD_DBG|$APP_DBG|$PG_CFG|$R8|$APP_REL|$CRASH|$JS_SMOKE|$ROUNDTRIP|$NATIVE|$ALIVE|$CONSTANTS")
   }
 
@@ -449,6 +424,10 @@ for V in "${VERSIONS[@]}"; do
   fi
   AGP_HOST=$(resolved_version 'com\.android\.tools\.build:gradle' "$LOG/buildEnvironment-root.log")
   AGP_HOST="${AGP_HOST:-?}"
+  # "?" means Gradle ran but nothing parsed, which is a tool failure, not a clean
+  # reading. The TRACKED coordinates below already enforce this; these two were
+  # exempt for no reason and could report a row of "?" cells as ok.
+  [[ "$AGP_HOST" == "?" ]] && PROBLEM=1
 
   say "  querying our module's buildscript classpath"
   if ! ( cd "$DIR/android" && ./gradlew "$MODULE:buildEnvironment" --no-daemon ) >"$LOG/buildEnvironment.log" 2>&1; then
@@ -463,6 +442,7 @@ for V in "${VERSIONS[@]}"; do
   AGP_OURS="${AGP_OURS:-none (guarded)}"
   KGP=$(resolved_version 'org\.jetbrains\.kotlin:kotlin-gradle-plugin' "$LOG/buildEnvironment.log")
   KGP="${KGP:-?}"
+  [[ "$KGP" == "?" ]] && PROBLEM=1
 
   say "  resolving the dependency graph"
   if ! ( cd "$DIR/android" && ./gradlew "$MODULE:dependencies" \
@@ -636,6 +616,10 @@ for V in "${VERSIONS[@]}"; do
   JS_SMOKE=$(grep -oE 'KLAVIYO_SMOKE_DONE [a-z0-9=/ ]*' "$LOG/logcat.log" | head -1)
   JS_SMOKE="${JS_SMOKE#KLAVIYO_SMOKE_DONE }"
   JS_SMOKE="${JS_SMOKE:-no summary}"
+  # The count was captured into the table and never read, so a smoke run that
+  # reported its own failures still recorded "ok" and exited 0. "no summary"
+  # means the line never appeared, which is also not a pass.
+  case "$JS_SMOKE" in *failures=0*) ;; *) PROBLEM=1 ;; esac
 
   # The decisive check. Every other API on the legacy bridge is fire-and-forget,
   # so a JS try/catch around it catches nothing and "0 failures" can mean the
@@ -783,7 +767,7 @@ say "logs:    $WORK/logs/<version>/"
 
 # Non-zero exit if anything came out wrong, so this is usable as a pre-release
 # gate. A Kotlin version skew counts: it is a runtime hazard, not a warning.
-if ((PROBLEM)); then
+if ((RUN_PROBLEM)); then
   say ""
   warn "at least one version did not come out clean -- see the tables above"
   exit 1

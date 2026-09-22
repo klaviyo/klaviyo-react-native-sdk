@@ -70,6 +70,12 @@ yarn test
 yarn example setup
 ```
 
+CI builds the example app at one React Native version, in debug only. To check the
+packed SDK against several React Native versions, including minified release builds,
+see `scripts/version-matrix/README.md`. Run it by hand when you change a dependency,
+touch `android/build.gradle`, bump the Klaviyo Android SDK pin, or add a file that has
+to reach customers.
+
 #### Running Example App
 
 ```bash

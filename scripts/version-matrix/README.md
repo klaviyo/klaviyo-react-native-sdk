@@ -88,6 +88,14 @@ diff <(jq -S . /tmp/before.json) <(jq -S . /tmp/after.json)
 
 ### Columns that need explaining
 
+**`status` is the one field to filter on, and it has three shapes.** `ok` means the
+version came out clean. A reason string such as `gradle failed`, `install mismatch`,
+`no apk` or `scaffold failed` means it bailed at that step and the later columns were
+never filled in. `failed` means it reached the end of its tier with something wrong in
+its own row. So filter on `.status != "ok"`, never on `.status == "failed"`, or you will
+miss every version that bailed early. A Kotlin skew counts as a failure here, the same
+way it counts for the exit code.
+
 **`AGP (ours)` reading `none (guarded)` is the expected, correct result.** Gradle loads
 plugins parent-first, so a host app's own AGP always wins over the one our module's
 buildscript declares. That absence is the evidence the guard works. A version number
@@ -190,8 +198,11 @@ the exit code is never trusted.
 we packed. `logs/<version>/install-verify.log` has the diff. This usually means a stale
 install survived; `--fresh` clears it.
 
-**Results look wrong for one version** — `--fresh <version>` discards its cached scaffold
-and starts over. The raw logs in `logs/<version>/` back every cell in the tables.
+**Results look wrong for one version.** Run that version on its own:
+`./version-matrix.sh --fresh 0.86.3`. Note that `0.86.3` there is the version list, not an
+argument to the flag. `--fresh` takes no argument. It is a switch for the whole run, so on
+a sweep it discards every scaffold rather than just the one you are looking at. The raw
+logs in `logs/<version>/` back every cell in the tables.
 
 **A run is taking forever** — the first run per version includes a full `npm install`.
 Subsequent runs reuse it. `--clean` wipes everything if you want to start fresh.
