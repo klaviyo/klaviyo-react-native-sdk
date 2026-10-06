@@ -18,6 +18,14 @@ inputs:
     description: Optional install link to surface in the message (e.g. internal-sharing download URL). Only useful to users already authorized for the build.
     required: false
     default: ''
+  install_label:
+    description: Link text for install_url
+    required: false
+    default: Tap to install build
+  access_note:
+    description: Optional plain-text instructions for reaching the build (e.g. who can see it and where). Must not contain public/unauthenticated links — this repo's logs are public.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -36,7 +44,7 @@ runs:
             - type: "section"
               text:
                 type: "mrkdwn"
-                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|Tap to install build>', inputs.install_url) || '' }}"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
