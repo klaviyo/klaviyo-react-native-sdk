@@ -1,0 +1,57 @@
+name: Prepare example app release notes
+description: >-
+  Writes release notes for a store upload to a file. On `release: published`
+  the GitHub release body is used; on every other trigger the text is
+  synthesized from git metadata (ref, short SHA, commit subject or PR title).
+inputs:
+  max_length:
+    description: Maximum number of characters to keep (store-specific cap, e.g. 500 for Play, 4000 for TestFlight)
+    required: true
+outputs:
+  notes_file:
+    description: Path to the file containing the release notes
+    value: ${{ steps.notes.outputs.notes_file }}
+
+runs:
+  using: composite
+  steps:
+    - id: notes
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        RELEASE_BODY: ${{ github.event.release.body }}
+        RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        # The PR merge ref's name ("123/merge") and SHA aren't meaningful to
+        # testers, so prefer the PR head for labeled-PR runs.
+        REF_NAME: ${{ github.head_ref || github.ref_name }}
+        SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        MAX_LENGTH: ${{ inputs.max_length }}
+        # Character-based truncation below is locale-aware; pin a UTF-8
+        # locale so multi-byte characters near the cut are never split.
+        # C.UTF-8 is guaranteed on ubuntu-24.04 and macOS runners.
+        LC_ALL: C.UTF-8
+      run: |
+        set -euo pipefail
+        if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_BODY//[[:space:]]/}" ]; then
+          NOTES="$RELEASE_BODY"
+        else
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            SUBJECT="PR #${PR_NUMBER}: ${PR_TITLE}"
+          elif [ "$EVENT_NAME" = "release" ]; then
+            SUBJECT="Release ${RELEASE_NAME}"
+          else
+            # Checkout is shallow, but HEAD is always present for push /
+            # workflow_dispatch runs.
+            SUBJECT=$(git log -1 --format=%s HEAD 2>/dev/null || true)
+          fi
+          NOTES=$(printf '%s\n\nBuilt from %s @ %s (%s)' "${SUBJECT:-No commit message}" "$REF_NAME" "${SHA:0:7}" "$EVENT_NAME")
+        fi
+
+        NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
+        printf '%s' "${NOTES:0:${MAX_LENGTH}}" > "$NOTES_FILE"
+        echo "Release notes:"
+        cat "$NOTES_FILE"
+        echo
+        echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"

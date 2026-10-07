@@ -4,7 +4,7 @@
 # Triggers:
 #   - workflow_dispatch     (manual; choose `both` / `android` / `ios`)
 #   - release: published    (both platforms)
-#   - push to master        (both platforms)
+#   - push to master/rel/** (both platforms)
 #   - pull_request: labeled (label drives platform selection — see below)
 #
 # Label conventions (cleanup-label removes them after the run so reapplying
@@ -12,6 +12,14 @@
 #   - `deploy-example-app`         → both platforms
 #   - `deploy-example-app:android` → Android only
 #   - `deploy-example-app:ios`     → iOS only
+#
+# Build numbers: each job preflights the store for highest+1, then retries
+# with a fresh number if the upload itself is rejected for a conflict (e.g.
+# two runs racing on master + rel/**).
+#
+# This repo is public, so its Actions logs are too. Never surface a public
+# install link (e.g. a TestFlight public-link `testflight.apple.com/join/...`)
+# here; only links that require a Play/App Store Connect login.
 
 name: Publish Example App
 
@@ -30,7 +38,7 @@ on:
   release:
     types: [published]
   push:
-    branches: [master]
+    branches: [master, 'rel/**']
   pull_request:
     types: [labeled]
 
@@ -84,37 +92,26 @@ jobs:
         run: |
           VERSION_NAME=$(grep -oE 'versionName "[^"]+"' example/android/app/build.gradle | head -1 | sed -E 's/versionName "([^"]+)"/\1/')
           echo "Version name: $VERSION_NAME"
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
 
-      # Auth for the Play Edits API preflight below.
+      # Auth for the Play Edits API calls in play-publish.sh.
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # Pick highest+1 versionCode. /edits/{id}/bundles returns ALL bundles
-      # for the app, not edit-scoped. The androidpublisher scope is required
-      # explicitly — the default cloud-platform scope returns empty.
+      # Pick highest+1 versionCode. The script aborts on any HTTP error so we
+      # don't silently fall back to HIGHEST=0.
       - name: Resolve next versionCode from Play
         shell: bash
         env:
           PACKAGE_NAME: com.klaviyoreactnativesdkexample
         run: |
           set -euo pipefail
-          TOKEN=$(gcloud auth print-access-token --scopes=https://www.googleapis.com/auth/androidpublisher)
-          AUTH="Authorization: Bearer $TOKEN"
-          API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
-
-          # `-f` aborts on HTTP error so we don't silently fall back to
-          # HIGHEST=0 and hit a confusing version-code conflict at upload.
-          EDIT_ID=$(curl -fsS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
-          BUNDLES=$(curl -fsS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
-          curl -fsS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
-
-          HIGHEST=$(echo "$BUNDLES" | jq '[.bundles[]?.versionCode // 0] | max // 0')
+          HIGHEST=$(.github/scripts/play-publish.sh highest-version-code)
           NEXT=$(( HIGHEST + 1 ))
           echo "Highest existing versionCode: $HIGHEST"
           echo "Next versionCode: $NEXT"
-          echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
+          echo "VERSION_CODE=$NEXT" >> "$GITHUB_ENV"
 
       # Build the example app against the SDK as `npm install`-ed from a
       # tarball, not the workspace symlink. Catches `files`-allowlist drift,
@@ -125,53 +122,64 @@ jobs:
         shell: bash
         run: ./pack-and-test.sh setup
 
+      # Play Store release notes: the GitHub release body on `release`,
+      # otherwise synthesized from git metadata. 500 chars is Google's
+      # per-locale cap.
+      - name: Prepare release notes
+        id: release_notes
+        uses: ./.github/actions/example-release-notes
+        with:
+          max_length: 500
+
+      # Build + upload in one loop so a versionCode conflict at upload time
+      # (another run published the same code after our preflight) rebuilds
+      # with a fresh code instead of failing. play-publish.sh exits 75 only
+      # for a conflict; any other error fails the step immediately.
+      #
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
       # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
-      - name: Assemble Release Bundle
+      - name: Build & deploy to Internal Track
         shell: bash
         env:
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
+          PACKAGE_NAME: com.klaviyoreactnativesdkexample
+          NOTES_FILE: ${{ steps.release_notes.outputs.notes_file }}
           # Prevent Metro from trying to start a dev server during the build
           CI: true
         run: |
-          cd example/android && ./gradlew :app:bundleRelease \
-            -PreleaseVersionCode=${{ env.VERSION_CODE }} \
-            -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
-            -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
-            -Pandroid.injected.signing.key.alias="${ALIAS}" \
-            -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
+          set -euo pipefail
+          MAX_ATTEMPTS=3
+          AAB="example/android/app/build/outputs/bundle/release/app-release.aab"
 
-      # On `release: published`, write the GitHub release body into a
-      # `whatsnew-en-US` file so the upload action attaches it as Play Store
-      # release notes. Truncate to 500 chars per Google's per-locale cap.
-      # Other triggers (workflow_dispatch / push / labeled PR) skip this and
-      # the release lands without notes.
-      - name: Prepare release notes
-        if: github.event_name == 'release'
-        shell: bash
-        env:
-          RELEASE_BODY: ${{ github.event.release.body }}
-        run: |
-          mkdir -p "${RUNNER_TEMP}/whatsnew"
-          # Bash parameter expansion truncates by character (locale-aware,
-          # ubuntu-24.04 runners default to en_US.UTF-8), so emojis or
-          # non-ASCII text near the boundary don't get split mid-byte —
-          # which would produce invalid UTF-8 and risk a Play Store reject.
-          printf '%s' "${RELEASE_BODY:0:500}" > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
-          echo "WHATSNEW_DIR=${RUNNER_TEMP}/whatsnew" >> "${GITHUB_ENV}"
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "=== Attempt $attempt/$MAX_ATTEMPTS: versionCode $VERSION_CODE ==="
+            (cd example/android && ./gradlew :app:bundleRelease \
+              -PreleaseVersionCode="$VERSION_CODE" \
+              -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
+              -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
+              -Pandroid.injected.signing.key.alias="${ALIAS}" \
+              -Pandroid.injected.signing.key.password="${KEY_PASSWORD}")
 
-      - name: Deploy to Internal Track
-        id: play_upload
-        uses: r0adkll/upload-google-play@v1.1.3
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.klaviyoreactnativesdkexample
-          releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
-          whatsNewDirectory: ${{ env.WHATSNEW_DIR }}
+            status=0
+            RELEASE_NAME="$VERSION_NAME ($VERSION_CODE)" \
+              .github/scripts/play-publish.sh upload "$AAB" "$VERSION_CODE" internal "$NOTES_FILE" || status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            elif [ "$status" -ne 75 ]; then
+              exit "$status"
+            fi
+
+            HIGHEST=$(.github/scripts/play-publish.sh highest-version-code)
+            NEXT=$(( (HIGHEST > VERSION_CODE ? HIGHEST : VERSION_CODE) + 1 ))
+            echo "::warning::versionCode $VERSION_CODE conflicted at upload; retrying with $NEXT"
+            VERSION_CODE=$NEXT
+            echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          done
+
+          echo "::error::Upload still conflicting after $MAX_ATTEMPTS attempts"
+          exit 1
 
       - name: Clean up keystore
         if: always()
@@ -185,10 +193,10 @@ jobs:
           result: success
           platform: Play Store
           version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
-          # The action emits this for every non-internalsharing track too —
-          # it's the standard `play.google.com/apps/test/<pkg>/<code>` URL,
-          # only resolvable by users already authorized for the build.
-          install_url: ${{ steps.play_upload.outputs.internalSharingDownloadUrl }}
+          # Standard `play.google.com/apps/test/<pkg>/<code>` URL (what
+          # r0adkll/upload-google-play used to emit), only resolvable by users
+          # already authorized for the build.
+          install_url: https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
 
       - name: Notify Slack on failure
         if: failure()
@@ -305,7 +313,7 @@ jobs:
         run: |
           MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
           echo "Marketing version: $MARKETING_VERSION"
-          echo "MARKETING_VERSION=$MARKETING_VERSION" >> $GITHUB_ENV
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
 
       # Pick latest+1 CFBundleVersion (mirrors the Android preflight). `jwt`
       # is installed inline rather than added to example/Gemfile.
@@ -317,66 +325,38 @@ jobs:
         shell: bash
         run: |
           gem install jwt --no-document --silent
-          ruby <<'RUBY'
-          require 'jwt'
-          require 'json'
-          require 'net/http'
-          require 'openssl'
-          require 'uri'
+          ruby .github/scripts/asc.rb next-build-number
 
-          key_id    = ENV.fetch('APP_STORE_CONNECT_API_KEY_ID')
-          issuer    = ENV.fetch('APP_STORE_CONNECT_API_KEY_ISSUER_ID')
-          bundle_id = ENV.fetch('BUNDLE_ID')
+      # TestFlight "What to Test": same source as the Play notes. 4000 chars
+      # is App Store Connect's whatsNew cap.
+      - name: Prepare release notes
+        id: release_notes
+        uses: ./.github/actions/example-release-notes
+        with:
+          max_length: 4000
 
-          p8_path   = File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
-          private_key = OpenSSL::PKey::EC.new(File.read(p8_path))
-
-          now = Time.now.to_i
-          token = JWT.encode(
-            { iss: issuer, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' },
-            private_key,
-            'ES256',
-            { kid: key_id }
-          )
-
-          def get(uri, token)
-            req = Net::HTTP::Get.new(uri, 'Authorization' => "Bearer #{token}")
-            res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |h| h.request(req) }
-            raise "ASC API #{uri}: HTTP #{res.code}\n#{res.body}" unless res.is_a?(Net::HTTPSuccess)
-            JSON.parse(res.body)
-          end
-
-          apps = get(URI("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=#{bundle_id}&limit=1"), token)
-          raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." if apps['data'].empty?
-          app_id = apps['data'][0]['id']
-
-          # Fetch all builds and take the numeric max — `uploadedDate` can
-          # be null. limit=200 is the API max; pagination needed past that.
-          builds = get(URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{app_id}&limit=200"), token)
-          versions = builds['data'].map { |b| b['attributes']['version'].to_i }
-          latest = versions.empty? ? 0 : versions.max
-          next_build = latest + 1
-
-          puts "Latest TestFlight build for #{bundle_id}: #{latest}"
-          puts "Next build number: #{next_build}"
-          File.open(ENV.fetch('GITHUB_ENV'), 'a') { |f| f.puts "BUILD_NUMBER=#{next_build}" }
-          RUBY
-
-      # agvtool updates CFBundleVersion across all targets.
-      - name: Set build number on project
-        working-directory: example/ios
-        shell: bash
-        run: xcrun agvtool new-version -all "$BUILD_NUMBER"
-
-      # Build + sign the IPA via fastlane. The `release_ipa` lane runs
-      # match(readonly) to install the shared App Store cert + profiles from the
-      # mobile-certificates repo (git-only, never contacts Apple, so no cert is
-      # generated), pins each target to its match profile, and exports a signed
-      # IPA to example/ios/build/. ssh-agent is started inline because its env
-      # can't cross workflow steps, and match runs in this same step.
-      - name: Build & sign IPA (fastlane match + gym)
+      # Build, sign and upload in one loop (ported from klaviyo-ios-test-app's
+      # testflight.yml) so a build-number conflict at upload time rebuilds with
+      # a fresh number instead of failing.
+      #
+      # The `release_ipa` lane runs match(readonly) to install the shared App
+      # Store cert + profiles from the mobile-certificates repo (git-only, never
+      # contacts Apple, so no cert is generated), pins each target to its match
+      # profile, and exports a signed IPA to example/ios/build/. It's safe to
+      # re-run: the keychain and imported certs are reused. ssh-agent is started
+      # inline because its env can't cross workflow steps.
+      #
+      # altool authenticates with the API key — no Apple ID / app-specific
+      # password / 2FA dance. agvtool updates CFBundleVersion across all targets.
+      - name: Build, sign & upload to TestFlight
         working-directory: example
         env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          # For asc.rb when re-resolving the build number after a conflict.
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          BUNDLE_ID: com.klaviyoreactnativesdkexample
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -391,6 +371,7 @@ jobs:
           CI: 'true'
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           eval "$(ssh-agent -s)"
@@ -398,20 +379,68 @@ jobs:
           CERT_P12_PATH="$RUNNER_TEMP/dist.p12"
           echo "$BUILD_CERTIFICATE_BASE64" | base64 -d > "$CERT_P12_PATH"
           export CERT_P12_PATH
-          fastlane ios release_ipa
 
-      # altool with the API key — no Apple ID / app-specific password / 2FA dance.
-      - name: Upload to TestFlight
-        working-directory: example/ios
+          MAX_ATTEMPTS=3
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "=== Attempt $attempt/$MAX_ATTEMPTS: build number $BUILD_NUMBER ==="
+            rm -f ios/build/KlaviyoReactNativeSdkExample.ipa
+            (cd ios && xcrun agvtool new-version -all "$BUILD_NUMBER")
+            fastlane ios release_ipa
+
+            status=0
+            UPLOAD_OUTPUT=$(xcrun altool --upload-app --type ios \
+              --file "ios/build/KlaviyoReactNativeSdkExample.ipa" \
+              --apiKey "$ASC_KEY_ID" \
+              --apiIssuer "$ASC_ISSUER_ID" 2>&1) || status=$?
+            echo "$UPLOAD_OUTPUT"
+
+            # altool can exit 0 while reporting an error, so check both.
+            if [ "$status" -eq 0 ] && ! grep -q "ERROR:" <<<"$UPLOAD_OUTPUT"; then
+              exit 0
+            fi
+
+            # A duplicate CFBundleVersion is reported with the previous
+            # version in the payload (or as ITMS-90189 from transporter);
+            # anything else is non-recoverable.
+            if ! grep -qiE 'previousBundleVersion|bundle version must be higher|has already been used|DUPLICATE|ITMS-90189|Redundant Binary Upload' <<<"$UPLOAD_OUTPUT"; then
+              echo "::error::TestFlight upload failed with a non-recoverable error"
+              exit 1
+            fi
+
+            PREV_BUILD=$(grep -oE 'previousBundleVersion = [0-9]+' <<<"$UPLOAD_OUTPUT" | head -1 | grep -oE '[0-9]+' || true)
+            CURRENT=$BUILD_NUMBER
+            ruby ../.github/scripts/asc.rb next-build-number >/dev/null
+            # asc.rb appended the fresh value to $GITHUB_ENV; take the max of
+            # that, altool's previousBundleVersion + 1 and ours + 1.
+            ASC_NEXT=$(grep -E '^BUILD_NUMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2)
+            NEXT=$(( CURRENT + 1 ))
+            if [ -n "$PREV_BUILD" ] && [ $(( PREV_BUILD + 1 )) -gt "$NEXT" ]; then
+              NEXT=$(( PREV_BUILD + 1 ))
+            fi
+            if [ "$ASC_NEXT" -gt "$NEXT" ]; then
+              NEXT=$ASC_NEXT
+            fi
+            echo "::warning::Build number $CURRENT conflicted at upload; retrying with $NEXT"
+            BUILD_NUMBER=$NEXT
+            echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          done
+
+          echo "::error::Upload still conflicting after $MAX_ATTEMPTS attempts"
+          exit 1
+
+      # Best effort: the build is already on TestFlight, so a failure here
+      # only costs the notes and shouldn't report the publish as failed.
+      # The poll loop inside asc.rb caps itself at 20 minutes.
+      - name: Set TestFlight "What to Test"
+        continue-on-error: true
+        timeout-minutes: 25
         env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          BUNDLE_ID: com.klaviyoreactnativesdkexample
+          NOTES_FILE: ${{ steps.release_notes.outputs.notes_file }}
         shell: bash
-        run: |
-          xcrun altool --upload-app --type ios \
-            --file "build/KlaviyoReactNativeSdkExample.ipa" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+        run: ruby .github/scripts/asc.rb set-whats-new "$MARKETING_VERSION" "$BUILD_NUMBER" "$NOTES_FILE"
 
       - name: Clean up API key
         if: always()
@@ -426,6 +455,13 @@ jobs:
           result: success
           platform: TestFlight
           version_label: ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }})
+          # App Store Connect page for the build (or the app's TestFlight tab
+          # if the build lookup failed). Requires an ASC login, so it's safe
+          # in this public repo's logs. Deliberately NOT a TestFlight public
+          # link, which would let anyone install the build.
+          install_url: ${{ env.ASC_BUILD_ID && format('https://appstoreconnect.apple.com/apps/{0}/testflight/ios/{1}', env.ASC_APP_ID, env.ASC_BUILD_ID) || format('https://appstoreconnect.apple.com/apps/{0}/testflight/ios', env.ASC_APP_ID) }}
+          install_label: View build in App Store Connect
+          access_note: Internal testers get it in the TestFlight app (iOS) once processing finishes, usually 10–30 min. No access? Ask an App Store Connect admin to add your Apple ID to the example app's internal testing group.
 
       - name: Notify Slack on failure
         if: failure()
