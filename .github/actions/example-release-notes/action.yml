@@ -30,7 +30,8 @@ runs:
         MAX_LENGTH: ${{ inputs.max_length }}
         # Character-based truncation below is locale-aware; pin a UTF-8
         # locale so multi-byte characters near the cut are never split.
-        LC_ALL: en_US.UTF-8
+        # C.UTF-8 is guaranteed on ubuntu-24.04 and macOS runners.
+        LC_ALL: C.UTF-8
       run: |
         set -euo pipefail
         if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_BODY//[[:space:]]/}" ]; then

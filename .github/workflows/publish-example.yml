@@ -400,8 +400,9 @@ jobs:
             fi
 
             # A duplicate CFBundleVersion is reported with the previous
-            # version in the payload; anything else is non-recoverable.
-            if ! grep -qiE 'previousBundleVersion|bundle version must be higher|has already been used|DUPLICATE' <<<"$UPLOAD_OUTPUT"; then
+            # version in the payload (or as ITMS-90189 from transporter);
+            # anything else is non-recoverable.
+            if ! grep -qiE 'previousBundleVersion|bundle version must be higher|has already been used|DUPLICATE|ITMS-90189|Redundant Binary Upload' <<<"$UPLOAD_OUTPUT"; then
               echo "::error::TestFlight upload failed with a non-recoverable error"
               exit 1
             fi
@@ -429,8 +430,10 @@ jobs:
 
       # Best effort: the build is already on TestFlight, so a failure here
       # only costs the notes and shouldn't report the publish as failed.
+      # The poll loop inside asc.rb caps itself at 20 minutes.
       - name: Set TestFlight "What to Test"
         continue-on-error: true
+        timeout-minutes: 25
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}

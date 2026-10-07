@@ -66,9 +66,14 @@ end
 def next_build_number
   id = app_id
   # Fetch all builds and take the numeric max — `uploadedDate` can be null.
-  # limit=200 is the API max; pagination needed past that.
-  builds = request(:Get, "/builds?filter[app]=#{id}&limit=200")
-  versions = builds['data'].map { |b| b['attributes']['version'].to_i }
+  # limit=200 is the API max; follow links.next past that.
+  versions = []
+  path = "/builds?filter[app]=#{id}&limit=200"
+  while path
+    page = request(:Get, path)
+    versions.concat(page['data'].map { |b| b['attributes']['version'].to_i })
+    path = page.dig('links', 'next')&.sub(API, '')
+  end
   latest = versions.max || 0
 
   puts "Latest TestFlight build for #{ENV.fetch('BUNDLE_ID')}: #{latest}"
