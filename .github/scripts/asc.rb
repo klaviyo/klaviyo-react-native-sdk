@@ -55,10 +55,12 @@ end
 
 def app_id
   bundle_id = ENV.fetch('BUNDLE_ID')
-  apps = request(:Get, "/apps?filter[bundleId]=#{bundle_id}&limit=1")
-  raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." if apps['data'].empty?
+  # filter[bundleId] prefix-matches, so confirm the exact bundle ID.
+  apps = request(:Get, "/apps?filter[bundleId]=#{bundle_id}&limit=10")
+  app = apps['data'].find { |a| a.dig('attributes', 'bundleId') == bundle_id }
+  raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." unless app
 
-  apps['data'][0]['id']
+  app['id']
 end
 
 def next_build_number

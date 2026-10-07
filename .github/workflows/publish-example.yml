@@ -92,7 +92,7 @@ jobs:
         run: |
           VERSION_NAME=$(grep -oE 'versionName "[^"]+"' example/android/app/build.gradle | head -1 | sed -E 's/versionName "([^"]+)"/\1/')
           echo "Version name: $VERSION_NAME"
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
 
       # Auth for the Play Edits API calls in play-publish.sh.
       - uses: google-github-actions/auth@v2
@@ -111,7 +111,7 @@ jobs:
           NEXT=$(( HIGHEST + 1 ))
           echo "Highest existing versionCode: $HIGHEST"
           echo "Next versionCode: $NEXT"
-          echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
+          echo "VERSION_CODE=$NEXT" >> "$GITHUB_ENV"
 
       # Build the example app against the SDK as `npm install`-ed from a
       # tarball, not the workspace symlink. Catches `files`-allowlist drift,
@@ -313,7 +313,7 @@ jobs:
         run: |
           MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
           echo "Marketing version: $MARKETING_VERSION"
-          echo "MARKETING_VERSION=$MARKETING_VERSION" >> $GITHUB_ENV
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
 
       # Pick latest+1 CFBundleVersion (mirrors the Android preflight). `jwt`
       # is installed inline rather than added to example/Gemfile.
