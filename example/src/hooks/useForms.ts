@@ -40,6 +40,10 @@ export function useForms() {
         )
       );
       if (event.type === 'formWillDisplay') {
+        // Uncomment to block a specific form.
+        // if (event.formId === 'FORM_ID_TO_BLOCK') {
+        //   return false;
+        // }
         console.log(
           `[useForms] accepting form ${event.formId} (${event.formType})`
         );
