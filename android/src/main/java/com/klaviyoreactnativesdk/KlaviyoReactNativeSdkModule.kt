@@ -36,6 +36,7 @@ import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
@@ -53,6 +54,8 @@ class KlaviyoReactNativeSdkModule(
     private const val SMS = "sms"
     private const val WHATSAPP = "whatsapp"
   }
+
+  private val pendingFormGatingCallbacks = ConcurrentHashMap<String, FormLifecycleEvent.FormWillDisplay>()
 
   private fun sendEvent(
     eventName: String,
@@ -478,6 +481,12 @@ class KlaviyoReactNativeSdkModule(
                   putString("buttonLabel", event.buttonLabel)
                   putString("deepLinkUrl", event.deepLinkUrl.toString())
                 }
+
+                is FormLifecycleEvent.FormWillDisplay -> {
+                  putString("type", "formWillDisplay")
+                  putString("formType", event.formType)
+                  pendingFormGatingCallbacks[event.formId] = event
+                }
               }
             }
 
@@ -490,7 +499,23 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun respondToFormWillDisplay(
+    formId: String,
+    accepted: Boolean,
+  ) {
+    val event = pendingFormGatingCallbacks.remove(formId) ?: return
+    UiThreadUtil.runOnUiThread {
+      if (accepted) {
+        event.accept()
+      } else {
+        event.reject()
+      }
+    }
+  }
+
+  @ReactMethod
   fun unregisterFormLifecycleHandler() {
+    pendingFormGatingCallbacks.clear()
     UiThreadUtil.runOnUiThread {
       try {
         Klaviyo.unregisterFormLifecycleHandler()

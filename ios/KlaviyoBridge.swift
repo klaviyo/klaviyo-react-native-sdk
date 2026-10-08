@@ -9,6 +9,8 @@ import KlaviyoForms
 
 @objc
 public class KlaviyoBridge: NSObject {
+    private static var pendingFormGatingContinuations: [String: Any] = [:]
+    private static let gatingLock = NSLock()
     enum ProfileProperty: String, CaseIterable {
         case email = "email"
         case phoneNumber = "phone_number"
@@ -120,8 +122,29 @@ public class KlaviyoBridge: NSObject {
                 params["type"] = "formCtaClicked"
                 params["buttonLabel"] = buttonLabel as Any
                 params["deepLinkUrl"] = deepLinkUrl.absoluteString as Any
+            case let .formWillDisplay(formId, _, formType, continuation):
+                params["type"] = "formWillDisplay"
+                params["formType"] = formType as Any
+                gatingLock.lock()
+                pendingFormGatingContinuations[formId] = continuation
+                gatingLock.unlock()
             }
             callback(params)
+        }
+        #endif
+    }
+
+    @objc
+    public static func respondToFormWillDisplay(formId: String, accepted: Bool) {
+        #if canImport(KlaviyoForms)
+        gatingLock.lock()
+        let continuation = pendingFormGatingContinuations.removeValue(forKey: formId)
+        gatingLock.unlock()
+        guard let continuation = continuation as? FormDisplayContinuation else { return }
+        if accepted {
+            continuation.accept()
+        } else {
+            continuation.reject()
         }
         #endif
     }
@@ -130,6 +153,9 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func unregisterFormLifecycleHandler() {
         #if canImport(KlaviyoForms)
+        gatingLock.lock()
+        pendingFormGatingContinuations.removeAll()
+        gatingLock.unlock()
         KlaviyoSDK().unregisterFormLifecycleHandler()
         #endif
     }

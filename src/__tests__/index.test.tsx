@@ -38,6 +38,7 @@ jest.mock('react-native', () => {
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
+        respondToFormWillDisplay: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerGeofencing: jest.fn(),
         unregisterGeofencing: jest.fn(),
@@ -656,6 +657,153 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.unregisterFormLifecycleHandler
       ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call respondToFormWillDisplay with true when handler returns true', async () => {
+      const handler = jest.fn().mockReturnValue(true);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Wait for the Promise.resolve microtask
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should reject a native gating event with an empty form name', async () => {
+      const handler = jest.fn().mockReturnValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: '',
+        formType: 'POPUP',
+      });
+      await Promise.resolve();
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: '',
+        formType: 'POPUP',
+      });
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should call respondToFormWillDisplay with false when handler returns false', async () => {
+      const handler = jest.fn().mockReturnValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should default to accepting when handler returns void/undefined', async () => {
+      const handler = jest.fn(); // returns undefined
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should handle async handler returning a Promise', async () => {
+      const handler = jest.fn().mockResolvedValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Need to flush the microtask queue for the resolved promise
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should default to accepting when handler throws', async () => {
+      const handler = jest.fn().mockRejectedValue(new Error('handler error'));
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should fail-open when handler throws synchronously', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn().mockImplementation(() => {
+        throw new Error('sync kaboom');
+      });
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      // Clear mocks from re-registration cleanup
+      jest.clearAllMocks();
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Synchronous — no await needed
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+
+      consoleErrorSpy.mockRestore();
     });
 
     it('should be safe to call the unsubscribe function more than once', () => {

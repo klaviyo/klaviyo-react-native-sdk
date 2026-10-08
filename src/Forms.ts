@@ -41,6 +41,8 @@ export interface FormConfiguration {
  * building dispatch tables keyed by event type.
  */
 export const FormLifecycleEventType = {
+  /** Emitted before presentation; the handler can accept or reject the form. */
+  WillDisplay: 'formWillDisplay',
   /** Emitted when a form is shown to the user. */
   Shown: 'formShown',
   /** Emitted when the user dismisses a visible form. */
@@ -113,12 +115,35 @@ export type FormLifecycleEvent =
        * non-empty — this event is not emitted when no deep link is configured.
        */
       deepLinkUrl: string;
+    }
+  | {
+      type: typeof FormLifecycleEventType.WillDisplay;
+      formId: string;
+      formName: string;
+      formType: string;
     };
 
 /**
- * Handler function type for form lifecycle events
+ * Handler function type for form lifecycle events.
+ *
+ * For most events, the return value is ignored. For `formWillDisplay`, return
+ * a boolean (or a Promise resolving to a boolean) to accept or reject the form:
+ * - `true` (or `undefined`/void) — accept, allow the form to display
+ * - `false` — reject, prevent the form from displaying
+ *
+ * Example:
+ * ```typescript
+ * Klaviyo.registerFormLifecycleHandler((event) => {
+ *   if (event.type === 'formWillDisplay') {
+ *     // Reject forms during onboarding
+ *     return !isOnboarding;
+ *   }
+ * });
+ * ```
  */
-export type FormLifecycleHandler = (event: FormLifecycleEvent) => void;
+export type FormLifecycleHandler = (
+  event: FormLifecycleEvent
+) => void | boolean | Promise<boolean | void>;
 
 const FORM_LIFECYCLE_EVENT_TYPES: readonly FormLifecycleEventType[] =
   Object.values(FormLifecycleEventType);
@@ -135,7 +160,9 @@ function isNonEmptyString(value: unknown): value is string {
  *
  * Returns `null` and logs a warning if required fields are missing or empty.
  * Required fields vary by event type:
- * - All events: `type`, `formId`, `formName`
+ * - All events: `type`, `formId`
+ * - Displayed lifecycle events: `formName`
+ * - `formWillDisplay`: `formType`; `formName` may be absent or empty
  * - `formCtaClicked`: additionally requires `deepLinkUrl`; `buttonLabel` defaults to empty string if absent
  *
  * @param data Raw event data from the native bridge
@@ -158,10 +185,22 @@ export function parseFormLifecycleEvent(
 
   const missingFields: string[] = [];
   if (!isNonEmptyString(formId)) missingFields.push('formId');
-  if (!isNonEmptyString(formName)) missingFields.push('formName');
+  if (
+    type !== FormLifecycleEventType.WillDisplay &&
+    !isNonEmptyString(formName)
+  ) {
+    missingFields.push('formName');
+  }
 
   if (type === FormLifecycleEventType.CtaClicked) {
     if (!isNonEmptyString(data.deepLinkUrl)) missingFields.push('deepLinkUrl');
+  }
+
+  if (
+    type === FormLifecycleEventType.WillDisplay &&
+    !isNonEmptyString(data.formType)
+  ) {
+    missingFields.push('formType');
   }
 
   if (missingFields.length > 0) {
@@ -173,9 +212,16 @@ export function parseFormLifecycleEvent(
 
   const validatedType = type as FormLifecycleEventType;
   const validFormId = formId as string;
-  const validFormName = formName as string;
+  const validFormName = typeof formName === 'string' ? formName : '';
 
   switch (validatedType) {
+    case FormLifecycleEventType.WillDisplay:
+      return {
+        type: validatedType,
+        formId: validFormId,
+        formName: validFormName,
+        formType: data.formType as string,
+      };
     case FormLifecycleEventType.Shown:
       return {
         type: validatedType,
