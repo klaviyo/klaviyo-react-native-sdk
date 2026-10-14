@@ -4,11 +4,9 @@ GEM
     base64 (0.3.0)
     jwt (3.3.0)
       base64
-    webrick (1.9.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   jwt (= 3.3.0)
-  webrick (= 1.9.2)

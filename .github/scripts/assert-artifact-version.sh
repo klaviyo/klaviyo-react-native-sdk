@@ -5,13 +5,10 @@
 # Usage:
 #   assert-artifact-version.sh ios <ipa> <expected-build> <expected-short-version>
 #   assert-artifact-version.sh android <aab> <expected-code> <expected-name>
-#   assert-artifact-version.sh --check-tools <ios|android>
-#       Checks the tools the assertion needs exist (aapt2 for android) without
-#       an artifact, so a deploy can fail in seconds, before building.
 #
 # iOS: reads CFBundleVersion / CFBundleShortVersionString from
 # Payload/*.app/Info.plist inside the IPA. Uses /usr/libexec/PlistBuddy on
-# macOS and falls back to python3 plistlib elsewhere (CI tests on ubuntu).
+# macOS and falls back to python3 plistlib elsewhere.
 #
 # Android: reads versionCode / versionName from the AAB's manifest with
 # aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are binary
@@ -24,10 +21,7 @@ fail() {
 }
 
 # Prints the path of aapt2: PATH first, else the newest under
-# $ANDROID_HOME/build-tools. Exits non-zero when none is found. The directory
-# names are ordered with POSIX sort flags only (sort -V is missing on older BSD
-# sort): numerically on the dotted version, then by full path so a release and
-# its release candidate always order the same way.
+# $ANDROID_HOME/build-tools. Exits non-zero when none is found.
 find_aapt2() {
   local found
   found=$(command -v aapt2 || true)
@@ -40,30 +34,6 @@ find_aapt2() {
   [ -n "$found" ] || return 1
   printf '%s\n' "$found"
 }
-
-if [ "${1:-}" = "--check-tools" ]; then
-  [ $# -eq 2 ] || {
-    echo "usage: $0 --check-tools <ios|android>" >&2
-    exit 2
-  }
-  case "$2" in
-    android)
-      aapt2=$(find_aapt2) || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
-      echo "aapt2: $aapt2"
-      ;;
-    ios)
-      if [ ! -x /usr/libexec/PlistBuddy ] && ! command -v python3 >/dev/null 2>&1; then
-        fail "neither PlistBuddy nor python3 is available to read the IPA plist"
-      fi
-      echo "plist reader: ok"
-      ;;
-    *)
-      echo "usage: $0 --check-tools <ios|android>" >&2
-      exit 2
-      ;;
-  esac
-  exit 0
-fi
 
 [ $# -eq 4 ] || {
   echo "usage: $0 <ios|android> <artifact> <expected-code> <expected-name>" >&2

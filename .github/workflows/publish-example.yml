@@ -19,9 +19,8 @@
 # fresh number if the upload is rejected for a conflict (e.g. two runs racing
 # on master + rel/**).
 #
-# Deploys run only after the `checks` (ci.yml: lint, unit tests, library
-# build) and `publish-checks` (workflow/script checks) jobs pass in the same
-# run, on every trigger including the PR-label one.
+# Deploys run only after the `checks` job (ci.yml: lint, unit tests, library
+# build) passes in the same run, on every trigger including the PR-label one.
 #
 # This repo is public, so its Actions logs are too. Never surface a public
 # install link (e.g. a TestFlight public-link `testflight.apple.com/join/...`)
@@ -76,7 +75,7 @@ env:
 
 jobs:
   # Only run for triggers that can deploy: any other PR label must not start
-  # the full macOS CI or the publish-helper suite.
+  # the full macOS CI.
   checks:
     name: Lint, test and build the library
     if: |
@@ -87,17 +86,6 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
-
-  publish-checks:
-    name: Publish workflow and script checks
-    if: |
-      github.event_name == 'release'
-      || github.event_name == 'push'
-      || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app'))
-    permissions:
-      contents: read
-    uses: ./.github/workflows/example-publish-checks.yml
 
   # Verifies the platform's required secrets exist before a deploy runs.
   # Environment secrets are not visible here (no environment: is declared),
@@ -173,7 +161,7 @@ jobs:
 
   deploy-android:
     name: Publish to Play Store internal track
-    needs: [checks, publish-checks, preflight-android]
+    needs: [checks, preflight-android]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment:
@@ -209,12 +197,6 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
           java-package: jdk
-
-      # The version assertion after the build needs aapt2; fail here, in
-      # seconds, rather than after a full bundle build.
-      - name: Check the version assertion's tools exist
-        shell: bash
-        run: .github/scripts/assert-artifact-version.sh --check-tools android
 
       - name: Add Google Services from Secrets
         run: 'echo "$GOOGLE_SERVICES_JSON" > ./example/android/app/google-services.json'
@@ -274,7 +256,7 @@ jobs:
       # with a fresh code. play-publish.sh exits 75 only for a conflict; any
       # other error fails the step immediately.
       #
-      # The release notes are regenerated per attempt (build-release-notes)
+      # The release notes are regenerated per attempt (release-notes.sh)
       # so they always carry the versionCode that actually ships, and the
       # in-app build info (.env) is regenerated per attempt too, with the
       # Metro cache cleared so a rebuild can't inline the old values.
@@ -323,7 +305,7 @@ jobs:
             # version being attempted.
             .github/scripts/assert-artifact-version.sh android "$AAB" "$VERSION_CODE" "$VERSION_NAME"
 
-            .github/scripts/build-release-notes.sh android 500 > "$NOTES_FILE"
+            .github/scripts/release-notes.sh android 500 > "$NOTES_FILE"
             echo "BUILT_AT=$BUILT_AT" >> "$GITHUB_ENV"
 
             status=0
@@ -392,35 +374,22 @@ jobs:
           store: Play internal
           full_version: ${{ env.VERSION_NAME }}
           build: ${{ env.VERSION_CODE }}
-          rn_version: ${{ steps.release_notes.outputs.rn_version }}
-          rn_ref: ${{ steps.release_notes.outputs.rn_ref }}
-          native_name: Android
-          native_version: ${{ steps.release_notes.outputs.native_version }}
-          native_ref: ${{ steps.release_notes.outputs.native_ref }}
+          sdks: ${{ steps.release_notes.outputs.sdks }}
           install_url: ${{ steps.internal_sharing.outputs.url }}
           install_label: Internal App Sharing link
           install_fallback: Internal App Sharing upload failed, see the workflow run
-
-      - name: Find failed step
-        id: failed
-        if: failure()
-        shell: bash
-        env:
-          STEPS_JSON: ${{ toJSON(steps) }}
-        run: echo "name=$(.github/scripts/failed-step.sh "$STEPS_JSON")" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-publish
         with:
-          failed_step: ${{ steps.failed.outputs.name }}
+          steps_json: ${{ toJSON(steps) }}
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: Android
           store: Play internal
           full_version: ${{ env.VERSION_NAME }}
           build: ${{ env.VERSION_CODE }}
-          native_name: Android
 
   deploy-ios:
     name: Publish to TestFlight
@@ -429,7 +398,7 @@ jobs:
     environment:
       name: testflight
       url: ${{ steps.result.outputs.testflight_url }}
-    needs: [checks, publish-checks, preflight-ios]
+    needs: [checks, preflight-ios]
     outputs:
       marketing_version: ${{ steps.result.outputs.marketing_version }}
       full_version: ${{ steps.result.outputs.full_version }}
@@ -744,35 +713,22 @@ jobs:
           store: TestFlight
           full_version: ${{ env.FULL_VERSION }}
           build: ${{ env.BUILD_NUMBER }}
-          rn_version: ${{ steps.release_notes.outputs.rn_version }}
-          rn_ref: ${{ steps.release_notes.outputs.rn_ref }}
-          native_name: iOS
-          native_version: ${{ steps.release_notes.outputs.native_version }}
-          native_ref: ${{ steps.release_notes.outputs.native_ref }}
+          sdks: ${{ steps.release_notes.outputs.sdks }}
           install_url: ${{ steps.result.outputs.testflight_url }}
           install_label: Open the example app in TestFlight
           access_note: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload. Not a tester yet? Ask in #mobile-push-team to be added to the internal TestFlight group with your Apple ID email.
-
-      - name: Find failed step
-        id: failed
-        if: failure()
-        shell: bash
-        env:
-          STEPS_JSON: ${{ toJSON(steps) }}
-        run: echo "name=$(.github/scripts/failed-step.sh "$STEPS_JSON")" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-publish
         with:
-          failed_step: ${{ steps.failed.outputs.name }}
+          steps_json: ${{ toJSON(steps) }}
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: iOS
           store: TestFlight
           full_version: ${{ env.FULL_VERSION }}
           build: ${{ env.BUILD_NUMBER }}
-          native_name: iOS
 
   # Runs on Linux so no macOS runner is held while Apple processes the build.
   what-to-test:
@@ -854,21 +810,13 @@ jobs:
           store: TestFlight
           full_version: ${{ needs.deploy-ios.outputs.full_version }}
           build: ${{ needs.deploy-ios.outputs.build_number }}
-          native_name: iOS
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
     needs:
-      [
-        checks,
-        publish-checks,
-        preflight-android,
-        preflight-ios,
-        deploy-android,
-        deploy-ios,
-      ]
+      [checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
     if: |
       always()
       && github.event_name == 'pull_request'

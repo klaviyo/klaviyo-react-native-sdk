@@ -20,11 +20,3 @@ updates:
       publish-gems:
         patterns:
           - '*'
-  - package-ecosystem: pip
-    directory: /.github/pins/python
-    schedule:
-      interval: monthly
-    groups:
-      publish-python:
-        patterns:
-          - '*'
