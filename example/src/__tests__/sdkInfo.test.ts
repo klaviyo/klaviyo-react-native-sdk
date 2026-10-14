@@ -270,6 +270,35 @@ describe('cross-check with the node formatter', () => {
       commit: 'cafe123',
       sourceLabel: 'main',
     },
+    {
+      // A ref that embeds the version, as the RN ref did before it was split.
+      appName: 'RN Example',
+      appVersion: '2.5.1',
+      buildNumber: '10',
+      platform: 'ios' as const,
+      rnVersion: '2.5.1',
+      rnRef: '2.5.1 (rel/2.5@abc1234)',
+      nativeVersion: '5.4.1',
+      nativeRef: '5.4.1 (main@deadbee)',
+      commit: 'abc1234',
+      sourceLabel: 'rel/2.5',
+      event: 'push',
+      built: '2026-10-13 21:00 UTC',
+    },
+    {
+      // Missing and "unknown" values must both render as an em dash.
+      appName: 'RN Example',
+      appVersion: 'unknown',
+      buildNumber: '',
+      platform: 'android' as const,
+      rnVersion: '2.5.1',
+      rnRef: 'unknown',
+      nativeVersion: undefined,
+      nativeRef: 'main@deadbee',
+      commit: undefined,
+      sourceLabel: '',
+      built: 'unknown',
+    },
   ];
 
   it.each(fixtures.map((f, i) => [i, f] as const))(

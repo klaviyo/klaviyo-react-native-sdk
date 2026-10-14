@@ -167,6 +167,66 @@ describe('updateEnvContent with version keys', () => {
   });
 });
 
+// The node copy of the version/ref helpers. The app has its own copy in
+// example/src/sdkInfo.ts with its own tests; each copy is pinned separately so
+// a break in only one of them fails that copy's tests, not just the
+// cross-check.
+describe('node version/ref helpers', () => {
+  it('refPart strips an embedded leading version', () => {
+    expect(sdkRef.refPart('2.5.1 (rel/2.5@abc1234)', '2.5.1')).toBe(
+      'rel/2.5@abc1234'
+    );
+  });
+
+  it('refPart leaves other refs alone', () => {
+    expect(sdkRef.refPart('main@abc1234', '2.5.1')).toBe('main@abc1234');
+    expect(sdkRef.refPart('local:main@abc1234-dirty', '2.5.1')).toBe(
+      'local:main@abc1234-dirty'
+    );
+  });
+
+  it('valueOrMissing maps empty and unknown to the em dash, never to unknown', () => {
+    expect(sdkRef.valueOrMissing(undefined)).toBe('—');
+    expect(sdkRef.valueOrMissing('')).toBe('—');
+    expect(sdkRef.valueOrMissing('unknown')).toBe('—');
+    expect(sdkRef.valueOrMissing('2.5.1')).toBe('2.5.1');
+  });
+
+  it('formatVersionRef is the bare version when the ref equals it', () => {
+    expect(sdkRef.formatVersionRef('2.5.1', '2.5.1')).toBe('2.5.1');
+  });
+
+  it('formatVersionRef omits an empty or unknown ref', () => {
+    expect(sdkRef.formatVersionRef('2.5.1', '')).toBe('2.5.1');
+    expect(sdkRef.formatVersionRef('2.5.1', undefined)).toBe('2.5.1');
+    expect(sdkRef.formatVersionRef('2.5.1', 'unknown')).toBe('2.5.1');
+  });
+
+  it('formatVersionRef shows the ref part of a ref that embeds the version', () => {
+    expect(sdkRef.formatVersionRef('2.5.1', '2.5.1 (rel/2.5@abc1234)')).toBe(
+      '2.5.1 · rel/2.5@abc1234'
+    );
+  });
+
+  it('formatVersionRef shows branch, local and dirty refs in full, version first', () => {
+    expect(sdkRef.formatVersionRef('2.5.1', 'rel/2.5@abc1234')).toBe(
+      '2.5.1 · rel/2.5@abc1234'
+    );
+    expect(sdkRef.formatVersionRef('2.5.1', 'local:main@abc1234-dirty')).toBe(
+      '2.5.1 · local:main@abc1234-dirty'
+    );
+  });
+
+  it('formatVersionRef keeps a prerelease suffix in the version and renders a missing version as a dash', () => {
+    expect(sdkRef.formatVersionRef('2.6.0-rc.1', 'main@abc1234')).toBe(
+      '2.6.0-rc.1 · main@abc1234'
+    );
+    expect(sdkRef.formatVersionRef(undefined, 'main@abc1234')).toBe(
+      '— · main@abc1234'
+    );
+  });
+});
+
 describe('node formatter', () => {
   const base = {
     appName: 'RN Example',
