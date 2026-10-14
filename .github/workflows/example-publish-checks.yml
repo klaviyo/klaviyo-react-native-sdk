@@ -28,13 +28,12 @@ jobs:
 
       - name: Install actionlint
         run: |
-          curl -sSfL https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz \
+          curl -sSfL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
             | tar xz -C "$RUNNER_TEMP" actionlint
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
-      # macos-26 is not in actionlint 1.7.7's runner table yet.
       - name: Lint workflows
-        run: actionlint -ignore 'label "macos-26" is unknown' .github/workflows/publish-example.yml .github/workflows/example-publish-checks.yml
+        run: actionlint .github/workflows/publish-example.yml .github/workflows/example-publish-checks.yml
 
       - name: Shellcheck scripts
         run: shellcheck .github/scripts/*.sh
@@ -44,6 +43,12 @@ jobs:
 
       - name: Test play-publish.sh
         run: .github/scripts/test-play-publish.sh
+
+      # The runner's system Ruby installs gems to a root-owned directory.
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          ruby-version: '3.2'
 
       - name: Test asc.rb
         run: |
