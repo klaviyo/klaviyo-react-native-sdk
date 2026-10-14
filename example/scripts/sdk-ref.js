@@ -433,11 +433,38 @@ function updateEnvContent(content, values) {
 
 // Reads `--<name> <value>` flags into an object (flags without a value are
 // ignored).
+// Flags that are switches: set to true without consuming the next token.
+// `--flag=<value>` is also supported for value flags.
+const BOOLEAN_FLAGS = new Set([
+  'print',
+  'print-header',
+  'print-versions',
+  'from-env',
+]);
+
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
+    const inline = argv[i].match(/^--([a-z-]+)=(.*)$/);
+    if (inline) {
+      args[inline[1]] = inline[2];
+      continue;
+    }
     const flag = argv[i].match(/^--([a-z-]+)$/);
-    if (flag && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+    if (!flag) {
+      continue;
+    }
+    if (BOOLEAN_FLAGS.has(flag[1])) {
+      // A bare boolean flag is true; an explicit value still parses.
+      if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
+        args[flag[1]] = argv[i + 1];
+        i++;
+      } else {
+        args[flag[1]] = true;
+      }
+      continue;
+    }
+    if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
       args[flag[1]] = argv[i + 1];
       i++;
     }

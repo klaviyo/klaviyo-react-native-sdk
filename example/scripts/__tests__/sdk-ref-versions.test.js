@@ -246,10 +246,10 @@ describe('node formatter', () => {
 });
 
 describe('parseArgs', () => {
-  it('reads --flag value pairs and skips valueless flags', () => {
+  it('reads --flag value pairs and records boolean flags', () => {
     expect(
       sdkRef.parseArgs(['--print', '--build', '42', '--commit', 'abc'])
-    ).toEqual({ build: '42', commit: 'abc' });
+    ).toEqual({ print: true, build: '42', commit: 'abc' });
   });
 });
 
@@ -449,4 +449,33 @@ describe('--print-header --from-env', () => {
       );
       expect(out).toContain('RN Example 2.6.0-rc.1 (42)');
     }));
+});
+
+describe('parseArgs boolean flags', () => {
+  it('treats --from-env as a boolean in any position', () => {
+    expect(
+      sdkRef.parseArgs(['--print-header', '--from-env', '--env-file', '/tmp/x'])
+    ).toEqual({ 'print-header': true, 'from-env': true, 'env-file': '/tmp/x' });
+    expect(
+      sdkRef.parseArgs(['--env-file', '/tmp/x', '--print-header', '--from-env'])
+    ).toEqual({ 'print-header': true, 'from-env': true, 'env-file': '/tmp/x' });
+  });
+
+  it('keeps --from-env yes and --from-env=yes working', () => {
+    expect(sdkRef.parseArgs(['--from-env', 'yes'])).toEqual({
+      'from-env': 'yes',
+    });
+    expect(sdkRef.parseArgs(['--from-env=yes'])).toEqual({
+      'from-env': 'yes',
+    });
+  });
+
+  it('does not let --from-env swallow a positional-looking value', () => {
+    // A following value is consumed as the flag value only when present;
+    // a following flag is never consumed.
+    expect(sdkRef.parseArgs(['--from-env', '--platform', 'ios'])).toEqual({
+      'from-env': true,
+      'platform': 'ios',
+    });
+  });
 });
