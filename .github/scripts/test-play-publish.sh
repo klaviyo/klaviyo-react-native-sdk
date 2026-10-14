@@ -128,13 +128,13 @@ set_scenario() { printf '%s' "$1" > "$WORK/state/scenario"; }
 
 # 1. highest-version-code returns the max.
 out=$("$SCRIPT" highest-version-code)
-[ "$out" = "250" ] && pass "highest-version-code" || fail "highest-version-code: got '$out'"
+if [ "$out" = "250" ]; then pass "highest-version-code"; else fail "highest-version-code: got '$out'"; fi
 
 # 2. Successful upload: exit 0, notes forwarded to the track update.
 set_scenario '{}'
 echo "release notes text" > "$WORK/notes.txt"
 out=$("$SCRIPT" upload "$WORK/app.aab" 300 internal "$WORK/notes.txt")
-grep -q "Published versionCode 300" <<<"$out" && pass "upload success" || fail "upload success: $out"
+if grep -q "Published versionCode 300" <<<"$out"; then pass "upload success"; else fail "upload success: $out"; fi
 
 # 3. versionCode conflict at upload exits 75.
 set_scenario '{"upload_conflict": true}'
@@ -142,7 +142,7 @@ set +e
 "$SCRIPT" upload "$WORK/app.aab" 300 internal >/dev/null 2>&1
 status=$?
 set -e
-[ "$status" -eq 75 ] && pass "upload conflict exits 75" || fail "upload conflict: exit $status"
+if [ "$status" -eq 75 ]; then pass "upload conflict exits 75"; else fail "upload conflict: exit $status"; fi
 
 # 4. versionCode conflict at commit exits 75.
 set_scenario '{"commit_conflict": true}'
@@ -150,7 +150,7 @@ set +e
 "$SCRIPT" upload "$WORK/app.aab" 300 internal >/dev/null 2>&1
 status=$?
 set -e
-[ "$status" -eq 75 ] && pass "commit conflict exits 75" || fail "commit conflict: exit $status"
+if [ "$status" -eq 75 ]; then pass "commit conflict exits 75"; else fail "commit conflict: exit $status"; fi
 
 # 5. Play reporting a different versionCode than requested exits 1.
 set_scenario '{"reported_code": 301}'
@@ -158,13 +158,13 @@ set +e
 "$SCRIPT" upload "$WORK/app.aab" 300 internal >/dev/null 2>&1
 status=$?
 set -e
-[ "$status" -eq 1 ] && pass "versionCode mismatch exits 1" || fail "versionCode mismatch: exit $status"
+if [ "$status" -eq 1 ]; then pass "versionCode mismatch exits 1"; else fail "versionCode mismatch: exit $status"; fi
 
 # 6. internal-sharing prints the downloadUrl.
 set_scenario '{}'
 out=$("$SCRIPT" internal-sharing "$WORK/app.aab")
 url=$(tail -1 <<<"$out")
-[ "$url" = "https://play.google.com/apps/test/RQ fake/1" ] && pass "internal-sharing downloadUrl" || fail "internal-sharing: got '$out'"
+if [ "$url" = "https://play.google.com/apps/test/RQ fake/1" ]; then pass "internal-sharing downloadUrl"; else fail "internal-sharing: got '$out'"; fi
 
 if [ "$fail_count" -gt 0 ]; then
   echo "$fail_count test(s) failed"
