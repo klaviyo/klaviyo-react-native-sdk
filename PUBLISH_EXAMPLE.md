@@ -75,14 +75,19 @@ environment variables, upload signed artifacts, or post public install links.
 
 ## Build numbers
 
-- **Android**: `versionCode` is globally monotonic. The job asks Play for the
-  highest uploaded code and uses one above it. If a concurrent run takes it,
-  `play-publish.sh` exits 75 and the loop rebuilds with `max(highest, current) + 1`,
-  up to 3 attempts.
+Both platforms are deployed by lanes in `example/fastlane/Fastfile`
+(`fastlane android release`, `fastlane ios release`).
+
+- **Android**: `versionCode` is globally monotonic. The lane reads the highest
+  code on the internal track (`google_play_track_version_codes`) and uses one
+  above it. If the upload is rejected for a conflict (a code held on another
+  track, or a concurrent run), it rebuilds with `max(highest, current) + 1`, up
+  to 3 attempts. The Gradle build retries dependency-resolution failures
+  (JitPack builds branch and commit SDK targets on first request).
 - **iOS**: build numbers restart at 1 per marketing version.
-  `asc.rb next-build-number` uses one above the highest in App Store Connect;
-  a duplicate at upload (`previousBundleVersion = N`, ITMS-90189, or an
-  `ERROR:` line, since `altool` can exit 0 on failure) rebuilds with a fresh
+  `latest_testflight_build_number` for that version, plus one, is the first
+  number; it is checked again after the archive. A duplicate at upload
+  (`previousBundleVersion = N`, ITMS-90189 and similar) rebuilds with a fresh
   number, up to 4 attempts.
 - **Prereleases**: for `2.6.0-rc.1` the iOS marketing version is the numeric
   `2.6.0` (Apple requires `X.Y[.Z]`), so a prerelease shares its release's build
@@ -96,7 +101,9 @@ refs, build number, commit, branch and build time to `example/.env`. The app
 shows them in its info modal, and `.github/scripts/release-notes.sh` prints the
 same header for the store notes (500 chars on Play, 4000 on TestFlight; the
 release name and body are appended on `release: published` and cut first).
-`.github/scripts/slack-message.sh` builds the Slack message.
+`.github/scripts/slack-message.sh` builds the Slack message. Uploads go
+through fastlane: `pilot` and `supply` for TestFlight and Play, plus Internal
+App Sharing on Android and What to Test on iOS.
 
 ## Getting a build as a tester
 
@@ -125,6 +132,6 @@ gh workflow run publish-example.yml --ref master -f platform=both   # or android
 ## Pinned actions and tools
 
 Every `uses:` in the publish workflow and its composite actions is pinned to a
-full commit SHA, and the Ruby gems the deploy installs (`jwt`, `fastlane`) are
-pinned in `.github/pins/*/Gemfile`. `.github/dependabot.yml` opens one grouped
-PR a month for each.
+full commit SHA, and the fastlane gem the deploy installs is pinned in
+`.github/pins/fastlane/Gemfile`. `.github/dependabot.yml` opens one grouped PR
+a month for each.

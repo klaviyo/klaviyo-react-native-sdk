@@ -218,26 +218,6 @@ jobs:
           echo "Version name: $VERSION_NAME"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
 
-      # Auth for the Play Edits API calls in play-publish.sh.
-      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
-        with:
-          credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-
-      # Pick highest+1 versionCode. The script aborts on any HTTP error
-      # rather than falling back to HIGHEST=0.
-      - name: Resolve next versionCode from Play
-        id: resolve_version_code
-        shell: bash
-        env:
-          PACKAGE_NAME: com.klaviyoreactnativesdkexample
-        run: |
-          set -euo pipefail
-          HIGHEST=$(.github/scripts/play-publish.sh highest-version-code)
-          NEXT=$(( HIGHEST + 1 ))
-          echo "Highest existing versionCode: $HIGHEST"
-          echo "Next versionCode: $NEXT"
-          echo "VERSION_CODE=$NEXT" >> "$GITHUB_ENV"
-
       # Builds the example app against the SDK as `npm install`-ed from a
       # tarball, not the workspace symlink. See pack-and-test.sh.
       - name: Pack SDK + flip example to packed install
@@ -245,105 +225,44 @@ jobs:
         shell: bash
         run: ./pack-and-test.sh setup
 
-      # Writes the SDK version/ref block to example/.env for the app UI and
-      # release notes; a missing ref resolves to "unknown" without failing.
-      - name: Record SDK versions in example/.env
-        shell: bash
-        run: node example/scripts/sdk-ref.js --commit "$COMMIT_SHA" --branch "$BRANCH"
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          ruby-version: '3.2'
 
-      # Build + upload in one loop: a versionCode conflict at upload time
-      # (another run published the same code after our preflight) rebuilds
-      # with a fresh code. play-publish.sh exits 75 only for a conflict; any
-      # other error fails the step immediately.
-      #
-      # The release notes are regenerated per attempt (release-notes.sh)
-      # so they always carry the versionCode that actually ships, and the
-      # in-app build info (.env) is regenerated per attempt too, with the
-      # Metro cache cleared so a rebuild can't inline the old values.
-      #
-      # Inline signing via -Pandroid.injected.signing.* — Play rejects
-      # double-signed AABs.
-      #
-      # The build goes through gradle-retry.sh: the Klaviyo Android SDK
-      # resolves from JitPack, which builds branch/commit targets on first
-      # request and can time out or 404 on a cold start.
+      - name: Install fastlane
+        shell: bash
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
+
+      # The android release lane picks the next versionCode from the Play
+      # internal track, builds and signs the bundle, and uploads it, rebuilding
+      # with a fresh code when the upload is rejected for a conflict.
       - name: Build & deploy to Internal Track
         id: build_and_deploy
+        working-directory: example
         shell: bash
         env:
+          KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
-          PACKAGE_NAME: com.klaviyoreactnativesdkexample
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # Prevent Metro from trying to start a dev server during the build
           CI: true
-        run: |
-          set -euo pipefail
-          MAX_ATTEMPTS=3
-          AAB="example/android/app/build/outputs/bundle/release/app-release.aab"
-          NOTES_FILE="${RUNNER_TEMP}/release-notes.txt"
-
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            echo "=== Attempt $attempt/$MAX_ATTEMPTS: versionCode $VERSION_CODE ==="
-            # One timestamp per attempt, shared by the in-app build info and
-            # the store notes header so they match.
-            BUILT_AT="$(date -u '+%Y-%m-%d %H:%M UTC')"
-            node example/scripts/sdk-ref.js --build "$VERSION_CODE" --commit "$COMMIT_SHA" --branch "$BRANCH" --built "$BUILT_AT"
-            rm -rf "${TMPDIR:-/tmp}/metro-cache" "example/android/app/build/generated"
-            (cd example/android && ../../.github/scripts/gradle-retry.sh :app:bundleRelease \
-              -PreleaseVersionCode="$VERSION_CODE" \
-              -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
-              -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
-              -Pandroid.injected.signing.key.alias="${ALIAS}" \
-              -Pandroid.injected.signing.key.password="${KEY_PASSWORD}" \
-              -Dorg.gradle.internal.http.socketTimeout=120000)
-
-            # Refuse to upload a bundle whose manifest disagrees with the
-            # version being attempted.
-            .github/scripts/assert-artifact-version.sh android "$AAB" "$VERSION_CODE" "$VERSION_NAME"
-
-            .github/scripts/release-notes.sh android 500 > "$NOTES_FILE"
-            echo "BUILT_AT=$BUILT_AT" >> "$GITHUB_ENV"
-
-            status=0
-            RELEASE_NAME="$VERSION_NAME ($VERSION_CODE)" \
-              .github/scripts/play-publish.sh upload "$AAB" "$VERSION_CODE" internal "$NOTES_FILE" || status=$?
-            if [ "$status" -eq 0 ]; then
-              exit 0
-            elif [ "$status" -ne 75 ]; then
-              exit "$status"
-            fi
-
-            HIGHEST=$(.github/scripts/play-publish.sh highest-version-code)
-            NEXT=$(( (HIGHEST > VERSION_CODE ? HIGHEST : VERSION_CODE) + 1 ))
-            echo "::warning::versionCode $VERSION_CODE conflicted at upload; retrying with $NEXT"
-            VERSION_CODE=$NEXT
-            echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          done
-
-          echo "::error::Upload still conflicting after $MAX_ATTEMPTS attempts"
-          exit 1
+        run: fastlane android release
 
       # Internal App Sharing gives the Slack message an install link. A
       # failure here must not fail a deploy that already landed on the track.
       - name: Upload to Internal App Sharing
         id: internal_sharing
         continue-on-error: true
+        working-directory: example
         shell: bash
         env:
-          PACKAGE_NAME: com.klaviyoreactnativesdkexample
-        run: |
-          set -euo pipefail
-          url=$(.github/scripts/play-publish.sh internal-sharing "example/android/app/build/outputs/bundle/release/app-release.aab")
-          if [ -z "$url" ]; then
-            echo "::warning::Internal App Sharing did not return a download URL"
-            exit 1
-          fi
-          echo "::add-mask::$url"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: fastlane android share
 
       # Composed after the upload so the notes carry the versionCode that
       # actually shipped. 500 chars is Google's per-locale cap.
@@ -491,13 +410,6 @@ jobs:
           bundle exec pod install --repo-update
           rm -f .xcode.env.local
 
-      # After pod install so Podfile.lock reflects the resolved KlaviyoSwift
-      # pin, and before the Xcode build inlines .env via Metro. A missing ref
-      # resolves to "unknown" without failing.
-      - name: Record SDK versions in example/.env
-        shell: bash
-        run: node example/scripts/sdk-ref.js --commit "$COMMIT_SHA" --branch "$BRANCH"
-
       # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key
         env:
@@ -510,71 +422,22 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
-      # package.json carries the full SDK version (possibly a prerelease like
-      # 2.6.0-rc.1). CFBundleShortVersionString must be numeric X.Y[.Z], so
-      # the marketing version used for the build and the ASC build-number
-      # sequence is the stripped value; the full version is what humans see
-      # in Slack and the notes.
-      - name: Resolve full and marketing versions
-        shell: bash
-        run: |
-          FULL_VERSION=$(jq -r .version package.json)
-          MARKETING_VERSION=$(ruby .github/scripts/asc.rb ios-marketing-version "$FULL_VERSION")
-          echo "Full version: $FULL_VERSION"
-          echo "Marketing version: $MARKETING_VERSION"
-          echo "FULL_VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
-          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
-
-      # Build numbers restart at 1 per marketing version. A failed query here
-      # stops the job before any build runs. `jwt` is installed inline rather
-      # than added to example/Gemfile.
-      - name: Resolve next build number from App Store Connect
-        id: resolve_build_number
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          BUNDLE_ID: com.klaviyoreactnativesdkexample
-        shell: bash
-        run: |
-          gem install -g .github/pins/asc/Gemfile --no-document --silent
-          ruby .github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION"
-
-      # Build, sign and upload in one loop (same shape as
-      # klaviyo-ios-test-app's testflight.yml). A build-number conflict at
-      # upload time rebuilds with a fresh number. After archive+export the
-      # build number is re-resolved per marketing version: if a concurrent
-      # run took it, this attempt rebuilds without uploading; the final
-      # attempt always uploads.
-      #
-      # The `release_ipa` lane runs match(readonly) to install the shared App
-      # Store cert + profiles from the mobile-certificates repo (git-only, so
-      # it never contacts Apple or generates a cert), pins each target to its
-      # match profile, and exports a signed IPA to example/ios/build/.
-      # ssh-agent is started inline because its env can't cross workflow steps.
-      #
-      # altool authenticates with the API key. agvtool updates CFBundleVersion
-      # across all targets.
+      # The ios release lane picks the next build number from TestFlight,
+      # builds, signs (match, read-only) and uploads, rebuilding with a fresh
+      # number when the upload is rejected for a conflict. ssh-agent is started
+      # inline because its env can't cross workflow steps.
       - name: Build, sign & upload to TestFlight
         id: build_sign_upload
         working-directory: example
         env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          # For asc.rb when re-resolving the build number after a conflict.
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          BUNDLE_ID: com.klaviyoreactnativesdkexample
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Password-protected distribution key: match imports keys with an empty
-          # password, which macOS 26's `security import` rejects, so the lane
-          # imports this one itself. See example/fastlane/Fastfile.
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          # RN build-phase scripts read this directly to wire codegen outputs.
           RCT_NEW_ARCH_ENABLED: '1'
-          # Prevent Metro from starting a dev server.
           CI: 'true'
         shell: bash
         run: |
@@ -586,77 +449,7 @@ jobs:
           CERT_P12_PATH="$RUNNER_TEMP/dist.p12"
           echo "$BUILD_CERTIFICATE_BASE64" | base64 -d > "$CERT_P12_PATH"
           export CERT_P12_PATH
-
-          MAX_ATTEMPTS=4
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            echo "=== Attempt $attempt/$MAX_ATTEMPTS: build number $BUILD_NUMBER ==="
-            rm -f ios/build/KlaviyoReactNativeSdkExample.ipa
-            # Pin the marketing version too: the pbxproj can be stale, and
-            # CFBundleShortVersionString must never carry a prerelease suffix.
-            (cd ios && xcrun agvtool new-marketing-version "$MARKETING_VERSION" && xcrun agvtool new-version -all "$BUILD_NUMBER")
-            # Refresh the in-app build info and clear the Metro cache so a
-            # rebuild after a conflict can't inline the previous number.
-            node scripts/sdk-ref.js --build "$BUILD_NUMBER" --commit "$COMMIT_SHA" --branch "$BRANCH" --built "$(date -u '+%Y-%m-%d %H:%M UTC')"
-            rm -rf "$TMPDIR/metro-cache" "$TMPDIR/haste-map-"*
-            fastlane ios release_ipa
-
-            # Refuse to upload an IPA whose plist disagrees with the version
-            # being attempted.
-            ../.github/scripts/assert-artifact-version.sh ios ios/build/KlaviyoReactNativeSdkExample.ipa "$BUILD_NUMBER" "$MARKETING_VERSION"
-
-            if ruby ../.github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION" --minimum "$BUILD_NUMBER"; then
-              ASC_NEXT=$(grep -E '^BUILD_NUMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2)
-              if [ "$ASC_NEXT" -gt "$BUILD_NUMBER" ] && [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
-                echo "Build $BUILD_NUMBER was taken since preflight — rebuilding with $ASC_NEXT"
-                BUILD_NUMBER=$ASC_NEXT
-                echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
-                continue
-              fi
-            else
-              echo "::warning::Pre-upload re-check failed; relying on upload conflict detection"
-            fi
-
-            status=0
-            UPLOAD_OUTPUT=$(xcrun altool --upload-app --type ios \
-              --file "ios/build/KlaviyoReactNativeSdkExample.ipa" \
-              --apiKey "$ASC_KEY_ID" \
-              --apiIssuer "$ASC_ISSUER_ID" 2>&1) || status=$?
-            echo "$UPLOAD_OUTPUT"
-
-            # altool can exit 0 while reporting an error, so check both.
-            if [ "$status" -eq 0 ] && ! grep -q "ERROR:" <<<"$UPLOAD_OUTPUT"; then
-              echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
-              exit 0
-            fi
-
-            # A duplicate CFBundleVersion is reported with the previous
-            # version in the payload (or as ITMS-90189 from transporter);
-            # anything else is non-recoverable.
-            if ! grep -qiE 'previousBundleVersion|bundle version must be higher|has already been used|DUPLICATE|ITMS-90189|Redundant Binary Upload' <<<"$UPLOAD_OUTPUT"; then
-              echo "::error::TestFlight upload failed with a non-recoverable error"
-              exit 1
-            fi
-
-            PREV_BUILD=$(grep -oE 'previousBundleVersion = [0-9]+' <<<"$UPLOAD_OUTPUT" | head -1 | grep -oE '[0-9]+' || true)
-            CURRENT=$BUILD_NUMBER
-            ruby ../.github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION" >/dev/null
-            # asc.rb appended the fresh value to $GITHUB_ENV; take the max of
-            # that, altool's previousBundleVersion + 1 and ours + 1.
-            ASC_NEXT=$(grep -E '^BUILD_NUMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2)
-            NEXT=$(( CURRENT + 1 ))
-            if [ -n "$PREV_BUILD" ] && [ $(( PREV_BUILD + 1 )) -gt "$NEXT" ]; then
-              NEXT=$(( PREV_BUILD + 1 ))
-            fi
-            if [ "$ASC_NEXT" -gt "$NEXT" ]; then
-              NEXT=$ASC_NEXT
-            fi
-            echo "::warning::Build number $CURRENT conflicted at upload; retrying with $NEXT"
-            BUILD_NUMBER=$NEXT
-            echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
-          done
-
-          echo "::error::Upload still conflicting after $MAX_ATTEMPTS attempts"
-          exit 1
+          fastlane ios release
 
       # What to Test is composed here, after the final upload, so it carries
       # the build number that actually shipped. 4000 chars is App Store
@@ -772,25 +565,28 @@ jobs:
         shell: bash
         env:
           NOTES: ${{ needs.deploy-ios.outputs.notes }}
-        run: printf '%s' "$NOTES" > what-to-test.txt
+        run: printf '%s' "$NOTES" > "$GITHUB_WORKSPACE/what-to-test.txt"
+
+      - name: Install fastlane
+        id: install_fastlane
+        if: steps.setup_ruby.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
 
       - name: Set What to Test on the uploaded build
         id: set_whats_new
-        if: steps.setup_ruby.outcome == 'success' && steps.write_key.outcome == 'success' && steps.save_notes.outcome == 'success'
+        if: steps.setup_ruby.outcome == 'success' && steps.install_fastlane.outcome == 'success' && steps.write_key.outcome == 'success' && steps.save_notes.outcome == 'success'
         continue-on-error: true
+        working-directory: example
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          BUNDLE_ID: com.klaviyoreactnativesdkexample
           MARKETING_VERSION: ${{ needs.deploy-ios.outputs.marketing_version }}
           BUILD_NUMBER: ${{ needs.deploy-ios.outputs.build_number }}
+          NOTES_FILE: ${{ github.workspace }}/what-to-test.txt
         shell: bash
-        run: |
-          gem install -g .github/pins/asc/Gemfile --no-document --silent
-          ruby .github/scripts/asc.rb set-whats-new \
-            "$MARKETING_VERSION" \
-            "$BUILD_NUMBER" \
-            what-to-test.txt
+        run: fastlane ios whats_new
 
       - name: Clean up API key
         if: always()
@@ -800,7 +596,7 @@ jobs:
       # The build is already on TestFlight; a failure here only costs the
       # notes, so warn instead of failing the run.
       - name: Warn on Slack when What to Test failed
-        if: steps.setup_ruby.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
+        if: steps.setup_ruby.outcome == 'failure' || steps.install_fastlane.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
         continue-on-error: true
         uses: ./.github/actions/notify-slack-publish
         with:
