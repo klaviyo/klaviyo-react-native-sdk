@@ -309,6 +309,36 @@ s = s.replace('        id: save_notes\n        continue-on-error: true\n', '    
 "
 expect_fail "a what-to-test step that can fail the run is caught" "the what-to-test job cannot fail the run"
 
+NOTES_ACTION="$TMP/actions/example-release-notes/action.yml"
+SLACK_ACTION="$TMP/actions/notify-slack-publish/action.yml"
+
+fresh_copy
+# actionlint never reads action.yml, so an unquoted expansion in a composite's
+# run: block is only caught by the guard's own shellcheck pass.
+mutate "$NOTES_ACTION" "s = s.replace('printf \\'%s\\' \"\$NOTES\" > \"\$RAW\"', 'printf %s \$NOTES > \$RAW', 1)"
+expect_fail "an unquoted expansion in a composite run: block is caught" "composite run: blocks pass shellcheck"
+
+fresh_copy
+mutate "$SLACK_ACTION" "s = s.replace('        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME\n', '        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME\n        cd \$MISSING_DIR\n', 1)"
+expect_fail "a risky cd in the Slack composite is caught" "composite run: blocks pass shellcheck"
+
+fresh_copy
+# The rule must not pass by checking nothing: strip every run: block from the
+# composites and the guard has to say so.
+python3 - "$TMP/actions" <<'PY'
+import glob
+import sys
+
+import yaml
+
+for path in glob.glob(sys.argv[1] + '/*/action.yml'):
+    doc = yaml.safe_load(open(path))
+    steps = (doc.get('runs') or {}).get('steps') or []
+    doc['runs']['steps'] = [st for st in steps if not st.get('run')]
+    yaml.safe_dump(doc, open(path, 'w'))
+PY
+expect_fail "composites with no run: blocks are reported, not passed" "the deploy call tree has composite run: blocks to shellcheck"
+
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
 # must follow the deploy's call tree rather than a fixed list.

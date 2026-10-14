@@ -17,6 +17,11 @@
 #                                             (paths relative to the repo root),
 #                                             so CI lints exactly those
 #
+# actionlint does not read composite actions, so the shell in their `run:`
+# blocks is shellchecked here: every local action the deploy uses has its
+# `run:` blocks extracted (GitHub expressions replaced by a placeholder) and
+# linted, and the rule fails if no block is found at all.
+#
 # Env (overridden by test-workflow-guards-selftest.sh, which breaks a copy of
 # the workflows once per rule and expects a FAIL):
 #   WORKFLOW_DIR    directory with publish-example.yml and the other workflows
@@ -272,6 +277,47 @@ for path in workflow_files:
             if is_checkout(step):
                 check(f'{os.path.basename(path)}: {job_name} checkout sets persist-credentials: false',
                       (step.get('with') or {}).get('persist-credentials') is False)
+
+# 4b. The shell in composite actions' `run:` blocks is shellchecked (actionlint
+#     skips action.yml). `${{ ... }}` expressions are replaced by a plain
+#     placeholder, as they are not shell, and the rule fails when it finds no
+#     block to lint, so it cannot pass by checking nothing.
+import shutil
+import subprocess
+import tempfile
+
+blocks = []
+for name in GUARDED_ACTIONS:
+    apath = os.path.join(actions_dir, name, 'action.yml')
+    if not os.path.exists(apath):
+        continue
+    for i, st in enumerate((load(apath).get('runs') or {}).get('steps') or []):
+        script = st.get('run')
+        if not script:
+            continue
+        shell = str(st.get('shell') or 'bash')
+        if shell not in ('bash', 'sh'):
+            continue
+        text = re.sub(r'\$\{\{.*?\}\}', 'EXPR', str(script), flags=re.DOTALL)
+        blocks.append((f'{name} step {i}', shell, text))
+
+check('the deploy call tree has composite run: blocks to shellcheck', bool(blocks),
+      'no run: blocks found in the composite actions of the call tree')
+
+if blocks and not shutil.which('shellcheck'):
+    failed('composite run: blocks pass shellcheck', 'shellcheck is not installed')
+elif blocks:
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for label, shell, text in blocks:
+            target = os.path.join(tmp, label.replace(' ', '_') + '.sh')
+            with open(target, 'w') as f:
+                f.write(f'#!/usr/bin/env {shell}\n' + text + '\n')
+            result = subprocess.run(['shellcheck', '-s', shell, target], capture_output=True, text=True)
+            if result.returncode != 0:
+                detail = (result.stdout + result.stderr).replace(target, label)
+                problems.append(f'{label}:\n{detail.strip()}')
+    check('composite run: blocks pass shellcheck', not problems, '\n'.join(problems))
 
 # 5. The preflight jobs read repository-level secrets, so they declare no
 #    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or

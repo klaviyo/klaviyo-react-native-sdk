@@ -104,9 +104,11 @@ runs:
         done
         SDK_REF="RN ${RN_VERSION:-—} | ${PLATFORM} ${NATIVE_VERSION:-—}"
 
-        echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
-        echo "sdk_ref=$SDK_REF" >> "$GITHUB_OUTPUT"
-        echo "rn_version=$RN_VERSION" >> "$GITHUB_OUTPUT"
-        echo "rn_ref=$RN_REF" >> "$GITHUB_OUTPUT"
-        echo "native_version=$NATIVE_VERSION" >> "$GITHUB_OUTPUT"
-        echo "native_ref=$NATIVE_REF" >> "$GITHUB_OUTPUT"
+        {
+          echo "notes_file=$NOTES_FILE"
+          echo "sdk_ref=$SDK_REF"
+          echo "rn_version=$RN_VERSION"
+          echo "rn_ref=$RN_REF"
+          echo "native_version=$NATIVE_VERSION"
+          echo "native_ref=$NATIVE_REF"
+        } >> "$GITHUB_OUTPUT"
