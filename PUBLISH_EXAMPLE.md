@@ -14,6 +14,11 @@ so reapplying re-triggers):
 - `deploy-example-app:android` — Android only
 - `deploy-example-app:ios` — iOS only
 
+Every trigger — push, release, manual and PR-label — gates the deploys on the
+same-run `checks` (the ci.yml lint, unit test and library build jobs) and
+`publish-checks` (the example-publish-checks.yml workflow and script checks)
+jobs. A failure in either means no store upload.
+
 A newer push to the same branch cancels the run in flight, so quick merges
 deploy only the latest commit. Release, manual and PR-label runs are never
 cancelled. Runs on different refs can overlap; the build number logic below
@@ -21,9 +26,11 @@ handles that. If a cancel lands after an upload, the build exists in the store
 without release notes.
 
 Each deploy job runs in a GitHub environment (`android-internal-track`,
-`testflight`), so the repo's Deployments page lists each deploy with a link —
-the Internal App Sharing URL for Android, the app's TestFlight page for iOS.
-The environments have no protection rules and no secrets of their own.
+`testflight`), so the repo's Deployments page lists each deploy. Only the iOS
+environment carries a URL (the app's `beta.itunes.apple.com/v1/app/<id>` page,
+which opens for existing testers only). The Android environment has no URL:
+this repo is public and so is the Deployments page, so the Internal App
+Sharing link is masked in the logs and appears only in the Slack message.
 
 After an iOS upload, a separate `what-to-test` job on a Linux runner waits for
 Apple to finish processing the build and sets its TestFlight **What to Test**
@@ -31,10 +38,12 @@ text, so no macOS runner is held during processing.
 
 `.github/workflows/example-publish-checks.yml` runs on PRs that touch the
 workflow or its helpers: actionlint, shellcheck, and unit tests for
-`asc.rb` / `play-publish.sh` / `gradle-retry.sh` / `example/scripts`. It also
-has a read-only dry run (next TestFlight build number, highest Play
-versionCode) gated to `workflow_dispatch` on master, since it runs with the
-store credentials in its environment.
+`asc.rb` / `play-publish.sh` / `gradle-retry.sh` / `example/scripts`. The
+publish workflow also calls it as the `publish-checks` job before every
+deploy. It also has a read-only dry run (next TestFlight build number,
+highest Play versionCode) gated to `workflow_dispatch` on master, since it
+runs with the store credentials in its environment; the dry run is skipped
+when the workflow is called by another workflow.
 
 ---
 
@@ -61,6 +70,50 @@ store credentials in its environment.
 | `SLACK_WEBHOOK_URL`                   | both    | Incoming webhook for deploy notifications                                                                                             |
 
 ---
+
+## One-time setup (humans)
+
+Store listings and config:
+
+1. Play Console app for `com.klaviyoreactnativesdkexample`, with an internal
+   testing track and a testers list. Play only accepts API uploads after the
+   first bundle has been uploaded by hand.
+2. Google Cloud service account with release permission on that app (Play
+   Console → Users and permissions); its key JSON goes in
+   `SERVICE_ACCOUNT_JSON`.
+3. App Store Connect app for bundle id `com.klaviyoreactnativesdkexample`,
+   plus explicit App IDs for it and its notification-service extension
+   `com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension`.
+4. App Store distribution profiles named
+   `match AppStore com.klaviyoreactnativesdkexample` and
+   `match AppStore com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension`
+   in `klaviyo/mobile-certificates` (run `fastlane match appstore` from
+   `example` once with write access; CI only reads — see
+   `example/fastlane/Matchfile`).
+5. Firebase config for both platforms: the `google-services.json` contents go
+   in `GOOGLE_SERVICES_JSON` and the base64-encoded `GoogleService-Info.plist`
+   in `GOOGLE_SERVICE_INFO_PLIST_BASE64`. Both are for
+   `com.klaviyoreactnativesdkexample`.
+
+The remaining secrets are listed in the table above; values there match the
+names the workflow reads.
+
+### GitHub environments
+
+The deploy jobs run in the GitHub environments `android-internal-track` and
+`testflight`. Move the store secrets above into those two environments and
+restrict their deployment branches to `master`, `rel/**` and release tags, so
+a workflow edited in a pull request can't read them.
+
+### Public build logs
+
+This repo is public, so anyone can read its Actions logs. The scripts never
+echo secrets or run with `set -x`, and the Slack messages only carry links
+that need a Play tester or App Store Connect login to open — no public
+TestFlight links. The Android Internal App Sharing link appears only in the
+Slack message: the workflow masks it with `::add-mask` right after reading it
+and does not set it as the environment URL. Do not add steps that print
+environment variables, upload signed artifacts, or post public install links.
 
 ## Build Numbers and Retries
 

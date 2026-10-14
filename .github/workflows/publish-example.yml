@@ -19,9 +19,17 @@
 # fresh number if the upload is rejected for a conflict (e.g. two runs racing
 # on master + rel/**).
 #
+# Deploys run only after the `checks` (ci.yml: lint, unit tests, library
+# build) and `publish-checks` (workflow/script checks) jobs pass in the same
+# run, on every trigger including the PR-label one.
+#
 # This repo is public, so its Actions logs are too. Never surface a public
 # install link (e.g. a TestFlight public-link `testflight.apple.com/join/...`)
-# here; only links that require a Play/App Store Connect login.
+# here; only links that require a Play/App Store Connect login. The Android
+# Internal App Sharing URL is masked (::add-mask) right after it is read so
+# it only appears in the Slack message, and it is not set as the
+# android-internal-track environment URL, which the public Deployments page
+# would show.
 
 name: Publish Example App
 
@@ -54,12 +62,24 @@ permissions:
   contents: read
 
 jobs:
+  checks:
+    name: Lint, test and build the library
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  publish-checks:
+    name: Publish workflow and script checks
+    permissions:
+      contents: read
+    uses: ./.github/workflows/example-publish-checks.yml
+
   deploy-android:
     name: Publish to Play Store internal track
+    needs: [checks, publish-checks]
     runs-on: ubuntu-24.04
     environment:
       name: android-internal-track
-      url: ${{ steps.internal_sharing.outputs.url }}
     # Run on release / push always; on workflow_dispatch when platform is
     # `both` or `android`; on labeled PR when the label is `deploy-example-app`
     # (umbrella) or `deploy-example-app:android`.
@@ -219,11 +239,17 @@ jobs:
             echo "::warning::Internal App Sharing did not return a download URL"
             exit 1
           fi
+          echo "::add-mask::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Clean up keystore
         if: always()
         run: rm -f "${RUNNER_TEMP}/upload.jks"
+
+      - name: Clean up google-services.json and example/.env
+        if: always()
+        shell: bash
+        run: rm -f example/android/app/google-services.json example/.env
 
       - name: Notify Slack on success
         if: success()
@@ -254,6 +280,7 @@ jobs:
     environment:
       name: testflight
       url: ${{ steps.result.outputs.testflight_url }}
+    needs: [checks, publish-checks]
     outputs:
       marketing_version: ${{ steps.result.outputs.marketing_version }}
       build_number: ${{ steps.result.outputs.build_number }}
@@ -525,6 +552,16 @@ jobs:
         shell: bash
         run: rm -rf "$HOME/.appstoreconnect/private_keys"
 
+      - name: Clean up distribution certificate, ssh key and config files
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/dist.p12" example/ios/GoogleService-Info.plist example/.env
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh-add -D 2>/dev/null || true
+            ssh-agent -k 2>/dev/null || true
+          fi
+
       - name: Notify Slack on success
         if: success()
         uses: ./.github/actions/notify-slack-publish
@@ -618,7 +655,7 @@ jobs:
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
-    needs: [deploy-android, deploy-ios]
+    needs: [checks, publish-checks, deploy-android, deploy-ios]
     if: |
       always()
       && github.event_name == 'pull_request'
