@@ -236,6 +236,49 @@ fresh_copy
 mutate "$NOTIFY" "s = s.replace('github.event.pull_request.head.sha || github.sha', 'github.sha', 1)"
 expect_fail "Slack reporting the merge commit is caught" "notify-slack-publish reports the PR head commit"
 
+CI="$TMP/wf/ci.yml"
+CHECKS="$TMP/wf/example-publish-checks.yml"
+SETUP="$TMP/actions/setup/action.yml"
+
+fresh_copy
+mutate "$CI" "s = s.replace('uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5', 'uses: actions/checkout@v5', 1)"
+expect_fail "an unpinned checkout in ci.yml (called by the deploy) is caught" "every action in the deploy call tree is pinned"
+
+fresh_copy
+mutate "$SETUP" "s = s.replace('actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5', 'actions/setup-node@v5', 1)"
+expect_fail "an unpinned action in a composite the deploy uses is caught" "every action in the deploy call tree is pinned"
+
+fresh_copy
+mutate "$CHECKS" "s = s.replace('uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5', 'uses: actions/checkout@v5', 1)"
+expect_fail "an unpinned action in the called checks workflow is caught" "every action in the deploy call tree is pinned"
+
+fresh_copy
+mutate "$PUB" "s = s.replace('uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2', 'uses: google-github-actions/auth@v2', 1)"
+expect_fail "an unpinned action in publish-example.yml is caught" "every action in the deploy call tree is pinned"
+
+fresh_copy
+# A tag-looking ref that is not a full SHA (a 7-char abbreviation) is not a pin.
+mutate "$CI" "s = s.replace('actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5', 'actions/checkout@fbc6f39 # v5', 1)"
+expect_fail "an abbreviated SHA is not accepted as a pin" "every action in the deploy call tree is pinned"
+
+fresh_copy
+mutate "$CI" "
+i = s.index('  lint:')
+j = s.index('          persist-credentials: false\n', i)
+s = s[:j] + s[j + len('          persist-credentials: false\n'):]
+s = s.replace('        with:\n        - name', '        - name', 1)
+"
+expect_fail "a ci.yml checkout without persist-credentials is caught" "ci.yml: lint checkout sets persist-credentials"
+
+fresh_copy
+# The call tree is derived, not hardcoded: stop calling ci.yml and it drops out.
+mutate "$PUB" "
+i = s.index('  checks:')
+j = s.index('    uses: ./.github/workflows/ci.yml\n', i)
+s = s[:j] + '    uses: ./.github/workflows/example-publish-checks.yml\n' + s[j + len('    uses: ./.github/workflows/ci.yml\n'):]
+"
+expect_fail "a deploy that no longer calls ci.yml is caught" "the deploy call tree includes ci.yml"
+
 fresh_copy
 mutate "$PUB" "
 i = s.index('  deploy-ios:')

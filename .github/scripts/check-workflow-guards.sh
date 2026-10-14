@@ -5,6 +5,11 @@
 # or sed dialect of the runner. Prints one PASS/FAIL line per rule and exits
 # non-zero if any rule fails.
 #
+# The workflows and composite actions that run in the deploy (publish-example.yml
+# plus every workflow it calls, recursively, and every local action any of them
+# uses) are all held to the same pin and checkout rules; the set is derived from
+# the workflow itself, so a newly called workflow is covered automatically.
+#
 # Env (overridden by test-workflow-guards-selftest.sh, which breaks a copy of
 # the workflows once per rule and expects a FAIL):
 #   WORKFLOW_DIR    directory with publish-example.yml and the other workflows
@@ -168,11 +173,77 @@ def is_checkout(step):
     return str(step.get('uses') or '').startswith('actions/checkout@')
 
 
-# Workflows that deploy or gate a deploy; the SDK's own build and release
-# workflows are outside the publish pipeline.
-GUARDED = ('publish-example.yml', 'example-publish-checks.yml', 'ci.yml')
+
+
+def deploy_call_tree():
+    # Workflows reached from publish-example.yml through
+    # `uses: ./.github/workflows/<file>`, and the local actions used by any of
+    # them (`uses: ./.github/actions/<name>`), found recursively.
+    workflows = {'publish-example.yml'}
+    actions = set()
+    pending = ['publish-example.yml']
+    while pending:
+        name = pending.pop()
+        path = os.path.join(workflow_dir, name)
+        if not os.path.exists(path):
+            continue
+        doc = load(path)
+        for job in (doc.get('jobs') or {}).values():
+            uses = [str(job.get('uses') or '')] + [str(st.get('uses') or '') for st in steps_of(job)]
+            for u in uses:
+                m = re.match(r'\./\.github/workflows/([^@\s]+)', u)
+                if m and m.group(1) not in workflows:
+                    workflows.add(m.group(1))
+                    pending.append(m.group(1))
+                m = re.match(r'\./\.github/actions/([^@\s/]+)', u)
+                if m:
+                    actions.add(m.group(1))
+    # Actions can use other local actions.
+    changed = True
+    while changed:
+        changed = False
+        for a in sorted(actions):
+            apath = os.path.join(actions_dir, a, 'action.yml')
+            if not os.path.exists(apath):
+                continue
+            for st in (load(apath).get('runs') or {}).get('steps') or []:
+                m = re.match(r'\./\.github/actions/([^@\s/]+)', str(st.get('uses') or ''))
+                if m and m.group(1) not in actions:
+                    actions.add(m.group(1))
+                    changed = True
+    return sorted(workflows), sorted(actions)
+
+
+GUARDED_WORKFLOWS, GUARDED_ACTIONS = deploy_call_tree()
+check('the deploy call tree includes ci.yml and example-publish-checks.yml',
+      {'ci.yml', 'example-publish-checks.yml'} <= set(GUARDED_WORKFLOWS),
+      f'found: {GUARDED_WORKFLOWS}')
+
+# Every third-party action in the call tree is pinned to a full commit SHA.
+SHA_PIN = re.compile(r'@[0-9a-f]{40}(\s|$)')
+unpinned = []
+for name in GUARDED_WORKFLOWS:
+    path = os.path.join(workflow_dir, name)
+    if not os.path.exists(path):
+        continue
+    for job_name, job in (load(path).get('jobs') or {}).items():
+        for use in [job.get('uses')] + [st.get('uses') for st in steps_of(job)]:
+            use = str(use or '')
+            if use and not use.startswith('./') and not SHA_PIN.search(use + ' '):
+                unpinned.append(f'{name}: {job_name}: {use}')
+for name in GUARDED_ACTIONS:
+    apath = os.path.join(actions_dir, name, 'action.yml')
+    if not os.path.exists(apath):
+        continue
+    for st in (load(apath).get('runs') or {}).get('steps') or []:
+        use = str(st.get('uses') or '')
+        if use and not use.startswith('./') and not SHA_PIN.search(use + ' '):
+            unpinned.append(f'action {name}: {use}')
+check('every action in the deploy call tree is pinned to a full commit SHA',
+      not unpinned, '\n'.join(unpinned))
+
 for path in workflow_files:
-    if os.path.basename(path) not in GUARDED:
+    if os.path.basename(path) not in GUARDED_WORKFLOWS:
         continue
     doc = load(path)
     for job_name, job in (doc.get('jobs') or {}).items():
