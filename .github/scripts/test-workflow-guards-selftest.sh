@@ -132,6 +132,10 @@ mutate "$PUB" "s = s.replace('\${{ github.event_name }}', '\${{ lower(github.eve
 expect_fail "an unknown expression function is caught" "expressions only call functions"
 
 fresh_copy
+mutate "$PUB" "s = s.replace('toJSON(steps)', 'tojson(steps)', 1).replace('hashFiles(', 'HASHFILES(')"
+if run_guard; then report 0 "GitHub's case-insensitive function names are accepted"; else report 1 "GitHub's case-insensitive function names are accepted"; cat "$TMP/out.log"; fi
+
+fresh_copy
 mutate "$PUB" "
 i = s.index('      - name: Notify Slack on success')
 j = s.index('        continue-on-error: true\n', i)

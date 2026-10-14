@@ -161,8 +161,10 @@ def all_steps(doc):
 # 1. Only functions GitHub Actions provides may be called inside ${{ }}; an
 #    unknown one fails when the expression evaluates, after merge.
 ALLOWED = {
-    'contains', 'startsWith', 'endsWith', 'format', 'join', 'toJSON',
-    'fromJSON', 'hashFiles', 'case', 'success', 'always', 'cancelled', 'failure',
+    name.lower() for name in (
+        'contains', 'startsWith', 'endsWith', 'format', 'join', 'toJSON',
+        'fromJSON', 'hashFiles', 'case', 'success', 'always', 'cancelled', 'failure',
+    )
 }
 
 
@@ -188,9 +190,9 @@ def functions_in(expression):
 unknown = set()
 for path in workflow_files + action_files:
     for expr in re.findall(r'\$\{\{.*?\}\}', read(path), flags=re.DOTALL):
-        unknown |= {fn for fn in functions_in(expr) if fn not in ALLOWED}
+        unknown |= {fn for fn in functions_in(expr) if fn.lower() not in ALLOWED}
     for value in if_values(load(path)):
-        unknown |= {fn for fn in functions_in(value) if fn not in ALLOWED}
+        unknown |= {fn for fn in functions_in(value) if fn.lower() not in ALLOWED}
 check('expressions only call functions that GitHub Actions provides',
       not unknown, f'unsupported: {", ".join(sorted(unknown))}')
 

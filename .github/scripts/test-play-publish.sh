@@ -72,6 +72,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send({"versionCode": scenario.get("reported_code", 300)})
         elif method == "PUT" and "/tracks/" in path:
+            with open(os.path.join(STATE, "put_body"), "wb") as fh:
+                fh.write(self.put_body)
             self._send({})
         elif method == "POST" and path.endswith(":commit"):
             scenario = read_state("scenario", {})
@@ -82,6 +84,9 @@ class Handler(BaseHTTPRequestHandler):
         elif method == "DELETE" and "/edits/" in path:
             self._send({})
         elif method == "POST" and "/internalappsharing/" in path and path.endswith("/artifacts/bundle"):
+            if read_state("scenario", {}).get("hang"):
+                import time
+                time.sleep(30)
             if read_state("scenario", {}).get("no_download_url"):
                 self._send({})
             else:
@@ -97,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
         self._route("POST")
 
     def do_PUT(self):
-        self._body()
+        self.put_body = self._body()
         self._route("PUT")
 
     def do_DELETE(self):
@@ -138,6 +143,7 @@ set_scenario '{}'
 echo "release notes text" > "$WORK/notes.txt"
 out=$("$SCRIPT" upload "$WORK/app.aab" 300 internal "$WORK/notes.txt")
 if grep -q "Published versionCode 300" <<<"$out"; then pass "upload success"; else fail "upload success: $out"; fi
+if jq -e '.releases[0].releaseNotes[0].text == "release notes text"' "$WORK/state/put_body" >/dev/null 2>&1; then pass "upload sends the release notes in the track update"; else fail "upload: track update body lacks the release notes: $(cat "$WORK/state/put_body" 2>/dev/null)"; fi
 
 # 3. versionCode conflict at upload exits 75.
 set_scenario '{"upload_conflict": true}'
@@ -170,6 +176,15 @@ out=$("$SCRIPT" internal-sharing "$WORK/app.aab" 2>/dev/null)
 if [ "$out" = "https://play.google.com/apps/test/RQ fake/1" ]; then pass "internal-sharing stdout is only the downloadUrl"; else fail "internal-sharing: got '$out'"; fi
 err=$("$SCRIPT" internal-sharing "$WORK/app.aab" 2>&1 >/dev/null)
 if grep -q "Uploading" <<<"$err"; then pass "internal-sharing progress goes to stderr"; else fail "internal-sharing: progress missing from stderr: '$err'"; fi
+
+# 6b. A stalled sharing upload is cut off by the request time limit and fails
+#     instead of holding the step open.
+set_scenario '{"hang": true}'
+set +e
+SHARING_MAX_TIME=2 "$SCRIPT" internal-sharing "$WORK/app.aab" >/dev/null 2>&1
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then pass "a stalled sharing upload times out"; else fail "a stalled sharing upload did not fail"; fi
 
 # 7. A response without a downloadUrl leaves stdout empty (never a log line),
 #    so the workflow's empty-URL fallback triggers.

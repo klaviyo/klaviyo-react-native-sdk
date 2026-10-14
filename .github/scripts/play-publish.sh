@@ -132,6 +132,7 @@ internal_sharing() {
   local aab=$1 status
   echo "Uploading $aab to Internal App Sharing" >&2
   status=$(call POST "$SHARING_UPLOAD_API/artifacts/bundle?uploadType=media" \
+    --max-time "${SHARING_MAX_TIME:-300}" \
     -H "Content-Type: application/octet-stream" \
     --data-binary "@$aab")
   [ "$status" = 200 ] || fail "Internal App Sharing upload failed" "$status"
