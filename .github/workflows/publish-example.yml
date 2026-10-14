@@ -115,8 +115,8 @@ jobs:
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # Pick highest+1 versionCode. The script aborts on any HTTP error so we
-      # don't silently fall back to HIGHEST=0.
+      # Pick highest+1 versionCode. The script aborts on any HTTP error
+      # rather than falling back to HIGHEST=0.
       - name: Resolve next versionCode from Play
         shell: bash
         env:
@@ -129,19 +129,14 @@ jobs:
           echo "Next versionCode: $NEXT"
           echo "VERSION_CODE=$NEXT" >> "$GITHUB_ENV"
 
-      # Build the example app against the SDK as `npm install`-ed from a
-      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
-      # podspec/build.gradle path bugs, and stale `lib/` builds before the
-      # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
-      # skipped — the runner is ephemeral. See pack-and-test.sh for details.
+      # Builds the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. See pack-and-test.sh.
       - name: Pack SDK + flip example to packed install
         shell: bash
         run: ./pack-and-test.sh setup
 
-      # After the setup action so node is on PATH. Writes the SDK version/ref
-      # block to example/.env for the app UI and release notes. A missing ref
-      # resolves to "unknown" rather than failing the step — the checkout is
-      # shallow, so tag/branch info may not be available.
+      # Writes the SDK version/ref block to example/.env for the app UI and
+      # release notes; a missing ref resolves to "unknown" without failing.
       - name: Record SDK versions in example/.env
         shell: bash
         run: node example/scripts/sdk-ref.js
@@ -154,18 +149,17 @@ jobs:
           max_length: 500
           version_label: ${{ env.VERSION_NAME }}
 
-      # Build + upload in one loop so a versionCode conflict at upload time
+      # Build + upload in one loop: a versionCode conflict at upload time
       # (another run published the same code after our preflight) rebuilds
-      # with a fresh code instead of failing. play-publish.sh exits 75 only
-      # for a conflict; any other error fails the step immediately.
+      # with a fresh code. play-publish.sh exits 75 only for a conflict; any
+      # other error fails the step immediately.
       #
-      # Inline signing via -Pandroid.injected.signing.* — AGP produces a
-      # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
+      # Inline signing via -Pandroid.injected.signing.* — Play rejects
+      # double-signed AABs.
       #
-      # The build itself goes through gradle-retry.sh: the Klaviyo Android SDK
+      # The build goes through gradle-retry.sh: the Klaviyo Android SDK
       # resolves from JitPack, which builds branch/commit targets on first
-      # request and can time out or 404 on a cold start. The socket timeout is
-      # raised for the same reason.
+      # request and can time out or 404 on a cold start.
       - name: Build & deploy to Internal Track
         shell: bash
         env:
@@ -325,14 +319,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-publish-
 
-      # Build the example app against the SDK as `npm install`-ed from a
-      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
-      # podspec path bugs, and stale `lib/` builds before the IPA hits
-      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
-      # runner is ephemeral. See pack-and-test.sh for details. Must run
-      # before "Install CocoaPods dependencies" so that pod install picks
-      # up the packed-mode resolution (marker is set, react-native.config.js
-      # points at example/node_modules/<sdk>).
+      # Builds the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. See pack-and-test.sh. Must run
+      # before "Install CocoaPods dependencies" so pod install picks up the
+      # packed-mode resolution.
       - name: Pack SDK + flip example to packed install
         shell: bash
         run: ./pack-and-test.sh setup
@@ -355,8 +345,7 @@ jobs:
 
       # After pod install so Podfile.lock reflects the resolved KlaviyoSwift
       # pin, and before the Xcode build inlines .env via Metro. A missing ref
-      # resolves to "unknown" rather than failing the step — the checkout is
-      # shallow, so tag/branch info may not be available.
+      # resolves to "unknown" without failing.
       - name: Record SDK versions in example/.env
         shell: bash
         run: node example/scripts/sdk-ref.js
@@ -394,21 +383,21 @@ jobs:
           gem install jwt --no-document --silent
           ruby .github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION"
 
-      # Build, sign and upload in one loop (ported from klaviyo-ios-test-app's
-      # testflight.yml) so a build-number conflict at upload time rebuilds with
-      # a fresh number instead of failing. After archive+export the build number
-      # is re-resolved per marketing version: if a concurrent run took it, this
-      # attempt rebuilds without uploading; the final attempt always uploads.
+      # Build, sign and upload in one loop (same shape as
+      # klaviyo-ios-test-app's testflight.yml). A build-number conflict at
+      # upload time rebuilds with a fresh number. After archive+export the
+      # build number is re-resolved per marketing version: if a concurrent
+      # run took it, this attempt rebuilds without uploading; the final
+      # attempt always uploads.
       #
       # The `release_ipa` lane runs match(readonly) to install the shared App
-      # Store cert + profiles from the mobile-certificates repo (git-only, never
-      # contacts Apple, so no cert is generated), pins each target to its match
-      # profile, and exports a signed IPA to example/ios/build/. It's safe to
-      # re-run: the keychain and imported certs are reused. ssh-agent is started
-      # inline because its env can't cross workflow steps.
+      # Store cert + profiles from the mobile-certificates repo (git-only, so
+      # it never contacts Apple or generates a cert), pins each target to its
+      # match profile, and exports a signed IPA to example/ios/build/.
+      # ssh-agent is started inline because its env can't cross workflow steps.
       #
-      # altool authenticates with the API key — no Apple ID / app-specific
-      # password / 2FA dance. agvtool updates CFBundleVersion across all targets.
+      # altool authenticates with the API key. agvtool updates CFBundleVersion
+      # across all targets.
       - name: Build, sign & upload to TestFlight
         working-directory: example
         env:
