@@ -60,28 +60,9 @@ runs:
       run: |
         set -euo pipefail
 
-        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME
-        SOURCE_LABEL=$("${{ github.workspace }}/.github/scripts/source-label.sh")
-
-        # Every shared value (version, SDK refs, build number, commit, Built
-        # time) is read back from the example/.env the app was built with, so
-        # the notes cannot drift from the in-app build info.
-        HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env \
-          --platform "$PLATFORM" \
-          --source-label "$SOURCE_LABEL" \
-          --event "$EVENT_NAME" \
-          --run-url "$RUN_URL" \
-          --app-name "RN Example")
-
-        NOTES="$HEADER"
-        if [ "$EVENT_NAME" = "release" ]; then
-          NOTES="${HEADER}"$'\n\n'"Release notes (${RELEASE_NAME}):"$'\n'"${RELEASE_BODY}"
-        fi
-
-        RAW="${RUNNER_TEMP}/release-notes-raw.txt"
-        printf '%s' "$NOTES" > "$RAW"
+        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME RUN_URL RELEASE_NAME RELEASE_BODY
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
-        "${{ github.workspace }}/.github/scripts/truncate-notes.sh" "$MAX_LENGTH" "$RAW" > "$NOTES_FILE"
+        "${{ github.workspace }}/.github/scripts/build-release-notes.sh" "$PLATFORM" "$MAX_LENGTH" > "$NOTES_FILE"
         echo "Release notes:"
         cat "$NOTES_FILE"
         echo

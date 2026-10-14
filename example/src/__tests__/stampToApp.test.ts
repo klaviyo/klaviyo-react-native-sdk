@@ -136,9 +136,11 @@ describe('what the app shows for a stamped label deploy', () => {
       path.join(REPO_ROOT, 'klaviyo-react-native-sdk.podspec'),
       'utf8'
     );
-    const androidVersion = gradle.match(
-      /^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=(.+)$/m
-    )?.[1];
+    const sdkRef = require('../../scripts/sdk-ref');
+    const androidVersion: string = sdkRef.androidVersion(
+      gradle,
+      'KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion'
+    );
     const iosVersion = podspec.match(
       /s\.dependency "KlaviyoSwift", "([^"]+)"/
     )?.[1];
