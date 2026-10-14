@@ -10,3 +10,21 @@ updates:
       github-actions:
         patterns:
           - '*'
+  - package-ecosystem: bundler
+    directories:
+      - /.github/pins/asc
+      - /.github/pins/fastlane
+    schedule:
+      interval: monthly
+    groups:
+      publish-gems:
+        patterns:
+          - '*'
+  - package-ecosystem: pip
+    directory: /.github/pins/python
+    schedule:
+      interval: monthly
+    groups:
+      publish-python:
+        patterns:
+          - '*'

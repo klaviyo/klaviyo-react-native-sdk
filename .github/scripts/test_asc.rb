@@ -31,7 +31,11 @@ class FakeAsc < WEBrick::HTTPServlet::AbstractServlet
     full_path = req.request_uri.request_uri
     srv.requests << [req.request_method, full_path, req.body]
     rule = srv.responses.find { |m, pattern, _s, _b| m == req.request_method && full_path =~ pattern }
-    if rule && rule[2] == :filtering
+    if rule && rule[2] == :stall
+      sleep rule[3]
+      res.status = 200
+      res.body = '{}'
+    elsif rule && rule[2] == :filtering
       res.status = 200
       res['Content-Type'] = 'application/json'
       res.body = JSON.generate(filtered_builds(rule[3], full_path))
@@ -149,6 +153,15 @@ class TestAsc < Minitest::Test
 
   def env_values
     Hash[@env_file.tap(&:rewind).read.lines.map { |l| l.chomp.split('=', 2) }]
+  end
+
+  def test_a_stalled_api_call_times_out_instead_of_hanging
+    ENV['ASC_HTTP_TIMEOUT'] = '1'
+    @server.responses << ['GET', %r{/apps\?}, :stall, 5]
+
+    started = Time.now
+    assert_raises(Net::ReadTimeout) { next_build_number('1.2.3', 1) }
+    assert_operator Time.now - started, :<, 4
   end
 
   def test_next_build_number_filters_by_marketing_version

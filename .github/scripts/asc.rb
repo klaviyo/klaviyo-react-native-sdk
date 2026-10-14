@@ -67,7 +67,9 @@ def request(method, path, body = nil)
   uri = URI("#{api_base}#{path}")
   req = Net::HTTP.const_get(method).new(uri, 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json')
   req.body = JSON.generate(body) if body
-  res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') { |h| h.request(req) }
+  timeout = (ENV['ASC_HTTP_TIMEOUT'] || '60').to_i
+  res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https',
+                                            open_timeout: timeout, read_timeout: timeout) { |h| h.request(req) }
   raise "ASC API #{method.upcase} #{path}: HTTP #{res.code}\n#{res.body}" unless res.is_a?(Net::HTTPSuccess)
 
   res.body.to_s.empty? ? {} : JSON.parse(res.body)

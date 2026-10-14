@@ -477,7 +477,7 @@ jobs:
       # Kept out of example/Gemfile to avoid bloating the CocoaPods-only bundle.
       - name: Install fastlane
         shell: bash
-        run: gem install fastlane -v 2.237.0 --no-document
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
 
       # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
       # push delivery works against the published build.
@@ -566,7 +566,7 @@ jobs:
           BUNDLE_ID: com.klaviyoreactnativesdkexample
         shell: bash
         run: |
-          gem install jwt --no-document --silent
+          gem install -g .github/pins/asc/Gemfile --no-document --silent
           ruby .github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION"
 
       # Build, sign and upload in one loop (same shape as
@@ -820,7 +820,7 @@ jobs:
           BUNDLE_ID: com.klaviyoreactnativesdkexample
         shell: bash
         run: |
-          gem install jwt --no-document --silent
+          gem install -g .github/pins/asc/Gemfile --no-document --silent
           ruby .github/scripts/asc.rb set-whats-new \
             "${{ needs.deploy-ios.outputs.marketing_version }}" \
             "${{ needs.deploy-ios.outputs.build_number }}" \
@@ -865,6 +865,7 @@ jobs:
       && github.event.pull_request.head.repo.full_name == github.repository
       && startsWith(github.event.label.name, 'deploy-example-app')
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       pull-requests: write
     steps:

@@ -72,6 +72,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send({"versionCode": scenario.get("reported_code", 300)})
         elif method == "PUT" and "/tracks/" in path:
+            if read_state("scenario", {}).get("hang_track"):
+                import time
+                time.sleep(30)
             with open(os.path.join(STATE, "put_body"), "wb") as fh:
                 fh.write(self.put_body)
             self._send({})
@@ -185,6 +188,15 @@ SHARING_MAX_TIME=2 "$SCRIPT" internal-sharing "$WORK/app.aab" >/dev/null 2>&1
 status=$?
 set -e
 if [ "$status" -ne 0 ]; then pass "a stalled sharing upload times out"; else fail "a stalled sharing upload did not fail"; fi
+
+# 6c. Every other Play call is time-limited too, so a stalled track update
+#     fails the upload instead of holding the job.
+set_scenario '{"hang_track": true}'
+set +e
+PLAY_MAX_TIME=2 "$SCRIPT" upload "$WORK/app.aab" 300 internal >/dev/null 2>&1
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then pass "a stalled track update times out"; else fail "a stalled track update did not fail"; fi
 
 # 7. A response without a downloadUrl leaves stdout empty (never a log line),
 #    so the workflow's empty-URL fallback triggers.

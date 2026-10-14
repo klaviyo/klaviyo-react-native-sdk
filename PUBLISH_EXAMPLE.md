@@ -231,3 +231,10 @@ gh workflow run publish-example.yml --ref master -f platform=both   # or android
 Every `uses:` in the publish workflow, its checks workflow and its composite
 actions is pinned to a full commit SHA with the version in a comment.
 `.github/dependabot.yml` opens one grouped PR a month to update them.
+
+The tools the deploy installs are pinned in files Dependabot watches, never
+inline in a `run:` step: the Ruby gems that sign and upload (`jwt`, `webrick`,
+`fastlane`) in `.github/pins/*/Gemfile` and PyYAML in
+`.github/pins/python/requirements.txt`. Each has a monthly, grouped entry in
+`.github/dependabot.yml`. shellcheck 0.9.0 is pinned on purpose, with its
+checksum, so lint results do not shift under a release; it is updated by hand.

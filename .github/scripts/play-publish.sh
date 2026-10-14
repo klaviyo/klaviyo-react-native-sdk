@@ -37,7 +37,7 @@ EDIT_ID=""
 cleanup() {
   # Abandon an uncommitted edit so it doesn't linger.
   if [ -n "$EDIT_ID" ]; then
-    curl -sS -o /dev/null -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" || true
+    curl -sS --max-time "${PLAY_MAX_TIME:-120}" -o /dev/null -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" || true
   fi
   rm -f "$RESPONSE_FILE"
 }
@@ -48,7 +48,7 @@ trap cleanup EXIT
 call() {
   local method=$1 url=$2
   shift 2
-  curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X "$method" -H "$AUTH" "$@" "$url"
+  curl -sS --max-time "${PLAY_MAX_TIME:-120}" -o "$RESPONSE_FILE" -w '%{http_code}' -X "$method" -H "$AUTH" "$@" "$url"
 }
 
 # Play reports a reused versionCode a few different ways depending on where

@@ -40,7 +40,7 @@ jobs:
       - name: Install PyYAML for the workflow guards
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/python" -m pip install --quiet PyYAML
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --quiet -r .github/pins/python/requirements.txt
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Lint workflows
@@ -113,7 +113,7 @@ jobs:
 
       - name: Test asc.rb
         run: |
-          gem install jwt webrick --no-document --silent
+          gem install -g .github/pins/asc/Gemfile --no-document --silent
           ruby .github/scripts/test_asc.rb
 
       - name: Setup
@@ -158,7 +158,7 @@ jobs:
           BUNDLE_ID: com.klaviyoreactnativesdkexample
         shell: bash
         run: |
-          gem install jwt --no-document --silent
+          gem install -g .github/pins/asc/Gemfile --no-document --silent
           FULL_VERSION=$(jq -r .version package.json)
           MARKETING_VERSION=$(ruby .github/scripts/asc.rb ios-marketing-version "$FULL_VERSION")
           ruby .github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION"

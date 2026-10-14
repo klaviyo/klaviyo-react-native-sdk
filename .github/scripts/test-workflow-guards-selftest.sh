@@ -319,7 +319,7 @@ SLACK_ACTION="$TMP/actions/notify-slack-publish/action.yml"
 fresh_copy
 # actionlint never reads action.yml, so an unquoted expansion in a composite's
 # run: block is only caught by the guard's own shellcheck pass.
-mutate "$NOTES_ACTION" "s = s.replace('printf \\'%s\\' \"\$NOTES\" > \"\$RAW\"', 'printf %s \$NOTES > \$RAW', 1)"
+mutate "$NOTES_ACTION" "s = s.replace('\"\$PLATFORM\" \"\$MAX_LENGTH\" > \"\$NOTES_FILE\"', '\$PLATFORM \$MAX_LENGTH > \$NOTES_FILE', 1)"
 expect_fail "an unquoted expansion in a composite run: block is caught" "composite run: blocks pass shellcheck"
 
 fresh_copy
