@@ -427,6 +427,21 @@ else
   report 1 "a forbidden form in a composite run: block is caught (wrong cause)"
 fi
 
+# Block-scalar headers other than a bare | are parsed, not pattern-matched, so
+# a run: block written with an indentation indicator, a chomping mark or a
+# trailing comment is still scanned by every rule.
+for HEADER in '|2' '|2-' '|-2' '>-' '|- # note' '|2- # note'; do
+  fresh_copy_with_scripts
+  mutate "$TMP/actions/example-release-notes/action.yml" "s = s.replace('      run: |\n        set -euo pipefail\n', '      run: $HEADER\n        set -euo pipefail\n        T=\$(mktemp -d -p /tmp x)\n', 1)"
+  if run_guard_scripts; then
+    report 1 "a run: block with header '$HEADER' is scanned (guard passed)"
+  elif grep -qF "mktemp -p/--tmpdir" "$TMP/out.log"; then
+    report 0 "a run: block with header '$HEADER' is scanned"
+  else
+    report 1 "a run: block with header '$HEADER' is scanned (wrong cause)"
+  fi
+done
+
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
 # must follow the deploy's call tree rather than a fixed list.

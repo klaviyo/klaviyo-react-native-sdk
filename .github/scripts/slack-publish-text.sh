@@ -30,7 +30,7 @@ sdk_entry() {
     ref=${ref#"$version ("}
     ref=${ref%)}
   fi
-  ref=$(printf '%s' "$ref" | tr -cd 'A-Za-z0-9._/ +@-')
+  ref=$(printf '%s' "$ref" | tr -cd 'A-Za-z0-9._/ +@:-')
   if [ -n "$ref" ] && [ "$ref" != "$version" ]; then
     printf '%s %s · %s' "$name" "$version" "$ref"
   else

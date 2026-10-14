@@ -61,6 +61,10 @@ sdks_line=$(grep -F '*SDKs:*' <<<"$out" | sed 's/ | / /')
 if grep -qE '[<>&|!`]' <<<"$sdks_line"; then fail "hostile refs: control characters in the SDKs line"; else pass "hostile refs: no control characters in the SDKs line"; fi
 check "hostile refs: safe remainder kept" "$out" 'RN 2.6.0 · xchannelabc'
 
+# A local-checkout ref keeps its colon.
+out=$(env "${BASE[@]}" RN_REF='local:master@abc1234-dirty' "$SCRIPT")
+check "local ref: colon kept" "$out" 'RN 2.6.0 · local:master@abc1234-dirty'
+
 # Release build.
 out=$(env "${BASE[@]}" SOURCE_LABEL='release v2.6.0' EVENT_NAME=release "$SCRIPT")
 check "release: source label" "$out" '*Source:* release v2.6.0 (release)'
