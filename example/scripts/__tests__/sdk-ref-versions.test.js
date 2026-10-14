@@ -586,11 +586,31 @@ describe('CI requires an explicit commit and branch', () => {
 
   it('CLI: a valid CI stamp succeeds and records exactly what was passed', () => {
     const os = require('os');
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-ci-ok-'));
+    // The script writes example/.env next to its own file, not into cwd, so
+    // run a copy of it from a scratch tree: the real example/.env is never
+    // touched and the stamped file is read from where it was written.
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-ci-ok-'));
+    fs.mkdirSync(path.join(scratch, 'example'), { recursive: true });
+    fs.cpSync(
+      path.join(__dirname, '..'),
+      path.join(scratch, 'example', 'scripts'),
+      {
+        recursive: true,
+      }
+    );
+    fs.copyFileSync(
+      path.join(__dirname, '..', '..', '..', 'package.json'),
+      path.join(scratch, 'package.json')
+    );
+    const realEnv = path.join(__dirname, '..', '..', '.env');
+    const before = fs.existsSync(realEnv)
+      ? fs.readFileSync(realEnv, 'utf8')
+      : null;
+
     const r = spawnSync(
       process.execPath,
       [
-        SCRIPT,
+        path.join(scratch, 'example', 'scripts', 'sdk-ref.js'),
         '--build',
         '7',
         '--commit',
@@ -601,17 +621,24 @@ describe('CI requires an explicit commit and branch', () => {
         'x',
       ],
       {
-        cwd: dir,
+        cwd: scratch,
         encoding: 'utf8',
-        env: { PATH: process.env.PATH, HOME: dir, CI: 'true' },
+        env: { PATH: process.env.PATH, HOME: scratch, CI: 'true' },
       }
     );
     expect(r.status).toBe(0);
+
     const stamped = fs.readFileSync(
-      path.join(__dirname, '..', '..', '.env'),
+      path.join(scratch, 'example', '.env'),
       'utf8'
     );
     expect(stamped).toContain('KLAVIYO_BUILD_COMMIT=cafe123');
     expect(stamped).toContain('KLAVIYO_BUILD_BRANCH=ecm/head');
+
+    // The developer's real example/.env is exactly as it was.
+    const after = fs.existsSync(realEnv)
+      ? fs.readFileSync(realEnv, 'utf8')
+      : null;
+    expect(after).toBe(before);
   });
 });
