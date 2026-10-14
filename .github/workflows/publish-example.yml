@@ -138,6 +138,11 @@ jobs:
       #
       # Inline signing via -Pandroid.injected.signing.* — AGP produces a
       # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
+      #
+      # The build itself goes through gradle-retry.sh: the Klaviyo Android SDK
+      # resolves from JitPack, which builds branch/commit targets on first
+      # request and can time out or 404 on a cold start. The socket timeout is
+      # raised for the same reason.
       - name: Build & deploy to Internal Track
         shell: bash
         env:
@@ -155,12 +160,13 @@ jobs:
 
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             echo "=== Attempt $attempt/$MAX_ATTEMPTS: versionCode $VERSION_CODE ==="
-            (cd example/android && ./gradlew :app:bundleRelease \
+            (cd example/android && ../../.github/scripts/gradle-retry.sh :app:bundleRelease \
               -PreleaseVersionCode="$VERSION_CODE" \
               -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
               -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
               -Pandroid.injected.signing.key.alias="${ALIAS}" \
-              -Pandroid.injected.signing.key.password="${KEY_PASSWORD}")
+              -Pandroid.injected.signing.key.password="${KEY_PASSWORD}" \
+              -Dorg.gradle.internal.http.socketTimeout=120000)
 
             status=0
             RELEASE_NAME="$VERSION_NAME ($VERSION_CODE)" \
