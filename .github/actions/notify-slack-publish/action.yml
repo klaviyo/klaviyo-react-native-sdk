@@ -41,7 +41,7 @@ inputs:
     required: false
     default: ''
   failed_step:
-    description: Override for the failing-step name in the failure headline. Defaults to the first failed step reported by the actions context.
+    description: Name of the step that failed, shown in the failure headline. A composite action cannot see its caller's steps, so the caller passes it. Defaults to "unknown step".
     required: false
     default: ''
   install_url:
@@ -65,24 +65,8 @@ runs:
   using: composite
   steps:
     # Free text (a release tag can contain a double quote) is computed in a
-    # step and referenced by output — never interpolated into the payload.
-    # The failure headline names the first step the actions context reports
-    # as failed, so the workflow does not have to track steps itself.
-    - name: Find failed step
-      id: failed
-      if: inputs.result == 'failure'
-      shell: bash
-      env:
-        STEPS_JSON: ${{ toJSON(steps) }}
-        OVERRIDE: ${{ inputs.failed_step }}
-      run: |
-        if [ -n "$OVERRIDE" ]; then
-          echo "name=$OVERRIDE" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        name=$(printf '%s' "$STEPS_JSON" | jq -r '[to_entries[] | select(.value.outcome == "failure")][0].key // empty')
-        echo "name=$name" >> "$GITHUB_OUTPUT"
-
+    # step and written to a file; the payload is built as JSON from that file,
+    # never interpolated into YAML.
     - name: Compose message
       id: message
       shell: bash
@@ -97,7 +81,7 @@ runs:
         NATIVE_NAME: ${{ inputs.native_name }}
         NATIVE_VERSION: ${{ inputs.native_version }}
         NATIVE_REF: ${{ inputs.native_ref }}
-        FAILED_STEP: ${{ steps.failed.outputs.name }}
+        FAILED_STEP: ${{ inputs.failed_step }}
         EVENT_NAME: ${{ github.event_name }}
         RELEASE_TAG: ${{ github.event.release.tag_name }}
         HEAD_REF: ${{ github.head_ref }}
@@ -116,12 +100,8 @@ runs:
         SOURCE_LABEL=$("${{ github.workspace }}/.github/scripts/source-label.sh")
         export SOURCE_LABEL
         "${{ github.workspace }}/.github/scripts/slack-publish-text.sh" > "${RUNNER_TEMP}/slack-text.txt"
-        DELIM="EOF-$RANDOM-$RANDOM"
-        {
-          echo "text<<$DELIM"
-          cat "${RUNNER_TEMP}/slack-text.txt"
-          echo "$DELIM"
-        } >> "$GITHUB_OUTPUT"
+        "${{ github.workspace }}/.github/scripts/slack-payload.sh" "${RUNNER_TEMP}/slack-text.txt" > "${RUNNER_TEMP}/slack-payload.json"
+        echo "payload_file=${RUNNER_TEMP}/slack-payload.json" >> "$GITHUB_OUTPUT"
 
     # SLACK_WEBHOOK_URL is optional: when it is empty the notification is
     # skipped rather than failing the run.
@@ -135,10 +115,4 @@ runs:
       with:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
-        payload: |
-          text: ${{ steps.message.outputs.text }}
-          blocks:
-            - type: "section"
-              text:
-                type: "mrkdwn"
-                text: ${{ steps.message.outputs.text }}
+        payload-file-path: ${{ steps.message.outputs.payload_file }}

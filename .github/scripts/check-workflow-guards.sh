@@ -5,7 +5,11 @@
 # Guards:
 #   1. Every step that posts to Slack on success or warns (⚠️) must be
 #      continue-on-error, so a Slack outage never fails an uploaded deploy.
-#   2. Every step that stamps build info (sdk-ref.js with --build) or renders
+#   2. Every job that runs preflight scripts checks the repo out first, and the
+#      check/publish-checks jobs only run on deploy-capable triggers.
+#   3. The what-to-test job never fails the run: every step before its cleanup
+#      is continue-on-error.
+#   4. Every step that stamps build info (sdk-ref.js with --build) or renders
 #      notes/Slack (build-release-notes.sh) must draw EVENT_NAME /
 #      RELEASE_TAG / COMMIT_SHA / BRANCH from the workflow-level env block,
 #      not a per-step copy.
@@ -52,6 +56,24 @@ for job_name, job in workflow.get('jobs', {}).items():
             for key in ['EVENT_NAME', 'RELEASE_TAG', 'COMMIT_SHA', 'BRANCH']:
                 if key in env:
                     violations.append(f'{label}: redefines shared {key} per step instead of using the workflow env block')
+
+for job_name in ('preflight-android', 'preflight-ios'):
+    steps = workflow['jobs'][job_name].get('steps', []) or []
+    first = steps[0] if steps else {}
+    if not str(first.get('uses', '')).startswith('actions/checkout@'):
+        violations.append(f'{job_name}: first step must be actions/checkout (the preflight script lives in the repo)')
+
+for job_name in ('checks', 'publish-checks'):
+    cond = workflow['jobs'][job_name].get('if')
+    if not cond or 'pull_request' not in str(cond) or 'startsWith' not in str(cond):
+        violations.append(f'{job_name}: must be gated so non-deploy PR labels do not start it')
+
+for step in workflow['jobs']['what-to-test'].get('steps', []) or []:
+    name = step.get('name') or step.get('uses') or '<unnamed>'
+    if step.get('if') == 'always()':
+        continue
+    if not step.get('continue-on-error') and 'checkout' not in str(step.get('uses', '')):
+        violations.append(f'what-to-test: {name}: must be continue-on-error so a notes failure never fails the run')
 
 if violations:
     print('workflow guard violations:', file=sys.stderr)

@@ -130,7 +130,7 @@ upload() {
 # can install from.
 internal_sharing() {
   local aab=$1 status
-  echo "Uploading $aab to Internal App Sharing"
+  echo "Uploading $aab to Internal App Sharing" >&2
   status=$(call POST "$SHARING_UPLOAD_API/artifacts/bundle?uploadType=media" \
     -H "Content-Type: application/octet-stream" \
     --data-binary "@$aab")

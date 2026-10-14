@@ -61,6 +61,12 @@ jobs:
       - name: Test slack-publish-text.sh
         run: .github/scripts/test-slack-publish-text.sh
 
+      - name: Test slack-payload.sh
+        run: .github/scripts/test-slack-payload.sh
+
+      - name: Test failed-step.sh
+        run: .github/scripts/test-failed-step.sh
+
       - name: Test assert-artifact-version.sh
         run: .github/scripts/test-assert-artifact-version.sh
 

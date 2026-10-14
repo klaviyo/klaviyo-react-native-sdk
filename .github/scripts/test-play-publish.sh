@@ -82,7 +82,10 @@ class Handler(BaseHTTPRequestHandler):
         elif method == "DELETE" and "/edits/" in path:
             self._send({})
         elif method == "POST" and "/internalappsharing/" in path and path.endswith("/artifacts/bundle"):
-            self._send({"downloadUrl": "https://play.google.com/apps/test/RQ fake/1"})
+            if read_state("scenario", {}).get("no_download_url"):
+                self._send({})
+            else:
+                self._send({"downloadUrl": "https://play.google.com/apps/test/RQ fake/1"})
         else:
             self._send({"error": {"message": f"no route {method} {path}"}}, 404)
 
@@ -160,11 +163,19 @@ status=$?
 set -e
 if [ "$status" -eq 1 ]; then pass "versionCode mismatch exits 1"; else fail "versionCode mismatch: exit $status"; fi
 
-# 6. internal-sharing prints the downloadUrl.
+# 6. internal-sharing prints only the downloadUrl on stdout; progress goes to
+#    stderr so the caller can capture the URL with $(...).
 set_scenario '{}'
-out=$("$SCRIPT" internal-sharing "$WORK/app.aab")
-url=$(tail -1 <<<"$out")
-if [ "$url" = "https://play.google.com/apps/test/RQ fake/1" ]; then pass "internal-sharing downloadUrl"; else fail "internal-sharing: got '$out'"; fi
+out=$("$SCRIPT" internal-sharing "$WORK/app.aab" 2>/dev/null)
+if [ "$out" = "https://play.google.com/apps/test/RQ fake/1" ]; then pass "internal-sharing stdout is only the downloadUrl"; else fail "internal-sharing: got '$out'"; fi
+err=$("$SCRIPT" internal-sharing "$WORK/app.aab" 2>&1 >/dev/null)
+if grep -q "Uploading" <<<"$err"; then pass "internal-sharing progress goes to stderr"; else fail "internal-sharing: progress missing from stderr: '$err'"; fi
+
+# 7. A response without a downloadUrl leaves stdout empty (never a log line),
+#    so the workflow's empty-URL fallback triggers.
+set_scenario '{"no_download_url": true}'
+out=$("$SCRIPT" internal-sharing "$WORK/app.aab" 2>/dev/null)
+if [ -z "$out" ]; then pass "internal-sharing without downloadUrl prints nothing"; else fail "internal-sharing no-url: got '$out'"; fi
 
 if [ "$fail_count" -gt 0 ]; then
   echo "$fail_count test(s) failed"

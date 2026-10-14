@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Preflight for one deploy platform: reports whether every secret it needs is
-# present. Prints `<platform>_ready=true|false` and `<platform>_missing=<names>`
-# on stdout (the caller appends them to GITHUB_OUTPUT). Only emptiness is
+# present. Writes `<platform>_ready=true|false` and `<platform>_missing=<names>`
+# to the file named by OUTPUT_FILE, else GITHUB_OUTPUT, else stdout. Annotations (::notice::,
+# ::error::) always go to stdout so they reach the step log. Only emptiness is
 # inspected; secret values are never printed.
 #
 # A deploy with missing secrets is skipped on push/release (exit 0,
@@ -9,7 +10,8 @@
 # (a human asked for the deploy: ::error::, exit 1).
 #
 # Usage: check-secrets.sh <android|ios>
-# Env: EVENT_NAME (github.event_name) and one variable per required secret.
+# Env: EVENT_NAME (github.event_name), OUTPUT_FILE (optional override) and one
+# variable per required secret. The runner provides GITHUB_OUTPUT.
 set -euo pipefail
 
 ANDROID_REQUIRED="KLAVIYO_EXAMPLE_API_KEY GOOGLE_SERVICES_JSON SIGNING_KEY KEY_STORE_PASSWORD ALIAS KEY_PASSWORD SERVICE_ACCOUNT_JSON"
@@ -20,6 +22,7 @@ IOS_REQUIRED="KLAVIYO_EXAMPLE_API_KEY GOOGLE_SERVICE_INFO_PLIST_BASE64 APP_STORE
   exit 2
 }
 platform=$1
+out=${OUTPUT_FILE:-${GITHUB_OUTPUT:-/dev/stdout}}
 
 case "$platform" in
   android) required=$ANDROID_REQUIRED ;;
@@ -37,14 +40,14 @@ for name in $required; do
   fi
 done
 
-echo "${platform}_missing=$missing"
+echo "${platform}_missing=$missing" >> "$out"
 
 if [ -z "$missing" ]; then
-  echo "${platform}_ready=true"
+  echo "${platform}_ready=true" >> "$out"
   exit 0
 fi
 
-echo "${platform}_ready=false"
+echo "${platform}_ready=false" >> "$out"
 case "${EVENT_NAME:-}" in
   workflow_dispatch | pull_request)
     echo "::error::Cannot deploy $platform: missing secrets $missing"
