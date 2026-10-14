@@ -9,6 +9,7 @@ on:
       - '.github/workflows/publish-example.yml'
       - '.github/workflows/example-publish-checks.yml'
       - '.github/scripts/**'
+      - '.github/pins/**'
       - '.github/actions/example-release-notes/**'
       - '.github/actions/notify-slack-publish/**'
       - 'example/scripts/**'

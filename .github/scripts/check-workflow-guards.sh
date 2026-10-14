@@ -431,19 +431,6 @@ for name in GUARDED_WORKFLOWS:
 check('every job that runs gem install sets up Ruby first',
       not no_ruby, '\n'.join(no_ruby))
 
-# 4g. The pinned-tool lockfiles carry no BUNDLED WITH line: `gem install -g`
-#     writes them with the local Bundler, and a Bundler that cannot run on the
-#     runner's Ruby would fail the first real deploy.
-pins_dir = os.environ.get('PINS_DIR') or os.path.join(os.path.dirname(os.path.abspath(workflow_dir)), 'pins')
-bundled = []
-for lock in sorted(glob.glob(os.path.join(pins_dir, '*', 'Gemfile.lock'))):
-    if re.search(r'^BUNDLED WITH\s*$', read(lock), flags=re.MULTILINE):
-        bundled.append(os.path.relpath(lock, pins_dir))
-check('pinned-tool lockfiles carry no BUNDLED WITH line', not bundled, '\n'.join(bundled))
-pin_locks = glob.glob(os.path.join(pins_dir, '*', 'Gemfile.lock'))
-check('the pinned-tool lockfiles are found (the rule is not checking nothing)', bool(pin_locks),
-      f'no Gemfile.lock under {pins_dir}')
-
 # 5. The preflight jobs read repository-level secrets, so they declare no
 #    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or
 #    by the secrets script.

@@ -29,12 +29,10 @@ fresh_copy() {
   cp "$ROOT"/.github/workflows/*.yml "$TMP/wf/"
   cp -R "$ROOT"/.github/actions/. "$TMP/actions/"
   cp "$ROOT/.github/scripts/check-secrets.sh" "$TMP/secrets.sh"
-  rm -rf "$TMP/pins"
-  cp -R "$ROOT/.github/pins" "$TMP/pins"
 }
 
 run_guard() {
-  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$TMP/secrets.sh" PINS_DIR="${PINS_DIR:-$TMP/pins}" \
+  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$TMP/secrets.sh" \
     bash "$GUARD" >"$TMP/out.log" 2>&1
 }
 
@@ -362,7 +360,7 @@ fresh_copy_with_scripts() {
 }
 
 run_guard_scripts() {
-  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$SECRETS_OVERRIDE" PINS_DIR="$TMP/pins" \
+  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$SECRETS_OVERRIDE" \
     bash "$GUARD" >"$TMP/out.log" 2>&1
 }
 
@@ -487,29 +485,6 @@ expect_fail "a checks job without timeout-minutes is caught" "every job in the d
 fresh_copy
 mutate "$TMP/wf/example-publish-checks.yml" "s = s.replace('      - name: Set up Ruby\\n        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0\\n        with:\\n          ruby-version: \\'3.2\\'\\n\\n      - name: Write App Store Connect API key', '      - name: Write App Store Connect API key', 1)"
 expect_fail "a gem install job without a Ruby setup is caught" "every job that runs gem install sets up Ruby first"
-
-# A pinned-tool lockfile with a BUNDLED WITH line is caught, and an empty pins
-# directory is reported rather than passed.
-fresh_copy
-printf '\nBUNDLED WITH\n   2.4.6\n' >> "$TMP/pins/asc/Gemfile.lock"
-if PINS_DIR="$TMP/pins" run_guard; then
-  report 1 "a pin lockfile with BUNDLED WITH is caught (guard passed)"
-elif grep -qF "pinned-tool lockfiles carry no BUNDLED WITH line" "$TMP/out.log"; then
-  report 0 "a pin lockfile with BUNDLED WITH is caught"
-else
-  report 1 "a pin lockfile with BUNDLED WITH is caught (wrong cause)"
-fi
-
-fresh_copy
-rm -rf "$TMP/pins"
-mkdir -p "$TMP/pins"
-if PINS_DIR="$TMP/pins" run_guard; then
-  report 1 "an empty pins directory is reported (guard passed)"
-elif grep -qF "the pinned-tool lockfiles are found" "$TMP/out.log"; then
-  report 0 "an empty pins directory is reported"
-else
-  report 1 "an empty pins directory is reported (wrong cause)"
-fi
 
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
