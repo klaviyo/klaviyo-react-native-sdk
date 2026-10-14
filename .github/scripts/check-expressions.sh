@@ -30,6 +30,13 @@ for path in files:
         if hit:
             line = text.count('\n', 0, match.start()) + 1
             bad.append(f"{os.path.relpath(path, root)}:{line}: {hit.group(0)} in {match.group(0)!r}")
+    # `if:` values are expressions without ${{ }}.
+    for match in re.finditer(r'(?m)^\s*(?:-\s+)?if:\s*(.+?)\s*$', text):
+        value = re.sub(r"'[^']*'", "''", match.group(1))
+        hit = banned.search(value)
+        if hit:
+            line = text.count('\n', 0, match.start()) + 1
+            bad.append(f"{os.path.relpath(path, root)}:{line}: {hit.group(0)} in if: {match.group(1)!r}")
 
 if bad:
     print('Nonexistent GitHub expression string function(s) found:', file=sys.stderr)

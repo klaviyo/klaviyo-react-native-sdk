@@ -97,6 +97,56 @@ else
   fail "negative: plain-text mention wrongly flagged"
 fi
 
+# A bare if: has no ${{ }} braces; a banned function there must fail (job and step level).
+fx="$WORK/bare-if"
+mkdir -p "$fx/.github/workflows"
+cat > "$fx/.github/workflows/w.yml" <<'EOF'
+on: push
+jobs:
+  x:
+    if: substr(github.sha, 0, 7) == 'abc1234'
+    steps:
+      - run: echo hi
+EOF
+if run_on_fixture "$fx" >/dev/null 2>&1; then
+  fail "bare job-level if: substr not caught"
+else
+  pass "bare job-level if: substr fails"
+fi
+
+fx="$WORK/bare-step-if"
+mkdir -p "$fx/.github/workflows"
+cat > "$fx/.github/workflows/w.yml" <<'EOF'
+on: push
+jobs:
+  x:
+    steps:
+      - if: always() && slice(github.sha, 0, 2) == 'ab'
+        run: echo hi
+EOF
+if run_on_fixture "$fx" >/dev/null 2>&1; then
+  fail "bare step-level if: slice not caught"
+else
+  pass "bare step-level if: slice fails"
+fi
+
+# A function name inside a quoted string in an if: is text, not a call.
+fx="$WORK/bare-if-string"
+mkdir -p "$fx/.github/workflows"
+cat > "$fx/.github/workflows/w.yml" <<'EOF'
+on: push
+jobs:
+  x:
+    if: github.event.label.name == 'substr(x)'
+    steps:
+      - run: echo hi
+EOF
+if run_on_fixture "$fx" >/dev/null 2>&1; then
+  pass "negative: function name inside a quoted if: string allowed"
+else
+  fail "negative: quoted if: string wrongly flagged"
+fi
+
 # The real repo must pass.
 if "$REPO_ROOT/.github/scripts/check-expressions.sh" >/dev/null; then
   pass "real repo: clean"

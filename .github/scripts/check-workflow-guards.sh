@@ -97,12 +97,33 @@ ALLOWED = {
     'contains', 'startsWith', 'endsWith', 'format', 'join', 'toJSON',
     'fromJSON', 'hashFiles', 'case', 'success', 'always', 'cancelled', 'failure',
 }
+
+
+def if_values(node):
+    # `if:` values are expressions even without ${{ }}, so they are scanned
+    # too (job and step level, workflows and composite actions).
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == 'if' and isinstance(value, str):
+                yield value
+            yield from if_values(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from if_values(item)
+
+
+def functions_in(expression):
+    # Calls inside quoted string literals are text, not function calls.
+    expression = re.sub(r"'[^']*'", "''", expression)
+    return re.findall(r'([A-Za-z_][A-Za-z0-9_]*)\s*\(', expression)
+
+
 unknown = set()
 for path in workflow_files + action_files:
     for expr in re.findall(r'\$\{\{.*?\}\}', read(path), flags=re.DOTALL):
-        for fn in re.findall(r'([A-Za-z_][A-Za-z0-9_]*)\s*\(', expr):
-            if fn not in ALLOWED:
-                unknown.add(fn)
+        unknown |= {fn for fn in functions_in(expr) if fn not in ALLOWED}
+    for value in if_values(load(path)):
+        unknown |= {fn for fn in functions_in(value) if fn not in ALLOWED}
 check('expressions only call functions that GitHub Actions provides',
       not unknown, f'unsupported: {", ".join(sorted(unknown))}')
 
@@ -237,7 +258,21 @@ unguarded = [
 check('label deploys are limited to same-repo pull requests',
       not unguarded, ', '.join(unguarded))
 
-# 9. The what-to-test job cannot fail the run: every step other than the
+# 9. Each platform's preflight and deploy run only when that platform was
+#    requested (dispatch input or label suffix), so an iOS-only run never
+#    checks or fails on Android's secrets, and the reverse.
+for platform, other in (('android', 'ios'), ('ios', 'android')):
+    for name in (f'preflight-{platform}', f'deploy-{platform}'):
+        cond = str(jobs[name].get('if') or '')
+        ok = (
+            f"inputs.platform == '{platform}'" in cond
+            and f"github.event.label.name == 'deploy-example-app:{platform}'" in cond
+            and f"'{other}'" not in cond
+            and f"deploy-example-app:{other}" not in cond
+        )
+        check(f'{name} runs only when {platform} was requested', ok, cond)
+
+# 10. The what-to-test job cannot fail the run: every step other than the
 #    checkout and the always() cleanup tolerates failure.
 fragile = []
 for step in steps_of(jobs['what-to-test']):

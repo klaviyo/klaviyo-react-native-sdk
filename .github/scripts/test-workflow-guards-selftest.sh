@@ -43,7 +43,9 @@ broken_copy_differs() {
     || ! diff -q "$ROOT/.github/scripts/check-secrets.sh" "$TMP/secrets.sh" >/dev/null 2>&1
 }
 
-# expect_fail <case name> <text the guard must print after FAIL:>
+# expect_fail <case name> <rule text>: the guard must exit non-zero and print
+# a FAIL line containing the rule text anywhere (rules with a job or file
+# prefix put it mid-line).
 expect_fail() {
   if ! broken_copy_differs; then
     echo "ABORT: '$1' ran the guard on an unmodified copy" >&2
@@ -51,7 +53,7 @@ expect_fail() {
   fi
   if run_guard; then
     report 1 "$1 (guard passed on a broken copy)"
-  elif grep -qF "FAIL: $2" "$TMP/out.log"; then
+  elif grep -E '^FAIL: ' "$TMP/out.log" | grep -qF -- "$2"; then
     report 0 "$1"
   else
     report 1 "$1 (guard failed, but not on '$2')"
@@ -89,6 +91,41 @@ if run_guard; then report 0 "the guard passes on the real workflows"; else repor
 fresh_copy
 mutate "$PUB" "s = s.replace('GOOGLE_SERVICES_JSON: \${{ secrets.GOOGLE_SERVICES_JSON }}', 'GOOGLE_SERVICES_JSON: \${{ substr(secrets.GOOGLE_SERVICES_JSON, 0, 9) }}', 1)"
 expect_fail "substr in an expression is caught" "expressions only call functions"
+
+fresh_copy
+# A bare job-level if: has no ${{ }} braces; an unknown function there must still be caught.
+mutate "$PUB" "
+i = s.index('  preflight-ios:')
+j = s.index('    if: |\\n', i)
+s = s[:j] + '    if: |\\n      substr(github.sha, 0, 7) == \'abc1234\' ||\\n' + s[j + len('    if: |\\n'):]
+"
+expect_fail "substr in a job-level if without braces is caught" "expressions only call functions"
+
+fresh_copy
+# Same for a step-level bare if:.
+mutate "$PUB" "
+i = s.index('      - name: Clean up keystore')
+j = s.index('        if: always()', i)
+s = s[:j] + '        if: always() && substring(github.sha, 0, 2) == \'ab\'' + s[j + len('        if: always()'):]
+"
+expect_fail "substring in a step-level if without braces is caught" "expressions only call functions"
+
+fresh_copy
+# An iOS-only run must not start Android's preflight.
+mutate "$PUB" "
+i = s.index('  preflight-android:')
+j = s.index(\"(inputs.platform == 'both' || inputs.platform == 'android')\", i)
+s = s[:j] + \"(inputs.platform == 'both' || inputs.platform == 'android' || inputs.platform == 'ios')\" + s[j + len(\"(inputs.platform == 'both' || inputs.platform == 'android')\"):]
+"
+expect_fail "an Android preflight that also runs for an iOS-only request is caught" "preflight-android runs only when android was requested"
+
+fresh_copy
+mutate "$PUB" "
+i = s.index('  deploy-ios:')
+j = s.index(\"github.event.label.name == 'deploy-example-app:ios'\", i)
+s = s[:j] + \"github.event.label.name == 'deploy-example-app:android' || github.event.label.name == 'deploy-example-app:ios'\" + s[j + len(\"github.event.label.name == 'deploy-example-app:ios'\"):]
+"
+expect_fail "an iOS deploy that also runs for the :android label is caught" "deploy-ios runs only when ios was requested"
 
 fresh_copy
 mutate "$PUB" "s = s.replace('\${{ github.event_name }}', '\${{ lower(github.event_name) }}', 1)"
