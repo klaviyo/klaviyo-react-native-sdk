@@ -22,6 +22,8 @@
  *   --build <n>         build number (KLAVIYO_BUILD_NUMBER)
  *   --commit <sha>      commit sha, truncated to 7 chars (KLAVIYO_BUILD_COMMIT)
  *   --branch <name>     branch name (KLAVIYO_BUILD_BRANCH)
+ *                       Both are required, and must be non-empty, when CI is set
+ *                       (exit 1 naming the flag); locally they default to git.
  *   --built <string>    build timestamp (KLAVIYO_BUILD_BUILT)
  *   --platform <ios|android>  native SDK row for --print-header
  *   --app-name <name>   app name for --print-header (default "RN Example")
@@ -506,6 +508,37 @@ function utcNow() {
   return new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 }
 
+// --- CI requirements ---
+
+// A truthy CI value ("true", "1"); the GitHub runner sets CI=true for every
+// step. An explicit "false"/"0"/empty is local.
+function isCi(env = process.env) {
+  const value = String(env.CI || '')
+    .trim()
+    .toLowerCase();
+  return value !== '' && value !== 'false' && value !== '0';
+}
+
+// Under CI the commit and branch that get stamped into the app must be passed
+// in explicitly (on a label deploy GITHUB_SHA and GITHUB_REF_NAME are the
+// merge commit and "<n>/merge"), and an empty value is not "absent": it is an
+// error, never a fallback to git or GITHUB_*. Returns the list of problems
+// (empty when fine). Local runs keep the git fallback.
+function ciRequirementErrors(args, env = process.env) {
+  if (!isCi(env)) {
+    return [];
+  }
+  return ['commit', 'branch']
+    .filter((flag) => {
+      const value = args[flag];
+      return typeof value !== 'string' || value.trim() === '';
+    })
+    .map(
+      (flag) =>
+        `--${flag} is required when CI is set and must not be empty (no fallback to git or GITHUB_* is used)`
+    );
+}
+
 // --- resolution against this checkout ---
 
 function resolveAll(options = {}) {
@@ -616,6 +649,14 @@ function main() {
     );
     return;
   }
+  const needsBuildInfo =
+    !process.argv.includes('--print') &&
+    !process.argv.includes('--print-versions');
+  const problems = needsBuildInfo ? ciRequirementErrors(args) : [];
+  if (problems.length > 0) {
+    process.stderr.write(`sdk-ref.js: ${problems.join('\nsdk-ref.js: ')}\n`);
+    process.exit(1);
+  }
   const resolved = resolveAll(args);
   if (process.argv.includes('--print')) {
     process.stdout.write(
@@ -672,6 +713,8 @@ if (require.main === module) {
 module.exports = {
   UNKNOWN,
   androidRef,
+  ciRequirementErrors,
+  isCi,
   androidVersion,
   formatBuildInfoHeader,
   formatVersionRef,

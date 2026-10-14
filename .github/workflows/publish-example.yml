@@ -260,7 +260,7 @@ jobs:
       # release notes; a missing ref resolves to "unknown" without failing.
       - name: Record SDK versions in example/.env
         shell: bash
-        run: node example/scripts/sdk-ref.js
+        run: node example/scripts/sdk-ref.js --commit "$COMMIT_SHA" --branch "$BRANCH"
 
       # Build + upload in one loop: a versionCode conflict at upload time
       # (another run published the same code after our preflight) rebuilds
@@ -520,7 +520,7 @@ jobs:
       # resolves to "unknown" without failing.
       - name: Record SDK versions in example/.env
         shell: bash
-        run: node example/scripts/sdk-ref.js
+        run: node example/scripts/sdk-ref.js --commit "$COMMIT_SHA" --branch "$BRANCH"
 
       # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key

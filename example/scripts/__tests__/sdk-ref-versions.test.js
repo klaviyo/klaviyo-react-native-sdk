@@ -479,3 +479,139 @@ describe('parseArgs boolean flags', () => {
     });
   });
 });
+
+describe('CI requires an explicit commit and branch', () => {
+  const { spawnSync } = require('child_process');
+  const SCRIPT = path.join(__dirname, '..', 'sdk-ref.js');
+  const { ciRequirementErrors, isCi } = require('../sdk-ref');
+
+  // A scratch HOME and cwd outside any checkout: nothing the generator could
+  // fall back to (git, GITHUB_*) is available, so a missing check shows up.
+  const run = (args, env) => {
+    const os = require('os');
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-ci-'));
+    return spawnSync(process.execPath, [SCRIPT, ...args], {
+      cwd,
+      encoding: 'utf8',
+      env: { PATH: process.env.PATH, HOME: cwd, ...env },
+    });
+  };
+
+  it('isCi treats true/1 as CI and false/0/empty/unset as local', () => {
+    expect(isCi({ CI: 'true' })).toBe(true);
+    expect(isCi({ CI: '1' })).toBe(true);
+    expect(isCi({ CI: 'false' })).toBe(false);
+    expect(isCi({ CI: '0' })).toBe(false);
+    expect(isCi({ CI: '' })).toBe(false);
+    expect(isCi({})).toBe(false);
+  });
+
+  it('names the flag for a missing or empty commit and branch under CI', () => {
+    const missing = ciRequirementErrors({}, { CI: 'true' });
+    expect(missing).toHaveLength(2);
+    expect(missing[0]).toContain('--commit');
+    expect(missing[1]).toContain('--branch');
+    const empty = ciRequirementErrors(
+      { commit: 'abc1234', branch: '  ' },
+      { CI: 'true' }
+    );
+    expect(empty).toHaveLength(1);
+    expect(empty[0]).toContain('--branch');
+    expect(
+      ciRequirementErrors({ commit: 'abc1234', branch: 'main' }, { CI: 'true' })
+    ).toEqual([]);
+  });
+
+  it('is silent for local runs, which keep the git fallback', () => {
+    expect(ciRequirementErrors({}, {})).toEqual([]);
+    expect(ciRequirementErrors({}, { CI: 'false' })).toEqual([]);
+  });
+
+  it('CLI: CI=true with an empty --branch exits non-zero naming --branch and writes nothing', () => {
+    const r = run(['--build', '7', '--commit', 'abc1234', '--branch', ''], {
+      CI: 'true',
+      GITHUB_REF_NAME: '429/merge',
+      GITHUB_SHA: 'abcd5678abcd5678',
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain('--branch');
+    expect(r.stderr).not.toContain('--commit is required');
+    expect(r.stdout).not.toContain('Wrote SDK refs');
+  });
+
+  it('CLI: CI=true with --commit missing exits non-zero naming --commit', () => {
+    const r = run(['--build', '7', '--branch', 'rel/2.6.0'], {
+      CI: 'true',
+      GITHUB_SHA: 'abcd5678abcd5678',
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain('--commit');
+    expect(r.stdout).not.toContain('Wrote SDK refs');
+  });
+
+  it('CLI: CI=true with no flags at all names both flags', () => {
+    const r = run([], { CI: 'true' });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain('--commit');
+    expect(r.stderr).toContain('--branch');
+  });
+
+  it('CLI: CI=true never falls back to GITHUB_REF_NAME/GITHUB_SHA', () => {
+    const r = run(['--build', '7', '--commit', 'abc1234', '--branch', ''], {
+      CI: 'true',
+      GITHUB_REF_NAME: '429/merge',
+      GITHUB_HEAD_REF: 'some-head',
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stdout + r.stderr).not.toContain('429/merge');
+  });
+
+  it('CLI: read-only --print and --print-versions still work under CI without flags', () => {
+    const printed = run(['--print'], { CI: 'true' });
+    expect(printed.status).toBe(0);
+    const versions = run(['--print-versions'], { CI: 'true' });
+    expect(versions.status).toBe(0);
+  });
+
+  it('CLI: --print-header --from-env needs no commit or branch under CI', () => {
+    const os = require('os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-ci-env-'));
+    const envFile = path.join(dir, '.env');
+    fs.writeFileSync(envFile, 'KLAVIYO_BUILD_APP_VERSION=2.5.1\n');
+    const r = run(['--print-header', '--from-env', '--env-file', envFile], {
+      CI: 'true',
+    });
+    expect(r.status).toBe(0);
+  });
+
+  it('CLI: a valid CI stamp succeeds and records exactly what was passed', () => {
+    const os = require('os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-ci-ok-'));
+    const r = spawnSync(
+      process.execPath,
+      [
+        SCRIPT,
+        '--build',
+        '7',
+        '--commit',
+        'cafe1234cafe1234',
+        '--branch',
+        'ecm/head',
+        '--built',
+        'x',
+      ],
+      {
+        cwd: dir,
+        encoding: 'utf8',
+        env: { PATH: process.env.PATH, HOME: dir, CI: 'true' },
+      }
+    );
+    expect(r.status).toBe(0);
+    const stamped = fs.readFileSync(
+      path.join(__dirname, '..', '..', '.env'),
+      'utf8'
+    );
+    expect(stamped).toContain('KLAVIYO_BUILD_COMMIT=cafe123');
+    expect(stamped).toContain('KLAVIYO_BUILD_BRANCH=ecm/head');
+  });
+});

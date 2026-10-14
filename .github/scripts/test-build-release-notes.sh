@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs build-release-notes.sh with the environment the Android deploy step
+# Runs build-release-notes.sh, and the per-attempt sdk-ref.js stamp commands,
+# with the environment the Android deploy step
 # really has (the workflow-level shared env plus the step's own), so a
 # variable the script needs but the workflow never sets fails here instead
 # of producing a blank source label in a store note. The shared env is read
@@ -124,6 +125,85 @@ else
   fail "release: wrong or blank source label in: $(grep -m1 'Commit:' <<<"$notes")"
 fi
 if grep -qF 'Release body text' <<<"$notes"; then pass "release: body is appended"; else fail "release: body missing"; fi
+
+# 3b. The step that STAMPS commit/branch into the app must receive the PR head
+#     SHA and head branch under a label-deploy env, never the merge commit or
+#     "<n>/merge". The stamping command lines are taken from the workflow
+#     itself (every `node .../sdk-ref.js --build ...` line), run with the
+#     event's shared env, so a changed or dropped argument fails here. The
+#     merge SHA and ref name differ from the head values on purpose.
+stamp_commands() {
+  python3 - <<'PY'
+import re
+
+import yaml
+
+wf = yaml.safe_load(open('.github/workflows/publish-example.yml'))
+for job in ('deploy-android', 'deploy-ios'):
+    for step in wf['jobs'][job]['steps']:
+        for line in str(step.get('run') or '').splitlines():
+            if re.search(r'sdk-ref\.js --build', line):
+                print(f'{job}\t{line.strip()}')
+PY
+}
+
+# run_stamp <event> <command line>: runs one stamping line under the event's
+# shared env plus the step's own variables, writing a scratch .env.
+run_stamp() {
+  local event=$1 cmd=$2 line
+  local -a vars=()
+  while IFS= read -r line; do vars+=("$line"); done < <(shared_env "$event")
+  # The workflow runs iOS stamping from example/ (scripts/sdk-ref.js) and
+  # Android from the repo root; both resolve to the same script here.
+  cmd=${cmd//node scripts\/sdk-ref.js/node example\/scripts\/sdk-ref.js}
+  # GITHUB_REF_NAME and GITHUB_SHA carry the merge-ref values a real label
+  # deploy runner has ("429/merge", the merge commit), and GITHUB_HEAD_REF is
+  # absent, so a --branch that is dropped or empty falls through to the wrong
+  # answer instead of a lucky one. The stamp runs from a directory outside any
+  # git checkout for the same reason.
+  local scratch
+  scratch=$(mktemp -d)
+  mkdir -p "$scratch/example"
+  cp -R "$REPO_ROOT/example/scripts" "$scratch/example/scripts"
+  cp "$REPO_ROOT/package.json" "$scratch/package.json"
+  mkdir -p "$scratch/android" "$scratch/ios"
+  cp "$REPO_ROOT/android/gradle.properties" "$scratch/android/" 2>/dev/null || true
+  cp "$REPO_ROOT/klaviyo-react-native-sdk.podspec" "$scratch/" 2>/dev/null || true
+  (cd "$scratch" && env -i PATH="$PATH" HOME="$HOME" "${vars[@]}" \
+    GITHUB_REF_NAME="429/merge" GITHUB_SHA="abcd5678abcd5678abcd5678abcd5678abcd5678" \
+    VERSION_CODE=7 BUILD_NUMBER=7 BUILT_AT="2026-10-14 02:00 UTC" \
+    bash -c "$cmd" >/dev/null)
+  local status=$?
+  STAMPED_ENV="$scratch/example/.env"
+  return "$status"
+}
+
+stamp_count=0
+while IFS=$'\t' read -r job cmd; do
+  [ -z "$job" ] && continue
+  stamp_count=$((stamp_count + 1))
+  if ! run_stamp pull_request "$cmd"; then
+    fail "label deploy stamp ($job): the stamp command failed: $cmd"
+    continue
+  fi
+  stamped_commit=$(grep '^KLAVIYO_BUILD_COMMIT=' "$STAMPED_ENV" | cut -d= -f2-)
+  stamped_branch=$(grep '^KLAVIYO_BUILD_BRANCH=' "$STAMPED_ENV" | cut -d= -f2-)
+  if [ "$stamped_commit" = "cafe123" ]; then
+    pass "label deploy stamp ($job): commit is the PR head sha"
+  else
+    fail "label deploy stamp ($job): commit is '$stamped_commit', expected the PR head cafe123 (merge commit is abcd567)"
+  fi
+  if [ "$stamped_branch" = "ecm/MAGE-1075/continuous-deployment" ]; then
+    pass "label deploy stamp ($job): branch is the PR head branch"
+  else
+    fail "label deploy stamp ($job): branch is '$stamped_branch', expected the PR head branch (not 429/merge)"
+  fi
+done < <(stamp_commands)
+if [ "$stamp_count" -lt 2 ]; then
+  fail "expected a stamping command in both deploy jobs, found $stamp_count"
+else
+  pass "both deploy jobs stamp build info per attempt"
+fi
 
 # 4. Every variable the script reads exists in the shared env or is supplied
 #    by the step (guards a variable added to the script but not the workflow).
