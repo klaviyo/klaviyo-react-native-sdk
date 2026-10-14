@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verifies the notes header comes from the SAME generated build info the app
 # was built with: generate example/.env with known flags, then render the
-# header with --print-header --from-env yes and assert every line matches the
+# header with --print-header --from-env and assert every line matches the
 # .env values (no fresh clock or git calls at notes time). Backs up and
 # restores the real example/.env.
 # Usage: test-notes-from-env.sh (run from the repo root)
@@ -45,7 +45,7 @@ env_number=$(grep '^KLAVIYO_BUILD_NUMBER=' "$ENV_FILE" | cut -d= -f2-)
 env_commit=$(grep '^KLAVIYO_BUILD_COMMIT=' "$ENV_FILE" | cut -d= -f2-)
 env_built=$(grep '^KLAVIYO_BUILD_BUILT=' "$ENV_FILE" | cut -d= -f2-)
 
-header=$(node example/scripts/sdk-ref.js --print-header --from-env yes \
+header=$(node example/scripts/sdk-ref.js --print-header --from-env \
   --platform ios \
   --app-name "RN Example" \
   --source-label "ecm/test-branch" \
@@ -62,7 +62,7 @@ grep -qF "CI run: https://example.com/run/1" <<<"$header" || fail "CI run line m
 
 # A different --built flag must NOT change the --from-env header: the .env
 # value wins.
-header2=$(node example/scripts/sdk-ref.js --print-header --from-env yes \
+header2=$(node example/scripts/sdk-ref.js --print-header --from-env \
   --platform ios \
   --built "1999-01-01 00:00 UTC" \
   --source-label "ecm/test-branch" \
@@ -72,7 +72,7 @@ grep -qF "Built: $env_built" <<<"$header2" || fail "--from-env ignored the .env 
 if grep -qF "1999-01-01" <<<"$header2"; then
   fail "--from-env took a fresh --built value"
 fi
-pass "--print-header --from-env yes reads every shared value from .env"
+pass "--print-header --from-env reads every shared value from .env"
 
 if [ "$fail_count" -gt 0 ]; then
   exit 1

@@ -66,7 +66,7 @@ runs:
         # Every shared value (version, SDK refs, build number, commit, Built
         # time) is read back from the example/.env the app was built with, so
         # the notes cannot drift from the in-app build info.
-        HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env yes \
+        HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env \
           --platform "$PLATFORM" \
           --source-label "$SOURCE_LABEL" \
           --event "$EVENT_NAME" \

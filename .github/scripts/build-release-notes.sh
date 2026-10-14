@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Composes the store release notes for one platform: the header block from
-# `sdk-ref.js --print-header --from-env yes` — every shared value (version, SDK
+# `sdk-ref.js --print-header --from-env` — every shared value (version, SDK
 # refs, build number, commit, branch, Built time) is read back from the
 # example/.env the app was just built with, so the notes cannot drift from
 # the in-app build info — then a blank line and the release body on release
@@ -27,7 +27,7 @@ SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME
 SOURCE_LABEL=$("$SCRIPTS/source-label.sh")
 
-HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env yes \
+HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env \
   --platform "$platform" \
   --source-label "$SOURCE_LABEL" \
   --event "${EVENT_NAME:-}" \
