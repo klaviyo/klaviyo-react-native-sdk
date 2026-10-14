@@ -13,6 +13,7 @@ else
   source_label="${HEAD_REF:-${REF_NAME:-}}"
 fi
 source_label=$(printf '%s' "$source_label" | tr -cd 'A-Za-z0-9._/ +:-')
+sdks=$(printf '%s' "${SDKS:-—}" | tr -d '<>&')
 
 footer="*Build:* ${FULL_VERSION:-?} (${BUILD:-?})
 *Source:* ${source_label} (${EVENT_NAME})
@@ -29,7 +30,7 @@ case "${RESULT:-}" in
     [ -z "${ACCESS_NOTE:-}" ] || get_build="${get_build:+$get_build — }${ACCESS_NOTE}"
     text="✅ RN Example (${PLATFORM}) → ${STORE}
 ${footer}
-*SDKs:* ${SDKS:-—}
+*SDKs:* ${sdks}
 *Get the build:* ${get_build}"
     ;;
   warning)
