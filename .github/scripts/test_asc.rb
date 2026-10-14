@@ -101,6 +101,10 @@ class TestAsc < Minitest::Test
     ENV['GITHUB_ENV'] = @env_file.path
     # ASC_TEST_TOKEN short-circuits token signing (no .p8 needed).
     ENV['ASC_TEST_TOKEN'] = 'test-token'
+    # A lookup that finds no build must fail within a second, not poll for
+    # the 45 minutes a real deploy waits.
+    ENV['ASC_POLL_TIMEOUT'] = '1'
+    ENV['ASC_POLL_INTERVAL'] = '0.2'
     ENV['HOME'] = Dir.mktmpdir
 
     load File.expand_path('asc.rb', __dir__)
@@ -180,7 +184,7 @@ class TestAsc < Minitest::Test
     respond('GET', %r{/builds\?cursor=page2}, builds_page(%w[11 9]))
     respond('GET', %r{/builds\?}, builds_page(%w[4], '/builds?cursor=page2'))
 
-    capture_io { next_build_number(nil, 1) }
+    capture_io { next_build_number('1.2.3', 1) }
     assert_equal 12, env_values['BUILD_NUMBER'].to_i
     assert_equal 2, @server.requests.count { |m, p, _| m == 'GET' && p.include?('builds?') }
   end
@@ -191,14 +195,14 @@ class TestAsc < Minitest::Test
                          { 'id' => APP_ID, 'attributes' => { 'bundleId' => BUNDLE } }] })
     respond('GET', %r{/builds\?}, builds_page(%w[1]))
 
-    capture_io { next_build_number(nil, 1) }
+    capture_io { next_build_number('1.2.3', 1) }
     assert_equal APP_ID, env_values['ASC_APP_ID']
   end
 
   def test_next_build_number_fails_loudly_on_http_error
     respond('GET', %r{/apps\?}, { 'errors' => [{ 'status' => '401' }] }, status: 401)
 
-    err = assert_raises(RuntimeError) { capture_io { next_build_number(nil, 1) } }
+    err = assert_raises(RuntimeError) { capture_io { next_build_number('1.2.3', 1) } }
     assert_includes err.message, 'HTTP 401'
   end
 
@@ -320,6 +324,125 @@ class TestAsc < Minitest::Test
     respond('GET', %r{/apps\?}, app_response)
     err = assert_raises(SystemExit) { capture_io { main(['next-build-number', '--marketing-version', '']) } }
     refute_equal 0, err.status
+  end
+
+  # Registers every route a lookup could reach, so an error in a rejection
+  # test can only come from the validation itself (never from a missing route),
+  # and the request log proves no call was sent.
+  def stub_all_asc_routes
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds([{ id: 'b', version: '1', marketing: '2.6.0' }])
+    respond('GET', %r{/builds/[^/]+/betaBuildLocalizations}, { 'data' => [] })
+    respond('POST', %r{/betaBuildLocalizations}, { 'data' => { 'id' => 'loc-1' } })
+  end
+
+  def assert_rejected_without_a_request(bad, &call)
+    err = assert_raises(ArgumentError, "#{bad.inspect} was not rejected") { capture_io(&call) }
+    assert_includes err.message, 'numeric marketing version', "wrong cause for #{bad.inspect}: #{err.message}"
+    assert_empty(@server.requests, "a request was sent for #{bad.inspect}: #{@server.requests.inspect}")
+  end
+
+  def test_lookups_reject_an_empty_or_nil_marketing_version
+    stub_all_asc_routes
+    notes = Tempfile.new('notes')
+    notes.write('n')
+    notes.close
+    [nil, '', '  '].each do |bad|
+      assert_rejected_without_a_request(bad) { next_build_number(bad, 1) }
+      assert_rejected_without_a_request(bad) { build_versions(APP_ID, bad) }
+      assert_rejected_without_a_request(bad) { set_whats_new(bad, '7', notes.path) }
+    end
+  end
+
+  def test_lookups_reject_a_malformed_marketing_version
+    stub_all_asc_routes
+    %w[abc v2 1.2.3.4 -rc.1].each do |bad|
+      assert_rejected_without_a_request(bad) { next_build_number(bad, 1) }
+    end
+  end
+
+  def test_build_versions_sends_the_marketing_version_filter_unconditionally
+    respond('GET', %r{/builds\?}, builds_page(%w[3]))
+    build_versions(APP_ID, '2.6.0')
+    query = URI.decode_www_form(URI(@server.requests.last[1]).query).to_h
+    assert_equal '2.6.0', query['filter[preReleaseVersion.version]']
+    assert_equal APP_ID, query['filter[app]']
+  end
+
+  # ASC stores preReleaseVersion.version as 2.6.0, never 2.6.0-rc.1, so a
+  # lookup that forwarded the suffix would find nothing and the notes job
+  # would poll until it timed out.
+  def test_next_build_number_sends_the_stripped_version_for_a_prerelease
+    stub_all_asc_routes
+    @server.responses.reject! { |_m, pattern, _s, _b| pattern == %r{/builds\?} }
+    respond_with_filtering_builds([{ id: 'a', version: '4', marketing: '2.6.0' }])
+    capture_io { next_build_number('2.6.0-rc.1', 1) }
+    lookup = @server.requests.find { |m, p, _| m == 'GET' && p.include?('/builds?') }
+    refute_nil lookup, 'no builds lookup was sent'
+    assert_equal '2.6.0', URI.decode_www_form(URI(lookup[1]).query).to_h['filter[preReleaseVersion.version]'],
+                 'the prerelease suffix was forwarded to App Store Connect'
+    assert_equal '5', env_values['BUILD_NUMBER']
+  end
+
+  def test_set_whats_new_sends_the_stripped_version_for_a_prerelease
+    stub_all_asc_routes
+    @server.responses.reject! { |_m, pattern, _s, _b| pattern == %r{/builds\?} }
+    respond_with_filtering_builds([{ id: 'rc-build', version: '7', marketing: '2.6.0' }])
+    notes = Tempfile.new('notes')
+    notes.write('n')
+    notes.close
+
+    capture_io { set_whats_new('2.6.0-rc.1+meta', '7', notes.path) }
+    lookup = @server.requests.find { |m, p, _| m == 'GET' && p.include?('/builds?') }
+    refute_nil lookup, 'no builds lookup was sent'
+    assert_equal '2.6.0', URI.decode_www_form(URI(lookup[1]).query).to_h['filter[preReleaseVersion.version]'],
+                 'the prerelease suffix was forwarded to App Store Connect'
+    post = @server.requests.find { |m, p, _| m == 'POST' && p.include?('betaBuildLocalizations') }
+    refute_nil post, 'no notes were written'
+    assert_equal 'rc-build', JSON.parse(post[2]).dig('data', 'relationships', 'build', 'data', 'id')
+  end
+
+  def test_set_whats_new_requires_a_build_number
+    stub_all_asc_routes
+    notes = Tempfile.new('notes')
+    notes.write('n')
+    notes.close
+    err = assert_raises(ArgumentError) { capture_io { set_whats_new('2.6.0', '', notes.path) } }
+    assert_includes err.message, 'build number is required'
+    assert_empty(@server.requests, 'a request was sent without a build number')
+  end
+
+  def test_cli_aborts_cleanly_on_a_malformed_marketing_version
+    stub_all_asc_routes
+    status = nil
+    _out, err_output = capture_io do
+      begin
+        main(['next-build-number', '--marketing-version', 'abc'])
+      rescue SystemExit => e
+        status = e.status
+      end
+    end
+    refute_nil status, 'the CLI did not abort'
+    refute_equal 0, status
+    assert_includes err_output, 'numeric marketing version', "wrong cause: #{err_output}"
+    assert_empty(@server.requests, 'a request was sent for a malformed version')
+  end
+
+  def test_set_whats_new_fails_fast_and_names_the_build_when_none_appears
+    stub_all_asc_routes
+    @server.responses.reject! { |_m, pattern, _s, _b| pattern == %r{/builds\?} }
+    respond_with_filtering_builds([{ id: 'other', version: '7', marketing: '9.9.9' }])
+    notes = Tempfile.new('notes')
+    notes.write('n')
+    notes.close
+
+    started = Time.now
+    err = assert_raises(RuntimeError) { capture_io { set_whats_new('2.6.0', '7', notes.path) } }
+    assert_operator Time.now - started, :<, 10, 'the poll did not honour ASC_POLL_TIMEOUT'
+    assert_includes err.message, '2.6.0'
+    assert_includes err.message, '(7)'
+    assert_includes err.message, 'did not appear'
+    refute(@server.requests.any? { |m, _p, _| m == 'POST' || m == 'PATCH' }, 'notes were written to a build')
   end
 
   def test_ios_marketing_version_plain_version_passes_through

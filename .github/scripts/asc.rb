@@ -13,7 +13,8 @@
 #   ruby asc.rb set-whats-new <marketing-version> <build-number> <notes-file>
 #       Waits for the uploaded build to finish processing in App Store
 #       Connect, then sets its en-US TestFlight "What to Test" text
-#       (betaBuildLocalizations).
+#       (betaBuildLocalizations). The marketing version is stripped of any
+#       -suffix before the lookup (ASC holds 5.5.0, not 5.5.0-beta.1).
 #   ruby asc.rb ios-marketing-version <full-version>
 #       Prints the CFBundleShortVersionString-safe form of a package.json
 #       version: prerelease suffix and build metadata stripped. Aborts
@@ -100,6 +101,20 @@ def ios_marketing_version(full_version)
   stripped
 end
 
+# The marketing version every ASC build lookup filters on. ASC stores
+# preReleaseVersion.version as the numeric X.Y.Z (5.5.0, never 5.5.0-beta.1),
+# so a suffix is stripped here and an empty or malformed value is an error:
+# a lookup without the filter, or with a suffix it cannot match, would return
+# the wrong build or nothing at all.
+def lookup_marketing_version(raw)
+  stripped = strip_ios_marketing_version(raw)
+  if stripped.empty? || !valid_ios_marketing_version?(stripped)
+    raise ArgumentError, "an ASC build lookup needs a numeric marketing version (got #{raw.inspect})"
+  end
+
+  stripped
+end
+
 def app_id
   bundle_id = ENV.fetch('BUNDLE_ID')
   # filter[bundleId] prefix-matches, so confirm the exact bundle ID.
@@ -110,12 +125,13 @@ def app_id
   app['id']
 end
 
-# All build versions for the app (filtered to the marketing version when
-# given). limit=200 is the API max; follow links.next past that.
+# All build versions of one marketing version of the app. The marketing-version
+# filter is unconditional. limit=200 is the API max; follow links.next past that.
 def build_versions(id, marketing_version)
+  marketing_version = lookup_marketing_version(marketing_version)
   versions = []
-  path = "/builds?filter[app]=#{id}&limit=200&fields[builds]=version,uploadedDate"
-  path += "&filter[preReleaseVersion.version]=#{marketing_version}" if marketing_version
+  path = "/builds?filter[app]=#{id}&filter[preReleaseVersion.version]=#{marketing_version}" \
+         '&limit=200&fields[builds]=version,uploadedDate'
   while path
     page = request(:Get, path)
     versions.concat(page['data'].map { |b| b.dig('attributes', 'version') })
@@ -126,19 +142,33 @@ def build_versions(id, marketing_version)
 end
 
 def next_build_number(marketing_version, minimum)
+  marketing_version = lookup_marketing_version(marketing_version)
   id = app_id
   latest = build_versions(id, marketing_version).map(&:to_i).max || 0
   nxt = [latest + 1, minimum].max
 
-  scope = marketing_version ? "version #{marketing_version}" : 'any version'
-  puts "Latest TestFlight build for #{ENV.fetch('BUNDLE_ID')} (#{scope}): #{latest}"
+  puts "Latest TestFlight build for #{ENV.fetch('BUNDLE_ID')} (version #{marketing_version}): #{latest}"
   puts "Next build number: #{nxt}"
   write_env('BUILD_NUMBER', nxt)
   write_env('ASC_APP_ID', id)
   nxt
 end
 
+# How long and how often set_whats_new waits for a fresh upload to appear in
+# App Store Connect. ASC_POLL_TIMEOUT / ASC_POLL_INTERVAL (seconds) override
+# the defaults so tests fail fast instead of waiting out a real deploy's poll.
+def poll_timeout
+  Float(ENV.fetch('ASC_POLL_TIMEOUT', 45 * 60))
+end
+
+def poll_interval
+  Float(ENV.fetch('ASC_POLL_INTERVAL', 30))
+end
+
 def set_whats_new(marketing_version, build_number, notes_file)
+  marketing_version = lookup_marketing_version(marketing_version)
+  raise ArgumentError, "a build number is required (got #{build_number.inspect})" if build_number.to_s.strip.empty?
+
   id = app_id
   notes = File.read(notes_file)
 
@@ -146,7 +176,7 @@ def set_whats_new(marketing_version, build_number, notes_file)
   # App Store Connect states reject it, so poll for a terminal-good state.
   build = nil
   state = nil
-  deadline = Time.now + (45 * 60)
+  deadline = Time.now + poll_timeout
   query = "/builds?filter[app]=#{id}&filter[version]=#{build_number}" \
           "&filter[preReleaseVersion.version]=#{marketing_version}&limit=1"
   loop do
@@ -155,9 +185,9 @@ def set_whats_new(marketing_version, build_number, notes_file)
     puts "Build #{marketing_version} (#{build_number}): #{state || 'not visible yet'}"
     break if build && %w[VALID PROCESSING].include?(state)
     raise "Build #{marketing_version} (#{build_number}) ended in state #{state}" if %w[FAILED INVALID].include?(state)
-    raise "Build #{marketing_version} (#{build_number}) did not appear within 45 minutes" if Time.now > deadline
+    raise "Build #{marketing_version} (#{build_number}) did not appear within #{(poll_timeout / 60.0).round} minutes" if Time.now > deadline
 
-    sleep 30
+    sleep poll_interval
   end
   build_id = build['id']
 
@@ -194,11 +224,19 @@ def main(argv)
     end
     abort 'asc.rb next-build-number: --marketing-version is required' if marketing_version.nil? || marketing_version.empty?
 
-    next_build_number(marketing_version, minimum)
+    begin
+      next_build_number(marketing_version, minimum)
+    rescue ArgumentError => e
+      abort "asc.rb next-build-number: #{e.message}"
+    end
   when 'set-whats-new'
     abort 'usage: asc.rb set-whats-new <marketing-version> <build-number> <notes-file>' unless argv.length == 4
 
-    set_whats_new(argv[1], argv[2], argv[3])
+    begin
+      set_whats_new(argv[1], argv[2], argv[3])
+    rescue ArgumentError => e
+      abort "asc.rb set-whats-new: #{e.message}"
+    end
   when 'ios-marketing-version'
     abort 'usage: asc.rb ios-marketing-version <full-version>' unless argv.length == 2
 

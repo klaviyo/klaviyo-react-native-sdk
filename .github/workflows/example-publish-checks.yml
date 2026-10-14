@@ -137,7 +137,8 @@ jobs:
         shell: bash
         run: |
           gem install jwt --no-document --silent
-          MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
+          FULL_VERSION=$(jq -r .version package.json)
+          MARKETING_VERSION=$(ruby .github/scripts/asc.rb ios-marketing-version "$FULL_VERSION")
           ruby .github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION"
 
       - name: Clean up API key
