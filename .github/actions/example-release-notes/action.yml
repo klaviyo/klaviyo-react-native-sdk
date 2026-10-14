@@ -11,10 +11,14 @@ outputs:
   notes_file:
     description: Path to the file containing the release notes
     value: ${{ steps.notes.outputs.notes_file }}
+  sdk_ref:
+    description: Compact one-line summary of the RN/Android/iOS SDK refs (empty when sdk-ref.js is unavailable)
+    value: ${{ steps.notes.outputs.sdk_ref }}
 
 runs:
   using: composite
   steps:
+    # Requires node on PATH (the workflow's setup action runs before this).
     - id: notes
       shell: bash
       env:
@@ -49,9 +53,23 @@ runs:
           NOTES=$(printf '%s\n\nBuilt from %s @ %s (%s)' "${SUBJECT:-No commit message}" "$REF_NAME" "${SHA:0:7}" "$EVENT_NAME")
         fi
 
+        # Lead with the SDK refs so testers can see exactly what the build
+        # contains. `--print` emits "Label: value" lines; awk compacts them
+        # to `RN 2.5.1 (...) | Android 4.5.1 | iOS 5.4.1`.
+        SDK_REF=""
+        if [ -f example/scripts/sdk-ref.js ]; then
+          SDK_REF=$(node example/scripts/sdk-ref.js --print \
+            | awk -F': +' '{ sub(/ SDK$/, "", $1); out = out (out ? " | " : "") $1 " " $2 } END { print out }' \
+            || true)
+        fi
+        if [ -n "$SDK_REF" ]; then
+          NOTES="${SDK_REF}"$'\n'"${NOTES}"
+        fi
+
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
         printf '%s' "${NOTES:0:${MAX_LENGTH}}" > "$NOTES_FILE"
         echo "Release notes:"
         cat "$NOTES_FILE"
         echo
         echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+        echo "sdk_ref=$SDK_REF" >> "$GITHUB_OUTPUT"

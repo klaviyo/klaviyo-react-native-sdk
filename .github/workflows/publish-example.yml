@@ -122,6 +122,14 @@ jobs:
         shell: bash
         run: ./pack-and-test.sh setup
 
+      # After the setup action so node is on PATH. Writes the SDK version/ref
+      # block to example/.env for the app UI and release notes. A missing ref
+      # resolves to "unknown" rather than failing the step — the checkout is
+      # shallow, so tag/branch info may not be available.
+      - name: Record SDK versions in example/.env
+        shell: bash
+        run: node example/scripts/sdk-ref.js
+
       # Play Store release notes: the GitHub release body on `release`,
       # otherwise synthesized from git metadata. 500 chars is Google's
       # per-locale cap.
@@ -198,6 +206,7 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
           platform: Play Store
+          sdk_ref: ${{ steps.release_notes.outputs.sdk_ref }}
           version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
           # Standard `play.google.com/apps/test/<pkg>/<code>` URL (what
           # r0adkll/upload-google-play used to emit), only resolvable by users
@@ -300,6 +309,14 @@ jobs:
         run: |
           bundle exec pod install --repo-update
           rm -f .xcode.env.local
+
+      # After pod install so Podfile.lock reflects the resolved KlaviyoSwift
+      # pin, and before the Xcode build inlines .env via Metro. A missing ref
+      # resolves to "unknown" rather than failing the step — the checkout is
+      # shallow, so tag/branch info may not be available.
+      - name: Record SDK versions in example/.env
+        shell: bash
+        run: node example/scripts/sdk-ref.js
 
       # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key
@@ -460,6 +477,7 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
           platform: TestFlight
+          sdk_ref: ${{ steps.release_notes.outputs.sdk_ref }}
           version_label: ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }})
           # App Store Connect page for the build (or the app's TestFlight tab
           # if the build lookup failed). Requires an ASC login, so it's safe

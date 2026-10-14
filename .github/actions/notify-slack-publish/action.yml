@@ -26,6 +26,10 @@ inputs:
     description: Optional plain-text instructions for reaching the build (e.g. who can see it and where). Must not contain public/unauthenticated links — this repo's logs are public.
     required: false
     default: ''
+  sdk_ref:
+    description: Optional compact SDK version/ref summary (e.g. 'RN 2.5.1 | Android 4.5.1 | iOS 5.4.1') shown on success messages
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -44,7 +48,7 @@ runs:
             - type: "section"
               text:
                 type: "mrkdwn"
-                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.sdk_ref != '' && format('\n*SDK:* {0}', inputs.sdk_ref) || '' }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
