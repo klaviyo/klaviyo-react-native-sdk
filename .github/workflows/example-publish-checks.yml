@@ -64,6 +64,14 @@ jobs:
       - name: Test assert-artifact-version.sh
         run: .github/scripts/test-assert-artifact-version.sh
 
+      - name: Guard GitHub expressions
+        run: |
+          .github/scripts/check-expressions.sh
+          .github/scripts/test-check-expressions.sh
+
+      - name: Guard publish workflow invariants
+        run: .github/scripts/check-workflow-guards.sh
+
       # The runner's system Ruby installs gems to a root-owned directory.
       - name: Set up Ruby
         uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
