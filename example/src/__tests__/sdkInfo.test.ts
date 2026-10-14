@@ -127,6 +127,7 @@ describe('formatBuildInfoHeader', () => {
     nativeRef: '5.4.1',
     commit: 'abc1234',
     sourceLabel: 'main',
+    built: '2026-10-13 21:00 UTC',
   };
 
   it('renders the release form without a ref suffix or CI line', () => {
@@ -136,6 +137,7 @@ describe('formatBuildInfoHeader', () => {
         'Klaviyo RN SDK 2.5.1',
         'Klaviyo iOS SDK 5.4.1',
         'Commit: abc1234 on main',
+        'Built: 2026-10-13 21:00 UTC',
       ].join('\n')
     );
   });
@@ -153,6 +155,7 @@ describe('formatBuildInfoHeader', () => {
         'Klaviyo RN SDK 2.5.1',
         'Klaviyo iOS SDK 5.4.1',
         'Commit: abc1234 on main (pull_request)',
+        'Built: 2026-10-13 21:00 UTC',
         'CI run: https://example.com/run/1',
       ].join('\n')
     );
@@ -181,6 +184,7 @@ describe('formatBuildInfoHeader', () => {
         'Klaviyo RN SDK —',
         'Klaviyo iOS SDK —',
         'Commit: — on —',
+        'Built: —',
       ].join('\n')
     );
   });
@@ -194,6 +198,7 @@ describe('buildCopyText', () => {
         'Klaviyo RN SDK 2.6.0-rc.1 · rel/2.6@abc1234',
         'Klaviyo iOS SDK 5.4.1',
         'Commit: cafe123 on rel/2.6',
+        'Built: 2026-10-13 21:00 UTC',
       ].join('\n')
     );
   });
@@ -237,6 +242,7 @@ describe('cross-check with the node formatter', () => {
       commit: 'abc1234',
       sourceLabel: 'main',
       event: 'push',
+      built: '2026-10-13 21:00 UTC',
       runUrl: 'https://example.com/run/1',
     },
     {
@@ -250,6 +256,7 @@ describe('cross-check with the node formatter', () => {
       nativeRef: 'main@deadbee',
       commit: 'abc1234',
       sourceLabel: 'rel/2.5',
+      built: '2026-10-13 22:30 UTC',
     },
     {
       appName: 'RN Example',

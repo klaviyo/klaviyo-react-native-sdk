@@ -110,13 +110,14 @@ export interface BuildInfoHeaderInput {
   commit?: string;
   sourceLabel?: string;
   event?: string;
+  built?: string;
   runUrl?: string;
 }
 
 // The notes header block shared with CI: one App line, the RN SDK row, the
-// native SDK row for the build's platform, a Commit line, and a CI run line
-// only when a run URL is given. In-app copies omit the CI line and the
-// event, passing the branch as the source label.
+// native SDK row for the build's platform, a Commit line, a Built line, and
+// a CI run line only when a run URL is given. In-app copies omit the CI line
+// and the event, passing the branch as the source label.
 export const formatBuildInfoHeader = (input: BuildInfoHeaderInput): string => {
   const appLine = `${input.appName} ${
     isMissing(input.appVersion) ? MISSING : input.appVersion
@@ -132,6 +133,7 @@ export const formatBuildInfoHeader = (input: BuildInfoHeaderInput): string => {
       input.platform === 'ios' ? 'iOS' : 'Android'
     } SDK ${formatVersionRef(input.nativeVersion, input.nativeRef)}`,
     commitLine,
+    `Built: ${valueOrMissing(input.built)}`,
   ];
   if (input.runUrl) {
     lines.push(`CI run: ${input.runUrl}`);
@@ -162,4 +164,5 @@ export const buildCopyText = (
         : env.KLAVIYO_SDK_REF_ANDROID,
     commit: env.KLAVIYO_BUILD_COMMIT,
     sourceLabel: env.KLAVIYO_BUILD_BRANCH,
+    built: env.KLAVIYO_BUILD_BUILT,
   });

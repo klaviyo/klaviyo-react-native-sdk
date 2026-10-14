@@ -179,6 +179,7 @@ describe('node formatter', () => {
     nativeRef: '5.4.1',
     commit: 'abc1234',
     sourceLabel: 'main',
+    built: '2026-10-13 21:00 UTC',
   };
 
   it('renders the release form without a ref suffix or CI line', () => {
@@ -188,6 +189,7 @@ describe('node formatter', () => {
         'Klaviyo RN SDK 2.5.1',
         'Klaviyo iOS SDK 5.4.1',
         'Commit: abc1234 on main',
+        'Built: 2026-10-13 21:00 UTC',
       ].join('\n')
     );
   });
@@ -205,6 +207,7 @@ describe('node formatter', () => {
         'Klaviyo RN SDK 2.5.1',
         'Klaviyo iOS SDK 5.4.1',
         'Commit: abc1234 on main (pull_request)',
+        'Built: 2026-10-13 21:00 UTC',
         'CI run: https://example.com/run/1',
       ].join('\n')
     );
@@ -230,6 +233,7 @@ describe('node formatter', () => {
         'Klaviyo RN SDK —',
         'Klaviyo iOS SDK —',
         'Commit: — on —',
+        'Built: —',
       ].join('\n')
     );
   });
@@ -283,4 +287,166 @@ describe('resolved versions against this checkout', () => {
     expect(expected).not.toBe('unknown');
     expect(resolved[key]).toBe(expected);
   });
+});
+
+describe('--print output', () => {
+  const { execFileSync } = require('child_process');
+  const SCRIPT = path.join(__dirname, '..', 'sdk-ref.js');
+
+  it('is exactly the original three ref lines', () => {
+    const out = execFileSync(process.execPath, [SCRIPT, '--print'], {
+      encoding: 'utf8',
+    });
+    const lines = out.replace(/\n$/, '').split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatch(/^RN SDK: {6}/);
+    expect(lines[1]).toMatch(/^Android SDK: /);
+    expect(lines[2]).toMatch(/^iOS SDK: {5}/);
+  });
+});
+
+describe('--print-header --from-env', () => {
+  const { execFileSync } = require('child_process');
+  const os = require('os');
+  const SCRIPT = path.join(__dirname, '..', 'sdk-ref.js');
+
+  const envContent = [
+    'KLAVIYO_SDK_REF_RN=rel/2.6@abc1234',
+    'KLAVIYO_SDK_REF_ANDROID=main@deadbee',
+    'KLAVIYO_SDK_REF_IOS=5.4.1',
+    'KLAVIYO_SDK_VERSION_RN=2.6.0-rc.1',
+    'KLAVIYO_SDK_VERSION_ANDROID=4.6.0',
+    'KLAVIYO_SDK_VERSION_IOS=5.4.1',
+    'KLAVIYO_BUILD_APP_VERSION=2.6.0-rc.1',
+    'KLAVIYO_BUILD_NUMBER=42',
+    'KLAVIYO_BUILD_COMMIT=cafe123',
+    'KLAVIYO_BUILD_BRANCH=rel/2.6',
+    'KLAVIYO_BUILD_BUILT=2026-10-13 21:00 UTC',
+    '',
+  ].join('\n');
+
+  const withTempEnv = (content, fn) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-ref-env-'));
+    const file = path.join(dir, '.env');
+    fs.writeFileSync(file, content);
+    try {
+      return fn(file, dir);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('builds the header solely from the .env values', () =>
+    withTempEnv(envContent, (file) => {
+      const out = execFileSync(
+        process.execPath,
+        [
+          SCRIPT,
+          '--print-header',
+          '--from-env',
+          '1',
+          '--env-file',
+          file,
+          '--platform',
+          'ios',
+          '--source-label',
+          'PR #429',
+          '--event',
+          'pull_request',
+          '--run-url',
+          'https://example.com/run/1',
+        ],
+        { encoding: 'utf8' }
+      );
+      expect(out).toBe(
+        [
+          'RN Example 2.6.0-rc.1 (42)',
+          'Klaviyo RN SDK 2.6.0-rc.1 · rel/2.6@abc1234',
+          'Klaviyo iOS SDK 5.4.1',
+          'Commit: cafe123 on PR #429 (pull_request)',
+          'Built: 2026-10-13 21:00 UTC',
+          'CI run: https://example.com/run/1',
+          '',
+        ].join('\n')
+      );
+    }));
+
+  it('matches the in-app copy block for the same values', () =>
+    withTempEnv(envContent, (file) => {
+      const out = execFileSync(
+        process.execPath,
+        [
+          SCRIPT,
+          '--print-header',
+          '--from-env',
+          '1',
+          '--env-file',
+          file,
+          '--platform',
+          'android',
+        ],
+        { encoding: 'utf8' }
+      );
+      // Same values through the pure env-driven path equal the TS formatter
+      // fixtures asserted in example/src/__tests__/sdkInfo.test.ts.
+      expect(out).toBe(
+        sdkRef.headerFromEnv(sdkRef.parseEnvContent(envContent), {
+          'platform': 'android',
+          'app-name': 'RN Example',
+        }) + '\n'
+      );
+    }));
+
+  it('renders em dashes for keys missing from the .env', () =>
+    withTempEnv('KLAVIYO_BUILD_BRANCH=main\n', (file) => {
+      const out = execFileSync(
+        process.execPath,
+        [
+          SCRIPT,
+          '--print-header',
+          '--from-env',
+          '1',
+          '--env-file',
+          file,
+          '--platform',
+          'ios',
+        ],
+        { encoding: 'utf8' }
+      );
+      expect(out).toBe(
+        [
+          'RN Example —',
+          'Klaviyo RN SDK —',
+          'Klaviyo iOS SDK —',
+          'Commit: — on main',
+          'Built: —',
+          '',
+        ].join('\n')
+      );
+    }));
+
+  it('does not touch git, package.json or the clock', () =>
+    withTempEnv(envContent, (file, dir) => {
+      // Run from an empty cwd with a PATH that has no git: success proves
+      // the mode is pure env-driven.
+      const out = execFileSync(
+        process.execPath,
+        [
+          SCRIPT,
+          '--print-header',
+          '--from-env',
+          '1',
+          '--env-file',
+          file,
+          '--platform',
+          'ios',
+        ],
+        {
+          encoding: 'utf8',
+          cwd: dir,
+          env: { PATH: '/nonexistent-no-git-here' },
+        }
+      );
+      expect(out).toContain('RN Example 2.6.0-rc.1 (42)');
+    }));
 });
