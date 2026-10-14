@@ -1,11 +1,17 @@
 name: Prepare example app release notes
 description: >-
-  Writes release notes for a store upload to a file. On `release: published`
-  the GitHub release body is used; on every other trigger the text is
-  synthesized from git metadata (ref, short SHA, commit subject or PR title).
+  Writes store release notes to a file. The notes lead with the app version,
+  the SDK refs and the commit, then the ref, trigger, build time (UTC) and a
+  link to the CI run; on `release: published` the release name and body are
+  appended. Free text arrives only through env vars. Truncation cuts the
+  appended free text first so the header survives the store's length cap
+  (500 chars on Play, 4000 on TestFlight).
 inputs:
   max_length:
     description: Maximum number of characters to keep (store-specific cap, e.g. 500 for Play, 4000 for TestFlight)
+    required: true
+  version_label:
+    description: App version line, e.g. "2.5.1 (build 7)" for iOS or "2.5.1" for Android
     required: true
 outputs:
   notes_file:
@@ -31,6 +37,8 @@ runs:
         # testers, so prefer the PR head for labeled-PR runs.
         REF_NAME: ${{ github.head_ref || github.ref_name }}
         SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        VERSION_LABEL: ${{ inputs.version_label }}
         MAX_LENGTH: ${{ inputs.max_length }}
         # Character-based truncation below is locale-aware; pin a UTF-8
         # locale so multi-byte characters near the cut are never split.
@@ -38,32 +46,36 @@ runs:
         LC_ALL: C.UTF-8
       run: |
         set -euo pipefail
-        if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_BODY//[[:space:]]/}" ]; then
-          NOTES="$RELEASE_BODY"
+
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          SUBJECT="PR #${PR_NUMBER}: ${PR_TITLE}"
         else
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            SUBJECT="PR #${PR_NUMBER}: ${PR_TITLE}"
-          elif [ "$EVENT_NAME" = "release" ]; then
-            SUBJECT="Release ${RELEASE_NAME}"
-          else
-            # Checkout is shallow, but HEAD is always present for push /
-            # workflow_dispatch runs.
-            SUBJECT=$(git log -1 --format=%s HEAD 2>/dev/null || true)
-          fi
-          NOTES=$(printf '%s\n\nBuilt from %s @ %s (%s)' "${SUBJECT:-No commit message}" "$REF_NAME" "${SHA:0:7}" "$EVENT_NAME")
+          SUBJECT=$(git log -1 --format=%s "$SHA" 2>/dev/null || true)
         fi
 
-        # Lead with the SDK refs so testers can see exactly what the build
-        # contains. `--print` emits "Label: value" lines; awk compacts them
-        # to `RN 2.5.1 (...) | Android 4.5.1 | iOS 5.4.1`.
+        # `--print` emits "Label: value" lines; awk compacts them to
+        # `RN 2.5.1 (...) | Android 4.5.1 | iOS 5.4.1`.
         SDK_REF=""
         if [ -f example/scripts/sdk-ref.js ]; then
           SDK_REF=$(node example/scripts/sdk-ref.js --print \
             | awk -F': +' '{ sub(/ SDK$/, "", $1); out = out (out ? " | " : "") $1 " " $2 } END { print out }' \
             || true)
         fi
-        if [ -n "$SDK_REF" ]; then
-          NOTES="${SDK_REF}"$'\n'"${NOTES}"
+
+        HEADER="Version ${VERSION_LABEL}"
+        [ -n "$SDK_REF" ] && HEADER="${HEADER}"$'\n'"SDK: ${SDK_REF}"
+        HEADER="${HEADER}"$'\n'"Commit: ${SHA:0:7} ${SUBJECT}"
+        HEADER="${HEADER}"$'\n'"Ref: ${REF_NAME} (${EVENT_NAME})"
+        HEADER="${HEADER}"$'\n'"Built: $(date -u '+%Y-%m-%d %H:%M UTC')"
+        HEADER="${HEADER}"$'\n'"CI run: ${RUN_URL}"
+
+        NOTES="$HEADER"
+        if [ "$EVENT_NAME" = "release" ]; then
+          TRAILER=$'\n\n'"Release notes (${RELEASE_NAME}):"$'\n'"${RELEASE_BODY}"
+          # Cut the release text first so the header survives the cap.
+          BUDGET=$(( MAX_LENGTH - ${#HEADER} ))
+          if [ "$BUDGET" -lt 0 ]; then BUDGET=0; fi
+          NOTES="${HEADER}${TRAILER:0:$BUDGET}"
         fi
 
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"

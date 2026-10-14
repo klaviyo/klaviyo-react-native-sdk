@@ -22,6 +22,10 @@ inputs:
     description: Link text for install_url
     required: false
     default: Tap to install build
+  install_fallback:
+    description: Text shown in place of the install link when install_url is empty. When unset, an empty install_url omits the line entirely.
+    required: false
+    default: ''
   access_note:
     description: Optional plain-text instructions for reaching the build (e.g. who can see it and where). Must not contain public/unauthenticated links — this repo's logs are public.
     required: false
@@ -34,7 +38,23 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: slackapi/slack-github-action@v2.1.1
+    # Free text (a release tag can contain a double quote) is computed in a
+    # step and referenced by output — never interpolated into the payload.
+    - name: Set source label
+      id: source
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        REF_NAME: ${{ github.head_ref || github.ref_name }}
+      run: |
+        if [ -n "$RELEASE_TAG" ]; then
+          source_label="release $RELEASE_TAG"
+        else
+          source_label="$REF_NAME"
+        fi
+        echo "label=$(printf '%s' "$source_label" | tr -cd 'A-Za-z0-9._/ +-')" >> "$GITHUB_OUTPUT"
+
+    - uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
       with:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
@@ -48,7 +68,7 @@ runs:
             - type: "section"
               text:
                 type: "mrkdwn"
-                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.sdk_ref != '' && format('\n*SDK:* {0}', inputs.sdk_ref) || '' }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Source:* `${{ steps.source.outputs.label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.sdk_ref != '' && format('\n*SDK:* {0}', inputs.sdk_ref) || '' }}${{ (inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label)) || (inputs.install_fallback != '' && format('\n*Install:* {0}', inputs.install_fallback)) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
