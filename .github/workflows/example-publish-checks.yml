@@ -70,8 +70,14 @@ jobs:
       - name: Test assert-artifact-version.sh
         run: .github/scripts/test-assert-artifact-version.sh
 
+      # A venv keeps the install off the system interpreter, which newer
+      # runner images mark as externally managed (PEP 668). Later steps pick
+      # up its python3 through GITHUB_PATH.
       - name: Install PyYAML for the workflow guards
-        run: python3 -m pip install --quiet --user PyYAML
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --quiet PyYAML
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Guard GitHub expressions
         run: |
