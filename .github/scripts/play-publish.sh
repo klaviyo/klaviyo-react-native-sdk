@@ -10,15 +10,23 @@
 #       Uploads the bundle, assigns it to <track> as a completed release and
 #       commits the edit. Exit codes: 0 = success, 75 = versionCode conflict
 #       (caller should rebuild with a higher code), anything else = failure.
+#   play-publish.sh internal-sharing <aab>
+#       Uploads the bundle to Internal App Sharing and prints the
+#       downloadUrl from the response (empty when the API omits it).
 #
 # Env: PACKAGE_NAME (required). Auth comes from the gcloud credentials set up
 # by google-github-actions/auth. The androidpublisher scope must be requested
 # explicitly: the default cloud-platform scope gets empty responses.
+# PLAY_API_BASE / PLAY_UPLOAD_API_BASE override the API roots (tests only).
 set -euo pipefail
 
 : "${PACKAGE_NAME:?PACKAGE_NAME is required}"
-API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
-UPLOAD_API="https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/$PACKAGE_NAME"
+API_BASE="${PLAY_API_BASE:-https://androidpublisher.googleapis.com/androidpublisher/v3}"
+UPLOAD_BASE="${PLAY_UPLOAD_API_BASE:-https://androidpublisher.googleapis.com/upload/androidpublisher/v3}"
+API="$API_BASE/applications/$PACKAGE_NAME"
+UPLOAD_API="$UPLOAD_BASE/applications/$PACKAGE_NAME"
+# Internal App Sharing hangs off applications/internalappsharing/<pkg>.
+SHARING_UPLOAD_API="$UPLOAD_BASE/applications/internalappsharing/$PACKAGE_NAME"
 EXIT_CONFLICT=75
 
 TOKEN=$(gcloud auth print-access-token --scopes=https://www.googleapis.com/auth/androidpublisher)
@@ -117,6 +125,19 @@ upload() {
   echo "Published versionCode $version_code to '$track'"
 }
 
+# Internal App Sharing uploads go straight to internalappsharingartifacts —
+# no edit — and return a downloadUrl anyone with an authorized Play account
+# can install from.
+internal_sharing() {
+  local aab=$1 status
+  echo "Uploading $aab to Internal App Sharing"
+  status=$(call POST "$SHARING_UPLOAD_API/artifacts/bundle?uploadType=media" \
+    -H "Content-Type: application/octet-stream" \
+    --data-binary "@$aab")
+  [ "$status" = 200 ] || fail "Internal App Sharing upload failed" "$status"
+  jq -r '.downloadUrl // empty' "$RESPONSE_FILE"
+}
+
 case "${1:-}" in
   highest-version-code)
     highest_version_code
@@ -126,8 +147,13 @@ case "${1:-}" in
     [ $# -ge 3 ] || { echo "usage: $0 upload <aab> <version-code> <track> [release-notes-file]" >&2; exit 2; }
     upload "$@"
     ;;
+  internal-sharing)
+    shift
+    [ $# -eq 1 ] || { echo "usage: $0 internal-sharing <aab>" >&2; exit 2; }
+    internal_sharing "$@"
+    ;;
   *)
-    echo "usage: $0 {highest-version-code|upload ...}" >&2
+    echo "usage: $0 {highest-version-code|upload ...|internal-sharing <aab>}" >&2
     exit 2
     ;;
 esac
