@@ -209,6 +209,12 @@ jobs:
           java-version: '17'
           java-package: jdk
 
+      # The version assertion after the build needs aapt2; fail here, in
+      # seconds, rather than after a full bundle build.
+      - name: Check the version assertion's tools exist
+        shell: bash
+        run: .github/scripts/assert-artifact-version.sh --check-tools android
+
       - name: Add Google Services from Secrets
         run: 'echo "$GOOGLE_SERVICES_JSON" > ./example/android/app/google-services.json'
         shell: bash

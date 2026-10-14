@@ -80,6 +80,7 @@ cat > "$WORK/bin/aapt2" <<'EOF'
 printf '%s\n' "$FAKE_DUMP"
 EOF
 chmod +x "$WORK/bin/aapt2"
+REAL_PATH="$PATH"
 export PATH="$WORK/bin:$PATH"
 
 # A real AAB zip only needs the manifest path for the script's unzip.
@@ -107,6 +108,51 @@ FAKE_DUMP=''
 expect_fail "android empty aapt2 output" "$SCRIPT" android "$WORK/fake.aab" 42 2.6.0-rc.1
 
 expect_fail "android missing artifact" "$SCRIPT" android "$WORK/nope.aab" 42 2.6.0-rc.1
+
+# The stub must not outlive the cases that need it.
+export PATH="$REAL_PATH"
+if command -v aapt2 >/dev/null 2>&1 && [ "$(command -v aapt2)" = "$WORK/bin/aapt2" ]; then
+  fail "the aapt2 stub is still on PATH after the stubbed cases"
+else
+  pass "PATH restored: the stub no longer shadows aapt2"
+fi
+
+# --check-tools: resolves the real tool without an artifact.
+# A fake SDK layout proves the ANDROID_HOME branch (no stub on PATH).
+mkdir -p "$WORK/sdk/build-tools/34.0.0" "$WORK/sdk/build-tools/36.1.0"
+printf '#!/bin/sh\n' > "$WORK/sdk/build-tools/34.0.0/aapt2"
+printf '#!/bin/sh\n' > "$WORK/sdk/build-tools/36.1.0/aapt2"
+chmod +x "$WORK/sdk/build-tools/34.0.0/aapt2" "$WORK/sdk/build-tools/36.1.0/aapt2"
+
+out=$(env -i PATH="/usr/bin:/bin" HOME="$WORK" ANDROID_HOME="$WORK/sdk" "$SCRIPT" --check-tools android 2>&1) && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && grep -qF "aapt2: $WORK/sdk/build-tools/36.1.0/aapt2" <<<"$out"; then
+  pass "--check-tools android finds the newest aapt2 under ANDROID_HOME"
+else
+  fail "--check-tools android via ANDROID_HOME: rc=$rc out=$out"
+fi
+
+out=$(env -i PATH="/usr/bin:/bin" HOME="$WORK" "$SCRIPT" --check-tools android 2>&1) && rc=0 || rc=$?
+if [ "$rc" -ne 0 ] && grep -qF 'aapt2 not found' <<<"$out"; then
+  pass "--check-tools android fails naming aapt2 when it is nowhere"
+else
+  fail "--check-tools android with no aapt2: rc=$rc out=$out"
+fi
+
+out=$(env -i PATH="/usr/bin:/bin" HOME="$WORK" ANDROID_HOME="$WORK/empty-sdk" "$SCRIPT" --check-tools android 2>&1) && rc=0 || rc=$?
+if [ "$rc" -ne 0 ] && grep -qF 'aapt2 not found' <<<"$out"; then
+  pass "--check-tools android fails when ANDROID_HOME has no build-tools"
+else
+  fail "--check-tools android with an empty ANDROID_HOME: rc=$rc out=$out"
+fi
+
+out=$(env -i PATH="/usr/bin:/bin" HOME="$WORK" "$SCRIPT" --check-tools ios 2>&1) && rc=0 || rc=$?
+if [ "$rc" -eq 0 ]; then pass "--check-tools ios passes when a plist reader exists"; else fail "--check-tools ios: rc=$rc out=$out"; fi
+
+out=$("$SCRIPT" --check-tools windows 2>&1) && rc=0 || rc=$?
+if [ "$rc" -eq 2 ]; then pass "--check-tools rejects an unknown platform with a usage error"; else fail "--check-tools windows: rc=$rc out=$out"; fi
+
+out=$("$SCRIPT" --check-tools 2>&1) && rc=0 || rc=$?
+if [ "$rc" -eq 2 ]; then pass "--check-tools without a platform is a usage error"; else fail "--check-tools alone: rc=$rc out=$out"; fi
 
 if [ "$fail_count" -gt 0 ]; then
   echo "$fail_count test(s) failed" >&2

@@ -5,6 +5,9 @@
 # Usage:
 #   assert-artifact-version.sh ios <ipa> <expected-build> <expected-short-version>
 #   assert-artifact-version.sh android <aab> <expected-code> <expected-name>
+#   assert-artifact-version.sh --check-tools <ios|android>
+#       Checks the tools the assertion needs exist (aapt2 for android) without
+#       an artifact, so a deploy can fail in seconds, before building.
 #
 # iOS: reads CFBundleVersion / CFBundleShortVersionString from
 # Payload/*.app/Info.plist inside the IPA. Uses /usr/libexec/PlistBuddy on
@@ -15,6 +18,47 @@
 # protobuf, so plain unzip+grep cannot read them.
 set -euo pipefail
 
+fail() {
+  echo "::error::$1" >&2
+  exit 1
+}
+
+# Prints the path of aapt2: PATH first, else the newest under
+# $ANDROID_HOME/build-tools. Exits non-zero when none is found.
+find_aapt2() {
+  local found
+  found=$(command -v aapt2 || true)
+  if [ -z "$found" ] && [ -n "${ANDROID_HOME:-}" ]; then
+    found=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -1)
+  fi
+  [ -n "$found" ] || return 1
+  printf '%s\n' "$found"
+}
+
+if [ "${1:-}" = "--check-tools" ]; then
+  [ $# -eq 2 ] || {
+    echo "usage: $0 --check-tools <ios|android>" >&2
+    exit 2
+  }
+  case "$2" in
+    android)
+      aapt2=$(find_aapt2) || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
+      echo "aapt2: $aapt2"
+      ;;
+    ios)
+      if [ ! -x /usr/libexec/PlistBuddy ] && ! command -v python3 >/dev/null 2>&1; then
+        fail "neither PlistBuddy nor python3 is available to read the IPA plist"
+      fi
+      echo "plist reader: ok"
+      ;;
+    *)
+      echo "usage: $0 --check-tools <ios|android>" >&2
+      exit 2
+      ;;
+  esac
+  exit 0
+fi
+
 [ $# -eq 4 ] || {
   echo "usage: $0 <ios|android> <artifact> <expected-code> <expected-name>" >&2
   exit 2
@@ -23,11 +67,6 @@ platform=$1
 artifact=$2
 expected_code=$3
 expected_name=$4
-
-fail() {
-  echo "::error::$1" >&2
-  exit 1
-}
 
 [ -f "$artifact" ] || fail "Artifact not found: $artifact"
 
@@ -55,11 +94,7 @@ case "$platform" in
     actual_name=$(read_plist_value "$plist" CFBundleShortVersionString) || fail "CFBundleShortVersionString missing in $plist"
     ;;
   android)
-    aapt2=$(command -v aapt2 || true)
-    if [ -z "$aapt2" ] && [ -n "${ANDROID_HOME:-}" ]; then
-      aapt2=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -1)
-    fi
-    [ -n "$aapt2" ] || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
+    aapt2=$(find_aapt2) || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
     unzip -o -q "$artifact" 'base/manifest/AndroidManifest.xml' -d "$WORK"
     [ -f "$WORK/base/manifest/AndroidManifest.xml" ] || fail "No base/manifest/AndroidManifest.xml in $artifact"
     dump=$("$aapt2" dump xmltree --file base/manifest/AndroidManifest.xml "$artifact" 2>/dev/null || true)
