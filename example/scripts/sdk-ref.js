@@ -230,13 +230,42 @@ function parseLockVersion(lockContent, podName) {
   return match ? match[1] : null;
 }
 
+// Dirty only when no explicit --commit was given and the tree has
+// uncommitted changes.
+function isDirty({ commit, porcelain }) {
+  return commit ? false : Boolean(porcelain);
+}
+
+// CocoaPods records git-sourced pods in a YAML section:
+//   CHECKOUT OPTIONS:
+//     KlaviyoSwift:
+//       :commit: <sha>
+//       :git: <url>
 function parseLockCommit(lockContent, podName) {
-  const pattern = new RegExp(
-    `^ {2}${podName}: :checkout => "[^"]*"\\n {4}:commit => "([0-9a-f]+)"`,
-    'm'
-  );
-  const match = lockContent && lockContent.match(pattern);
-  return match ? match[1] : null;
+  if (!lockContent) {
+    return null;
+  }
+  const lines = lockContent.split('\n');
+  let i = lines.findIndex((line) => /^CHECKOUT OPTIONS:?\s*$/.test(line));
+  if (i === -1) {
+    return null;
+  }
+  for (i += 1; i < lines.length; i++) {
+    if (lines[i] !== '' && !lines[i].startsWith(' ')) {
+      break;
+    }
+    if (lines[i].trim() !== `${podName}:`) {
+      continue;
+    }
+    for (let j = i + 1; j < lines.length && lines[j].startsWith('    '); j++) {
+      const match = lines[j].match(/^ {4}:commit: ["']?([0-9a-f]+)["']?\s*$/);
+      if (match) {
+        return match[1];
+      }
+    }
+    return null;
+  }
+  return null;
 }
 
 function parsePodspecVersion(podspecContent, podName) {
@@ -500,9 +529,12 @@ function resolveAll(options = {}) {
     tagNames,
     branch,
     sha,
-    dirty: options.commit
-      ? false
-      : Boolean(git(['status', '--porcelain'], REPO_ROOT)),
+    dirty: isDirty({
+      commit: options.commit,
+      porcelain: options.commit
+        ? null
+        : git(['status', '--porcelain'], REPO_ROOT),
+    }),
   });
 
   const resolvers = {
@@ -651,6 +683,7 @@ module.exports = {
   headerFromEnv,
   parseArgs,
   parseEnvContent,
+  isDirty,
   parseLockCommit,
   parseLockVersion,
   parsePodfileOverride,

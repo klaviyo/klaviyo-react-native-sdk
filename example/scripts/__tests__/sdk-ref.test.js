@@ -3,6 +3,7 @@
 const {
   androidRef,
   iosRef,
+  isDirty,
   parseLockCommit,
   parseLockVersion,
   parsePodfileOverride,
@@ -223,14 +224,48 @@ describe('parseLockVersion / parseLockCommit', () => {
       'PODS:',
       '  - KlaviyoSwift (5.4.1)',
       '',
-      'CHECKOUT OPTIONS',
-      '  KlaviyoSwift: :checkout => "deadbee"',
-      '    :commit => "252a62ea36e47109e92bd376b0a1c4026b956e75"',
+      'CHECKOUT OPTIONS:',
+      '  KlaviyoSwift:',
+      '    :commit: 252a62ea36e47109e92bd376b0a1c4026b956e75',
+      '    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git',
       '',
     ].join('\n');
     expect(parseLockCommit(gitLock, 'KlaviyoSwift')).toBe(
       '252a62ea36e47109e92bd376b0a1c4026b956e75'
     );
+  });
+
+  it('reads the right pod when several are git-sourced', () => {
+    const gitLock = [
+      'CHECKOUT OPTIONS:',
+      '  KlaviyoCore:',
+      '    :commit: 1111111111111111111111111111111111111111',
+      '    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git',
+      '  KlaviyoSwift:',
+      '    :commit: 252a62ea36e47109e92bd376b0a1c4026b956e75',
+      '    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git',
+      '',
+      'SPEC CHECKSUMS:',
+      '  KlaviyoSwift: abcdef',
+      '',
+    ].join('\n');
+    expect(parseLockCommit(gitLock, 'KlaviyoSwift')).toBe(
+      '252a62ea36e47109e92bd376b0a1c4026b956e75'
+    );
+    expect(parseLockCommit(gitLock, 'KlaviyoCore')).toBe(
+      '1111111111111111111111111111111111111111'
+    );
+    expect(parseLockCommit(gitLock, 'KlaviyoForms')).toBeNull();
+  });
+
+  it('does not read a commit from outside CHECKOUT OPTIONS', () => {
+    const gitLock = [
+      'EXTERNAL SOURCES:',
+      '  KlaviyoSwift:',
+      '    :commit: 252a62ea36e47109e92bd376b0a1c4026b956e75',
+      '',
+    ].join('\n');
+    expect(parseLockCommit(gitLock, 'KlaviyoSwift')).toBeNull();
   });
 
   it('returns null without a checkout options entry', () => {
@@ -257,8 +292,10 @@ describe('iosRef', () => {
     const lock = [
       '  - KlaviyoSwift (5.4.1)',
       '',
-      '  KlaviyoSwift: :checkout => "deadbee"',
-      '    :commit => "252a62ea36e47109e92bd376b0a1c4026b956e75"',
+      'CHECKOUT OPTIONS:',
+      '  KlaviyoSwift:',
+      '    :commit: 252a62ea36e47109e92bd376b0a1c4026b956e75',
+      '    :git: https://github.com/klaviyo/klaviyo-swift-sdk.git',
     ].join('\n');
     expect(
       iosRef(
@@ -342,5 +379,34 @@ describe('updateEnvContent', () => {
       'KLAVIYO_SDK_REF_RN=unknown\nKLAVIYO_SDK_REF_ANDROID=unknown\nKLAVIYO_SDK_REF_IOS=unknown\n' +
         unknownVersions
     );
+  });
+});
+
+describe('isDirty', () => {
+  it('is never dirty when an explicit commit is given, even with a modified tree', () => {
+    expect(
+      isDirty({ commit: 'abc1234', porcelain: ' M example/package.json' })
+    ).toBe(false);
+  });
+
+  it('is dirty without an explicit commit when the tree has changes', () => {
+    expect(isDirty({ commit: undefined, porcelain: ' M yarn.lock' })).toBe(
+      true
+    );
+  });
+
+  it('is clean without an explicit commit when the tree is clean', () => {
+    expect(isDirty({ commit: undefined, porcelain: '' })).toBe(false);
+    expect(isDirty({ commit: undefined, porcelain: null })).toBe(false);
+  });
+
+  it('keeps the rn ref free of -dirty for an explicit commit on a packed tree', () => {
+    const ref = rnRef('2.5.1', {
+      tagNames: [],
+      branch: 'rel/2.5.1',
+      sha: 'abc1234',
+      dirty: isDirty({ commit: 'abc1234', porcelain: ' M yarn.lock' }),
+    });
+    expect(ref).toBe('rel/2.5.1@abc1234');
   });
 });
