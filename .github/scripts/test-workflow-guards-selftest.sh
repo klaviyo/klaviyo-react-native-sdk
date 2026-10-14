@@ -339,6 +339,90 @@ for path in glob.glob(sys.argv[1] + '/*/action.yml'):
 PY
 expect_fail "composites with no run: blocks are reported, not passed" "the deploy call tree has composite run: blocks to shellcheck"
 
+# Portability: scripts that run on both macOS and Linux avoid flags only one of
+# them has. Each case plants one forbidden form into a deploy script (or a
+# composite run: block) and expects the guard to name the rule.
+SCRIPTS_COPY="$TMP/scripts"
+
+fresh_copy_with_scripts() {
+  fresh_copy
+  rm -rf "$SCRIPTS_COPY"
+  mkdir -p "$SCRIPTS_COPY"
+  cp "$ROOT"/.github/scripts/*.sh "$SCRIPTS_COPY/"
+  cp "$SCRIPTS_COPY/check-secrets.sh" "$TMP/secrets.sh"
+  # The guard locates the scripts directory from SECRETS_SCRIPT's directory.
+  cp "$TMP/secrets.sh" "$SCRIPTS_COPY/check-secrets.sh"
+  SECRETS_OVERRIDE="$SCRIPTS_COPY/check-secrets.sh"
+}
+
+run_guard_scripts() {
+  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$SECRETS_OVERRIDE" \
+    bash "$GUARD" >"$TMP/out.log" 2>&1
+}
+
+# plant <form> <expected rule text>: appends the form to a script that runs on both platforms
+plant() {
+  local name=$1 form=$2 rule=$3
+  fresh_copy_with_scripts
+  printf '\n%s\n' "$form" >> "$SCRIPTS_COPY/source-label.sh"
+  if run_guard_scripts; then
+    report 1 "$name (guard passed on a planted forbidden form)"
+  elif grep -E '^FAIL: ' "$TMP/out.log" | grep -qF "avoid GNU-only and BSD-only command forms" && grep -qF "$rule" "$TMP/out.log"; then
+    report 0 "$name"
+  else
+    report 1 "$name (guard failed, but not on '$rule')"
+  fi
+}
+
+fresh_copy_with_scripts
+if run_guard_scripts; then
+  report 0 "the guard passes on a clean copy of the scripts"
+else
+  report 1 "the guard passes on a clean copy of the scripts"
+  grep -A4 -E "^FAIL" "$TMP/out.log" | head -8
+fi
+
+plant "mktemp -p is caught" "T=\$(mktemp -d -p /tmp x)" "mktemp -p/--tmpdir"
+plant "mktemp --tmpdir is caught" "T=\$(mktemp --tmpdir -d x.XXXX)" "mktemp -p/--tmpdir"
+plant "date -d is caught" "D=\$(date -d yesterday +%s)" "date -d"
+plant "readlink -f is caught" "P=\$(readlink -f \"\$0\")" "readlink -f"
+plant "stat -c is caught" "S=\$(stat -c %s file)" "stat -c"
+plant "stat -c with an attached format is caught" "S=\$(stat -c%s file)" "stat -c"
+plant "sed -i with an empty BSD suffix is caught" "sed -i '' s/a/b/ file" "sed -i needs a suffix"
+plant "grep -oP is caught" 'grep -oP "a" file' "grep -P"
+plant "sed -i without a suffix is caught" 'sed -i s/a/b/ file' "sed -i needs a suffix"
+plant "grep -P is caught" 'grep -P "a\d" file' "grep -P"
+plant "sort -V is caught" 'ls | sort -V' "sort -V"
+plant "xargs -r is caught" 'ls | xargs -r echo' "xargs -r"
+plant "find -printf is caught" 'find . -printf "%p\n"' "find -printf"
+plant "base64 -w0 is caught" 'echo x | base64 -w0' "base64 -w/--wrap"
+plant "base64 -w 0 is caught" 'echo x | base64 -w 0' "base64 -w/--wrap"
+plant "base64 --wrap is caught" 'echo x | base64 --wrap=0' "base64 -w/--wrap"
+plant "mapfile is caught" 'mapfile -t x < file' "mapfile/readarray"
+plant "readarray is caught" 'readarray -t x < file' "mapfile/readarray"
+
+# A documented, deliberate exception carries the marker on its own line and is
+# allowed; a comment that merely mentions a flag is not a use of it.
+fresh_copy_with_scripts
+printf '\n%s\n' 'sort -V file # portability-ok: only runs on a GNU-only host' >> "$SCRIPTS_COPY/source-label.sh"
+printf '%s\n' '# note: do not use sort -V here, it is missing on older BSD sort' >> "$SCRIPTS_COPY/source-label.sh"
+if run_guard_scripts; then
+  report 0 "a marked exception and a comment mentioning a flag are allowed"
+else
+  report 1 "a marked exception and a comment mentioning a flag are allowed"
+fi
+
+# The same forms inside a composite action's run: block are caught too.
+fresh_copy_with_scripts
+mutate "$TMP/actions/example-release-notes/action.yml" "s = s.replace('        set -euo pipefail\n', '        set -euo pipefail\n        T=\$(mktemp -d -p /tmp x)\n', 1)"
+if run_guard_scripts; then
+  report 1 "a forbidden form in a composite run: block is caught (guard passed)"
+elif grep -qF "action example-release-notes step 0" "$TMP/out.log" && grep -qF "mktemp -p/--tmpdir" "$TMP/out.log"; then
+  report 0 "a forbidden form in a composite run: block is caught"
+else
+  report 1 "a forbidden form in a composite run: block is caught (wrong cause)"
+fi
+
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
 # must follow the deploy's call tree rather than a fixed list.

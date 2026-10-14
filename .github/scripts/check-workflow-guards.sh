@@ -22,6 +22,11 @@
 # `run:` blocks extracted (GitHub expressions replaced by a placeholder) and
 # linted, and the rule fails if no block is found at all.
 #
+# The scripts and composite run: blocks the deploy runs on both macOS and Linux
+# must avoid GNU-only and BSD-only command forms (mktemp -p, date -d, readlink
+# -f, stat -c, sed -i without a suffix, grep -P, sort -V, ...); bump-version.sh
+# is a macOS developer tool that CI never runs on Linux, so it is out of scope.
+#
 # Env (overridden by test-workflow-guards-selftest.sh, which breaks a copy of
 # the workflows once per rule and expects a FAIL):
 #   WORKFLOW_DIR    directory with publish-example.yml and the other workflows
@@ -318,6 +323,60 @@ elif blocks:
                 detail = (result.stdout + result.stderr).replace(target, label)
                 problems.append(f'{label}:\n{detail.strip()}')
     check('composite run: blocks pass shellcheck', not problems, '\n'.join(problems))
+
+# 4c. Portability: scripts that run on both macOS (BSD userland, bash 3.2) and
+#     Linux (GNU userland) avoid flags only one of them has. Scans every script
+#     in .github/scripts (this directory's own check/test scripts included) and
+#     the composite run: blocks of the call tree, except the guard and its
+#     self-test, which carry the forbidden forms as literal data.
+PORTABILITY = [
+    ('mktemp -p/--tmpdir is GNU-only; use the template form mktemp -d "${TMPDIR:-/tmp}/x.XXXXXX"',
+     r'\bmktemp\b[^\n|;&]*(\s-p[\s=]|--tmpdir)'),
+    ('date -d is GNU-only (BSD date uses -j -f)', r'\bdate\b[^\n|;&]*\s-d[\s=]'),
+    ('readlink -f is missing on older macOS', r'\breadlink\s+-f\b'),
+    ('stat -c is GNU-only (BSD stat uses -f)', r'\bstat\s+-c\b'),
+    ("sed -i needs a suffix argument that both seds accept (GNU '-i', BSD \"-i ''\" differ)",
+     r'\bsed\s+-i(?!\.)(?:\s|$)'),
+    ('grep -P is not available in macOS grep', r'\bgrep\b[^\n|;&]*\s-[A-Za-z]*P[A-Za-z]*\b'),
+    ('sort -V (version sort) is missing on older BSD sort', r'\bsort\b[^\n|;&]*\s-[A-Za-z]*V\b'),
+    ('xargs -r is GNU-only', r'\bxargs\s+-r\b'),
+    ('find -printf is GNU-only', r'\bfind\b[^\n|;&]*-printf\b'),
+    ('base64 -w/--wrap is GNU-only', r'\bbase64\b[^\n|;&]*\s(-w[0-9=\s]|--wrap\b)'),
+    ('mapfile/readarray need bash 4 (stock macOS bash is 3.2)', r'\b(mapfile|readarray)\b'),
+]
+# Lines that carry a deliberate, documented exception end with this marker.
+ALLOW_MARK = 'portability-ok'
+
+PORTABILITY_DATA_FILES = {'check-workflow-guards.sh', 'test-workflow-guards-selftest.sh'}
+
+scripts_dir = os.path.dirname(secrets_script)
+portable_sources = []
+for path in sorted(glob.glob(os.path.join(scripts_dir, '*.sh'))):
+    # The guard and its self-test hold every forbidden form as literal data
+    # (the patterns, and the cases that plant them), so they cannot be scanned.
+    if os.path.basename(path) in PORTABILITY_DATA_FILES:
+        continue
+    portable_sources.append((os.path.basename(path), read(path)))
+for name in GUARDED_ACTIONS:
+    apath = os.path.join(actions_dir, name, 'action.yml')
+    if not os.path.exists(apath):
+        continue
+    for i, st in enumerate((load(apath).get('runs') or {}).get('steps') or []):
+        if st.get('run'):
+            portable_sources.append((f'action {name} step {i}', str(st['run'])))
+
+portability_hits = []
+for source, text in portable_sources:
+    lines = text.splitlines()
+    for message, pattern in PORTABILITY:
+        for m in re.finditer(pattern, text):
+            line_no = text.count('\n', 0, m.start()) + 1
+            line = lines[line_no - 1]
+            if ALLOW_MARK in line or line.lstrip().startswith('#'):
+                continue
+            portability_hits.append(f'{source}:{line_no}: {message}\n    {line.strip()[:110]}')
+check('scripts and composite blocks avoid GNU-only and BSD-only command forms',
+      not portability_hits, '\n'.join(portability_hits))
 
 # 5. The preflight jobs read repository-level secrets, so they declare no
 #    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or

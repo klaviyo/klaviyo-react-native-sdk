@@ -24,12 +24,18 @@ fail() {
 }
 
 # Prints the path of aapt2: PATH first, else the newest under
-# $ANDROID_HOME/build-tools. Exits non-zero when none is found.
+# $ANDROID_HOME/build-tools. Exits non-zero when none is found. The directory
+# names are ordered with POSIX sort flags only (sort -V is missing on older BSD
+# sort): numerically on the dotted version, then by full path so a release and
+# its release candidate always order the same way.
 find_aapt2() {
   local found
   found=$(command -v aapt2 || true)
   if [ -z "$found" ] && [ -n "${ANDROID_HOME:-}" ]; then
-    found=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -1)
+    found=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null \
+      | awk -F/ '{ v = $(NF - 1); sub(/-.*/, "", v); print v "\t" $0 }' \
+      | sort -t. -k1,1n -k2,2n -k3,3n -k4 \
+      | tail -1 | cut -f2)
   fi
   [ -n "$found" ] || return 1
   printf '%s\n' "$found"

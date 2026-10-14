@@ -131,6 +131,44 @@ else
   fail "--check-tools android via ANDROID_HOME: rc=$rc out=$out"
 fi
 
+# Version ordering of the build-tools directories uses POSIX sort flags only
+# (sort -V is missing on older BSD sort), so these cases pin the orderings a
+# lexical sort gets wrong: 9 vs 34 (single digit vs two), 36.2 vs 36.10 (minor
+# 10 is numerically larger but lexically smaller), and a release candidate
+# next to a newer release.
+newest_aapt2() { # dir... -> prints the directory name check-tools picks
+  local sdk
+  sdk=$(mktemp -d "${TMPDIR:-/tmp}/sdk.XXXXXX")
+  local d
+  for d in "$@"; do
+    mkdir -p "$sdk/build-tools/$d"
+    printf '#!/bin/sh\n' > "$sdk/build-tools/$d/aapt2"
+    chmod +x "$sdk/build-tools/$d/aapt2"
+  done
+  env -i PATH="/usr/bin:/bin" HOME="$WORK" ANDROID_HOME="$sdk" "$SCRIPT" --check-tools android 2>&1 \
+    | sed -E 's#^aapt2: .*/build-tools/([^/]+)/aapt2$#\1#'
+}
+
+expect_newest() { # name expected dir...
+  local name=$1 expected=$2
+  shift 2
+  local got
+  got=$(newest_aapt2 "$@")
+  if [ "$got" = "$expected" ]; then pass "aapt2 order: $name"; else fail "aapt2 order: $name (expected $expected, got $got)"; fi
+}
+expect_newest "single-digit major is older than a two-digit one" 34.0.0 9.0.0 34.0.0
+expect_newest "minor 10 is newer than minor 2" 36.10.0 36.2.0 36.10.0 36.9.0
+expect_newest "patch 10 is newer than patch 9" 35.0.10 35.0.9 35.0.10
+expect_newest "a newer release beats an older release candidate" 37.0.0 36.0.0-rc2 37.0.0
+expect_newest "a release candidate of a newer major beats an older release" 37.0.0-rc1 36.1.0 37.0.0-rc1
+expect_newest "input order does not matter" 36.1.0 36.1.0 34.0.0 35.0.0
+expect_newest "input order does not matter (reversed)" 36.1.0 35.0.0 34.0.0 36.1.0
+# A release and its own release candidate tie on the numeric keys; the result
+# must not depend on the order the directories were created in.
+a=$(newest_aapt2 37.0.0 37.0.0-rc1)
+b=$(newest_aapt2 37.0.0-rc1 37.0.0)
+if [ "$a" = "$b" ]; then pass "aapt2 order: a release and its release candidate resolve the same way in either order ($a)"; else fail "aapt2 order: tie is order-dependent ($a vs $b)"; fi
+
 out=$(env -i PATH="/usr/bin:/bin" HOME="$WORK" "$SCRIPT" --check-tools android 2>&1) && rc=0 || rc=$?
 if [ "$rc" -ne 0 ] && grep -qF 'aapt2 not found' <<<"$out"; then
   pass "--check-tools android fails naming aapt2 when it is nowhere"
