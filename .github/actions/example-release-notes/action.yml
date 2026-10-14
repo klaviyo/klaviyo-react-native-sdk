@@ -19,19 +19,19 @@ outputs:
     description: Path to the file containing the release notes
     value: ${{ steps.notes.outputs.notes_file }}
   sdk_ref:
-    description: Compact one-line summary of the RN/Android/iOS SDK refs (empty when sdk-ref.js is unavailable)
+    description: Compact one-line summary of the RN/Android/iOS SDK versions (empty when sdk-ref.js is unavailable)
     value: ${{ steps.notes.outputs.sdk_ref }}
   rn_version:
-    description: RN SDK semver from `sdk-ref.js --print` (empty when unavailable)
+    description: RN SDK semver from the generated build info in example/.env (empty when unavailable)
     value: ${{ steps.notes.outputs.rn_version }}
   rn_ref:
-    description: RN SDK ref from `sdk-ref.js --print` (empty when unavailable)
+    description: RN SDK ref from the generated build info in example/.env (empty when unavailable)
     value: ${{ steps.notes.outputs.rn_ref }}
   native_version:
-    description: This platform's native SDK semver from `sdk-ref.js --print` (empty when unavailable)
+    description: This platform's native SDK semver from the generated build info in example/.env (empty when unavailable)
     value: ${{ steps.notes.outputs.native_version }}
   native_ref:
-    description: This platform's native SDK ref from `sdk-ref.js --print` (empty when unavailable)
+    description: This platform's native SDK ref from the generated build info in example/.env (empty when unavailable)
     value: ${{ steps.notes.outputs.native_ref }}
 
 runs:

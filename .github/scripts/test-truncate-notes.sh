@@ -77,7 +77,9 @@ if "$SCRIPT" $((${#NOCI} + 5)) "$WORK/t3.txt" > "$WORK/t3.out" 2>/dev/null; then
 else
   pass "impossible cap: fails loudly"
 fi
-[ -s "$WORK/t3.out" ] && fail "impossible cap: emitted output anyway" || true
+if [ -s "$WORK/t3.out" ]; then
+  fail "impossible cap: emitted output anyway"
+fi
 
 # 4. Body exactly fits: no marker.
 EXACT_BODY='short body'
