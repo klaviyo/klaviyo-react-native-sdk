@@ -5,7 +5,7 @@
 # interpolated into a payload.
 #
 # Env:
-#   RESULT        success | failure
+#   RESULT        success | failure | warning (uploaded, but notes failed)
 #   PLATFORM      iOS | Android
 #   STORE         TestFlight | Play internal
 #   FULL_VERSION  package.json version, e.g. 2.6.0-rc.1
@@ -55,6 +55,13 @@ if [ "${RESULT:-}" = "success" ]; then
 *Source:* ${SOURCE_LABEL} (${EVENT_NAME})
 *Commit:* <https://github.com/${REPO}/commit/${COMMIT_SHA}|${COMMIT_SHA:0:7}> · <${RUN_URL}|CI run>
 *Get the build:* ${get_build}
+EOF
+elif [ "${RESULT:-}" = "warning" ]; then
+  cat <<EOF
+⚠️ RN Example (${PLATFORM}) → ${STORE}: uploaded, but setting What to Test failed
+*Build:* ${FULL_VERSION:-?} (${BUILD:-?})
+*Source:* ${SOURCE_LABEL} (${EVENT_NAME})
+*Commit:* <https://github.com/${REPO}/commit/${COMMIT_SHA}|${COMMIT_SHA:0:7}> · <${RUN_URL}|CI run>
 EOF
 else
   cat <<EOF

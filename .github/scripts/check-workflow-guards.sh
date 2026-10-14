@@ -1,84 +1,256 @@
 #!/usr/bin/env bash
-# YAML guards on publish-example.yml that must hold for the publish pipeline
-# to be safe. Fails with a list of violations, exit 1.
+# Static guards on the publish workflow and its composite actions: bugs that
+# actionlint accepts and that only fail at runtime or after merge. Parses the
+# YAML (PyYAML) instead of slicing text, so results do not depend on the awk
+# or sed dialect of the runner. Prints one PASS/FAIL line per rule and exits
+# non-zero if any rule fails.
 #
-# Guards:
-#   1. Every step that posts to Slack on success or warns (⚠️) must be
-#      continue-on-error, so a Slack outage never fails an uploaded deploy.
-#   2. Every job that runs preflight scripts checks the repo out first, and the
-#      check/publish-checks jobs only run on deploy-capable triggers.
-#   3. The what-to-test job never fails the run: every step before its cleanup
-#      is continue-on-error.
-#   4. Every step that stamps build info (sdk-ref.js with --build) or renders
-#      notes/Slack (build-release-notes.sh) must draw EVENT_NAME /
-#      RELEASE_TAG / COMMIT_SHA / BRANCH from the workflow-level env block,
-#      not a per-step copy.
-set -euo pipefail
+# Env (overridden by test-workflow-guards-selftest.sh, which breaks a copy of
+# the workflows once per rule and expects a FAIL):
+#   WORKFLOW_DIR    directory with publish-example.yml and the other workflows
+#                   (default .github/workflows)
+#   ACTIONS_DIR     directory holding the composite actions
+#                   (default .github/actions)
+#   SECRETS_SCRIPT  path to check-secrets.sh (default .github/scripts)
+set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export WORKFLOW_DIR="${WORKFLOW_DIR:-$ROOT/.github/workflows}"
+export ACTIONS_DIR="${ACTIONS_DIR:-$ROOT/.github/actions}"
+export SECRETS_SCRIPT="${SECRETS_SCRIPT:-$ROOT/.github/scripts/check-secrets.sh}"
 
-python3 - "$ROOT" <<'PY'
+python3 - <<'PY'
+import glob
+import os
+import re
 import sys
 
 import yaml
 
-root = sys.argv[1]
-with open(f'{root}/.github/workflows/publish-example.yml') as f:
-    workflow = yaml.safe_load(f)
+workflow_dir = os.environ['WORKFLOW_DIR']
+actions_dir = os.environ['ACTIONS_DIR']
+secrets_script = os.environ['SECRETS_SCRIPT']
 
-violations = []
+failures = 0
 
-top_env = workflow.get('env', {})
-shared_keys = ['EVENT_NAME', 'RELEASE_TAG', 'COMMIT_SHA', 'BRANCH']
-missing_top = [k for k in shared_keys if k not in top_env]
-if missing_top:
-    violations.append(f'workflow-level env is missing: {", ".join(missing_top)}')
 
-for job_name, job in workflow.get('jobs', {}).items():
-    for step in job.get('steps', []) or []:
-        run = step.get('run') or ''
-        uses = step.get('uses') or ''
-        env = step.get('env', {}) or {}
-        name = step.get('name') or uses or '<unnamed>'
-        label = f'{job_name}: {name}'
+def passed(name):
+    print(f'PASS: {name}')
 
-        posts_slack = 'slack-github-action' in uses or 'notify-slack-publish' in uses
-        is_failure_notifier = step.get('with', {}).get('result') == 'failure'
-        warns = '⚠️' in str(step.get('with', {}))
-        if posts_slack and not is_failure_notifier and not step.get('continue-on-error'):
-            violations.append(f'{label}: Slack success step without continue-on-error')
-        if warns and not step.get('continue-on-error'):
-            violations.append(f'{label}: warning step without continue-on-error')
 
-        stamps = 'sdk-ref.js --build' in run
-        renders = 'build-release-notes.sh' in run
-        if stamps or renders:
-            for key in ['EVENT_NAME', 'RELEASE_TAG', 'COMMIT_SHA', 'BRANCH']:
-                if key in env:
-                    violations.append(f'{label}: redefines shared {key} per step instead of using the workflow env block')
+def failed(name, detail=''):
+    global failures
+    failures += 1
+    print(f'FAIL: {name}')
+    for line in str(detail).strip().splitlines():
+        print(f'  | {line}')
 
-for job_name in ('preflight-android', 'preflight-ios'):
-    steps = workflow['jobs'][job_name].get('steps', []) or []
-    first = steps[0] if steps else {}
-    if not str(first.get('uses', '')).startswith('actions/checkout@'):
-        violations.append(f'{job_name}: first step must be actions/checkout (the preflight script lives in the repo)')
 
-for job_name in ('checks', 'publish-checks'):
-    cond = workflow['jobs'][job_name].get('if')
-    if not cond or 'pull_request' not in str(cond) or 'startsWith' not in str(cond):
-        violations.append(f'{job_name}: must be gated so non-deploy PR labels do not start it')
+def check(name, ok, detail=''):
+    if ok:
+        passed(name)
+    else:
+        failed(name, detail)
 
-for step in workflow['jobs']['what-to-test'].get('steps', []) or []:
-    name = step.get('name') or step.get('uses') or '<unnamed>'
-    if step.get('if') == 'always()':
+
+def load(path):
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def read(path):
+    with open(path) as f:
+        return f.read()
+
+
+publish = load(os.path.join(workflow_dir, 'publish-example.yml'))
+jobs = publish['jobs']
+workflow_files = sorted(glob.glob(os.path.join(workflow_dir, '*.yml')))
+action_files = sorted(
+    glob.glob(os.path.join(actions_dir, '**', 'action.yml'), recursive=True)
+)
+notify_path = os.path.join(actions_dir, 'notify-slack-publish', 'action.yml')
+notes_path = os.path.join(actions_dir, 'example-release-notes', 'action.yml')
+
+
+def steps_of(job):
+    return job.get('steps') or []
+
+
+def step_label(job_name, step):
+    return f"{job_name}: {step.get('name') or step.get('uses') or step.get('id') or '<unnamed>'}"
+
+
+def all_steps(doc):
+    if 'jobs' in doc:
+        for job_name, job in doc['jobs'].items():
+            for step in steps_of(job):
+                yield job_name, step
+    else:
+        for step in (doc.get('runs') or {}).get('steps') or []:
+            yield 'action', step
+
+
+# 1. Only functions GitHub Actions provides may be called inside ${{ }}; an
+#    unknown one fails when the expression evaluates, after merge.
+ALLOWED = {
+    'contains', 'startsWith', 'endsWith', 'format', 'join', 'toJSON',
+    'fromJSON', 'hashFiles', 'case', 'success', 'always', 'cancelled', 'failure',
+}
+unknown = set()
+for path in workflow_files + action_files:
+    for expr in re.findall(r'\$\{\{.*?\}\}', read(path), flags=re.DOTALL):
+        for fn in re.findall(r'([A-Za-z_][A-Za-z0-9_]*)\s*\(', expr):
+            if fn not in ALLOWED:
+                unknown.add(fn)
+check('expressions only call functions that GitHub Actions provides',
+      not unknown, f'unsupported: {", ".join(sorted(unknown))}')
+
+# 2. A Slack step other than the failure notifier tolerates failure, so a
+#    Slack problem never fails a deploy that already uploaded.
+slack_missing = []
+for job_name, job in jobs.items():
+    for step in steps_of(job):
+        uses = str(step.get('uses') or '')
+        if 'notify-slack-publish' not in uses and 'slack-github-action' not in uses:
+            continue
+        if (step.get('with') or {}).get('result') == 'failure':
+            continue
+        if not step.get('continue-on-error'):
+            slack_missing.append(step_label(job_name, step))
+check('every Slack step except the failure notifier has continue-on-error',
+      not slack_missing, '\n'.join(slack_missing))
+
+# 3. No YAML `payload:` input anywhere; multiline Slack text would break it.
+payload_blocks = []
+for path in workflow_files + action_files:
+    for where, step in all_steps(load(path)):
+        if 'payload' in (step.get('with') or {}):
+            payload_blocks.append(f'{os.path.basename(path)}: {where}')
+check('the Slack payload comes from a JSON file, not a YAML payload block',
+      not payload_blocks, '\n'.join(payload_blocks))
+
+
+# 4. Every job that runs a repo script or a local action checks the repo out
+#    first, and every checkout sets persist-credentials: false. The `with:`
+#    block is parsed, so the key can sit anywhere in it.
+def runs_repo_code(step):
+    run = str(step.get('run') or '')
+    uses = str(step.get('uses') or '')
+    return bool(
+        re.search(r'\.github/scripts/|\bnode example/|\bpack-and-test\.sh', run)
+        or uses.startswith('./')
+    )
+
+
+def is_checkout(step):
+    return str(step.get('uses') or '').startswith('actions/checkout@')
+
+
+# Workflows that deploy or gate a deploy; the SDK's own build and release
+# workflows are outside the publish pipeline.
+GUARDED = ('publish-example.yml', 'example-publish-checks.yml', 'ci.yml')
+for path in workflow_files:
+    if os.path.basename(path) not in GUARDED:
         continue
-    if not step.get('continue-on-error') and 'checkout' not in str(step.get('uses', '')):
-        violations.append(f'what-to-test: {name}: must be continue-on-error so a notes failure never fails the run')
+    doc = load(path)
+    for job_name, job in (doc.get('jobs') or {}).items():
+        if 'uses' in job:
+            continue
+        steps = steps_of(job)
+        first_use = next((i for i, s in enumerate(steps) if runs_repo_code(s)), None)
+        if first_use is not None:
+            first_checkout = next((i for i, s in enumerate(steps) if is_checkout(s)), None)
+            check(f'{os.path.basename(path)}: {job_name} checks out the repository before using it',
+                  first_checkout is not None and first_checkout <= first_use)
+        for step in steps:
+            if is_checkout(step):
+                check(f'{os.path.basename(path)}: {job_name} checkout sets persist-credentials: false',
+                      (step.get('with') or {}).get('persist-credentials') is False)
 
-if violations:
-    print('workflow guard violations:', file=sys.stderr)
-    for v in violations:
-        print(f'  {v}', file=sys.stderr)
+# 5. The preflight jobs read repository-level secrets, so they declare no
+#    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or
+#    by the secrets script.
+for name in ('preflight-android', 'preflight-ios'):
+    job = jobs[name]
+    check(f'{name} declares no environment', 'environment' not in job)
+    env_names = set()
+    for step in steps_of(job):
+        env_names |= set((step.get('env') or {}).keys())
+    check(f'{name} does not require SLACK_WEBHOOK_URL', 'SLACK_WEBHOOK_URL' not in env_names)
+required_lines = [
+    line for line in read(secrets_script).splitlines()
+    if re.match(r'^(ANDROID|IOS)_REQUIRED=', line)
+]
+check('SLACK_WEBHOOK_URL is not in the required-secrets lists',
+      bool(required_lines) and not any('SLACK_WEBHOOK_URL' in l for l in required_lines),
+      '\n'.join(required_lines) or 'no *_REQUIRED lists found')
+
+# 6. Stamping and notes steps use the workflow-level event env, never a
+#    per-step copy, and the commit and branch are the PR head's, not the
+#    merge ref's.
+top_env = publish.get('env') or {}
+missing = [k for k in ('EVENT_NAME', 'RELEASE_TAG', 'COMMIT_SHA', 'BRANCH') if k not in top_env]
+check('the workflow-level env defines the shared event fields',
+      not missing, f'missing: {", ".join(missing)}')
+check('the commit is the pull request head, not the merge commit',
+      'github.event.pull_request.head.sha' in str(top_env.get('COMMIT_SHA', '')),
+      f"COMMIT_SHA is {top_env.get('COMMIT_SHA')!r}")
+check('the branch is the PR head branch, not <n>/merge',
+      'github.head_ref' in str(top_env.get('BRANCH', '')),
+      f"BRANCH is {top_env.get('BRANCH')!r}")
+redefined = []
+for job_name, job in jobs.items():
+    for step in steps_of(job):
+        run = str(step.get('run') or '')
+        if 'sdk-ref.js --build' in run or 'build-release-notes.sh' in run:
+            for key in ('EVENT_NAME', 'RELEASE_TAG', 'COMMIT_SHA', 'BRANCH'):
+                if key in (step.get('env') or {}):
+                    redefined.append(f'{step_label(job_name, step)} redefines {key}')
+check('stamping and notes steps use the shared event env',
+      not redefined, '\n'.join(redefined))
+for path in (notify_path, notes_path):
+    text = read(path)
+    check(f'{os.path.basename(os.path.dirname(path))} reports the PR head commit',
+          'github.event.pull_request.head.sha' in text
+          and 'COMMIT_SHA: ${{ github.sha }}' not in text)
+
+# 7. Deploys wait for the tests; other triggers never start the expensive jobs.
+for name in ('deploy-android', 'deploy-ios'):
+    needs = jobs[name].get('needs') or []
+    needs = [needs] if isinstance(needs, str) else needs
+    check(f'{name} needs checks and publish-checks',
+          {'checks', 'publish-checks'} <= set(needs), f'needs: {needs}')
+for name in ('checks', 'publish-checks'):
+    cond = str(jobs[name].get('if') or '')
+    check(f'{name} only runs for deploy-capable triggers',
+          'startsWith(github.event.label.name' in cond and 'pull_request' in cond, cond)
+
+# 8. A label deploy starts only for same-repo pull requests, so a fork PR
+#    cannot reach store secrets, on every job that reads the label.
+same_repo = 'github.event.pull_request.head.repo.full_name == github.repository'
+unguarded = [
+    name for name, job in jobs.items()
+    if "github.event_name == 'pull_request'" in str(job.get('if') or '')
+    and same_repo not in str(job.get('if') or '')
+]
+check('label deploys are limited to same-repo pull requests',
+      not unguarded, ', '.join(unguarded))
+
+# 9. The what-to-test job cannot fail the run: every step other than the
+#    checkout and the always() cleanup tolerates failure.
+fragile = []
+for step in steps_of(jobs['what-to-test']):
+    if is_checkout(step) or str(step.get('if') or '').strip() == 'always()':
+        continue
+    if not step.get('continue-on-error'):
+        fragile.append(step.get('name') or step.get('uses'))
+check('the what-to-test job cannot fail the run',
+      not fragile, '\n'.join(str(f) for f in fragile))
+
+print()
+if failures:
+    print(f'{failures} guard(s) failed')
     sys.exit(1)
-print('workflow guards hold')
+print('All guards passed')
 PY

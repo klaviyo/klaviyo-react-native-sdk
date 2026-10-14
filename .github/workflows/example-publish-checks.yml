@@ -70,13 +70,18 @@ jobs:
       - name: Test assert-artifact-version.sh
         run: .github/scripts/test-assert-artifact-version.sh
 
+      - name: Install PyYAML for the workflow guards
+        run: python3 -m pip install --quiet --user PyYAML
+
       - name: Guard GitHub expressions
         run: |
           .github/scripts/check-expressions.sh
           .github/scripts/test-check-expressions.sh
 
       - name: Guard publish workflow invariants
-        run: .github/scripts/check-workflow-guards.sh
+        run: |
+          .github/scripts/check-workflow-guards.sh
+          .github/scripts/test-workflow-guards-selftest.sh
 
       # The runner's system Ruby installs gems to a root-owned directory.
       - name: Set up Ruby

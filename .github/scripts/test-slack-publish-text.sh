@@ -79,6 +79,17 @@ else
   pass "failure: no install line"
 fi
 
+# Warning form: uploaded, but What to Test failed; no install or SDK lines.
+out=$(env "${BASE[@]}" RESULT=warning "$SCRIPT")
+check "warning: headline" "$out" '⚠️ RN Example (iOS) → TestFlight: uploaded, but setting What to Test failed'
+check "warning: build line" "$out" '*Build:* 2.6.0 (12)'
+check "warning: run link" "$out" '<https://github.com/klaviyo/klaviyo-react-native-sdk/actions/runs/1|CI run>'
+if grep -q -e 'Get the build' -e '✅' -e '❌' <<<"$out"; then
+  fail "warning: carries success/failure/install content"
+else
+  pass "warning: no install line or other result icons"
+fi
+
 if [ "$fail_count" -gt 0 ]; then
   echo "$fail_count test(s) failed" >&2
   exit 1

@@ -81,7 +81,7 @@ jobs:
       github.event_name == 'release'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && startsWith(github.event.label.name, 'deploy-example-app'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app'))
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
@@ -92,7 +92,7 @@ jobs:
       github.event_name == 'release'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && startsWith(github.event.label.name, 'deploy-example-app'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app'))
     permissions:
       contents: read
     uses: ./.github/workflows/example-publish-checks.yml
@@ -115,7 +115,7 @@ jobs:
       github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -147,7 +147,7 @@ jobs:
       github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -183,7 +183,7 @@ jobs:
       (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
       && needs.preflight-android.outputs.ready == 'true'
 
     steps:
@@ -437,7 +437,7 @@ jobs:
       (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
       && needs.preflight-ios.outputs.ready == 'true'
 
     steps:
@@ -779,7 +779,7 @@ jobs:
       github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -832,17 +832,15 @@ jobs:
       - name: Warn on Slack when What to Test failed
         if: steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
         continue-on-error: true
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        uses: ./.github/actions/notify-slack-publish
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "⚠️ RN SDK Example App iOS ${{ needs.deploy-ios.outputs.full_version }} (${{ needs.deploy-ios.outputs.build_number }}) uploaded, but setting TestFlight What to Test failed"
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "⚠️ iOS build `${{ needs.deploy-ios.outputs.full_version }} (${{ needs.deploy-ios.outputs.build_number }})` is on TestFlight, but its *What to Test* notes could not be set.\n*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+          result: warning
+          platform: iOS
+          store: TestFlight
+          full_version: ${{ needs.deploy-ios.outputs.full_version }}
+          build: ${{ needs.deploy-ios.outputs.build_number }}
+          native_name: iOS
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
@@ -860,6 +858,7 @@ jobs:
     if: |
       always()
       && github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
       && startsWith(github.event.label.name, 'deploy-example-app')
     runs-on: ubuntu-24.04
     permissions:
