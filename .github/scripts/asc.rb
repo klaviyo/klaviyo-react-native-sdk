@@ -3,12 +3,13 @@
 # App Store Connect API helper for the example app's TestFlight publish.
 #
 # Usage:
-#   ruby asc.rb next-build-number [--marketing-version <v>] [--minimum <n>]
-#       Prints the next CFBundleVersion to use. With --marketing-version only
-#       builds of that version are considered (first build of a new version
-#       is 1); --minimum is a floor the result never goes below. Writes
+#   ruby asc.rb next-build-number --marketing-version <v> [--minimum <n>]
+#       Prints the next CFBundleVersion to use. Only builds of that marketing
+#       version are considered (the first build of a new version is 1), so
+#       --marketing-version is required; --minimum is a floor the result never
+#       goes below. Writes
 #       BUILD_NUMBER and ASC_APP_ID to $GITHUB_ENV when it is set. Exits
-#       non-zero when the query fails.
+#       non-zero when the query fails or --marketing-version is missing.
 #   ruby asc.rb set-whats-new <marketing-version> <build-number> <notes-file>
 #       Waits for the uploaded build to finish processing in App Store
 #       Connect, then sets its en-US TestFlight "What to Test" text
@@ -191,6 +192,8 @@ def main(argv)
       else abort "asc.rb next-build-number: unknown argument"
       end
     end
+    abort 'asc.rb next-build-number: --marketing-version is required' if marketing_version.nil? || marketing_version.empty?
+
     next_build_number(marketing_version, minimum)
   when 'set-whats-new'
     abort 'usage: asc.rb set-whats-new <marketing-version> <build-number> <notes-file>' unless argv.length == 4

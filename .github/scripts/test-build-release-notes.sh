@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Runs build-release-notes.sh with the environment the Android deploy step
+# really has (the workflow-level shared env plus the step's own), so a
+# variable the script needs but the workflow never sets fails here instead
+# of producing a blank source label in a store note. The shared env is read
+# from publish-example.yml itself and every ${{ }} expression is evaluated
+# for a given event by a small fixture table.
+# Backs up and restores the real example/.env.
+# Usage: test-build-release-notes.sh (run from the repo root)
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ENV_FILE="$REPO_ROOT/example/.env"
+BACKUP=$(mktemp)
+if [ -f "$ENV_FILE" ]; then
+  cp "$ENV_FILE" "$BACKUP"
+  HAD_ENV=1
+else
+  HAD_ENV=0
+fi
+restore() {
+  if [ "$HAD_ENV" = 1 ]; then
+    cp "$BACKUP" "$ENV_FILE"
+  else
+    rm -f "$ENV_FILE"
+  fi
+  rm -f "$BACKUP"
+}
+trap restore EXIT
+
+cd "$REPO_ROOT"
+
+fail_count=0
+fail() {
+  echo "FAIL: $1"
+  fail_count=$((fail_count + 1))
+}
+pass() { echo "PASS: $1"; }
+
+# shared_env <event>: prints KEY=VALUE for every key in the workflow-level
+# env block, with the GitHub expressions evaluated for the given event.
+shared_env() {
+  python3 - "$1" <<'PY'
+import re
+import sys
+
+import yaml
+
+event = sys.argv[1]
+wf = yaml.safe_load(open('.github/workflows/publish-example.yml'))
+
+ctx = {
+    'github.event_name': event,
+    'github.event.release.tag_name': 'v2.6.0-rc.1' if event == 'release' else '',
+    'github.event.pull_request.head.sha': 'cafe1234cafe1234cafe1234cafe1234cafe1234' if event == 'pull_request' else '',
+    'github.sha': 'abcd5678abcd5678abcd5678abcd5678abcd5678',
+    'github.head_ref': 'ecm/MAGE-1075/continuous-deployment' if event == 'pull_request' else '',
+    'github.ref_name': '429/merge' if event == 'pull_request' else ('v2.6.0-rc.1' if event == 'release' else 'rel/2.6.0'),
+}
+
+
+def evaluate(expr):
+    # Supports `a || b || ...` over context keys, which is all the shared env uses.
+    for part in (p.strip() for p in expr.split('||')):
+        if part not in ctx:
+            raise SystemExit(f'unsupported expression in shared env: {part}')
+        if ctx[part]:
+            return ctx[part]
+    return ''
+
+
+for key, value in (wf.get('env') or {}).items():
+    m = re.fullmatch(r'\$\{\{\s*(.*?)\s*\}\}', str(value))
+    print(f'{key}={evaluate(m.group(1)) if m else value}')
+PY
+}
+
+# generate_env <commit> <branch>: stamps example/.env. The branch stamped here
+# is deliberately NOT the expected source label for the cases below, so a
+# label that only appears through the generator's fallback to the stamped
+# branch fails instead of passing by accident.
+generate_env() {
+  node example/scripts/sdk-ref.js --build 7 --commit "$1" --branch "stamped-branch-not-the-label" \
+    --built "2026-10-14 02:00 UTC" >/dev/null
+}
+
+# run_notes <event>: runs the script under the shared env for the event plus
+# the Android step's own variables; stdout is the notes.
+run_notes() {
+  local event=$1 line
+  local -a vars=()
+  while IFS= read -r line; do vars+=("$line"); done < <(shared_env "$event")
+  env -i PATH="$PATH" HOME="$HOME" "${vars[@]}" \
+    RUN_URL="https://github.com/o/r/actions/runs/1" \
+    RELEASE_NAME="v2.6.0-rc.1" RELEASE_BODY="Release body text" \
+    .github/scripts/build-release-notes.sh android 4000
+}
+
+# 1. Label deploy: the source is the PR head branch, never "429/merge" or blank.
+generate_env cafe1234cafe1234 ecm/MAGE-1075/continuous-deployment
+notes=$(run_notes pull_request)
+if grep -qF 'Commit: cafe123 on ecm/MAGE-1075/continuous-deployment (pull_request)' <<<"$notes"; then
+  pass "label deploy: source label is the PR head branch"
+else
+  fail "label deploy: wrong or blank source label in: $(grep -m1 'Commit:' <<<"$notes")"
+fi
+if grep -qF '429/merge' <<<"$notes"; then fail "label deploy: merge ref name leaked into the notes"; else pass "label deploy: no <n>/merge in the notes"; fi
+
+# 2. Push to a release branch: the source is the branch.
+generate_env abcd5678abcd5678 rel/2.6.0
+notes=$(run_notes push)
+if grep -qF 'Commit: abcd567 on rel/2.6.0 (push)' <<<"$notes"; then
+  pass "push: source label is the branch"
+else
+  fail "push: wrong or blank source label in: $(grep -m1 'Commit:' <<<"$notes")"
+fi
+
+# 3. Release: the source is "release <tag>" and the body is appended.
+generate_env abcd5678abcd5678 v2.6.0-rc.1
+notes=$(run_notes release)
+if grep -qF 'Commit: abcd567 on release v2.6.0-rc.1 (release)' <<<"$notes"; then
+  pass "release: source label is release <tag>"
+else
+  fail "release: wrong or blank source label in: $(grep -m1 'Commit:' <<<"$notes")"
+fi
+if grep -qF 'Release body text' <<<"$notes"; then pass "release: body is appended"; else fail "release: body missing"; fi
+
+# 4. Every variable the script reads exists in the shared env or is supplied
+#    by the step (guards a variable added to the script but not the workflow).
+reads=$(grep -o -w -E 'EVENT_NAME|RELEASE_TAG|HEAD_REF|REF_NAME|RUN_URL|RELEASE_NAME|RELEASE_BODY' .github/scripts/build-release-notes.sh | sort -u)
+provided="$(shared_env push | cut -d= -f1) RUN_URL RELEASE_NAME RELEASE_BODY"
+for v in $reads; do
+  if grep -qw "$v" <<<"$provided"; then pass "$v is provided to the notes step"; else fail "$v is read by build-release-notes.sh but not provided by the workflow"; fi
+done
+
+if [ "$fail_count" -gt 0 ]; then
+  echo "$fail_count test(s) failed"
+  exit 1
+fi
+echo "all build-release-notes tests passed"

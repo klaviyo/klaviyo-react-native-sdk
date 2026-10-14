@@ -71,6 +71,8 @@ env:
   RELEASE_TAG: ${{ github.event.release.tag_name }}
   COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
   BRANCH: ${{ github.head_ref || github.ref_name }}
+  HEAD_REF: ${{ github.head_ref }}
+  REF_NAME: ${{ github.ref_name }}
 
 jobs:
   # Only run for triggers that can deploy: any other PR label must not start

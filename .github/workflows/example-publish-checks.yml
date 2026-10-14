@@ -106,6 +106,9 @@ jobs:
       - name: Test notes header reads from example/.env
         run: .github/scripts/test-notes-from-env.sh
 
+      - name: Test build-release-notes.sh under the workflow's env
+        run: .github/scripts/test-build-release-notes.sh
+
   asc-dry-run:
     name: Read-only store queries
     runs-on: ubuntu-24.04

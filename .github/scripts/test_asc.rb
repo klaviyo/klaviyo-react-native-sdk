@@ -9,6 +9,7 @@ require 'minitest/autorun'
 require 'socket'
 require 'webrick'
 require 'json'
+require 'uri'
 require 'stringio'
 require 'tempfile'
 require 'tmpdir'
@@ -30,7 +31,11 @@ class FakeAsc < WEBrick::HTTPServlet::AbstractServlet
     full_path = req.request_uri.request_uri
     srv.requests << [req.request_method, full_path, req.body]
     rule = srv.responses.find { |m, pattern, _s, _b| m == req.request_method && full_path =~ pattern }
-    if rule
+    if rule && rule[2] == :filtering
+      res.status = 200
+      res['Content-Type'] = 'application/json'
+      res.body = JSON.generate(filtered_builds(rule[3], full_path))
+    elsif rule
       res.status = rule[2]
       res['Content-Type'] = 'application/json'
       res.body = JSON.generate(rule[3])
@@ -39,6 +44,23 @@ class FakeAsc < WEBrick::HTTPServlet::AbstractServlet
       res.body = "no rule for #{req.request_method} #{req.path}"
     end
   end
+end
+
+# Applies the query's filters to build records, as App Store Connect would.
+# Each record: { id:, version:, marketing:, state: }.
+def filtered_builds(records, full_path)
+  query = URI.decode_www_form(URI(full_path).query.to_s).to_h
+  limit = (query['limit'] || '200').to_i
+  matched = records.select do |r|
+    (query['filter[version]'].nil? || r[:version] == query['filter[version]']) &&
+      (query['filter[preReleaseVersion.version]'].nil? ||
+       r[:marketing] == query['filter[preReleaseVersion.version]'])
+  end
+  { 'data' => matched.first(limit).map do |r|
+      { 'id' => r[:id],
+        'attributes' => { 'version' => r[:version], 'processingState' => r[:state] || 'VALID' } }
+    end,
+    'links' => {} }
 end
 
 class AscServer < WEBrick::HTTPServer
@@ -107,6 +129,13 @@ class TestAsc < Minitest::Test
 
   def app_response
     { 'data' => [{ 'id' => APP_ID, 'attributes' => { 'bundleId' => BUNDLE } }] }
+  end
+
+  # Stateful /builds stand-in: applies filter[version] and
+  # filter[preReleaseVersion.version] to BUILD_RECORDS (in listed order) and
+  # honours limit, like App Store Connect does.
+  def respond_with_filtering_builds(records)
+    @server.responses << ['GET', %r{/builds\?}, :filtering, records]
   end
 
   def builds_page(versions, next_path = nil)
@@ -206,6 +235,91 @@ class TestAsc < Minitest::Test
     capture_io { set_whats_new('1.2.3', '42', notes.path) }
     patch = @server.requests.find { |m, _p, _| m == 'PATCH' }
     assert_equal 'updated notes', JSON.parse(patch[2]).dig('data', 'attributes', 'whatsNew')
+  end
+
+  # Build 7 of 0.3.1 and build 7 of 0.3.2 can coexist because build numbers
+  # restart per marketing version. The older build is listed first, so a lookup
+  # that filters by build number alone (limit=1) would pick it.
+  SHARED_NUMBER_BUILDS = [
+    { id: 'old-0.3.1-b7', version: '7', marketing: '0.3.1' },
+    { id: 'new-0.3.2-b7', version: '7', marketing: '0.3.2' }
+  ].freeze
+
+  def test_set_whats_new_targets_the_marketing_version_when_build_numbers_collide
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds(SHARED_NUMBER_BUILDS)
+    respond('GET', %r{/builds/[^/]+/betaBuildLocalizations}, { 'data' => [] })
+    respond('POST', %r{/betaBuildLocalizations}, { 'data' => { 'id' => 'loc-1' } })
+
+    notes = Tempfile.new('notes')
+    notes.write('notes for 0.3.2')
+    notes.close
+
+    capture_io { set_whats_new('0.3.2', '7', notes.path) }
+    post = @server.requests.find { |m, p, _| m == 'POST' && p.include?('betaBuildLocalizations') }
+    refute_nil post, 'no localization was written'
+    body = JSON.parse(post[2])
+    assert_equal 'new-0.3.2-b7', body.dig('data', 'relationships', 'build', 'data', 'id')
+    refute(@server.requests.any? { |_m, p, _| p.include?('old-0.3.1-b7') },
+           'the older build with the same number was touched')
+  end
+
+  def test_set_whats_new_targets_the_older_version_when_that_is_requested
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds(SHARED_NUMBER_BUILDS.reverse)
+    respond('GET', %r{/builds/[^/]+/betaBuildLocalizations}, { 'data' => [] })
+    respond('POST', %r{/betaBuildLocalizations}, { 'data' => { 'id' => 'loc-1' } })
+
+    notes = Tempfile.new('notes')
+    notes.write('notes for 0.3.1')
+    notes.close
+
+    capture_io { set_whats_new('0.3.1', '7', notes.path) }
+    post = @server.requests.find { |m, p, _| m == 'POST' && p.include?('betaBuildLocalizations') }
+    body = JSON.parse(post[2])
+    assert_equal 'old-0.3.1-b7', body.dig('data', 'relationships', 'build', 'data', 'id')
+  end
+
+  def test_set_whats_new_lookup_sends_app_marketing_version_and_build_filters
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds(SHARED_NUMBER_BUILDS)
+    respond('GET', %r{/builds/[^/]+/betaBuildLocalizations}, { 'data' => [] })
+    respond('POST', %r{/betaBuildLocalizations}, { 'data' => { 'id' => 'loc-1' } })
+
+    notes = Tempfile.new('notes')
+    notes.write('n')
+    notes.close
+    capture_io { set_whats_new('0.3.2', '7', notes.path) }
+
+    lookup = @server.requests.find { |m, p, _| m == 'GET' && p.start_with?('/v1/builds?') || (m == 'GET' && p.include?('/builds?')) }
+    query = URI.decode_www_form(URI(lookup[1]).query).to_h
+    assert_equal APP_ID, query['filter[app]']
+    assert_equal '7', query['filter[version]']
+    assert_equal '0.3.2', query['filter[preReleaseVersion.version]']
+  end
+
+  def test_next_build_number_ignores_a_higher_number_from_another_marketing_version
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds([
+      { id: 'a', version: '12', marketing: '0.3.1' },
+      { id: 'b', version: '7', marketing: '0.3.2' }
+    ])
+    out, = capture_io { next_build_number('0.3.2', 1) }
+    assert_equal '8', env_values['BUILD_NUMBER'], out
+  end
+
+  def test_next_build_number_cli_requires_a_marketing_version
+    respond('GET', %r{/apps\?}, app_response)
+    respond_with_filtering_builds(SHARED_NUMBER_BUILDS)
+    err = assert_raises(SystemExit) { capture_io { main(['next-build-number']) } }
+    refute_equal 0, err.status
+    assert_empty(@server.requests, 'a query was sent without a marketing version')
+  end
+
+  def test_next_build_number_cli_rejects_an_empty_marketing_version
+    respond('GET', %r{/apps\?}, app_response)
+    err = assert_raises(SystemExit) { capture_io { main(['next-build-number', '--marketing-version', '']) } }
+    refute_equal 0, err.status
   end
 
   def test_ios_marketing_version_plain_version_passes_through
