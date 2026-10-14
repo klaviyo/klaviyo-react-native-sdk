@@ -175,6 +175,7 @@ jobs:
     name: Publish to Play Store internal track
     needs: [checks, publish-checks, preflight-android]
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     environment:
       name: android-internal-track
     # Run on release / push always; on workflow_dispatch when platform is
@@ -818,12 +819,14 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           BUNDLE_ID: com.klaviyoreactnativesdkexample
+          MARKETING_VERSION: ${{ needs.deploy-ios.outputs.marketing_version }}
+          BUILD_NUMBER: ${{ needs.deploy-ios.outputs.build_number }}
         shell: bash
         run: |
           gem install -g .github/pins/asc/Gemfile --no-document --silent
           ruby .github/scripts/asc.rb set-whats-new \
-            "${{ needs.deploy-ios.outputs.marketing_version }}" \
-            "${{ needs.deploy-ios.outputs.build_number }}" \
+            "$MARKETING_VERSION" \
+            "$BUILD_NUMBER" \
             what-to-test.txt
 
       - name: Clean up API key

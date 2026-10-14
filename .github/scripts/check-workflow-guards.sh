@@ -380,6 +380,44 @@ for source, text in portable_sources:
 check('scripts and composite blocks avoid GNU-only and BSD-only command forms',
       not portability_hits, '\n'.join(portability_hits))
 
+# 4d. A run: block takes no ${{ }} expression except a small set of values the
+#     runner itself controls; everything else (branch names, commit messages,
+#     actor, inputs, step outputs) reaches the script through env:.
+TRUSTED_IN_RUN = {
+    'github.run_id', 'github.run_attempt', 'github.run_number', 'github.sha',
+    'github.repository', 'github.server_url', 'github.workspace',
+    'runner.temp', 'job.status',
+}
+run_expr_hits = []
+for name in GUARDED_WORKFLOWS:
+    wpath = os.path.join(workflow_dir, name)
+    for where, step in all_steps(load(wpath)):
+        for expr in re.findall(r'\$\{\{\s*(.*?)\s*\}\}', str(step.get('run') or ''), flags=re.DOTALL):
+            if expr not in TRUSTED_IN_RUN:
+                run_expr_hits.append(f'{name}: {where}: ${{{{ {expr} }}}}')
+for name in GUARDED_ACTIONS:
+    apath = os.path.join(actions_dir, name, 'action.yml')
+    if not os.path.exists(apath):
+        continue
+    for i, st in enumerate((load(apath).get('runs') or {}).get('steps') or []):
+        for expr in re.findall(r'\$\{\{\s*(.*?)\s*\}\}', str(st.get('run') or ''), flags=re.DOTALL):
+            if expr not in TRUSTED_IN_RUN:
+                run_expr_hits.append(f'action {name} step {i}: ${{{{ {expr} }}}}')
+check('run: blocks interpolate only runner-controlled values; the rest go through env:',
+      not run_expr_hits, '\n'.join(run_expr_hits))
+
+# 4e. Every job in the deploy call tree sets timeout-minutes (the default is
+#     six hours), including the jobs of the reusable workflows it calls.
+no_timeout = []
+for name in GUARDED_WORKFLOWS:
+    for job_name, job in (load(os.path.join(workflow_dir, name)).get('jobs') or {}).items():
+        if 'uses' in job:
+            continue
+        if 'timeout-minutes' not in job:
+            no_timeout.append(f'{name}: {job_name}')
+check('every job in the deploy call tree sets timeout-minutes',
+      not no_timeout, '\n'.join(no_timeout))
+
 # 5. The preflight jobs read repository-level secrets, so they declare no
 #    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or
 #    by the secrets script.

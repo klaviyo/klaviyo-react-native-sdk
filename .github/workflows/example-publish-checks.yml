@@ -23,6 +23,7 @@ jobs:
   lint-and-test:
     name: Lint workflows and test helpers
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -134,6 +135,7 @@ jobs:
   asc-dry-run:
     name: Read-only store queries
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && github.workflow == 'Example Publish Checks'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

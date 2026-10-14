@@ -9,6 +9,7 @@ const {
   parsePodfileOverride,
   parsePodspecVersion,
   rnRef,
+  remoteBranchRef,
   rnVersion,
   updateEnvContent,
 } = require('../sdk-ref');
@@ -409,4 +410,23 @@ describe('isDirty', () => {
     });
     expect(ref).toBe('rel/2.5.1@abc1234');
   });
+});
+
+describe('remoteBranchRef', () => {
+  const ORIGINAL = process.env.SDK_REF_GIT_TIMEOUT_MS;
+  afterEach(() => {
+    if (ORIGINAL === undefined) {
+      delete process.env.SDK_REF_GIT_TIMEOUT_MS;
+    } else {
+      process.env.SDK_REF_GIT_TIMEOUT_MS = ORIGINAL;
+    }
+  });
+
+  it('gives up on a remote that never answers and returns the placeholder', () => {
+    process.env.SDK_REF_GIT_TIMEOUT_MS = '1500';
+    const started = Date.now();
+    const ref = remoteBranchRef('https://10.255.255.1/none.git', 'main');
+    expect(ref).toBe('main@unresolved');
+    expect(Date.now() - started).toBeLessThan(10000);
+  }, 20000);
 });

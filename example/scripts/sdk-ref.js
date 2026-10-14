@@ -74,12 +74,14 @@ const ANDROID_SDK_REPO = 'https://github.com/klaviyo/klaviyo-android-sdk';
 
 // Runs `git` returning trimmed stdout, or null when git fails / is missing
 // (e.g. a tarball checkout or a shallow clone without the ref asked for).
-function git(args, cwd) {
+function git(args, cwd, timeoutMs) {
   try {
     const out = execFileSync('git', args, {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: timeoutMs,
+      killSignal: 'SIGKILL',
     });
     return out.trim();
   } catch {
@@ -115,7 +117,8 @@ function remoteBranchRef(remoteUrl, branch) {
       remoteUrl,
       branch,
     ],
-    REPO_ROOT
+    REPO_ROOT,
+    Number(process.env.SDK_REF_GIT_TIMEOUT_MS) || 20000
   );
   const match = out && out.match(/^([0-9a-f]{40})\t/);
   return `${branch}@${match ? match[1].slice(0, 7) : 'unresolved'}`;

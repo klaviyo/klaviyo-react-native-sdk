@@ -442,6 +442,45 @@ for HEADER in '|2' '|2-' '|-2' '>-' '|- # note' '|2- # note'; do
   fi
 done
 
+# A run: block that interpolates a value outside the runner-controlled set is
+# caught in a deploy workflow, in the reusable ci.yml and in a composite.
+fresh_copy
+mutate "$PUB" "s = s.replace('rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 'echo \"\${{ github.head_ref }}\"; rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 1)"
+expect_fail "a branch name interpolated into a run: block is caught" "run: blocks interpolate only runner-controlled values"
+
+fresh_copy
+mutate "$PUB" "s = s.replace('rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 'echo \"\${{ github.event.head_commit.message }}\"; rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 1)"
+expect_fail "a commit message interpolated into a run: block is caught" "run: blocks interpolate only runner-controlled values"
+
+fresh_copy
+mutate "$PUB" "s = s.replace('rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 'echo \"\${{ inputs.platform }}\"; rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 1)"
+expect_fail "a workflow input interpolated into a run: block is caught" "run: blocks interpolate only runner-controlled values"
+
+fresh_copy
+mutate "$TMP/wf/ci.yml" "s = s.replace('      - name: Checkout\n', '      - name: Echo\n        run: echo \"\${{ github.actor }}\"\n      - name: Checkout\n', 1)"
+expect_fail "an actor interpolated into a ci.yml run: block is caught" "run: blocks interpolate only runner-controlled values"
+
+fresh_copy
+mutate "$NOTES_ACTION" "s = s.replace('set -euo pipefail\n', 'set -euo pipefail\n        echo \"\${{ github.ref_name }}\"\n', 1)"
+expect_fail "a ref name interpolated into a composite run: block is caught" "run: blocks interpolate only runner-controlled values"
+
+fresh_copy
+mutate "$PUB" "s = s.replace('rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 'echo \"\${{ github.run_id }}\"; rm -rf \"\$HOME/.appstoreconnect/private_keys\"', 1)"
+if run_guard; then report 0 "a runner-controlled value in a run: block is allowed"; else report 1 "a runner-controlled value in a run: block is allowed"; fi
+
+# Every job of the deploy call tree needs timeout-minutes, reusable ones too.
+fresh_copy
+mutate "$PUB" "s = s.replace('    timeout-minutes: 45\n', '', 1)"
+expect_fail "a deploy job without timeout-minutes is caught" "every job in the deploy call tree sets timeout-minutes"
+
+fresh_copy
+mutate "$TMP/wf/ci.yml" "s = s.replace('  test:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 30\n', '  test:\n    runs-on: ubuntu-24.04\n', 1)"
+expect_fail "a ci.yml job without timeout-minutes is caught" "every job in the deploy call tree sets timeout-minutes"
+
+fresh_copy
+mutate "$TMP/wf/example-publish-checks.yml" "s = s.replace('    timeout-minutes: 15\n', '', 1)"
+expect_fail "a checks job without timeout-minutes is caught" "every job in the deploy call tree sets timeout-minutes"
+
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
 # must follow the deploy's call tree rather than a fixed list.
