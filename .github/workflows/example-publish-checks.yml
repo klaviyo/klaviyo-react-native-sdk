@@ -12,6 +12,7 @@ on:
       - '.github/actions/example-release-notes/**'
       - '.github/actions/notify-slack-publish/**'
       - 'example/scripts/**'
+      - 'bump-version.sh'
   workflow_dispatch:
   workflow_call:
 
@@ -37,13 +38,31 @@ jobs:
         run: actionlint .github/workflows/publish-example.yml .github/workflows/example-publish-checks.yml
 
       - name: Shellcheck scripts
-        run: shellcheck .github/scripts/*.sh
+        run: shellcheck .github/scripts/*.sh bump-version.sh
 
       - name: Test gradle-retry.sh
         run: .github/scripts/test-gradle-retry.sh
 
       - name: Test play-publish.sh
         run: .github/scripts/test-play-publish.sh
+
+      - name: Test bump-version.sh marketing-version strip
+        run: .github/scripts/test-bump-version.sh
+
+      - name: Test source-label.sh
+        run: .github/scripts/test-source-label.sh
+
+      - name: Test check-secrets.sh
+        run: .github/scripts/test-check-secrets.sh
+
+      - name: Test truncate-notes.sh
+        run: .github/scripts/test-truncate-notes.sh
+
+      - name: Test slack-publish-text.sh
+        run: .github/scripts/test-slack-publish-text.sh
+
+      - name: Test assert-artifact-version.sh
+        run: .github/scripts/test-assert-artifact-version.sh
 
       # The runner's system Ruby installs gems to a root-owned directory.
       - name: Set up Ruby
@@ -61,6 +80,12 @@ jobs:
 
       - name: Test example/scripts
         run: yarn jest example/scripts
+
+      - name: Test in-app build info generator flags
+        run: .github/scripts/test-sdk-ref-build-info.sh
+
+      - name: Test notes header reads from example/.env
+        run: .github/scripts/test-notes-from-env.sh
 
   asc-dry-run:
     name: Read-only store queries

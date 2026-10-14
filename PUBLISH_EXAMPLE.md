@@ -14,10 +14,20 @@ so reapplying re-triggers):
 - `deploy-example-app:android` — Android only
 - `deploy-example-app:ios` — iOS only
 
+Label-triggered deploys report the PR head branch and head commit in the
+store notes and Slack messages (not the synthetic merge ref).
+
 Every trigger — push, release, manual and PR-label — gates the deploys on the
 same-run `checks` (the ci.yml lint, unit test and library build jobs) and
 `publish-checks` (the example-publish-checks.yml workflow and script checks)
 jobs. A failure in either means no store upload.
+
+Deploys are skipped, not failed, until the required secrets exist: a
+`preflight-<platform>` job checks the platform's secrets before its deploy
+runs. On `push` and `release` a missing secret skips the deploy green with a
+`::notice::` naming the missing secret names (no Slack message); on
+`workflow_dispatch` and label-triggered deploys the preflight fails red,
+since a human asked for the deploy.
 
 A newer push to the same branch cancels the run in flight, so quick merges
 deploy only the latest commit. Release, manual and PR-label runs are never
@@ -67,7 +77,11 @@ when the workflow is called by another workflow.
 | `APPLE_TEAM_ID`                       | iOS     | Apple Developer team ID                                                                                                               |
 | `BUILD_CERTIFICATE_BASE64`            | iOS     | Base64-encoded password-protected `.p12` with the Apple Distribution certificate **and its private key**                              |
 | `P12_PASSWORD`                        | iOS     | Password for that `.p12`                                                                                                              |
-| `SLACK_WEBHOOK_URL`                   | both    | Incoming webhook for deploy notifications                                                                                             |
+| `SLACK_WEBHOOK_URL`                   | both    | Incoming webhook for deploy notifications (optional; when unset the Slack steps skip with a notice)                                   |
+
+Store secrets must be repository secrets, not environment secrets; the
+preflight jobs declare no environment, so they cannot see environment secrets
+and would skip forever.
 
 ---
 
@@ -101,9 +115,10 @@ names the workflow reads.
 ### GitHub environments
 
 The deploy jobs run in the GitHub environments `android-internal-track` and
-`testflight`. Move the store secrets above into those two environments and
-restrict their deployment branches to `master`, `rel/**` and release tags, so
-a workflow edited in a pull request can't read them.
+`testflight`, which exist for deploy history (the Deployments page) and the
+testflight URL. They hold no secrets — the preflight jobs declare no
+environment, so the store secrets must be repository secrets — and should
+have no required reviewers.
 
 ### Public build logs
 
@@ -143,6 +158,19 @@ it (same convention as `bump-version.sh`):
    (`previousBundleVersion = N`, ITMS-90189, or an `ERROR:` line), the loop
    rebuilds with `max(N + 1, current + 1, re-resolved)`, up to 4 attempts.
    (`altool` can exit 0 on failure, so its output is grepped too.)
+
+### Prerelease versions
+
+When the SDK version is a prerelease (`2.6.0-rc.1`), the iOS marketing
+version is the stripped numeric form (`2.6.0`): Apple requires
+`CFBundleShortVersionString` to be numeric `X.Y[.Z]`. `bump-version.sh`
+writes the stripped value to the pbxproj (and validates it), and the publish
+workflow re-derives it from `package.json` and pins it with
+`agvtool new-marketing-version` before building. Build numbers key on the
+stripped value, so a prerelease shares its release version's build sequence.
+The full version (suffix included) still appears in the app UI, the store
+notes and every Slack message. Android `versionName` keeps the full string;
+`versionCode` is unaffected.
 
 ## Release Notes / What to Test
 

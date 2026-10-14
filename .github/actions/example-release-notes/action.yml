@@ -1,17 +1,18 @@
 name: Prepare example app release notes
 description: >-
-  Writes store release notes to a file. The notes lead with the app version,
-  the SDK refs and the commit, then the ref, trigger, build time (UTC) and a
-  link to the CI run; on `release: published` the release name and body are
-  appended. Free text arrives only through env vars. Truncation cuts the
-  appended free text first so the header survives the store's length cap
-  (500 chars on Play, 4000 on TestFlight).
+  Writes store release notes to a file. The notes lead with the header block
+  printed by `sdk-ref.js --print-header` (app version, SDK versions/refs,
+  commit, source label, CI run); on `release: published` the release name and
+  body are appended after a blank line. Free text arrives only through env
+  vars. Truncation (truncate-notes.sh) cuts the appended free text first,
+  then the CI run line; header lines are never cut (500 chars on Play, 4000
+  on TestFlight).
 inputs:
   max_length:
     description: Maximum number of characters to keep (store-specific cap, e.g. 500 for Play, 4000 for TestFlight)
     required: true
-  version_label:
-    description: App version line, e.g. "2.5.1 (build 7)" for iOS or "2.5.1" for Android
+  platform:
+    description: 'ios or android — selects which native SDK line the header carries'
     required: true
 outputs:
   notes_file:
@@ -20,6 +21,18 @@ outputs:
   sdk_ref:
     description: Compact one-line summary of the RN/Android/iOS SDK refs (empty when sdk-ref.js is unavailable)
     value: ${{ steps.notes.outputs.sdk_ref }}
+  rn_version:
+    description: RN SDK semver from `sdk-ref.js --print` (empty when unavailable)
+    value: ${{ steps.notes.outputs.rn_version }}
+  rn_ref:
+    description: RN SDK ref from `sdk-ref.js --print` (empty when unavailable)
+    value: ${{ steps.notes.outputs.rn_ref }}
+  native_version:
+    description: This platform's native SDK semver from `sdk-ref.js --print` (empty when unavailable)
+    value: ${{ steps.notes.outputs.native_version }}
+  native_ref:
+    description: This platform's native SDK ref from `sdk-ref.js --print` (empty when unavailable)
+    value: ${{ steps.notes.outputs.native_ref }}
 
 runs:
   using: composite
@@ -31,57 +44,69 @@ runs:
         EVENT_NAME: ${{ github.event_name }}
         RELEASE_BODY: ${{ github.event.release.body }}
         RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
-        PR_TITLE: ${{ github.event.pull_request.title }}
         # The PR merge ref's name ("123/merge") and SHA aren't meaningful to
         # testers, so prefer the PR head for labeled-PR runs.
-        REF_NAME: ${{ github.head_ref || github.ref_name }}
+        HEAD_REF: ${{ github.head_ref }}
+        REF_NAME: ${{ github.ref_name }}
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
         SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        VERSION_LABEL: ${{ inputs.version_label }}
+        PLATFORM: ${{ inputs.platform }}
         MAX_LENGTH: ${{ inputs.max_length }}
-        # Character-based truncation below is locale-aware; pin a UTF-8
-        # locale so multi-byte characters near the cut are never split.
-        # C.UTF-8 is guaranteed on ubuntu-24.04 and macOS runners.
+        # Character-based truncation is locale-aware; pin a UTF-8 locale so
+        # multi-byte characters near the cut are never split. C.UTF-8 is
+        # guaranteed on ubuntu-24.04 and macOS runners.
         LC_ALL: C.UTF-8
       run: |
         set -euo pipefail
 
-        if [ "$EVENT_NAME" = "pull_request" ]; then
-          SUBJECT="PR #${PR_NUMBER}: ${PR_TITLE}"
-        else
-          SUBJECT=$(git log -1 --format=%s "$SHA" 2>/dev/null || true)
-        fi
+        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME
+        SOURCE_LABEL=$("${{ github.workspace }}/.github/scripts/source-label.sh")
 
-        # `--print` emits "Label: value" lines; awk compacts them to
-        # `RN 2.5.1 (...) | Android 4.5.1 | iOS 5.4.1`.
-        SDK_REF=""
-        if [ -f example/scripts/sdk-ref.js ]; then
-          SDK_REF=$(node example/scripts/sdk-ref.js --print \
-            | awk -F': +' '{ sub(/ SDK$/, "", $1); out = out (out ? " | " : "") $1 " " $2 } END { print out }' \
-            || true)
-        fi
-
-        HEADER="Version ${VERSION_LABEL}"
-        [ -n "$SDK_REF" ] && HEADER="${HEADER}"$'\n'"SDK: ${SDK_REF}"
-        HEADER="${HEADER}"$'\n'"Commit: ${SHA:0:7} ${SUBJECT}"
-        HEADER="${HEADER}"$'\n'"Ref: ${REF_NAME} (${EVENT_NAME})"
-        HEADER="${HEADER}"$'\n'"Built: $(date -u '+%Y-%m-%d %H:%M UTC')"
-        HEADER="${HEADER}"$'\n'"CI run: ${RUN_URL}"
+        # Every shared value (version, SDK refs, build number, commit, Built
+        # time) is read back from the example/.env the app was built with, so
+        # the notes cannot drift from the in-app build info.
+        HEADER=$(node example/scripts/sdk-ref.js --print-header --from-env yes \
+          --platform "$PLATFORM" \
+          --source-label "$SOURCE_LABEL" \
+          --event "$EVENT_NAME" \
+          --run-url "$RUN_URL" \
+          --app-name "RN Example")
 
         NOTES="$HEADER"
         if [ "$EVENT_NAME" = "release" ]; then
-          TRAILER=$'\n\n'"Release notes (${RELEASE_NAME}):"$'\n'"${RELEASE_BODY}"
-          # Cut the release text first so the header survives the cap.
-          BUDGET=$(( MAX_LENGTH - ${#HEADER} ))
-          if [ "$BUDGET" -lt 0 ]; then BUDGET=0; fi
-          NOTES="${HEADER}${TRAILER:0:$BUDGET}"
+          NOTES="${HEADER}"$'\n\n'"Release notes (${RELEASE_NAME}):"$'\n'"${RELEASE_BODY}"
         fi
 
+        RAW="${RUNNER_TEMP}/release-notes-raw.txt"
+        printf '%s' "$NOTES" > "$RAW"
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
-        printf '%s' "${NOTES:0:${MAX_LENGTH}}" > "$NOTES_FILE"
+        "${{ github.workspace }}/.github/scripts/truncate-notes.sh" "$MAX_LENGTH" "$RAW" > "$NOTES_FILE"
         echo "Release notes:"
         cat "$NOTES_FILE"
         echo
+
+        # Slack fields come from the same example/.env the header read.
+        env_value() { grep "^$1=" example/.env 2>/dev/null | cut -d= -f2- || true; }
+        RN_VERSION=$(env_value KLAVIYO_SDK_VERSION_RN)
+        RN_REF=$(env_value KLAVIYO_SDK_REF_RN)
+        if [ "$PLATFORM" = ios ]; then
+          NATIVE_VERSION=$(env_value KLAVIYO_SDK_VERSION_IOS)
+          NATIVE_REF=$(env_value KLAVIYO_SDK_REF_IOS)
+        else
+          NATIVE_VERSION=$(env_value KLAVIYO_SDK_VERSION_ANDROID)
+          NATIVE_REF=$(env_value KLAVIYO_SDK_REF_ANDROID)
+        fi
+        for v in RN_VERSION RN_REF NATIVE_VERSION NATIVE_REF; do
+          if [ "${!v}" = "unknown" ]; then
+            printf -v "$v" ''
+          fi
+        done
+        SDK_REF="RN ${RN_VERSION:-—} | ${PLATFORM} ${NATIVE_VERSION:-—}"
+
         echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
         echo "sdk_ref=$SDK_REF" >> "$GITHUB_OUTPUT"
+        echo "rn_version=$RN_VERSION" >> "$GITHUB_OUTPUT"
+        echo "rn_ref=$RN_REF" >> "$GITHUB_OUTPUT"
+        echo "native_version=$NATIVE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "native_ref=$NATIVE_REF" >> "$GITHUB_OUTPUT"

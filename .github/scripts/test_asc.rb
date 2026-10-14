@@ -207,4 +207,56 @@ class TestAsc < Minitest::Test
     patch = @server.requests.find { |m, _p, _| m == 'PATCH' }
     assert_equal 'updated notes', JSON.parse(patch[2]).dig('data', 'attributes', 'whatsNew')
   end
+
+  def test_ios_marketing_version_plain_version_passes_through
+    out, = capture_io { assert_equal '2.5.1', ios_marketing_version('2.5.1') }
+    assert_equal "2.5.1\n", out
+  end
+
+  def test_ios_marketing_version_strips_prerelease_suffix
+    out, = capture_io { assert_equal '2.6.0', ios_marketing_version('2.6.0-alpha.1') }
+    assert_equal "2.6.0\n", out
+  end
+
+  def test_ios_marketing_version_strips_suffix_and_build_metadata
+    out, = capture_io { assert_equal '2.6.0', ios_marketing_version('2.6.0-rc.1+meta') }
+    assert_equal "2.6.0\n", out
+  end
+
+  def test_ios_marketing_version_accepts_one_and_two_part_versions
+    capture_io do
+      assert_equal '2', ios_marketing_version('2')
+      assert_equal '2.6', ios_marketing_version('2.6-beta')
+    end
+  end
+
+  def test_ios_marketing_version_rejects_malformed_versions
+    %w[v2 abc 1.2.3.4].each do |bad|
+      assert_raises(SystemExit) { capture_io { ios_marketing_version(bad) } }
+    end
+    assert_raises(SystemExit) { capture_io { ios_marketing_version('') } }
+  end
+
+  # bump-version.sh re-implements the same strip in bash; these pin the
+  # shared contract both implementations follow.
+  def test_strip_ios_marketing_version_shared_contract
+    {
+      '2.5.1' => '2.5.1',
+      '2.6.0-alpha.1' => '2.6.0',
+      '2.6.0-rc.1+meta' => '2.6.0',
+      '2.6-beta' => '2.6',
+      '2' => '2',
+      'v2' => 'v2',
+      'abc' => 'abc',
+      '1.2.3.4' => '1.2.3.4',
+      '' => ''
+    }.each do |input, expected|
+      assert_equal expected, strip_ios_marketing_version(input)
+    end
+  end
+
+  def test_valid_ios_marketing_version_shared_contract
+    %w[2 2.6 2.6.0].each { |v| assert valid_ios_marketing_version?(v), v }
+    ['v2', 'abc', '1.2.3.4', '', '2.6.0-rc.1', '2.6.0+meta'].each { |v| refute valid_ios_marketing_version?(v), v }
+  end
 end

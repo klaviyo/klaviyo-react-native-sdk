@@ -74,20 +74,88 @@ jobs:
       contents: read
     uses: ./.github/workflows/example-publish-checks.yml
 
-  deploy-android:
-    name: Publish to Play Store internal track
-    needs: [checks, publish-checks]
+  # Verifies the platform's required secrets exist before a deploy runs.
+  # Environment secrets are not visible here (no environment: is declared),
+  # so the store secrets must be repository secrets. Missing secrets skip the
+  # deploy on push/release (ready=false, green) and fail on
+  # workflow_dispatch / label deploys.
+  preflight-android:
+    name: Check Android deploy secrets
     runs-on: ubuntu-24.04
-    environment:
-      name: android-internal-track
-    # Run on release / push always; on workflow_dispatch when platform is
-    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
-    # (umbrella) or `deploy-example-app:android`.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      ready: ${{ steps.check.outputs.android_ready }}
+      missing: ${{ steps.check.outputs.android_missing }}
     if: |
       github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
       || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
+    steps:
+      - name: Check secrets
+        id: check
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: .github/scripts/check-secrets.sh android >> "$GITHUB_OUTPUT"
+
+  preflight-ios:
+    name: Check iOS deploy secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      ready: ${{ steps.check.outputs.ios_ready }}
+      missing: ${{ steps.check.outputs.ios_missing }}
+    if: |
+      github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+    steps:
+      - name: Check secrets
+        id: check
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: .github/scripts/check-secrets.sh ios >> "$GITHUB_OUTPUT"
+
+  deploy-android:
+    name: Publish to Play Store internal track
+    needs: [checks, publish-checks, preflight-android]
+    runs-on: ubuntu-24.04
+    environment:
+      name: android-internal-track
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:android`. Skipped (not failed) when the
+    # preflight found missing secrets on a push/release trigger.
+    if: |
+      (github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
+      && needs.preflight-android.outputs.ready == 'true'
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -161,18 +229,15 @@ jobs:
         shell: bash
         run: node example/scripts/sdk-ref.js
 
-      # Play Store release notes. 500 chars is Google's per-locale cap.
-      - name: Prepare release notes
-        id: release_notes
-        uses: ./.github/actions/example-release-notes
-        with:
-          max_length: 500
-          version_label: ${{ env.VERSION_NAME }}
-
       # Build + upload in one loop: a versionCode conflict at upload time
       # (another run published the same code after our preflight) rebuilds
       # with a fresh code. play-publish.sh exits 75 only for a conflict; any
       # other error fails the step immediately.
+      #
+      # The release notes are regenerated per attempt (build-release-notes)
+      # so they always carry the versionCode that actually ships, and the
+      # in-app build info (.env) is regenerated per attempt too, with the
+      # Metro cache cleared so a rebuild can't inline the old values.
       #
       # Inline signing via -Pandroid.injected.signing.* — Play rejects
       # double-signed AABs.
@@ -187,16 +252,28 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
           PACKAGE_NAME: com.klaviyoreactnativesdkexample
-          NOTES_FILE: ${{ steps.release_notes.outputs.notes_file }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           # Prevent Metro from trying to start a dev server during the build
           CI: true
         run: |
           set -euo pipefail
           MAX_ATTEMPTS=3
           AAB="example/android/app/build/outputs/bundle/release/app-release.aab"
+          NOTES_FILE="${RUNNER_TEMP}/release-notes.txt"
 
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             echo "=== Attempt $attempt/$MAX_ATTEMPTS: versionCode $VERSION_CODE ==="
+            # One timestamp per attempt, shared by the in-app build info and
+            # the store notes header so they match.
+            BUILT_AT="$(date -u '+%Y-%m-%d %H:%M UTC')"
+            node example/scripts/sdk-ref.js --build "$VERSION_CODE" --commit "$COMMIT_SHA" --branch "$BRANCH" --built "$BUILT_AT"
+            rm -rf "${TMPDIR:-/tmp}/metro-cache" "example/android/app/build/generated"
             (cd example/android && ../../.github/scripts/gradle-retry.sh :app:bundleRelease \
               -PreleaseVersionCode="$VERSION_CODE" \
               -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
@@ -204,6 +281,13 @@ jobs:
               -Pandroid.injected.signing.key.alias="${ALIAS}" \
               -Pandroid.injected.signing.key.password="${KEY_PASSWORD}" \
               -Dorg.gradle.internal.http.socketTimeout=120000)
+
+            # Refuse to upload a bundle whose manifest disagrees with the
+            # version being attempted.
+            .github/scripts/assert-artifact-version.sh android "$AAB" "$VERSION_CODE" "$VERSION_NAME"
+
+            .github/scripts/build-release-notes.sh android 500 > "$NOTES_FILE"
+            echo "BUILT_AT=$BUILT_AT" >> "$GITHUB_ENV"
 
             status=0
             RELEASE_NAME="$VERSION_NAME ($VERSION_CODE)" \
@@ -242,6 +326,15 @@ jobs:
           echo "::add-mask::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+      # Composed after the upload so the notes carry the versionCode that
+      # actually shipped. 500 chars is Google's per-locale cap.
+      - name: Prepare release notes
+        id: release_notes
+        uses: ./.github/actions/example-release-notes
+        with:
+          max_length: 500
+          platform: android
+
       - name: Clean up keystore
         if: always()
         run: rm -f "${RUNNER_TEMP}/upload.jks"
@@ -257,9 +350,15 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
-          platform: Play Store
-          sdk_ref: ${{ steps.release_notes.outputs.sdk_ref }}
-          version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          platform: Android
+          store: Play internal
+          full_version: ${{ env.VERSION_NAME }}
+          build: ${{ env.VERSION_CODE }}
+          rn_version: ${{ steps.release_notes.outputs.rn_version }}
+          rn_ref: ${{ steps.release_notes.outputs.rn_ref }}
+          native_name: Android
+          native_version: ${{ steps.release_notes.outputs.native_version }}
+          native_ref: ${{ steps.release_notes.outputs.native_ref }}
           install_url: ${{ steps.internal_sharing.outputs.url }}
           install_label: Internal App Sharing link
           install_fallback: Internal App Sharing upload failed, see the workflow run
@@ -270,8 +369,11 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          platform: Play Store
-          version_label: ${{ env.VERSION_NAME || '?' }} (${{ env.VERSION_CODE || '?' }})
+          platform: Android
+          store: Play internal
+          full_version: ${{ env.VERSION_NAME }}
+          build: ${{ env.VERSION_CODE }}
+          native_name: Android
 
   deploy-ios:
     name: Publish to TestFlight
@@ -280,9 +382,10 @@ jobs:
     environment:
       name: testflight
       url: ${{ steps.result.outputs.testflight_url }}
-    needs: [checks, publish-checks]
+    needs: [checks, publish-checks, preflight-ios]
     outputs:
       marketing_version: ${{ steps.result.outputs.marketing_version }}
+      full_version: ${{ steps.result.outputs.full_version }}
       build_number: ${{ steps.result.outputs.build_number }}
       app_id: ${{ steps.result.outputs.app_id }}
       sdk_ref: ${{ steps.result.outputs.sdk_ref }}
@@ -291,12 +394,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     # Run on release / push always; on workflow_dispatch when platform is
     # `both` or `ios`; on labeled PR when the label is `deploy-example-app`
-    # (umbrella) or `deploy-example-app:ios`.
+    # (umbrella) or `deploy-example-app:ios`. Skipped (not failed) when the
+    # preflight found missing secrets on a push/release trigger.
     if: |
-      github.event_name == 'release'
+      (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
+      && needs.preflight-ios.outputs.ready == 'true'
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -389,12 +494,19 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
-      # MARKETING_VERSION is kept in sync with the SDK by bump-version.sh.
-      - name: Read marketing version
+      # package.json carries the full SDK version (possibly a prerelease like
+      # 2.6.0-rc.1). CFBundleShortVersionString must be numeric X.Y[.Z], so
+      # the marketing version used for the build and the ASC build-number
+      # sequence is the stripped value; the full version is what humans see
+      # in Slack and the notes.
+      - name: Resolve full and marketing versions
         shell: bash
         run: |
-          MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
+          FULL_VERSION=$(jq -r .version package.json)
+          MARKETING_VERSION=$(ruby .github/scripts/asc.rb ios-marketing-version "$FULL_VERSION")
+          echo "Full version: $FULL_VERSION"
           echo "Marketing version: $MARKETING_VERSION"
+          echo "FULL_VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
           echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
 
       # Build numbers restart at 1 per marketing version. A failed query here
@@ -428,6 +540,8 @@ jobs:
       - name: Build, sign & upload to TestFlight
         working-directory: example
         env:
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           # For asc.rb when re-resolving the build number after a conflict.
@@ -461,8 +575,18 @@ jobs:
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             echo "=== Attempt $attempt/$MAX_ATTEMPTS: build number $BUILD_NUMBER ==="
             rm -f ios/build/KlaviyoReactNativeSdkExample.ipa
-            (cd ios && xcrun agvtool new-version -all "$BUILD_NUMBER")
+            # Pin the marketing version too: the pbxproj can be stale, and
+            # CFBundleShortVersionString must never carry a prerelease suffix.
+            (cd ios && xcrun agvtool new-marketing-version "$MARKETING_VERSION" && xcrun agvtool new-version -all "$BUILD_NUMBER")
+            # Refresh the in-app build info and clear the Metro cache so a
+            # rebuild after a conflict can't inline the previous number.
+            node scripts/sdk-ref.js --build "$BUILD_NUMBER" --commit "$COMMIT_SHA" --branch "$BRANCH" --built "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            rm -rf "$TMPDIR/metro-cache" "$TMPDIR/haste-map-"*
             fastlane ios release_ipa
+
+            # Refuse to upload an IPA whose plist disagrees with the version
+            # being attempted.
+            ../.github/scripts/assert-artifact-version.sh ios ios/build/KlaviyoReactNativeSdkExample.ipa "$BUILD_NUMBER" "$MARKETING_VERSION"
 
             if ruby ../.github/scripts/asc.rb next-build-number --marketing-version "$MARKETING_VERSION" --minimum "$BUILD_NUMBER"; then
               ASC_NEXT=$(grep -E '^BUILD_NUMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2)
@@ -526,7 +650,7 @@ jobs:
         uses: ./.github/actions/example-release-notes
         with:
           max_length: 4000
-          version_label: ${{ env.MARKETING_VERSION }} (build ${{ env.BUILD_NUMBER }})
+          platform: ios
 
       - name: Record uploaded version
         id: result
@@ -537,9 +661,13 @@ jobs:
           DELIM="EOF-$RANDOM-$RANDOM"
           {
             echo "marketing_version=$MARKETING_VERSION"
+            echo "full_version=$FULL_VERSION"
             echo "build_number=$BUILD_NUMBER"
             echo "app_id=$ASC_APP_ID"
-            echo "sdk_ref=${{ steps.release_notes.outputs.sdk_ref }}"
+            echo "rn_version=${{ steps.release_notes.outputs.rn_version }}"
+            echo "rn_ref=${{ steps.release_notes.outputs.rn_ref }}"
+            echo "native_version=${{ steps.release_notes.outputs.native_version }}"
+            echo "native_ref=${{ steps.release_notes.outputs.native_ref }}"
             echo "testflight_url=https://beta.itunes.apple.com/v1/app/$ASC_APP_ID"
             echo "notes<<$DELIM"
             cat "$NOTES_FILE"
@@ -568,12 +696,18 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
-          platform: TestFlight
-          sdk_ref: ${{ steps.release_notes.outputs.sdk_ref }}
-          version_label: ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }})
+          platform: iOS
+          store: TestFlight
+          full_version: ${{ env.FULL_VERSION }}
+          build: ${{ env.BUILD_NUMBER }}
+          rn_version: ${{ steps.release_notes.outputs.rn_version }}
+          rn_ref: ${{ steps.release_notes.outputs.rn_ref }}
+          native_name: iOS
+          native_version: ${{ steps.release_notes.outputs.native_version }}
+          native_ref: ${{ steps.release_notes.outputs.native_ref }}
           install_url: ${{ steps.result.outputs.testflight_url }}
           install_label: Open the example app in TestFlight
-          access_note: Install version ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload. Not a tester yet? Ask in #mobile-push-team to be added to the internal TestFlight group with your Apple ID email.
+          access_note: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload. Not a tester yet? Ask in #mobile-push-team to be added to the internal TestFlight group with your Apple ID email.
 
       - name: Notify Slack on failure
         if: failure()
@@ -581,8 +715,11 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          platform: TestFlight
-          version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
+          platform: iOS
+          store: TestFlight
+          full_version: ${{ env.FULL_VERSION }}
+          build: ${{ env.BUILD_NUMBER }}
+          native_name: iOS
 
   # Runs on Linux so no macOS runner is held while Apple processes the build.
   what-to-test:
@@ -644,18 +781,26 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            text: "⚠️ RN SDK Example App iOS ${{ needs.deploy-ios.outputs.marketing_version }} (${{ needs.deploy-ios.outputs.build_number }}) uploaded, but setting TestFlight What to Test failed"
+            text: "⚠️ RN SDK Example App iOS ${{ needs.deploy-ios.outputs.full_version }} (${{ needs.deploy-ios.outputs.build_number }}) uploaded, but setting TestFlight What to Test failed"
             blocks:
               - type: "section"
                 text:
                   type: "mrkdwn"
-                  text: "⚠️ iOS build `${{ needs.deploy-ios.outputs.marketing_version }} (${{ needs.deploy-ios.outputs.build_number }})` is on TestFlight, but its *What to Test* notes could not be set.\n*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  text: "⚠️ iOS build `${{ needs.deploy-ios.outputs.full_version }} (${{ needs.deploy-ios.outputs.build_number }})` is on TestFlight, but its *What to Test* notes could not be set.\n*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
-    needs: [checks, publish-checks, deploy-android, deploy-ios]
+    needs:
+      [
+        checks,
+        publish-checks,
+        preflight-android,
+        preflight-ios,
+        deploy-android,
+        deploy-ios,
+      ]
     if: |
       always()
       && github.event_name == 'pull_request'

@@ -8,12 +8,42 @@ inputs:
     description: "'success' or 'failure' — drives icon and headline"
     required: true
   platform:
-    description: "Human-readable platform label (e.g. 'Play Store', 'TestFlight')"
+    description: "Human-readable platform label: 'iOS' or 'Android'"
     required: true
-  version_label:
-    description: Version string to show in the message (e.g. release tag or 'X.Y.Z (build)')
+  store:
+    description: "Human-readable store label: 'TestFlight' or 'Play internal'"
+    required: true
+  full_version:
+    description: Full package.json version, suffix included (e.g. 2.6.0-rc.1)
     required: false
-    default: manual
+    default: ''
+  build:
+    description: Build number (iOS) or versionCode (Android)
+    required: false
+    default: ''
+  rn_version:
+    description: RN SDK semver (empty renders as a dash)
+    required: false
+    default: ''
+  rn_ref:
+    description: RN SDK ref; omitted from the message when equal to rn_version
+    required: false
+    default: ''
+  native_name:
+    description: "Native SDK label: 'iOS' or 'Android'"
+    required: true
+  native_version:
+    description: Native SDK semver (empty renders as a dash)
+    required: false
+    default: ''
+  native_ref:
+    description: Native SDK ref; omitted from the message when equal to native_version
+    required: false
+    default: ''
+  failed_step:
+    description: Override for the failing-step name in the failure headline. Defaults to the first failed step reported by the actions context.
+    required: false
+    default: ''
   install_url:
     description: Optional install link to surface in the message (e.g. internal-sharing download URL). Only useful to users already authorized for the build.
     required: false
@@ -30,46 +60,85 @@ inputs:
     description: Optional plain-text instructions for reaching the build (e.g. who can see it and where). Must not contain public/unauthenticated links — this repo's logs are public.
     required: false
     default: ''
-  sdk_ref:
-    description: Optional compact SDK version/ref summary (e.g. 'RN 2.5.1 | Android 4.5.1 | iOS 5.4.1') shown on success messages
-    required: false
-    default: ''
 
 runs:
   using: composite
   steps:
     # Free text (a release tag can contain a double quote) is computed in a
     # step and referenced by output — never interpolated into the payload.
-    - name: Set source label
-      id: source
+    # The failure headline names the first step the actions context reports
+    # as failed, so the workflow does not have to track steps itself.
+    - name: Find failed step
+      id: failed
+      if: inputs.result == 'failure'
       shell: bash
       env:
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
-        REF_NAME: ${{ github.head_ref || github.ref_name }}
+        STEPS_JSON: ${{ toJSON(steps) }}
+        OVERRIDE: ${{ inputs.failed_step }}
       run: |
-        if [ -n "$RELEASE_TAG" ]; then
-          source_label="release $RELEASE_TAG"
-        else
-          source_label="$REF_NAME"
+        if [ -n "$OVERRIDE" ]; then
+          echo "name=$OVERRIDE" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
-        echo "label=$(printf '%s' "$source_label" | tr -cd 'A-Za-z0-9._/ +-')" >> "$GITHUB_OUTPUT"
+        name=$(printf '%s' "$STEPS_JSON" | jq -r '[to_entries[] | select(.value.outcome == "failure")][0].key // empty')
+        echo "name=$name" >> "$GITHUB_OUTPUT"
 
-    - uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+    - name: Compose message
+      id: message
+      shell: bash
+      env:
+        RESULT: ${{ inputs.result }}
+        PLATFORM: ${{ inputs.platform }}
+        STORE: ${{ inputs.store }}
+        FULL_VERSION: ${{ inputs.full_version }}
+        BUILD: ${{ inputs.build }}
+        RN_VERSION: ${{ inputs.rn_version }}
+        RN_REF: ${{ inputs.rn_ref }}
+        NATIVE_NAME: ${{ inputs.native_name }}
+        NATIVE_VERSION: ${{ inputs.native_version }}
+        NATIVE_REF: ${{ inputs.native_ref }}
+        FAILED_STEP: ${{ steps.failed.outputs.name }}
+        EVENT_NAME: ${{ github.event_name }}
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        HEAD_REF: ${{ github.head_ref }}
+        REF_NAME: ${{ github.ref_name }}
+        # On pull_request events github.sha is the synthetic merge commit, so
+        # use the PR head — the same commit the release notes report.
+        COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        INSTALL_URL: ${{ inputs.install_url }}
+        INSTALL_LABEL: ${{ inputs.install_label }}
+        INSTALL_FALLBACK: ${{ inputs.install_fallback }}
+        ACCESS_NOTE: ${{ inputs.access_note }}
+      run: |
+        export EVENT_NAME RELEASE_TAG HEAD_REF REF_NAME
+        SOURCE_LABEL=$("${{ github.workspace }}/.github/scripts/source-label.sh")
+        export SOURCE_LABEL
+        "${{ github.workspace }}/.github/scripts/slack-publish-text.sh" > "${RUNNER_TEMP}/slack-text.txt"
+        DELIM="EOF-$RANDOM-$RANDOM"
+        {
+          echo "text<<$DELIM"
+          cat "${RUNNER_TEMP}/slack-text.txt"
+          echo "$DELIM"
+        } >> "$GITHUB_OUTPUT"
+
+    # SLACK_WEBHOOK_URL is optional: when it is empty the notification is
+    # skipped rather than failing the run.
+    - name: Skip without a webhook
+      if: inputs.webhook == ''
+      shell: bash
+      run: echo "::notice::SLACK_WEBHOOK_URL is not set; skipping the Slack notification"
+
+    - if: inputs.webhook != ''
+      uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
       with:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
         payload: |
-          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+          text: ${{ steps.message.outputs.text }}
           blocks:
-            - type: "header"
-              text:
-                type: "plain_text"
-                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
-                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Source:* `${{ steps.source.outputs.label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.sdk_ref != '' && format('\n*SDK:* {0}', inputs.sdk_ref) || '' }}${{ (inputs.install_url != '' && format('\n*Install:* <{0}|{1}>', inputs.install_url, inputs.install_label)) || (inputs.install_fallback != '' && format('\n*Install:* {0}', inputs.install_fallback)) || '' }}${{ inputs.access_note != '' && format('\n*Access:* {0}', inputs.access_note) || '' }}"
-            - type: "section"
-              text:
-                type: "mrkdwn"
-                text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                text: ${{ steps.message.outputs.text }}

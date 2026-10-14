@@ -13,6 +13,12 @@
 #       Waits for the uploaded build to finish processing in App Store
 #       Connect, then sets its en-US TestFlight "What to Test" text
 #       (betaBuildLocalizations).
+#   ruby asc.rb ios-marketing-version <full-version>
+#       Prints the CFBundleShortVersionString-safe form of a package.json
+#       version: prerelease suffix and build metadata stripped. Aborts
+#       non-zero unless the result is numeric X.Y[.Z], e.g. 2.6.0-rc.1
+#       prints 2.6.0; `v2` or `1.2.3.4` abort. Pure string handling, no API
+#       calls.
 #
 # Env: APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_KEY_ISSUER_ID,
 # BUNDLE_ID. The .p8 key is read from ~/.appstoreconnect/private_keys.
@@ -69,6 +75,28 @@ def write_env(name, value)
   return unless ENV['GITHUB_ENV']
 
   File.open(ENV.fetch('GITHUB_ENV'), 'a') { |f| f.puts "#{name}=#{value}" }
+end
+
+# Apple requires CFBundleShortVersionString to be numeric X.Y[.Z], so a
+# semver prerelease wrapper (2.6.0-rc.1) must be stripped before it reaches
+# the pbxproj or an ASC version filter. Build numbers key on the stripped
+# value, so a prerelease shares the release version's build sequence.
+def strip_ios_marketing_version(full_version)
+  full_version.to_s.strip.sub(/[-+].*\z/, '')
+end
+
+def valid_ios_marketing_version?(version)
+  version.match?(/\A\d+(\.\d+){0,2}\z/)
+end
+
+def ios_marketing_version(full_version)
+  stripped = strip_ios_marketing_version(full_version)
+  unless valid_ios_marketing_version?(stripped)
+    abort "asc.rb ios-marketing-version: '#{full_version}' does not strip to a numeric X.Y[.Z] version (got '#{stripped}')"
+  end
+
+  puts stripped
+  stripped
 end
 
 def app_id
@@ -168,8 +196,12 @@ def main(argv)
     abort 'usage: asc.rb set-whats-new <marketing-version> <build-number> <notes-file>' unless argv.length == 4
 
     set_whats_new(argv[1], argv[2], argv[3])
+  when 'ios-marketing-version'
+    abort 'usage: asc.rb ios-marketing-version <full-version>' unless argv.length == 2
+
+    ios_marketing_version(argv[1])
   else
-    abort 'usage: asc.rb {next-build-number [--marketing-version v] [--minimum n]|set-whats-new ...}'
+    abort 'usage: asc.rb {next-build-number [--marketing-version v] [--minimum n]|set-whats-new ...|ios-marketing-version <v>}'
   end
 end
 

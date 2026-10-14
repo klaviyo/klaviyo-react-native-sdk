@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Asserts a built artifact carries the version being uploaded, so a stale or
+# misconfigured build never reaches the store under the wrong number.
+#
+# Usage:
+#   assert-artifact-version.sh ios <ipa> <expected-build> <expected-short-version>
+#   assert-artifact-version.sh android <aab> <expected-code> <expected-name>
+#
+# iOS: reads CFBundleVersion / CFBundleShortVersionString from
+# Payload/*.app/Info.plist inside the IPA. Uses /usr/libexec/PlistBuddy on
+# macOS and falls back to python3 plistlib elsewhere (CI tests on ubuntu).
+#
+# Android: reads versionCode / versionName from the AAB's manifest with
+# aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are binary
+# protobuf, so plain unzip+grep cannot read them.
+set -euo pipefail
+
+[ $# -eq 4 ] || {
+  echo "usage: $0 <ios|android> <artifact> <expected-code> <expected-name>" >&2
+  exit 2
+}
+platform=$1
+artifact=$2
+expected_code=$3
+expected_name=$4
+
+fail() {
+  echo "::error::$1" >&2
+  exit 1
+}
+
+[ -f "$artifact" ] || fail "Artifact not found: $artifact"
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+read_plist_value() { # plist-file key
+  if [ -x /usr/libexec/PlistBuddy ]; then
+    /usr/libexec/PlistBuddy -c "Print :$2" "$1"
+  else
+    python3 - "$1" "$2" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], 'rb') as f:
+    print(plistlib.load(f)[sys.argv[2]])
+PY
+  fi
+}
+
+case "$platform" in
+  ios)
+    unzip -o -q "$artifact" 'Payload/*.app/Info.plist' -d "$WORK"
+    plist=$(find "$WORK/Payload" -name Info.plist | head -1)
+    [ -n "$plist" ] || fail "No Payload/*.app/Info.plist in $artifact"
+    actual_code=$(read_plist_value "$plist" CFBundleVersion) || fail "CFBundleVersion missing in $plist"
+    actual_name=$(read_plist_value "$plist" CFBundleShortVersionString) || fail "CFBundleShortVersionString missing in $plist"
+    ;;
+  android)
+    aapt2=$(command -v aapt2 || true)
+    if [ -z "$aapt2" ] && [ -n "${ANDROID_HOME:-}" ]; then
+      aapt2=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -1)
+    fi
+    [ -n "$aapt2" ] || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
+    unzip -o -q "$artifact" 'base/manifest/AndroidManifest.xml' -d "$WORK"
+    [ -f "$WORK/base/manifest/AndroidManifest.xml" ] || fail "No base/manifest/AndroidManifest.xml in $artifact"
+    dump=$("$aapt2" dump xmltree --file base/manifest/AndroidManifest.xml "$artifact" 2>/dev/null || true)
+    [ -n "$dump" ] || fail "aapt2 could not read the manifest of $artifact"
+    actual_code=$(grep -oE 'android:versionCode\(.*\)=\(type [^)]*\)0x[0-9a-f]+' <<<"$dump" | head -1 | grep -oE '0x[0-9a-f]+$' | sed 's/^0x//' || true)
+    [ -n "$actual_code" ] && actual_code=$((16#$actual_code))
+    actual_name=$(grep -oE 'android:versionName\(.*\)="[^"]*"' <<<"$dump" | head -1 | sed -E 's/.*="([^"]*)"/\1/' || true)
+    # AAB proto manifests may carry versionCode as a raw int attribute; fall
+    # back to the decimal form when the hex form was not matched.
+    if [ -z "${actual_code:-}" ]; then
+      actual_code=$(grep -oE 'android:versionCode.*\)[0-9]+' <<<"$dump" | head -1 | grep -oE '[0-9]+$' || true)
+    fi
+    [ -n "${actual_code:-}" ] || fail "versionCode missing in $artifact manifest"
+    [ -n "${actual_name:-}" ] || fail "versionName missing in $artifact manifest"
+    ;;
+  *)
+    echo "unknown platform: $platform" >&2
+    exit 2
+    ;;
+esac
+
+if [ "$actual_code" != "$expected_code" ]; then
+  fail "$platform artifact $artifact has build $actual_code, expected $expected_code — refusing to upload"
+fi
+if [ "$actual_name" != "$expected_name" ]; then
+  fail "$platform artifact $artifact has version '$actual_name', expected '$expected_name' — refusing to upload"
+fi
+echo "Verified $platform artifact: build $actual_code, version $actual_name"
