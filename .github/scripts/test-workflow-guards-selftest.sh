@@ -309,6 +309,58 @@ s = s.replace('        id: save_notes\n        continue-on-error: true\n', '    
 "
 expect_fail "a what-to-test step that can fail the run is caught" "the what-to-test job cannot fail the run"
 
+# --list-workflows feeds CI's actionlint step, so it must print only workflow
+# paths (a stray PASS: line would be handed to actionlint as a file name) and it
+# must follow the deploy's call tree rather than a fixed list.
+list_workflows() {
+  WORKFLOW_DIR="$TMP/wf" ACTIONS_DIR="$TMP/actions" SECRETS_SCRIPT="$TMP/secrets.sh" \
+    bash "$GUARD" --list-workflows 2>"$TMP/list.err"
+}
+
+fresh_copy
+out=$(list_workflows) && rc=0 || rc=$?
+non_paths=$(printf '%s\n' "$out" | grep -v -E '^\.github/workflows/[A-Za-z0-9._-]+\.yml$' || true)
+if [ "$rc" -eq 0 ] && [ -z "$non_paths" ]; then
+  report 0 "--list-workflows prints only workflow paths"
+else
+  report 1 "--list-workflows prints only workflow paths (rc=$rc, stray lines: $non_paths)"
+fi
+for wf in publish-example.yml ci.yml example-publish-checks.yml; do
+  if printf '%s\n' "$out" | grep -qx ".github/workflows/$wf"; then
+    report 0 "--list-workflows includes $wf"
+  else
+    report 1 "--list-workflows includes $wf (got: $out)"
+  fi
+done
+
+fresh_copy
+# A workflow the deploy does not call is not in the list, and one it newly
+# calls is: the list follows the call tree.
+cat > "$TMP/wf/extra-called.yml" <<'EOF'
+on: workflow_call
+jobs:
+  noop:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo hi
+EOF
+out_before=$(list_workflows)
+if printf '%s\n' "$out_before" | grep -qx '.github/workflows/extra-called.yml'; then
+  report 1 "--list-workflows lists a workflow the deploy does not call"
+else
+  report 0 "--list-workflows leaves out a workflow the deploy does not call"
+fi
+mutate "$PUB" "
+i = s.index('  publish-checks:')
+s = s[:i] + '  extra-called:\n    uses: ./.github/workflows/extra-called.yml\n\n' + s[i:]
+"
+out_after=$(list_workflows)
+if printf '%s\n' "$out_after" | grep -qx '.github/workflows/extra-called.yml'; then
+  report 0 "--list-workflows follows a newly called workflow"
+else
+  report 1 "--list-workflows follows a newly called workflow (got: $out_after)"
+fi
+
 echo
 echo "SUMMARY: $PASSED passed, $FAILED failed"
 [ "$FAILED" -eq 0 ]

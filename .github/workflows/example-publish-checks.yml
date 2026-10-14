@@ -34,8 +34,33 @@ jobs:
             | tar xz -C "$RUNNER_TEMP" actionlint
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
+      # The workflows the deploy runs (publish-example.yml and every workflow it
+      # calls, so ci.yml too), taken from the guard's own call-tree derivation.
+      # The workflow guard step below needs PyYAML, so the venv is created first.
+      - name: Install PyYAML for the workflow guards
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --quiet PyYAML
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
       - name: Lint workflows
-        run: actionlint .github/workflows/publish-example.yml .github/workflows/example-publish-checks.yml
+        run: |
+          workflows=()
+          while IFS= read -r wf; do workflows+=("$wf"); done < <(.github/scripts/check-workflow-guards.sh --list-workflows)
+          [ "${#workflows[@]}" -gt 0 ] || { echo "::error::no workflows found to lint"; exit 1; }
+          printf 'actionlint: %s\n' "${workflows[@]}"
+          actionlint "${workflows[@]}"
+
+      # Pinned so a runner image update cannot change what shellcheck flags;
+      # the checksum is verified before the binary is used.
+      - name: Install shellcheck 0.9.0
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/shellcheck.tar.xz" \
+            https://github.com/koalaman/shellcheck/releases/download/v0.9.0/shellcheck-v0.9.0.linux.x86_64.tar.xz
+          echo "700324c6dd0ebea0117591c6cc9d7350d9c7c5c287acbad7630fa17b1d4d9e2f  $RUNNER_TEMP/shellcheck.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/shellcheck.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/shellcheck-v0.9.0" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/shellcheck-v0.9.0/shellcheck" --version | sed -n 2p
 
       - name: Shellcheck scripts
         run: shellcheck .github/scripts/*.sh bump-version.sh
@@ -69,15 +94,6 @@ jobs:
 
       - name: Test assert-artifact-version.sh
         run: .github/scripts/test-assert-artifact-version.sh
-
-      # A venv keeps the install off the system interpreter, which newer
-      # runner images mark as externally managed (PEP 668). Later steps pick
-      # up its python3 through GITHUB_PATH.
-      - name: Install PyYAML for the workflow guards
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/python" -m pip install --quiet PyYAML
-          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Guard GitHub expressions
         run: |

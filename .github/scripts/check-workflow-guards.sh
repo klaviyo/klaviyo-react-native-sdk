@@ -10,6 +10,13 @@
 # uses) are all held to the same pin and checkout rules; the set is derived from
 # the workflow itself, so a newly called workflow is covered automatically.
 #
+# Usage:
+#   check-workflow-guards.sh                  run every guard
+#   check-workflow-guards.sh --list-workflows print the workflow files in the
+#                                             deploy's call tree, one per line
+#                                             (paths relative to the repo root),
+#                                             so CI lints exactly those
+#
 # Env (overridden by test-workflow-guards-selftest.sh, which breaks a copy of
 # the workflows once per rule and expects a FAIL):
 #   WORKFLOW_DIR    directory with publish-example.yml and the other workflows
@@ -24,7 +31,7 @@ export WORKFLOW_DIR="${WORKFLOW_DIR:-$ROOT/.github/workflows}"
 export ACTIONS_DIR="${ACTIONS_DIR:-$ROOT/.github/actions}"
 export SECRETS_SCRIPT="${SECRETS_SCRIPT:-$ROOT/.github/scripts/check-secrets.sh}"
 
-python3 - <<'PY'
+python3 - "${1:-}" <<'PY'
 import glob
 import os
 import re
@@ -80,6 +87,51 @@ notes_path = os.path.join(actions_dir, 'example-release-notes', 'action.yml')
 
 def steps_of(job):
     return job.get('steps') or []
+
+
+def deploy_call_tree():
+    # Workflows reached from publish-example.yml through
+    # `uses: ./.github/workflows/<file>`, and the local actions used by any of
+    # them (`uses: ./.github/actions/<name>`), found recursively.
+    workflows = {'publish-example.yml'}
+    actions = set()
+    pending = ['publish-example.yml']
+    while pending:
+        name = pending.pop()
+        path = os.path.join(workflow_dir, name)
+        if not os.path.exists(path):
+            continue
+        doc = load(path)
+        for job in (doc.get('jobs') or {}).values():
+            uses = [str(job.get('uses') or '')] + [str(st.get('uses') or '') for st in steps_of(job)]
+            for u in uses:
+                m = re.match(r'\./\.github/workflows/([^@\s]+)', u)
+                if m and m.group(1) not in workflows:
+                    workflows.add(m.group(1))
+                    pending.append(m.group(1))
+                m = re.match(r'\./\.github/actions/([^@\s/]+)', u)
+                if m:
+                    actions.add(m.group(1))
+    # Actions can use other local actions.
+    changed = True
+    while changed:
+        changed = False
+        for a in sorted(actions):
+            apath = os.path.join(actions_dir, a, 'action.yml')
+            if not os.path.exists(apath):
+                continue
+            for st in (load(apath).get('runs') or {}).get('steps') or []:
+                m = re.match(r'\./\.github/actions/([^@\s/]+)', str(st.get('uses') or ''))
+                if m and m.group(1) not in actions:
+                    actions.add(m.group(1))
+                    changed = True
+    return sorted(workflows), sorted(actions)
+
+
+if len(sys.argv) > 1 and sys.argv[1] == '--list-workflows':
+    for name in deploy_call_tree()[0]:
+        print(f'.github/workflows/{name}')
+    sys.exit(0)
 
 
 def step_label(job_name, step):
@@ -173,45 +225,6 @@ def is_checkout(step):
     return str(step.get('uses') or '').startswith('actions/checkout@')
 
 
-
-
-def deploy_call_tree():
-    # Workflows reached from publish-example.yml through
-    # `uses: ./.github/workflows/<file>`, and the local actions used by any of
-    # them (`uses: ./.github/actions/<name>`), found recursively.
-    workflows = {'publish-example.yml'}
-    actions = set()
-    pending = ['publish-example.yml']
-    while pending:
-        name = pending.pop()
-        path = os.path.join(workflow_dir, name)
-        if not os.path.exists(path):
-            continue
-        doc = load(path)
-        for job in (doc.get('jobs') or {}).values():
-            uses = [str(job.get('uses') or '')] + [str(st.get('uses') or '') for st in steps_of(job)]
-            for u in uses:
-                m = re.match(r'\./\.github/workflows/([^@\s]+)', u)
-                if m and m.group(1) not in workflows:
-                    workflows.add(m.group(1))
-                    pending.append(m.group(1))
-                m = re.match(r'\./\.github/actions/([^@\s/]+)', u)
-                if m:
-                    actions.add(m.group(1))
-    # Actions can use other local actions.
-    changed = True
-    while changed:
-        changed = False
-        for a in sorted(actions):
-            apath = os.path.join(actions_dir, a, 'action.yml')
-            if not os.path.exists(apath):
-                continue
-            for st in (load(apath).get('runs') or {}).get('steps') or []:
-                m = re.match(r'\./\.github/actions/([^@\s/]+)', str(st.get('uses') or ''))
-                if m and m.group(1) not in actions:
-                    actions.add(m.group(1))
-                    changed = True
-    return sorted(workflows), sorted(actions)
 
 
 GUARDED_WORKFLOWS, GUARDED_ACTIONS = deploy_call_tree()

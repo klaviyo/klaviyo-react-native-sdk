@@ -13,8 +13,9 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/bin"
 
-# Stub every external command the top-level code path can reach.
-for cmd in jq sed PlistBuddy; do
+# Stub the external commands the top-level code path reaches by name. PlistBuddy
+# is called by absolute path, so it is not stubbed (see run_bump).
+for cmd in jq sed; do
   cat > "$WORK/bin/$cmd" <<'EOF'
 #!/usr/bin/env bash
 exit 0
@@ -45,7 +46,13 @@ run_bump() {
     cd "$WORK"
     touch package.json
     mkdir -p ios android/src/main/res/values example/android/app example/ios/KlaviyoReactNativeSdkExample.xcodeproj
-    touch ios/klaviyo-sdk-configuration.plist android/src/main/res/values/strings.xml
+    # The script calls /usr/libexec/PlistBuddy by absolute path, which a PATH
+    # stub cannot shadow, so give the real tool a valid plist to edit.
+    printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+      '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+      '<plist version="1.0"><dict><key>klaviyo_sdk_version</key><string>0.0.0</string></dict></plist>' \
+      > ios/klaviyo-sdk-configuration.plist
+    touch android/src/main/res/values/strings.xml
     echo 'versionName "0.0.0"' > example/android/app/build.gradle
     echo 'MARKETING_VERSION = 0.0.0;' > example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj
     # shellcheck source=/dev/null
