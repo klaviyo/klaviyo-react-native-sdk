@@ -26,6 +26,11 @@ set -euo pipefail
 sdk_entry() {
   local name=$1 version=$2 ref=$3
   [ -z "$version" ] && version='—'
+  if [ "${ref#"$version ("}" != "$ref" ] && [ "${ref%)}" != "$ref" ]; then
+    ref=${ref#"$version ("}
+    ref=${ref%)}
+  fi
+  ref=$(printf '%s' "$ref" | tr -cd 'A-Za-z0-9._/ +@-')
   if [ -n "$ref" ] && [ "$ref" != "$version" ]; then
     printf '%s %s · %s' "$name" "$version" "$ref"
   else

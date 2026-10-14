@@ -50,6 +50,17 @@ else
   pass "branch: no backticks"
 fi
 
+# A native ref that embeds the version reduces to its ref part.
+out=$(env "${BASE[@]}" NATIVE_VERSION=5.4.1 NATIVE_REF='5.4.1 (252a62e)' "$SCRIPT")
+check "embedded version: ref part only" "$out" '| iOS 5.4.1 · 252a62e'
+if grep -qF '5.4.1 · 5.4.1' <<<"$out"; then fail "embedded version: version repeated"; else pass "embedded version: version not repeated"; fi
+
+# Ref names may hold mrkdwn control characters; none reach the message.
+out=$(env "${BASE[@]}" RN_REF='x<!channel>|a&b`c' NATIVE_REF='<!here>' "$SCRIPT")
+sdks_line=$(grep -F '*SDKs:*' <<<"$out" | sed 's/ | / /')
+if grep -qE '[<>&|!`]' <<<"$sdks_line"; then fail "hostile refs: control characters in the SDKs line"; else pass "hostile refs: no control characters in the SDKs line"; fi
+check "hostile refs: safe remainder kept" "$out" 'RN 2.6.0 · xchannelabc'
+
 # Release build.
 out=$(env "${BASE[@]}" SOURCE_LABEL='release v2.6.0' EVENT_NAME=release "$SCRIPT")
 check "release: source label" "$out" '*Source:* release v2.6.0 (release)'
