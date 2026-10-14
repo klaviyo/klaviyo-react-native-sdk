@@ -388,7 +388,6 @@ jobs:
       full_version: ${{ steps.result.outputs.full_version }}
       build_number: ${{ steps.result.outputs.build_number }}
       app_id: ${{ steps.result.outputs.app_id }}
-      sdk_ref: ${{ steps.result.outputs.sdk_ref }}
       notes: ${{ steps.result.outputs.notes }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
