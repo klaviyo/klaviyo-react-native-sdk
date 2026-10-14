@@ -36,8 +36,19 @@ run_guard() {
     bash "$GUARD" >"$TMP/out.log" 2>&1
 }
 
+# broken_copy_differs: true when the working copy no longer matches the repo.
+broken_copy_differs() {
+  ! diff -rq "$ROOT/.github/workflows" "$TMP/wf" >/dev/null 2>&1 \
+    || ! diff -rq "$ROOT/.github/actions" "$TMP/actions" >/dev/null 2>&1 \
+    || ! diff -q "$ROOT/.github/scripts/check-secrets.sh" "$TMP/secrets.sh" >/dev/null 2>&1
+}
+
 # expect_fail <case name> <text the guard must print after FAIL:>
 expect_fail() {
+  if ! broken_copy_differs; then
+    echo "ABORT: '$1' ran the guard on an unmodified copy" >&2
+    exit 2
+  fi
   if run_guard; then
     report 1 "$1 (guard passed on a broken copy)"
   elif grep -qF "FAIL: $2" "$TMP/out.log"; then
@@ -48,8 +59,10 @@ expect_fail() {
 }
 
 # mutate <file under TMP> <python snippet using s>: rewrites the file text.
+# A mutation that changes nothing (the text it targets moved) would let a case
+# pass or fail for the wrong reason, so it aborts the whole self-test.
 mutate() {
-  python3 - "$1" "$2" <<'PY'
+  if ! python3 - "$1" "$2" <<'PY'
 import sys
 
 path, code = sys.argv[1], sys.argv[2]
@@ -61,6 +74,10 @@ if scope['s'] == before:
     sys.exit('mutation did not change the file: ' + code)
 open(path, 'w').write(scope['s'])
 PY
+  then
+    echo "ABORT: a self-test mutation no longer changes its target; update the case" >&2
+    exit 2
+  fi
 }
 
 PUB="$TMP/wf/publish-example.yml"
@@ -92,6 +109,18 @@ j = s.index('        continue-on-error: true\n', i)
 s = s[:j] + s[j + len('        continue-on-error: true\n'):]
 "
 expect_fail "a Slack warning step without continue-on-error is caught" "every Slack step except the failure notifier"
+
+fresh_copy
+# Slack steps are found by the action they use, not by name: rename one and
+# strip its continue-on-error; the guard must still catch it.
+mutate "$PUB" "
+i = s.index('      - name: Notify Slack on success')
+s = s[:i] + s[i:].replace('Notify Slack on success', 'Tell the channel it shipped', 1)
+k = s.index('Tell the channel it shipped')
+j = s.index('        continue-on-error: true\n', k)
+s = s[:j] + s[j + len('        continue-on-error: true\n'):]
+"
+expect_fail "a renamed Slack step without continue-on-error is still caught" "every Slack step except the failure notifier"
 
 fresh_copy
 mutate "$NOTIFY" "s = s.replace('payload-file-path: \${{ steps.message.outputs.payload_file }}', 'payload: |\n          text: \"x\"', 1)"
