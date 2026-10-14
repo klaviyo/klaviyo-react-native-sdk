@@ -790,6 +790,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Ruby
+        id: setup_ruby
+        continue-on-error: true
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          ruby-version: '3.2'
+
       - name: Write App Store Connect API key
         id: write_key
         continue-on-error: true
@@ -813,7 +820,7 @@ jobs:
 
       - name: Set What to Test on the uploaded build
         id: set_whats_new
-        if: steps.write_key.outcome == 'success' && steps.save_notes.outcome == 'success'
+        if: steps.setup_ruby.outcome == 'success' && steps.write_key.outcome == 'success' && steps.save_notes.outcome == 'success'
         continue-on-error: true
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -837,7 +844,7 @@ jobs:
       # The build is already on TestFlight; a failure here only costs the
       # notes, so warn instead of failing the run.
       - name: Warn on Slack when What to Test failed
-        if: steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
+        if: steps.setup_ruby.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
         continue-on-error: true
         uses: ./.github/actions/notify-slack-publish
         with:

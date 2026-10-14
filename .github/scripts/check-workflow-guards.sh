@@ -418,6 +418,19 @@ for name in GUARDED_WORKFLOWS:
 check('every job in the deploy call tree sets timeout-minutes',
       not no_timeout, '\n'.join(no_timeout))
 
+# 4f. A job that runs `gem install` sets up Ruby first: the runner's system
+#     Ruby installs gems into a root-owned directory.
+no_ruby = []
+for name in GUARDED_WORKFLOWS:
+    for job_name, job in (load(os.path.join(workflow_dir, name)).get('jobs') or {}).items():
+        steps = steps_of(job)
+        installs = [i for i, st in enumerate(steps) if 'gem install' in str(st.get('run') or '')]
+        setups = [i for i, st in enumerate(steps) if str(st.get('uses') or '').startswith('ruby/setup-ruby@')]
+        if installs and not (setups and min(setups) < min(installs)):
+            no_ruby.append(f'{name}: {job_name}')
+check('every job that runs gem install sets up Ruby first',
+      not no_ruby, '\n'.join(no_ruby))
+
 # 5. The preflight jobs read repository-level secrets, so they declare no
 #    environment, and SLACK_WEBHOOK_URL (optional) is not required by them or
 #    by the secrets script.

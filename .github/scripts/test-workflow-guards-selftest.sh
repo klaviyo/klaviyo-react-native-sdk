@@ -481,6 +481,11 @@ fresh_copy
 mutate "$TMP/wf/example-publish-checks.yml" "s = s.replace('    timeout-minutes: 15\n', '', 1)"
 expect_fail "a checks job without timeout-minutes is caught" "every job in the deploy call tree sets timeout-minutes"
 
+# A job that runs gem install without ruby/setup-ruby before it is caught.
+fresh_copy
+mutate "$TMP/wf/example-publish-checks.yml" "s = s.replace('      - name: Set up Ruby\\n        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0\\n        with:\\n          ruby-version: \\'3.2\\'\\n\\n      - name: Write App Store Connect API key', '      - name: Write App Store Connect API key', 1)"
+expect_fail "a gem install job without a Ruby setup is caught" "every job that runs gem install sets up Ruby first"
+
 # --list-workflows feeds CI's actionlint step, so it must print only workflow
 # paths (a stray PASS: line would be handed to actionlint as a file name) and it
 # must follow the deploy's call tree rather than a fixed list.
