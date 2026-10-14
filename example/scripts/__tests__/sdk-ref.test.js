@@ -38,7 +38,7 @@ describe('rnRef', () => {
     ).toBe('2.5.1');
   });
 
-  it('includes branch@sha when HEAD is not tagged', () => {
+  it('is branch@sha7 when HEAD is not tagged', () => {
     expect(
       rnRef('2.5.1', {
         tagNames: [],
@@ -46,7 +46,7 @@ describe('rnRef', () => {
         sha: 'abc1234',
         dirty: false,
       })
-    ).toBe('2.5.1 (rel/2.5.1@abc1234)');
+    ).toBe('rel/2.5.1@abc1234');
   });
 
   it('appends -dirty for a dirty tree', () => {
@@ -57,7 +57,7 @@ describe('rnRef', () => {
         sha: 'abc1234',
         dirty: true,
       })
-    ).toBe('2.5.1 (main@abc1234-dirty)');
+    ).toBe('main@abc1234-dirty');
   });
 
   it('falls back when git info is missing', () => {
@@ -71,7 +71,7 @@ describe('rnRef', () => {
         sha: 'abc1234',
         dirty: false,
       })
-    ).toBe('2.5.1 (unknown@abc1234)');
+    ).toBe('unknown@abc1234');
     expect(
       rnRef('unknown', { tagNames: [], branch: 'main', sha: 'abc1234' })
     ).toBe('unknown');
@@ -311,11 +311,14 @@ describe('updateEnvContent', () => {
     KLAVIYO_SDK_REF_ANDROID: '4.5.1',
     KLAVIYO_SDK_REF_IOS: '5.4.1',
   };
+  const refBlock =
+    'KLAVIYO_SDK_REF_RN=2.5.1\nKLAVIYO_SDK_REF_ANDROID=4.5.1\nKLAVIYO_SDK_REF_IOS=5.4.1\n';
+  const unknownVersions =
+    'KLAVIYO_SDK_VERSION_RN=unknown\nKLAVIYO_SDK_VERSION_ANDROID=unknown\nKLAVIYO_SDK_VERSION_IOS=unknown\n' +
+    'KLAVIYO_BUILD_APP_VERSION=unknown\nKLAVIYO_BUILD_NUMBER=unknown\nKLAVIYO_BUILD_COMMIT=unknown\nKLAVIYO_BUILD_BRANCH=unknown\nKLAVIYO_BUILD_BUILT=unknown\n';
 
   it('creates the file content when missing', () => {
-    expect(updateEnvContent(null, refs)).toBe(
-      'KLAVIYO_SDK_REF_RN=2.5.1\nKLAVIYO_SDK_REF_ANDROID=4.5.1\nKLAVIYO_SDK_REF_IOS=5.4.1\n'
-    );
+    expect(updateEnvContent(null, refs)).toBe(refBlock + unknownVersions);
   });
 
   it('replaces managed lines and preserves everything else', () => {
@@ -323,20 +326,21 @@ describe('updateEnvContent', () => {
       'KLAVIYO_API_KEY=abc123\nKLAVIYO_SDK_REF_RN=stale\nOTHER=keep\n# comment\n';
     expect(updateEnvContent(existing, refs)).toBe(
       'KLAVIYO_API_KEY=abc123\nOTHER=keep\n# comment\n' +
-        'KLAVIYO_SDK_REF_RN=2.5.1\nKLAVIYO_SDK_REF_ANDROID=4.5.1\nKLAVIYO_SDK_REF_IOS=5.4.1\n'
+        refBlock +
+        unknownVersions
     );
   });
 
   it('appends to a file without a trailing newline cleanly', () => {
     expect(updateEnvContent('KLAVIYO_API_KEY=abc123', refs)).toBe(
-      'KLAVIYO_API_KEY=abc123\n' +
-        'KLAVIYO_SDK_REF_RN=2.5.1\nKLAVIYO_SDK_REF_ANDROID=4.5.1\nKLAVIYO_SDK_REF_IOS=5.4.1\n'
+      'KLAVIYO_API_KEY=abc123\n' + refBlock + unknownVersions
     );
   });
 
   it('writes unknown for missing refs', () => {
     expect(updateEnvContent(null, {})).toBe(
-      'KLAVIYO_SDK_REF_RN=unknown\nKLAVIYO_SDK_REF_ANDROID=unknown\nKLAVIYO_SDK_REF_IOS=unknown\n'
+      'KLAVIYO_SDK_REF_RN=unknown\nKLAVIYO_SDK_REF_ANDROID=unknown\nKLAVIYO_SDK_REF_IOS=unknown\n' +
+        unknownVersions
     );
   });
 });

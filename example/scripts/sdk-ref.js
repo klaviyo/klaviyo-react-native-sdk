@@ -1,13 +1,27 @@
 #!/usr/bin/env node
 /*
  * sdk-ref.js — resolve the versions/refs of the RN SDK and the native
- * Android and iOS SDKs the example app builds against, and persist them to
- * example/.env as a managed block of KLAVIYO_SDK_REF_* lines (read by the
- * app through react-native-dotenv).
+ * Android and iOS SDKs the example app builds against, plus build metadata,
+ * and persist them to example/.env as a managed block of KLAVIYO_SDK_REF_*,
+ * KLAVIYO_SDK_VERSION_* and KLAVIYO_BUILD_* lines (read by the app through
+ * react-native-dotenv).
  *
  * Usage:
  *   node example/scripts/sdk-ref.js          write the managed block to example/.env
  *   node example/scripts/sdk-ref.js --print  print a human-readable summary instead
+ *   node example/scripts/sdk-ref.js --print-header [flags]
+ *                                            print the release-notes header block
+ *
+ * Flags (override the git/clock defaults):
+ *   --build <n>         build number (KLAVIYO_BUILD_NUMBER)
+ *   --commit <sha>      commit sha, truncated to 7 chars (KLAVIYO_BUILD_COMMIT)
+ *   --branch <name>     branch name (KLAVIYO_BUILD_BRANCH)
+ *   --built <string>    build timestamp (KLAVIYO_BUILD_BUILT)
+ *   --platform <ios|android>  native SDK row for --print-header
+ *   --app-name <name>   app name for --print-header (default "RN Example")
+ *   --source-label <s>  source label for the Commit line of --print-header
+ *   --event <name>      event suffix for the Commit line of --print-header
+ *   --run-url <url>     adds a `CI run:` line to --print-header output
  *
  * Ref formats:
  *   official release  5.4.1
@@ -30,11 +44,23 @@ const UNKNOWN = 'unknown';
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const EXAMPLE_DIR = path.resolve(__dirname, '..');
 const ENV_FILE = path.join(EXAMPLE_DIR, '.env');
-const MANAGED_PREFIX = 'KLAVIYO_SDK_REF_';
+const MANAGED_PREFIXES = [
+  'KLAVIYO_SDK_REF_',
+  'KLAVIYO_SDK_VERSION_',
+  'KLAVIYO_BUILD_',
+];
 const MANAGED_KEYS = [
   'KLAVIYO_SDK_REF_RN',
   'KLAVIYO_SDK_REF_ANDROID',
   'KLAVIYO_SDK_REF_IOS',
+  'KLAVIYO_SDK_VERSION_RN',
+  'KLAVIYO_SDK_VERSION_ANDROID',
+  'KLAVIYO_SDK_VERSION_IOS',
+  'KLAVIYO_BUILD_APP_VERSION',
+  'KLAVIYO_BUILD_NUMBER',
+  'KLAVIYO_BUILD_COMMIT',
+  'KLAVIYO_BUILD_BRANCH',
+  'KLAVIYO_BUILD_BUILT',
 ];
 const ANDROID_SDK_REPO = 'https://github.com/klaviyo/klaviyo-android-sdk';
 
@@ -122,7 +148,7 @@ function rnVersion(packageJsonContent) {
 }
 
 // `version` alone when HEAD is exactly a tag matching it (v-prefixed or
-// bare), otherwise `version (branch@sha7[-dirty])`. Branch falls back to
+// bare), otherwise `branch@sha7[-dirty]`. Branch falls back to
 // GITHUB_HEAD_REF (PR runs) / GITHUB_REF_NAME since CI checkouts are
 // detached.
 function rnRef(version, { tagNames, branch, sha, dirty }) {
@@ -135,7 +161,7 @@ function rnRef(version, { tagNames, branch, sha, dirty }) {
   if (!sha) {
     return version;
   }
-  return `${version} (${branch || UNKNOWN}@${sha}${dirty ? '-dirty' : ''})`;
+  return `${branch || UNKNOWN}@${sha}${dirty ? '-dirty' : ''}`;
 }
 
 // --- Android SDK ---
@@ -159,6 +185,32 @@ function androidRef(pin, { snapshotToRef, localResolver }) {
     return pin.slice(0, 7);
   }
   return UNKNOWN;
+}
+
+// Resolves the Android SDK semver: the pin itself when it is a semver, else
+// the `# saved: <version>` comment configure-sdk.sh leaves directly above the
+// key when it replaces the pin with a commit/branch, else the pin string.
+function parseSavedCommentVersion(content, key) {
+  if (!content) {
+    return null;
+  }
+  const pattern = new RegExp(
+    `^# saved: (\\S+)\\n${key.replace(/\./g, '\\.')}=`,
+    'm'
+  );
+  const match = content.match(pattern);
+  return match ? match[1].trim() : null;
+}
+
+function androidVersion(gradlePropertiesContent, key) {
+  const pin = readProperty(gradlePropertiesContent, key);
+  if (!pin) {
+    return UNKNOWN;
+  }
+  if (isSemver(pin)) {
+    return pin;
+  }
+  return parseSavedCommentVersion(gradlePropertiesContent, key) || pin;
 }
 
 // --- iOS SDK ---
@@ -250,27 +302,107 @@ function iosRef({ lockContent, podfileContent, podspecContent }, resolvers) {
   return parsePodspecVersion(podspecContent, 'KlaviyoSwift') || UNKNOWN;
 }
 
+// Resolved KlaviyoSwift version: the lockfile's resolved pod version when
+// present, otherwise the podspec dependency pin.
+function iosVersion({ lockContent, podspecContent }) {
+  return (
+    parseLockVersion(lockContent, 'KlaviyoSwift') ||
+    parsePodspecVersion(podspecContent, 'KlaviyoSwift') ||
+    UNKNOWN
+  );
+}
+
+// --- notes header block (pure; mirrors example/src/sdkInfo.ts) ---
+
+const isMissing = (value) => !value || value === UNKNOWN;
+
+const valueOrMissing = (value) => (isMissing(value) ? '—' : value);
+
+// Strips a leading `<version> (` and trailing `)` so a ref that embeds the
+// version reduces to its ref part.
+const refPart = (ref, version) =>
+  ref.startsWith(`${version} (`) ? ref.slice(version.length + 2, -1) : ref;
+
+// "version · ref", omitting the ref when it is empty or equals the version.
+function formatVersionRef(version, ref) {
+  const versionText = valueOrMissing(version);
+  if (isMissing(ref)) {
+    return versionText;
+  }
+  const short = refPart(ref, versionText);
+  return !short || short === versionText
+    ? versionText
+    : `${versionText} · ${short}`;
+}
+
+// Header block shared by the in-app copy and the CI store notes: App line,
+// RN SDK row, the native SDK row for the build's platform, a Commit line,
+// and a CI run line only when runUrl is given.
+function formatBuildInfoHeader(input) {
+  const appLine = `${input.appName} ${valueOrMissing(input.appVersion)}${
+    isMissing(input.buildNumber) ? '' : ` (${input.buildNumber})`
+  }`;
+  const commitLine = `Commit: ${valueOrMissing(
+    input.commit
+  )} on ${valueOrMissing(input.sourceLabel)}${
+    input.event ? ` (${input.event})` : ''
+  }`;
+  const lines = [
+    appLine,
+    `Klaviyo RN SDK ${formatVersionRef(input.rnVersion, input.rnRef)}`,
+    `Klaviyo ${
+      input.platform === 'ios' ? 'iOS' : 'Android'
+    } SDK ${formatVersionRef(input.nativeVersion, input.nativeRef)}`,
+    commitLine,
+  ];
+  if (input.runUrl) {
+    lines.push(`CI run: ${input.runUrl}`);
+  }
+  return lines.join('\n');
+}
+
 // --- .env managed block ---
 
-// Replaces existing KLAVIYO_SDK_REF_* lines and leaves every other line
-// untouched, creating the file when missing.
-function updateEnvContent(content, refs) {
-  const managed = MANAGED_KEYS.map((key) => `${key}=${refs[key] || UNKNOWN}`);
+// Replaces existing managed lines (KLAVIYO_SDK_REF_*/KLAVIYO_SDK_VERSION_*)
+// and leaves every other line untouched, creating the file when missing.
+function updateEnvContent(content, values) {
+  const managed = MANAGED_KEYS.map((key) => `${key}=${values[key] || UNKNOWN}`);
   if (content === null) {
     return managed.join('\n') + '\n';
   }
   const kept = content
     .split('\n')
-    .filter((line) => !line.startsWith(MANAGED_PREFIX));
+    .filter(
+      (line) => !MANAGED_PREFIXES.some((prefix) => line.startsWith(prefix))
+    );
   while (kept.length > 0 && kept[kept.length - 1] === '') {
     kept.pop();
   }
   return [...kept, ...managed].join('\n') + '\n';
 }
 
+// Reads `--<name> <value>` flags into an object (flags without a value are
+// ignored).
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i].match(/^--([a-z-]+)$/);
+    if (flag && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+      args[flag[1]] = argv[i + 1];
+      i++;
+    }
+  }
+  return args;
+}
+
+// UTC timestamp in the `YYYY-MM-DD HH:MM UTC` form.
+function utcNow() {
+  return new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+}
+
 // --- resolution against this checkout ---
 
-function resolveAll() {
+function resolveAll(options = {}) {
   const pkgContent = readFileOrNull(path.join(REPO_ROOT, 'package.json'));
   const version = rnVersion(pkgContent);
 
@@ -280,14 +412,20 @@ function resolveAll() {
   const tagNames = tagOutput ? tagOutput.split('\n') : [];
   const abbrevRef = git(['rev-parse', '--abbrev-ref', 'HEAD'], REPO_ROOT);
   const branch =
+    options.branch ||
     process.env.GITHUB_HEAD_REF ||
     process.env.GITHUB_REF_NAME ||
     (abbrevRef && abbrevRef !== 'HEAD' ? abbrevRef : null);
+  const sha = options.commit
+    ? options.commit.slice(0, 7)
+    : git(['rev-parse', '--short=7', 'HEAD'], REPO_ROOT);
   const rn = rnRef(version, {
     tagNames,
     branch,
-    sha: git(['rev-parse', '--short=7', 'HEAD'], REPO_ROOT),
-    dirty: Boolean(git(['status', '--porcelain'], REPO_ROOT)),
+    sha,
+    dirty: options.commit
+      ? false
+      : Boolean(git(['status', '--porcelain'], REPO_ROOT)),
   });
 
   const resolvers = {
@@ -297,6 +435,10 @@ function resolveAll() {
 
   const gradleProperties = readFileOrNull(
     path.join(REPO_ROOT, 'android', 'gradle.properties')
+  );
+  const androidVersionValue = androidVersion(
+    gradleProperties,
+    'KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion'
   );
   const androidLocal = readFileOrNull(
     path.join(EXAMPLE_DIR, 'android', 'local.properties')
@@ -320,37 +462,81 @@ function resolveAll() {
           resolvers
         );
 
+  const iosLockContent = readFileOrNull(
+    path.join(EXAMPLE_DIR, 'ios', 'Podfile.lock')
+  );
+  const podspecContent = readFileOrNull(
+    path.join(REPO_ROOT, 'klaviyo-react-native-sdk.podspec')
+  );
   const ios = iosRef(
     {
-      lockContent: readFileOrNull(
-        path.join(EXAMPLE_DIR, 'ios', 'Podfile.lock')
-      ),
+      lockContent: iosLockContent,
       podfileContent: readFileOrNull(path.join(EXAMPLE_DIR, 'ios', 'Podfile')),
-      podspecContent: readFileOrNull(
-        path.join(REPO_ROOT, 'klaviyo-react-native-sdk.podspec')
-      ),
+      podspecContent,
     },
     resolvers
   );
+  const iosVersionValue = iosVersion({
+    lockContent: iosLockContent,
+    podspecContent,
+  });
 
   return {
     KLAVIYO_SDK_REF_RN: rn,
     KLAVIYO_SDK_REF_ANDROID: android,
     KLAVIYO_SDK_REF_IOS: ios,
+    KLAVIYO_SDK_VERSION_RN: version,
+    KLAVIYO_SDK_VERSION_ANDROID: androidVersionValue,
+    KLAVIYO_SDK_VERSION_IOS: iosVersionValue,
+    KLAVIYO_BUILD_APP_VERSION: version,
+    KLAVIYO_BUILD_NUMBER: options.build || '',
+    KLAVIYO_BUILD_COMMIT: sha || '',
+    KLAVIYO_BUILD_BRANCH: branch || '',
+    KLAVIYO_BUILD_BUILT: options.built || utcNow(),
   };
 }
 
 function main() {
-  const refs = resolveAll();
+  const args = parseArgs(process.argv.slice(2));
+  const resolved = resolveAll(args);
   if (process.argv.includes('--print')) {
     process.stdout.write(
-      `RN SDK:      ${refs.KLAVIYO_SDK_REF_RN}\n` +
-        `Android SDK: ${refs.KLAVIYO_SDK_REF_ANDROID}\n` +
-        `iOS SDK:     ${refs.KLAVIYO_SDK_REF_IOS}\n`
+      `RN SDK:      ${resolved.KLAVIYO_SDK_REF_RN}\n` +
+        `Android SDK: ${resolved.KLAVIYO_SDK_REF_ANDROID}\n` +
+        `iOS SDK:     ${resolved.KLAVIYO_SDK_REF_IOS}\n` +
+        `RN:      ${resolved.KLAVIYO_SDK_VERSION_RN}\n` +
+        `Android: ${resolved.KLAVIYO_SDK_VERSION_ANDROID}\n` +
+        `iOS:     ${resolved.KLAVIYO_SDK_VERSION_IOS}\n`
     );
     return;
   }
-  const content = updateEnvContent(readFileOrNull(ENV_FILE), refs);
+  if (process.argv.includes('--print-header')) {
+    const platform = args.platform === 'android' ? 'android' : 'ios';
+    process.stdout.write(
+      formatBuildInfoHeader({
+        appName: args['app-name'] || 'RN Example',
+        appVersion: resolved.KLAVIYO_BUILD_APP_VERSION,
+        buildNumber: resolved.KLAVIYO_BUILD_NUMBER,
+        platform,
+        rnVersion: resolved.KLAVIYO_SDK_VERSION_RN,
+        rnRef: resolved.KLAVIYO_SDK_REF_RN,
+        nativeVersion:
+          platform === 'ios'
+            ? resolved.KLAVIYO_SDK_VERSION_IOS
+            : resolved.KLAVIYO_SDK_VERSION_ANDROID,
+        nativeRef:
+          platform === 'ios'
+            ? resolved.KLAVIYO_SDK_REF_IOS
+            : resolved.KLAVIYO_SDK_REF_ANDROID,
+        commit: resolved.KLAVIYO_BUILD_COMMIT,
+        sourceLabel: args['source-label'] || resolved.KLAVIYO_BUILD_BRANCH,
+        event: args.event,
+        runUrl: args['run-url'],
+      }) + '\n'
+    );
+    return;
+  }
+  const content = updateEnvContent(readFileOrNull(ENV_FILE), resolved);
   fs.writeFileSync(ENV_FILE, content);
   process.stdout.write(`Wrote SDK refs to ${ENV_FILE}\n`);
 }
@@ -362,16 +548,26 @@ if (require.main === module) {
 module.exports = {
   UNKNOWN,
   androidRef,
+  androidVersion,
+  formatBuildInfoHeader,
+  formatVersionRef,
   iosRef,
+  iosVersion,
   isCommit,
   isSemver,
   localRef,
+  parseArgs,
   parseLockCommit,
   parseLockVersion,
   parsePodfileOverride,
   parsePodspecVersion,
+  parseSavedCommentVersion,
+  refPart,
   remoteBranchRef,
+  resolveAll,
   rnRef,
   rnVersion,
   updateEnvContent,
+  utcNow,
+  valueOrMissing,
 };

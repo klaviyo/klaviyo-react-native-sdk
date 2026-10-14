@@ -11,7 +11,8 @@ import { SectionHeader } from './components/SectionHeader';
 import { AppHeader } from './components/AppHeader';
 import { CompanyIdModal } from './components/CompanyIdModal';
 import { SdkInfoModal } from './components/SdkInfoModal';
-import type { SdkInfoEntry } from './components/SdkInfoModal';
+import { buildSdkInfoEntries, buildCopyText } from './sdkInfo';
+import type { SdkInfoEntry, SdkInfoEnv } from './sdkInfo';
 import { useCompanyId } from './hooks/useCompanyId';
 
 // Section components — each section owns the hook(s) it consumes, so state
@@ -34,6 +35,14 @@ import {
   KLAVIYO_SDK_REF_RN,
   KLAVIYO_SDK_REF_ANDROID,
   KLAVIYO_SDK_REF_IOS,
+  KLAVIYO_SDK_VERSION_RN,
+  KLAVIYO_SDK_VERSION_ANDROID,
+  KLAVIYO_SDK_VERSION_IOS,
+  KLAVIYO_BUILD_APP_VERSION,
+  KLAVIYO_BUILD_NUMBER,
+  KLAVIYO_BUILD_COMMIT,
+  KLAVIYO_BUILD_BRANCH,
+  KLAVIYO_BUILD_BUILT,
 } from '@env';
 
 // Fail fast if the key is missing or still set to the placeholder — the
@@ -52,21 +61,32 @@ if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
 // commented references in the iOS AppDelegate and Android MainApplication
 Klaviyo.initialize(API_KEY);
 
-// SDK version/ref rows for the info modal. The KLAVIYO_SDK_REF_* vars are
-// written by example/scripts/sdk-ref.js; undefined until it has run.
-const SDK_INFO_ENTRIES: SdkInfoEntry[] = [
-  { label: 'RN SDK', ref: KLAVIYO_SDK_REF_RN },
-  {
-    label: 'Android SDK',
-    ref: KLAVIYO_SDK_REF_ANDROID,
-    isCurrentPlatform: Platform.OS === 'android',
-  },
-  {
-    label: 'iOS SDK',
-    ref: KLAVIYO_SDK_REF_IOS,
-    isCurrentPlatform: Platform.OS === 'ios',
-  },
-];
+// Build-info rows and copy text for the (i) modal. The env vars are written
+// by example/scripts/sdk-ref.js; undefined until it has run. Kept at the
+// App level so a tabbed split of the sections leaves the header unchanged.
+const SDK_INFO_PLATFORM = Platform.OS === 'android' ? 'android' : 'ios';
+const SDK_INFO_ENV: SdkInfoEnv = {
+  KLAVIYO_SDK_REF_RN,
+  KLAVIYO_SDK_REF_ANDROID,
+  KLAVIYO_SDK_REF_IOS,
+  KLAVIYO_SDK_VERSION_RN,
+  KLAVIYO_SDK_VERSION_ANDROID,
+  KLAVIYO_SDK_VERSION_IOS,
+  KLAVIYO_BUILD_APP_VERSION,
+  KLAVIYO_BUILD_NUMBER,
+  KLAVIYO_BUILD_COMMIT,
+  KLAVIYO_BUILD_BRANCH,
+  KLAVIYO_BUILD_BUILT,
+};
+const SDK_INFO_ENTRIES: SdkInfoEntry[] = buildSdkInfoEntries(
+  SDK_INFO_ENV,
+  SDK_INFO_PLATFORM
+);
+const SDK_INFO_COPY_TEXT = buildCopyText(
+  SDK_INFO_ENV,
+  SDK_INFO_PLATFORM,
+  'RN Example'
+);
 
 type SectionKey =
   | 'analytics'
@@ -174,6 +194,7 @@ export default function App() {
       <SdkInfoModal
         visible={sdkInfoVisible}
         entries={SDK_INFO_ENTRIES}
+        copyText={SDK_INFO_COPY_TEXT}
         onClose={() => setSdkInfoVisible(false)}
       />
     </SafeAreaView>
