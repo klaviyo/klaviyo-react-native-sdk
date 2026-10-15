@@ -68,16 +68,16 @@ PODS:
     - KlaviyoLocation
     - KlaviyoSwift
     - React-Core
-  - KlaviyoCore (5.4.1):
+  - KlaviyoCore (5.5.0):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.4.1):
-    - KlaviyoCore (~> 5.4.1)
-  - KlaviyoLocation (5.4.1):
-    - KlaviyoSwift (~> 5.4.1)
-  - KlaviyoSwift (5.4.1):
+  - KlaviyoForms (5.5.0):
+    - KlaviyoCore (~> 5.5.0)
+  - KlaviyoLocation (5.5.0):
+    - KlaviyoSwift (~> 5.5.0)
+  - KlaviyoSwift (5.5.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.4.1)
-  - KlaviyoSwiftExtension (5.4.1)
+    - KlaviyoCore (~> 5.5.0)
+  - KlaviyoSwiftExtension (5.5.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -2872,19 +2872,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: db58bbee45258de84cb4b0d5bc6fcd1a7d9a826d
+    :commit: 698af2d5a08ee487bcfe69c1224054b9fca8c19a
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: db58bbee45258de84cb4b0d5bc6fcd1a7d9a826d
+    :commit: 698af2d5a08ee487bcfe69c1224054b9fca8c19a
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: db58bbee45258de84cb4b0d5bc6fcd1a7d9a826d
+    :commit: 698af2d5a08ee487bcfe69c1224054b9fca8c19a
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: db58bbee45258de84cb4b0d5bc6fcd1a7d9a826d
+    :commit: 698af2d5a08ee487bcfe69c1224054b9fca8c19a
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: db58bbee45258de84cb4b0d5bc6fcd1a7d9a826d
+    :commit: 698af2d5a08ee487bcfe69c1224054b9fca8c19a
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2905,11 +2905,11 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   klaviyo-react-native-sdk: 2ed29cc71394d083f15b05a2e99cbbe284f6bb34
-  KlaviyoCore: 096f278eeebed5737de752fdfcaa20a6ed90f947
-  KlaviyoForms: 6f473e6bf9a30e6e3af91b5674bedb5346826b6d
-  KlaviyoLocation: d69799af58502deb4ce5ce47fec7b6b7e5791f4f
-  KlaviyoSwift: bd74fed54a2978421511e023a4200eb5b9dc83bd
-  KlaviyoSwiftExtension: 2f5b9348e2198af88c6bd5189123865732a0ae7c
+  KlaviyoCore: c3be5c088eff49b920f6393fb70a6a9386744a45
+  KlaviyoForms: e5e3138223616a007c86e43b1e3fe816a4527a42
+  KlaviyoLocation: 7fb35c1c13bd49d5dd51c817d2f150a473e7ac24
+  KlaviyoSwift: 96da76dba4571b3cf39fdc542f1aeae5d1ebe115
+  KlaviyoSwiftExtension: a37b45143f0bf795044206e0dbb6ceda19b0e382
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669

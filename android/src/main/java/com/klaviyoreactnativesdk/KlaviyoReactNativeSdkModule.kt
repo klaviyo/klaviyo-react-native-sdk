@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.klaviyo.analytics.AuthTokenProvider
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
@@ -19,7 +20,6 @@ import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
-import com.klaviyo.core.auth.AuthTokenProvider
 import com.klaviyo.core.config.Config
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
