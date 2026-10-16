@@ -5,12 +5,14 @@
  * KLAVIYO_BUILD_* lines in example/.env (read by the app via react-native-dotenv).
  * Other lines in .env are left untouched.
  *
- *   node scripts/sdk-ref.js [--build <n>] [--commit <sha>] [--branch <name>] [--built <text>]
- *       write the lines to example/.env
+ *   node scripts/sdk-ref.js [--build <n>] [--app-version <v>] [--commit <sha>] [--branch <name>] [--built <text>]
+ *       write the lines to example/.env (the app version defaults to package.json's)
  *   node scripts/sdk-ref.js --print-header --platform <ios|android> [--source-label <s>] [--event <e>] [--run-url <u>]
  *       print the release-notes header from the lines already in example/.env
  *   node scripts/sdk-ref.js --print-sdks --platform <ios|android>
  *       print a one-line SDK summary from example/.env
+ *   node scripts/sdk-ref.js --print-build-info --platform <ios|android>
+ *       print "<app version> (<build>) · <commit> · <branch> · <SDKs>" from example/.env
  *
  * Metro inlines .env at bundle time; restart it with --reset-cache after a change.
  */
@@ -84,7 +86,7 @@ function resolve(args) {
       ? androidPin
       : androidSaved || androidPin,
     KLAVIYO_SDK_VERSION_IOS: iosVersion,
-    KLAVIYO_BUILD_APP_VERSION: version,
+    KLAVIYO_BUILD_APP_VERSION: args['app-version'] || version,
     KLAVIYO_BUILD_NUMBER: args.build || '',
     KLAVIYO_BUILD_COMMIT: commit,
     KLAVIYO_BUILD_BRANCH: branch,
@@ -150,6 +152,16 @@ function header(env, args) {
   return lines.join('\n');
 }
 
+function buildInfo(env, platform) {
+  const build = env.KLAVIYO_BUILD_NUMBER;
+  return [
+    `${dash(env.KLAVIYO_BUILD_APP_VERSION)}${build && build !== 'unknown' ? ` (${build})` : ''}`,
+    dash(env.KLAVIYO_BUILD_COMMIT),
+    dash(env.KLAVIYO_BUILD_BRANCH),
+    ...sdks(env, platform),
+  ].join(' · ');
+}
+
 const argv = process.argv.slice(2);
 const args = {};
 for (let i = 0; i < argv.length; i++) {
@@ -161,6 +173,8 @@ for (let i = 0; i < argv.length; i++) {
 
 if (args['print-header']) {
   console.log(header(readEnv(), args));
+} else if (args['print-build-info']) {
+  console.log(buildInfo(readEnv(), args.platform));
 } else if (args['print-sdks']) {
   console.log(sdks(readEnv(), args.platform).join(' | '));
 } else {

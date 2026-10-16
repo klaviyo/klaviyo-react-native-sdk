@@ -89,15 +89,28 @@ Both platforms are deployed by lanes in `example/fastlane/Fastfile`
   number; it is checked again after the archive. A duplicate at upload
   (`previousBundleVersion = N`, ITMS-90189 and similar) rebuilds with a fresh
   number, up to 4 attempts.
-- **Prereleases**: for `2.6.0-rc.1` the iOS marketing version is the numeric
-  `2.6.0` (Apple requires `X.Y[.Z]`), so a prerelease shares its release's build
-  sequence. Android `versionName` keeps the full string, and the full version
-  shows in the app, notes and Slack.
+- **App version**: derived from the SDK version in `package.json` (`X.Y.Z`,
+  any prerelease suffix dropped) plus the build number, after the build number
+  lookup, and recomputed whenever a retry picks a new number.
+
+  | Trigger                      | App version           |
+  | ---------------------------- | --------------------- |
+  | `release: published`         | `X.Y.Z`               |
+  | push or deploy on `rel/*`    | `X.Y.Z-rc.<build>`    |
+  | any other branch or dispatch | `X.Y.Z-alpha.<build>` |
+
+  `<build>` is the Play versionCode or TestFlight build number. Android
+  `versionName`, the notes and Slack carry the full string. iOS
+  `CFBundleShortVersionString` is plain `X.Y.Z` (Apple allows only integers);
+  the full string, commit, branch and SDK versions are in the `KlaviyoBuildInfo`
+  Info.plist key and the in-app build info. A package version that does not
+  reduce to `X.Y.Z`, or a missing `EVENT_NAME`, fails the deploy.
 
 ## Build info and release notes
 
 `example/scripts/sdk-ref.js` writes the RN, Android and iOS SDK versions and
-refs, build number, commit, branch and build time to `example/.env`. The app
+refs, derived app version, build number, commit, branch and build time to
+`example/.env`. The app
 shows them in its info modal, and `.github/scripts/release-notes.sh` prints the
 same header for the store notes (500 chars on Play, 4000 on TestFlight; the
 release name and body are appended on `release: published` and cut first).

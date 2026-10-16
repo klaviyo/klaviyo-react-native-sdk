@@ -14,7 +14,7 @@ inputs:
     description: "'TestFlight' or 'Play internal'"
     required: true
   full_version:
-    description: Full package.json version, suffix included (e.g. 2.6.0-rc.1)
+    description: Full derived app version, suffix included (e.g. 2.6.0-rc.7)
     required: false
     default: ''
   build:

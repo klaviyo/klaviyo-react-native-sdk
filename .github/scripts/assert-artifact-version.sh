@@ -3,12 +3,13 @@
 # misconfigured build never reaches the store under the wrong number.
 #
 # Usage:
-#   assert-artifact-version.sh ios <ipa> <expected-build> <expected-short-version>
+#   assert-artifact-version.sh ios <ipa> <expected-build> <expected-short-version> [<expected-full-version>]
 #   assert-artifact-version.sh android <aab> <expected-code> <expected-name>
 #
 # iOS: reads CFBundleVersion / CFBundleShortVersionString from
 # Payload/*.app/Info.plist inside the IPA. Uses /usr/libexec/PlistBuddy on
-# macOS and falls back to python3 plistlib elsewhere.
+# macOS and falls back to python3 plistlib elsewhere. With a full version, the
+# KlaviyoBuildInfo key must start with it.
 #
 # Android: reads versionCode / versionName from the AAB's manifest with
 # aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are binary
@@ -35,14 +36,15 @@ find_aapt2() {
   printf '%s\n' "$found"
 }
 
-[ $# -eq 4 ] || {
-  echo "usage: $0 <ios|android> <artifact> <expected-code> <expected-name>" >&2
+[ $# -eq 4 ] || [ $# -eq 5 ] || {
+  echo "usage: $0 <ios|android> <artifact> <expected-code> <expected-name> [<expected-full-version>]" >&2
   exit 2
 }
 platform=$1
 artifact=$2
 expected_code=$3
 expected_name=$4
+expected_full=${5:-}
 
 [ -f "$artifact" ] || fail "Artifact not found: $artifact"
 
@@ -68,6 +70,13 @@ case "$platform" in
     [ -n "$plist" ] || fail "No Payload/*.app/Info.plist in $artifact"
     actual_code=$(read_plist_value "$plist" CFBundleVersion) || fail "CFBundleVersion missing in $plist"
     actual_name=$(read_plist_value "$plist" CFBundleShortVersionString) || fail "CFBundleShortVersionString missing in $plist"
+    if [ -n "$expected_full" ]; then
+      build_info=$(read_plist_value "$plist" KlaviyoBuildInfo) || fail "KlaviyoBuildInfo missing in $plist"
+      case "$build_info" in
+        "$expected_full "*) ;;
+        *) fail "$platform artifact $artifact has KlaviyoBuildInfo '$build_info', expected it to start with '$expected_full' — refusing to upload" ;;
+      esac
+    fi
     ;;
   android)
     aapt2=$(find_aapt2) || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"

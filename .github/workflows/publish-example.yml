@@ -19,6 +19,11 @@
 # fresh number if the upload is rejected for a conflict (e.g. two runs racing
 # on master + rel/**).
 #
+# App version: X.Y.Z from the SDK version on a release, X.Y.Z-rc.<build> on
+# rel/*, X.Y.Z-alpha.<build> otherwise. Android versionName carries the full
+# string; iOS CFBundleShortVersionString stays X.Y.Z and the full string goes
+# in the KlaviyoBuildInfo Info.plist key.
+#
 # Deploys run only after the `checks` job (ci.yml: lint, unit tests, library
 # build) passes in the same run, on every trigger including the PR-label one.
 #
@@ -209,15 +214,6 @@ jobs:
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
 
-      # Read versionName (kept in sync with SDK version by bump-version.sh)
-      # so Slack notifications can include it on success or failure.
-      - name: Read versionName
-        shell: bash
-        run: |
-          VERSION_NAME=$(grep -oE 'versionName "[^"]+"' example/android/app/build.gradle | head -1 | sed -E 's/versionName "([^"]+)"/\1/')
-          echo "Version name: $VERSION_NAME"
-          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-
       # Builds the example app against the SDK as `npm install`-ed from a
       # tarball, not the workspace symlink. See pack-and-test.sh.
       - name: Pack SDK + flip example to packed install
@@ -235,8 +231,9 @@ jobs:
         run: gem install -g .github/pins/fastlane/Gemfile --no-document
 
       # The android release lane picks the next versionCode from the Play
-      # internal track, builds and signs the bundle, and uploads it, rebuilding
-      # with a fresh code when the upload is rejected for a conflict.
+      # internal track, derives the versionName from it, builds and signs the
+      # bundle, and uploads it, rebuilding with a fresh code and name when the
+      # upload is rejected for a conflict.
       - name: Build & deploy to Internal Track
         id: build_and_deploy
         working-directory: example
@@ -423,8 +420,9 @@ jobs:
           chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
       # The ios release lane picks the next build number from TestFlight,
-      # builds, signs (match, read-only) and uploads, rebuilding with a fresh
-      # number when the upload is rejected for a conflict. ssh-agent is started
+      # derives the full app version from it, builds, signs (match, read-only)
+      # and uploads, rebuilding with a fresh number and version when the upload
+      # is rejected for a conflict. ssh-agent is started
       # inline because its env can't cross workflow steps.
       - name: Build, sign & upload to TestFlight
         id: build_sign_upload
