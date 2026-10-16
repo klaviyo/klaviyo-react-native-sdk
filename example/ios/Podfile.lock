@@ -58,7 +58,7 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - klaviyo-react-native-sdk (2.5.1):
+  - klaviyo-react-native-sdk (2.6.0):
     - KlaviyoForms (= 5.4.1)
     - KlaviyoLocation (= 5.4.1)
     - KlaviyoSwift (= 5.4.1)
@@ -2221,7 +2221,7 @@ SPEC CHECKSUMS:
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  klaviyo-react-native-sdk: b8cfe736e5f8d026890953a3d4800309055dc289
+  klaviyo-react-native-sdk: 76aed3675512bafd20fb860679a3c4795de0921d
   KlaviyoCore: 252a62ea36e47109e92bd376b0a1c4026b956e75
   KlaviyoForms: b9767202597c87c1637969f1070903fd7fecfc7e
   KlaviyoLocation: d69799af58502deb4ce5ce47fec7b6b7e5791f4f
