@@ -5,7 +5,6 @@ import KlaviyoForms
 #if canImport(KlaviyoLocation)
 @_spi(KlaviyoPrivate) import KlaviyoLocation
 #endif
-@_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
 public class KlaviyoBridge: NSObject {
