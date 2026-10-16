@@ -6,9 +6,9 @@ import { isNonEmptyString } from './validation';
  * Personalized In-App Forms require the SDK to present a user-identifying JWT to
  * the Klaviyo backend. The React Native SDK is a thin wrapper: the underlying
  * native iOS and Android SDKs own all token state management (caching, proactive
- * refresh, WebView injection, and all token-related logging). The
- * wrapper's sole responsibility is to bridge the host's JS-side provider to the
- * native SDK.
+ * refresh, timeouts when waiting for a token, WebView injection, and all
+ * token-related logging). The wrapper's sole responsibility is to bridge the
+ * host's JS-side provider to the native SDK.
  */
 export interface KlaviyoAuthTokenApi {
   /**
@@ -19,7 +19,8 @@ export interface KlaviyoAuthTokenApi {
    * whatever mechanism the host application uses to obtain a fresh token
    * (e.g. calling its auth server or exchanging an OAuth refresh token). Read the
    * current user fresh on each invocation rather than capturing identity at
-   * registration. The native SDK manages token caching and refresh.
+   * registration. Fetch a fresh JWT each time; do not cache tokens in the
+   * provider. The native SDK manages token caching and refresh.
    *
    * Register once and keep the provider registered across profile changes.
    * On logout, clear the SDK profile with `resetProfile()`. Apply a timeout to

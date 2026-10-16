@@ -628,7 +628,7 @@ Klaviyo.registerAuthTokenProvider(async () => {
 });
 ```
 
-Register the provider once and keep it registered across profile changes. Read the current signed-in user on each call and fetch a fresh JWT; let the native SDK manage token caching and refresh.
+Register the provider once and keep it registered across profile changes. Read the current signed-in user on every invocation and fetch a fresh JWT each time; do not cache tokens in the provider. The native SDK manages token caching and refresh.
 
 On logout, clear the SDK profile:
 
@@ -651,6 +651,8 @@ The provider has type `() => Promise<string>`. Your code must:
   ```typescript
   throw Object.assign(new Error('offline'), { isConnectivityError: true });
   ```
+
+  An explicit `isConnectivityError: false` opts out of connectivity classification, even for an `AbortError` or a recognized `fetch` network failure.
 
 For platform details, see the native [Android](https://github.com/klaviyo/klaviyo-android-sdk/blob/4.6.0/README.md#personalized-forms-authentication) and [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/blob/5.5.0/README.md#personalized-forms-authentication) guides.
 
