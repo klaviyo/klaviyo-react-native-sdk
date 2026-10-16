@@ -56,14 +56,13 @@ if [[ -z "$new_version" ]]; then
   read -rp "Enter the new React SDK version: " new_version
 fi
 
-# Apple requires CFBundleShortVersionString to be numeric X.Y[.Z], so a
-# prerelease suffix (e.g. -rc.1) or +build metadata must not reach the
-# pbxproj. Keep the strip/validate regexes in sync with
-# strip_ios_marketing_version in .github/scripts/asc.rb (tested by
-# .github/scripts/test_asc.rb and .github/scripts/test-bump-version.sh).
+# Apple requires CFBundleShortVersionString to be numeric, so a prerelease
+# suffix (e.g. -rc.1) or +build metadata must not reach the pbxproj. The
+# strip/validate rule matches sdk_base_version in example/fastlane/Fastfile,
+# which derives the CI app version from the same package version.
 marketing_version="${new_version%%[-+]*}"
-if [[ ! "$marketing_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
-  echo "Error: version '$new_version' does not strip to a numeric X.Y[.Z] marketing version (got '$marketing_version')." >&2
+if [[ ! "$marketing_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: version '$new_version' does not strip to a numeric X.Y.Z marketing version (got '$marketing_version')." >&2
   exit 1
 fi
 
