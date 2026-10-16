@@ -12,8 +12,9 @@
 # KlaviyoBuildInfo key must start with it.
 #
 # Android: reads versionCode / versionName from the AAB's manifest with
-# aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are binary
-# protobuf, so plain unzip+grep cannot read them.
+# aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are protobuf,
+# which aapt2 cannot dump directly, so the manifest is converted to a binary
+# APK manifest first.
 set -euo pipefail
 
 fail() {
@@ -80,20 +81,16 @@ case "$platform" in
     ;;
   android)
     aapt2=$(find_aapt2) || fail "aapt2 not found (set ANDROID_HOME or add build-tools to PATH)"
-    unzip -o -q "$artifact" 'base/manifest/AndroidManifest.xml' -d "$WORK"
-    [ -f "$WORK/base/manifest/AndroidManifest.xml" ] || fail "No base/manifest/AndroidManifest.xml in $artifact"
-    dump=$("$aapt2" dump xmltree --file base/manifest/AndroidManifest.xml "$artifact" 2>/dev/null || true)
-    [ -n "$dump" ] || fail "aapt2 could not read the manifest of $artifact"
-    actual_code=$(grep -oE 'android:versionCode\(.*\)=\(type [^)]*\)0x[0-9a-f]+' <<<"$dump" | head -1 | grep -oE '0x[0-9a-f]+$' | sed 's/^0x//' || true)
-    [ -n "$actual_code" ] && actual_code=$((16#$actual_code))
-    actual_name=$(grep -oE 'android:versionName\(.*\)="[^"]*"' <<<"$dump" | head -1 | sed -E 's/.*="([^"]*)"/\1/' || true)
-    # AAB proto manifests may carry versionCode as a raw int attribute; fall
-    # back to the decimal form when the hex form was not matched.
-    if [ -z "${actual_code:-}" ]; then
-      actual_code=$(grep -oE 'android:versionCode.*\)[0-9]+' <<<"$dump" | head -1 | grep -oE '[0-9]+$' || true)
-    fi
-    [ -n "${actual_code:-}" ] || fail "versionCode missing in $artifact manifest"
-    [ -n "${actual_name:-}" ] || fail "versionName missing in $artifact manifest"
+    unzip -o -q "$artifact" 'base/manifest/AndroidManifest.xml' -d "$WORK/aab" || fail "No base/manifest/AndroidManifest.xml in $artifact"
+    mkdir "$WORK/manifest"
+    cp "$WORK/aab/base/manifest/AndroidManifest.xml" "$WORK/manifest/AndroidManifest.xml"
+    (cd "$WORK/manifest" && zip -q ../proto.apk AndroidManifest.xml)
+    "$aapt2" convert --output-format binary -o "$WORK/binary.apk" "$WORK/proto.apk" || fail "aapt2 could not convert the manifest of $artifact"
+    badging=$("$aapt2" dump badging "$WORK/binary.apk") || fail "aapt2 could not read the manifest of $artifact"
+    actual_code=$(sed -nE "s/^package:.* versionCode='([0-9]+)'.*/\1/p" <<<"$badging" | head -1)
+    actual_name=$(sed -nE "s/^package:.* versionName='([^']*)'.*/\1/p" <<<"$badging" | head -1)
+    [ -n "$actual_code" ] || fail "versionCode missing in $artifact manifest"
+    [ -n "$actual_name" ] || fail "versionName missing in $artifact manifest"
     ;;
   *)
     echo "unknown platform: $platform" >&2
