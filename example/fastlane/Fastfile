@@ -355,7 +355,7 @@ platform :android do
       log.level = level
     end
     UI.user_error!("Internal App Sharing did not return a download URL") if url.to_s.empty?
-    puts "::add-mask::#{url}"
+    $stdout.write("::add-mask::#{url}\n")
     append_github("GITHUB_OUTPUT", "url", url)
   end
 end
