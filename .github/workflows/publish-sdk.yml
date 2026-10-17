@@ -36,16 +36,18 @@ jobs:
       - name: Prepare
         run: yarn prepare
 
-      - uses: JS-DevTools/npm-publish@v3
+      - id: publish
+        uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify version on npm
+        timeout-minutes: 10
         env:
           VERSION: ${{ steps.pkg.outputs.version }}
         run: |
           for attempt in $(seq 1 20); do
-            published="$(npm view "klaviyo-react-native-sdk@${VERSION}" version 2>/dev/null || true)"
+            published="$(npm view "klaviyo-react-native-sdk@${VERSION}" version --fetch-timeout=10000 --fetch-retries=0 2>/dev/null || true)"
             if [ "$published" = "$VERSION" ]; then
               echo "klaviyo-react-native-sdk@${VERSION} is live on npm"
               exit 0
@@ -65,7 +67,7 @@ jobs:
           result: success
           title: RN SDK
           platform: npm
-          version_label: ${{ steps.pkg.outputs.version }}
+          version_label: ${{ steps.publish.outputs.type != '' && steps.pkg.outputs.version || format('{0} (already on npm, nothing published)', steps.pkg.outputs.version) }}
           release_url: ${{ github.event.release.html_url }}
 
       - name: Notify Slack on failure
