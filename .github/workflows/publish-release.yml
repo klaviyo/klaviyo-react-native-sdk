@@ -24,7 +24,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-      checks: read
+      actions: read
+      pull-requests: read
     outputs:
       sha: ${{ steps.validate.outputs.sha }}
       release_url: ${{ steps.draft.outputs.release_url }}
@@ -66,26 +67,33 @@ jobs:
         run: |
           set -euo pipefail
 
-          CHECKS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
-            --jq '.check_runs[] | select(.name != "Publish Release") | {name, status, conclusion}')
+          # Checks pull_request CI on the head commit of the PR that merged SHA (falls back to SHA).
+          CI_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
+            --jq "[.[] | select(.merge_commit_sha == \"$SHA\")][0].head.sha // empty")
+          CI_SHA=${CI_SHA:-$SHA}
+          echo "Checking pull_request workflow runs on $CI_SHA"
 
-          if [ -z "$CHECKS" ]; then
-            echo "::error::No check runs found for $SHA"
+          RUNS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$CI_SHA&event=pull_request" \
+            --jq '.workflow_runs[] | {name, run_number, status, conclusion}' \
+            | jq -s 'group_by(.name) | map(max_by(.run_number)) | .[]')
+
+          if [ -z "$RUNS" ]; then
+            echo "::error::No pull_request CI runs found for $CI_SHA"
             exit 1
           fi
 
-          BAD=$(echo "$CHECKS" | jq -r 'select(
+          BAD=$(echo "$RUNS" | jq -r 'select(
             .status != "completed"
             or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
           ) | "  - \(.name): \(.status)/\(.conclusion // "pending")"')
 
           if [ -n "$BAD" ]; then
-            echo "::error::Some check runs are not green:"
+            echo "::error::Some CI runs are not green:"
             echo "$BAD"
             exit 1
           fi
 
-          echo "All check runs green for $SHA"
+          echo "All CI runs green for $CI_SHA"
 
       - name: Create or reuse draft release
         id: draft
