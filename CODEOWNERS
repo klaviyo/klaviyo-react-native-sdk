@@ -1,7 +1,2 @@
 # Default owner
 *   @klaviyo/mobile-app-growth
-
-# Push related files
-src/Push.ts                              @klaviyo/mobile-app-growth @klaviyo/mobile-push-team
-src/NativeKlaviyoReactNativeSdk.ts       @klaviyo/mobile-app-growth @klaviyo/mobile-push-team
-src/index.tsx                            @klaviyo/mobile-app-growth @klaviyo/mobile-push-team

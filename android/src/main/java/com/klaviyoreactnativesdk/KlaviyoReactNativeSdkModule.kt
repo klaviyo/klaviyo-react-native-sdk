@@ -15,12 +15,13 @@ import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
 import com.klaviyo.analytics.model.EventMetric
-import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
+import com.klaviyo.analytics.model.Subscription
 import com.klaviyo.core.MissingKlaviyoModule
 import com.klaviyo.core.Registry
 import com.klaviyo.core.config.Config
+import com.klaviyo.core.config.Log
 import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
@@ -35,9 +36,9 @@ import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.IOException
 import java.io.Serializable
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
 class KlaviyoReactNativeSdkModule(
@@ -47,6 +48,12 @@ class KlaviyoReactNativeSdkModule(
     const val NAME = "KlaviyoReactNativeSdk"
     private const val LOCATION = "location"
     private const val PROPERTIES = "properties"
+    private const val LIST_ID = "listId"
+    private const val CUSTOM_SOURCE = "customSource"
+    private const val CHANNELS = "channels"
+    private const val EMAIL = "email"
+    private const val SMS = "sms"
+    private const val WHATSAPP = "whatsapp"
   }
 
   private fun sendEvent(
@@ -81,26 +88,55 @@ class KlaviyoReactNativeSdkModule(
 
   override fun getName(): String = NAME
 
+  // Mirrors every public singleton of the Android SDK's ProfileKey, in its declaration order.
+  // Values are read from the SDK rather than retyped, so a rename or removal upstream fails
+  // this module's build instead of silently shipping a stale string. An upstream ADDITION is
+  // not caught -- a new public key must be added here by hand. That was already true in
+  // practice: ProfileProperty in src/Profile.ts is a hand-written enum, so a new key never
+  // reached JS without a TypeScript edit either way.
+  //
+  // The SDK's identity and push keys (EXTERNAL_ID, EMAIL, PHONE_NUMBER, ANONYMOUS_ID,
+  // PUSH_TOKEN) are `internal`, not visible here, and were never exported -- JS supplies its
+  // own literals for the three it needs, in Profile.setExternalId, setEmail and setPhoneNumber.
+  // LOCATION and PROPERTIES are wrapper-owned with no SDK equivalent; their keys are
+  // intentionally lowercase to match today's output byte for byte.
+  private val profileKeys: Map<String, String> =
+    mapOf(
+      "FIRST_NAME" to ProfileKey.FIRST_NAME.name,
+      "LAST_NAME" to ProfileKey.LAST_NAME.name,
+      "ORGANIZATION" to ProfileKey.ORGANIZATION.name,
+      "TITLE" to ProfileKey.TITLE.name,
+      "IMAGE" to ProfileKey.IMAGE.name,
+      "ADDRESS1" to ProfileKey.ADDRESS1.name,
+      "ADDRESS2" to ProfileKey.ADDRESS2.name,
+      "CITY" to ProfileKey.CITY.name,
+      "COUNTRY" to ProfileKey.COUNTRY.name,
+      "LATITUDE" to ProfileKey.LATITUDE.name,
+      "LONGITUDE" to ProfileKey.LONGITUDE.name,
+      "REGION" to ProfileKey.REGION.name,
+      "ZIP" to ProfileKey.ZIP.name,
+      "TIMEZONE" to ProfileKey.TIMEZONE.name,
+      LOCATION to LOCATION,
+      PROPERTIES to PROPERTIES,
+    )
+
+  // Public EventMetric singletons, in the SDK's declaration order. The `internal` OPENED_PUSH
+  // metric is not visible here and was never exported.
+  private val eventNames: Map<String, String> =
+    mapOf(
+      "OPENED_APP" to EventMetric.OPENED_APP.name,
+      "VIEWED_PRODUCT" to EventMetric.VIEWED_PRODUCT.name,
+      "ADDED_TO_CART" to EventMetric.ADDED_TO_CART.name,
+      "STARTED_CHECKOUT" to EventMetric.STARTED_CHECKOUT.name,
+    )
+
   override fun getConstants(): MutableMap<String, Any> =
     hashMapOf(
-      "PROFILE_KEYS" to
-        this.extractConstants<ProfileKey>().toMutableMap().apply {
-          this[LOCATION] = LOCATION
-          this[PROPERTIES] = PROPERTIES
-        },
-      "EVENT_NAMES" to this.extractConstants<EventMetric>(),
+      "PROFILE_KEYS" to profileKeys,
+      "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
     )
-
-  private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword =
-    T::class
-      .nestedClasses
-      .filter {
-        it.visibility == KVisibility.PUBLIC && it.objectInstance is T
-      }.associate {
-        it.simpleName.toString() to (it.objectInstance as T).name
-      }
 
   @ReactMethod
   @OptIn(AdvancedAPI::class)
@@ -110,6 +146,33 @@ class KlaviyoReactNativeSdkModule(
     // The native SDK will track Activity changes internally from here on.
     reactApplicationContext.currentActivity?.let(Registry.lifecycleMonitor::assignCurrentActivity)
     Klaviyo.initialize(apiKey, reactContext)
+  }
+
+  // The Android SDK has no dedicated logging on/off API (log verbosity is set via
+  // manifest metadata), so the toggle is implemented on top of the SDK's mutable
+  // log level: `None` silences all logging, and the prior level is captured here
+  // so re-enabling restores the configured verbosity.
+  private var logLevelToRestore: Log.Level? = null
+
+  @ReactMethod
+  fun setLoggingEnabled(enabled: Boolean) {
+    if (enabled) {
+      if (Registry.log.logLevel == Log.Level.None) {
+        // Fall back to the SDK's default level if logging was already disabled
+        // before this module captured a level (e.g. via manifest metadata).
+        Registry.log.logLevel = logLevelToRestore ?: Log.Level.Error
+      }
+    } else {
+      if (Registry.log.logLevel != Log.Level.None) {
+        logLevelToRestore = Registry.log.logLevel
+      }
+      Registry.log.logLevel = Log.Level.None
+    }
+  }
+
+  @ReactMethod
+  fun isLoggingEnabled(callback: Callback) {
+    callback.invoke(Registry.log.logLevel != Log.Level.None)
   }
 
   @ReactMethod
@@ -326,6 +389,106 @@ class KlaviyoReactNativeSdkModule(
     }
 
     Klaviyo.createEvent(event = klaviyoEvent)
+  }
+
+  @ReactMethod
+  fun createSubscription(subscription: ReadableMap) {
+    val listId =
+      subscription
+        .takeIf {
+          it.hasKey(LIST_ID) && it.getType(LIST_ID) == ReadableType.String
+        }?.getString(LIST_ID)
+        ?.takeIf { it.isNotBlank() } ?: run {
+        Registry.log.error("Klaviyo React Native SDK: Subscription listId is required")
+        return
+      }
+
+    val customSource =
+      subscription
+        .takeIf {
+          it.hasKey(CUSTOM_SOURCE) && it.getType(CUSTOM_SOURCE) == ReadableType.String
+        }?.getString(CUSTOM_SOURCE)
+
+    // Only a *missing* channels key means "all available marketing" — the broad grant is reachable
+    // solely through the named factory on this SDK and the JS layer. A key that is present but not
+    // an object is malformed, and is rejected rather than quietly widening consent.
+    val channelsMap =
+      if (subscription.hasKey(CHANNELS)) {
+        subscription.takeIf { it.getType(CHANNELS) == ReadableType.Map }?.getMap(CHANNELS) ?: run {
+          Registry.log.error(
+            "Klaviyo React Native SDK: Subscription channels must be an object when present",
+          )
+          return
+        }
+      } else {
+        null
+      }
+
+    val parsed = channelsMap?.let { parseSubscriptionChannels(it) }
+
+    Klaviyo.createSubscription(
+      if (parsed == null) {
+        Subscription.allAvailableMarketing(listId, customSource)
+      } else {
+        Subscription(listId, parsed, customSource)
+      },
+    )
+  }
+
+  /**
+   * Maps the JS channels payload onto [Subscription.Channels]. An absent channel stays null (leave
+   * it untouched); an empty array stays empty, so the native SDK's own validation reports it rather
+   * than this bridge silently dropping the channel.
+   */
+  private fun parseSubscriptionChannels(channels: ReadableMap): Subscription.Channels =
+    Subscription.Channels(
+      email = channels.parseConsentSet(EMAIL) { Subscription.Channels.Email.valueOf(it) },
+      sms = channels.parseConsentSet(SMS) { Subscription.Channels.Messaging.valueOf(it) },
+      whatsapp = channels.parseConsentSet(WHATSAPP) { Subscription.Channels.Messaging.valueOf(it) },
+    )
+
+  /**
+   * Reads one channel's consent array off the JS payload, or null when the key is absent.
+   *
+   * The JS wire values are the lowercased enum names, so [valueOf] covers the mapping. An
+   * unrecognized value is warned about and skipped rather than failing the whole request: skipping
+   * only ever narrows the consent granted, and it keeps a newer JS layer from breaking against an
+   * older native SDK. A non-string entry is skipped the same way. iOS drops both the same way.
+   *
+   * A present-but-wrong-type value (e.g. a string instead of an array) is also treated as an
+   * omitted channel, but unlike a genuinely absent key, it's warned about first: silently applying
+   * the same behavior as "not specified" could otherwise mask a caller mistake.
+   */
+  private fun <T : Enum<T>> ReadableMap.parseConsentSet(
+    key: String,
+    valueOf: (String) -> T,
+  ): Set<T>? {
+    if (!hasKey(key)) return null
+
+    if (getType(key) != ReadableType.Array) {
+      Registry.log.warning(
+        "Klaviyo React Native SDK: Ignoring non-array $key consent value",
+      )
+      return null
+    }
+
+    return getArray(key)
+      ?.toArrayList()
+      ?.mapNotNull { entry ->
+        entry as? String ?: run {
+          Registry.log.warning(
+            "Klaviyo React Native SDK: Ignoring non-string $key consent entry",
+          )
+          null
+        }
+      }?.mapNotNull { rawValue ->
+        runCatching { valueOf(rawValue.uppercase(Locale.ROOT)) }.getOrElse {
+          Registry.log.warning(
+            "Klaviyo React Native SDK: Ignoring unrecognized $key consent type '$rawValue'",
+          )
+          null
+        }
+      }?.toSet()
   }
 
   @ReactMethod

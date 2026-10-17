@@ -15,6 +15,11 @@ import {
   classifyProviderError,
   parseAuthTokenRequestedEvent,
 } from './AuthToken';
+import {
+  type Subscription,
+  formatSubscription,
+  validateSubscription,
+} from './Subscription';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -62,6 +67,12 @@ export const Klaviyo: KlaviyoInterface = {
   initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
   },
+  setLoggingEnabled(enabled: boolean): void {
+    KlaviyoReactNativeSdk.setLoggingEnabled(enabled);
+  },
+  isLoggingEnabled(callback: (enabled: boolean) => void): void {
+    KlaviyoReactNativeSdk.isLoggingEnabled(callback);
+  },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
   },
@@ -106,6 +117,16 @@ export const Klaviyo: KlaviyoInterface = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
+  },
+  createSubscription(subscription: Subscription): void {
+    // Validate the whole shape up front: TypeScript can't police plain-JS callers, and reporting
+    // here beats throwing mid-marshalling or handing native a malformed payload.
+    const error = validateSubscription(subscription);
+    if (error !== null) {
+      console.error(`[Klaviyo] Error: ${error}`);
+      return;
+    }
+    KlaviyoReactNativeSdk.createSubscription(formatSubscription(subscription));
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     if (!isFormsAvailable()) return;
@@ -277,3 +298,14 @@ export type {
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
 export type { AuthTokenProvider, KlaviyoAuthTokenApi } from './AuthToken';
+export {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from './Subscription';
+export type {
+  KlaviyoSubscriptionApi,
+  Subscription,
+  SubscriptionChannels,
+} from './Subscription';

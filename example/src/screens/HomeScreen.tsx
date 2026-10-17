@@ -22,8 +22,17 @@ import { FormsSection } from '../sections/FormsSection';
 import { GeofencingSection } from '../sections/GeofencingSection';
 import { PushSection } from '../sections/PushSection';
 import { AuthSection } from '../sections/AuthSection';
+import { SubscriptionSection } from '../sections/SubscriptionSection';
+import { LoggingSection } from '../sections/LoggingSection';
 
-type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push' | 'auth';
+type SectionKey =
+  | 'analytics'
+  | 'subscriptions'
+  | 'forms'
+  | 'geofencing'
+  | 'push'
+  | 'logging'
+  | 'auth';
 
 // SectionList data — each section corresponds to a feature domain. Each
 // section has a single item (the section key) whose content is rendered by
@@ -31,9 +40,11 @@ type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push' | 'auth';
 // Defined at module scope so the reference is stable across renders.
 const SECTIONS: { title: string; data: SectionKey[] }[] = [
   { title: 'Profile & Events', data: ['analytics'] },
+  { title: 'Subscriptions', data: ['subscriptions'] },
   { title: 'In-App Forms', data: ['forms'] },
   { title: 'Geofencing & Location', data: ['geofencing'] },
   { title: 'Push Notifications', data: ['push'] },
+  { title: 'SDK Logging', data: ['logging'] },
   { title: 'Auth', data: ['auth'] },
 ];
 
@@ -41,6 +52,10 @@ const renderSection = (sectionKey: SectionKey) => {
   switch (sectionKey) {
     case 'analytics':
       return <AnalyticsSection />;
+    case 'subscriptions':
+      return <SubscriptionSection />;
+    case 'logging':
+      return <LoggingSection />;
     case 'forms':
       return <FormsSection />;
     case 'geofencing':
@@ -56,9 +71,7 @@ const renderSection = (sectionKey: SectionKey) => {
 
 /**
  * The example app's main screen — a `SectionList` of feature domains. This
- * was `App.tsx`'s entire body prior to MAGE-879; it moved here (unchanged
- * aside from the new Auth section) when the app grew a navigation stack, so
- * `App.tsx` could become the `NavigationContainer` + native-stack shell.
+ * contains the SDK feature sections and company settings.
  */
 export function HomeScreen() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
