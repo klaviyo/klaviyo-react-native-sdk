@@ -1,6 +1,7 @@
 import UIKit
 import React
 import React_RCTAppDelegate
+import ReactAppDependencyProvider
 import UserNotifications
 import FirebaseCore
 import KlaviyoSwift
@@ -56,6 +57,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     let launchOptionsWithURL = getLaunchOptionsWithURL(launchOptions)
 
     let delegate = ReactNativeDelegate()
+    // Wires up Fabric's third-party component registration (RCTThirdPartyComponentsProvider,
+    // codegen-generated into build/generated/ios/). Without this, `RCTReactNativeFactory`'s
+    // `thirdPartyFabricComponents` falls back to an empty dictionary, so libraries that
+    // register custom Fabric view components (e.g. react-native-screens' RNSScreen /
+    // RNSScreenStackHeaderConfig) never get registered — Fabric then falls back to a plain
+    // interop view for them, and any of their component-specific props crash with
+    // "unrecognized selector sent to instance" the first time one is set (e.g. RNSScreen's
+    // `color`). This was previously never hit because the app had no other library
+    // registering third-party Fabric view components until react-native-screens was added.
+    delegate.dependencyProvider = RCTAppDependencyProvider()
     let factory = RCTReactNativeFactory(delegate: delegate)
     reactNativeDelegate = delegate
     reactNativeFactory = factory

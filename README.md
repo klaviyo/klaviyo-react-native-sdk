@@ -369,11 +369,11 @@ forwarding differently by default:
 On Android, `com.klaviyo.push.automatic_push_token_forwarding` is three-valued, because leaving it
 unset is different from setting it to `false`:
 
-| Value | Behavior |
-|---|---|
+| Value                 | Behavior                                                                                                                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **not set** (default) | Forwards a token whenever FCM delivers one to `KlaviyoPushService`. On React Native, `Klaviyo.initialize()` runs from JS after `Application.onCreate`, so a token FCM delivers before that call is silently dropped. |
-| **`true`** | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground. |
-| **`false`** | No automatic forwarding at all — a complete opt-out. |
+| **`true`**            | Additionally fetches and registers the current token at `Klaviyo.initialize()` and on each foreground.                                                                                                               |
+| **`false`**           | No automatic forwarding at all — a complete opt-out.                                                                                                                                                                 |
 
 Each platform has its own key — `klaviyo_automatic_push_token_forwarding` in the iOS `Info.plist` and
 `com.klaviyo.push.automatic_push_token_forwarding` in the Android manifest — with the same meaning
