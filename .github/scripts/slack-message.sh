@@ -7,7 +7,7 @@
 # ACCESS_NOTE, STEPS_JSON (toJSON(steps), failure only).
 set -euo pipefail
 
-if [ "${EVENT_NAME:-}" = "release" ]; then
+if [ "${EVENT_NAME:-}" = "release" ] || [ "${PLATFORM:-}" = "npm" ]; then
   source_label="release ${RELEASE_TAG:-}"
 else
   source_label="${HEAD_REF:-${REF_NAME:-}}"
@@ -19,6 +19,21 @@ footer="*Build:* ${FULL_VERSION:-?} (${BUILD:-?})
 *Source:* ${source_label} (${EVENT_NAME})
 *Commit:* <https://github.com/${REPO}/commit/${COMMIT_SHA}|${COMMIT_SHA:0:7}> · <${RUN_URL}|CI run>"
 
+if [ "${PLATFORM:-}" = "npm" ]; then
+  if [ "${RESULT:-}" = "success" ]; then
+    if [ "${ALREADY_PUBLISHED:-}" = "true" ]; then
+      text="✅ RN SDK ${FULL_VERSION:-?} already on npm, nothing to do
+${footer}"
+    else
+      text="✅ RN SDK ${FULL_VERSION:-?} published to npm (dist-tag ${DIST_TAG:-latest})
+${footer}"
+    fi
+  else
+    failed=$(printf '%s' "${STEPS_JSON:-}" | jq -r '[to_entries[] | select(.value.conclusion == "failure")][0].key // "unknown step"' 2>/dev/null || echo "unknown step")
+    text="❌ RN SDK npm publish failed at ${failed//_/ }
+${footer}"
+  fi
+else
 case "${RESULT:-}" in
   success)
     get_build=''
@@ -43,5 +58,6 @@ ${footer}"
 ${footer}"
     ;;
 esac
+fi
 
 jq -n --arg text "$text" '{text: ($text | split("\n")[0]), blocks: [{type: "section", text: {type: "mrkdwn", text: $text}}]}'

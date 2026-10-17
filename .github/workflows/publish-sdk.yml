@@ -7,12 +7,17 @@ on:
 jobs:
   publish-sdk:
     runs-on: ubuntu-24.04
+    environment: npm
     permissions:
       contents: read
       packages: write
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Read package version
+        id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -34,3 +39,43 @@ jobs:
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify version on npm
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          for attempt in $(seq 1 20); do
+            published="$(npm view "klaviyo-react-native-sdk@${VERSION}" version 2>/dev/null || true)"
+            if [ "$published" = "$VERSION" ]; then
+              echo "klaviyo-react-native-sdk@${VERSION} is live on npm"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/20: ${VERSION} not visible on npm yet, retrying in 15s"
+            sleep 15
+          done
+          echo "::error::klaviyo-react-native-sdk@${VERSION} did not appear on npm after 5 minutes"
+          exit 1
+
+      - name: Notify Slack on success
+        if: success()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: success
+          title: RN SDK
+          platform: npm
+          version_label: ${{ steps.pkg.outputs.version }}
+          release_url: ${{ github.event.release.html_url }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          title: RN SDK
+          platform: npm
+          version_label: ${{ steps.pkg.outputs.version || github.event.release.tag_name }}
+          release_url: ${{ github.event.release.html_url }}
