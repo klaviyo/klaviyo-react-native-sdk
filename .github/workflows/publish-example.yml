@@ -2,7 +2,8 @@
 # iOS are independent jobs.
 #
 # Triggers:
-#   - workflow_dispatch     (manual; choose `both` / `android` / `ios`)
+#   - workflow_dispatch     (manual or tag-dispatch from publish-release.yml;
+#                           choose `both` / `android` / `ios`)
 #   - release: published    (both platforms)
 #   - push to master/rel/** (both platforms)
 #   - pull_request: labeled (label drives platform selection — see below)

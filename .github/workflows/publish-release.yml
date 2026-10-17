@@ -1,0 +1,210 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (X.Y.Z)'
+        required: true
+        type: string
+      ref:
+        description: 'Branch or SHA to release; defaults to the default branch'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      checks: read
+    outputs:
+      sha: ${{ steps.validate.outputs.sha }}
+      release_url: ${{ steps.draft.outputs.release_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.event.repository.default_branch }}
+
+      - name: Validate version
+        id: validate
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$VERSION' does not match X.Y.Z"
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $VERSION already exists"
+            exit 1
+          fi
+
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$PKG_VERSION" != "$VERSION" ]; then
+            echo "::error::package.json version is '$PKG_VERSION', expected '$VERSION'"
+            exit 1
+          fi
+
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Verify CI status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.validate.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          CHECKS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+            --jq '.check_runs[] | select(.name != "Publish Release") | {name, status, conclusion}')
+
+          if [ -z "$CHECKS" ]; then
+            echo "::error::No check runs found for $SHA"
+            exit 1
+          fi
+
+          BAD=$(echo "$CHECKS" | jq -r 'select(
+            .status != "completed"
+            or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
+          ) | "  - \(.name): \(.status)/\(.conclusion // "pending")"')
+
+          if [ -n "$BAD" ]; then
+            echo "::error::Some check runs are not green:"
+            echo "$BAD"
+            exit 1
+          fi
+
+          echo "All check runs green for $SHA"
+
+      - name: Create or reuse draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ steps.validate.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_JSON=$(gh release view "$VERSION" --json isDraft,url 2>/dev/null || echo "")
+
+          if [ -n "$RELEASE_JSON" ]; then
+            IS_DRAFT=$(echo "$RELEASE_JSON" | jq -r '.isDraft')
+            URL=$(echo "$RELEASE_JSON" | jq -r '.url')
+            if [ "$IS_DRAFT" != "true" ]; then
+              echo "::error::Release $VERSION already exists and is published"
+              exit 1
+            fi
+            echo "Reusing existing draft release: $URL"
+          else
+            URL=$(gh release create "$VERSION" --draft --generate-notes --target "$SHA" --title "$VERSION")
+            echo "Created draft release: $URL"
+          fi
+
+          echo "release_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Write summary
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ steps.validate.outputs.sha }}
+          RELEASE_URL: ${{ steps.draft.outputs.release_url }}
+        run: |
+          {
+            echo "## Publish Release: $VERSION"
+            echo ""
+            echo "- **Version:** \`$VERSION\`"
+            echo "- **SHA:** \`$SHA\`"
+            echo "- **Draft release:** $RELEASE_URL"
+            echo ""
+            echo "Approve the \`release\` environment on this run to publish."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack — awaiting approval
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: success
+          headline: "⏳ RN SDK ${{ inputs.version }}: release awaiting approval"
+          title: RN SDK
+          platform: GitHub release
+          version_label: ${{ inputs.version }}
+          release_url: ${{ steps.draft.outputs.release_url }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          title: RN SDK
+          platform: GitHub release
+          version_label: ${{ inputs.version }}
+
+  publish:
+    needs: prepare
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release edit "$VERSION" --draft=false --target "$SHA" --repo "$GITHUB_REPOSITORY"
+
+      - name: Dispatch publish-sdk
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh workflow run publish-sdk.yml --ref "$VERSION" --repo "$GITHUB_REPOSITORY"
+
+      - name: Dispatch publish-example
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh workflow run publish-example.yml --ref "$VERSION" -f platform=both --repo "$GITHUB_REPOSITORY"
+
+      - name: Write summary
+        env:
+          VERSION: ${{ inputs.version }}
+          RELEASE_URL: ${{ needs.prepare.outputs.release_url }}
+        run: |
+          {
+            echo "## Published: $VERSION"
+            echo ""
+            echo "- **Release:** $RELEASE_URL"
+            echo "- **SDK publish:** [publish-sdk.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-sdk.yml)"
+            echo "- **Example publish:** [publish-example.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-example.yml)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          title: RN SDK
+          platform: GitHub release
+          version_label: ${{ inputs.version }}
