@@ -1,6 +1,10 @@
-name: Notify Slack of example app publish result
-description: Posts a Slack message summarizing a publish job (success or failure) for the React Native SDK example app.
+name: Notify Slack of publish result
+description: Posts a Slack message summarizing a publish job (success or failure) for the React Native SDK or its example app.
 inputs:
+  title:
+    description: Subject shown at the start of the headline
+    required: false
+    default: RN SDK Example App
   webhook:
     description: Slack incoming webhook URL
     required: true
@@ -18,6 +22,10 @@ inputs:
     description: Optional install link to surface in the message (e.g. internal-sharing download URL). Only useful to users already authorized for the build.
     required: false
     default: ''
+  release_url:
+    description: Optional GitHub release link to surface in the message
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -27,16 +35,16 @@ runs:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
         payload: |
-          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} ${{ inputs.title }}: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
           blocks:
             - type: "header"
               text:
                 type: "plain_text"
-                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} ${{ inputs.title }}: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
-                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|Tap to install build>', inputs.install_url) || '' }}"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|Tap to install build>', inputs.install_url) || '' }}${{ inputs.release_url != '' && format('\n*Release:* <{0}|View release>', inputs.release_url) || '' }}"
             - type: "section"
               text:
                 type: "mrkdwn"
