@@ -37,7 +37,12 @@ end
 def derived_version(base, build_number)
   event = ENV["EVENT_NAME"].to_s
   UI.user_error!("EVENT_NAME is not set, cannot derive the app version") if event.empty?
-  return base if event == "release"
+  if event == "release"
+    tag = ENV["RELEASE_TAG"].to_s.sub(/\Av/, "")
+    tag_base, _, suffix = tag.partition("-")
+    UI.user_error!("release tag '#{ENV['RELEASE_TAG']}' does not match SDK version #{base}") unless tag_base == base
+    return suffix.empty? ? base : "#{base}-#{suffix}"
+  end
 
   channel = ENV.fetch("BRANCH", "").start_with?("rel/") ? "rc" : "alpha"
   "#{base}-#{channel}.#{build_number}"
