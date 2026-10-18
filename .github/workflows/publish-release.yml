@@ -27,80 +27,36 @@ jobs:
       actions: read
       pull-requests: read
     outputs:
-      sha: ${{ steps.validate.outputs.sha }}
+      sha: ${{ steps.preflight.outputs.sha }}
       release_url: ${{ steps.draft.outputs.release_url }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.event.repository.default_branch }}
 
-      - name: Validate version
-        id: validate
+      - name: Fail if tag already exists
         env:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::Version '$VERSION' does not match X.Y.Z"
-            exit 1
-          fi
-
           if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
             echo "::error::Tag $VERSION already exists"
             exit 1
           fi
 
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$PKG_VERSION" != "$VERSION" ]; then
-            echo "::error::package.json version is '$PKG_VERSION', expected '$VERSION'"
-            exit 1
-          fi
-
-          SHA=$(git rev-parse HEAD)
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Verify CI status
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ steps.validate.outputs.sha }}
-        run: |
-          set -euo pipefail
-
-          # Checks pull_request CI on the head commit of the PR that merged SHA (falls back to SHA).
-          CI_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
-            --jq "[.[] | select(.merge_commit_sha == \"$SHA\")][0].head.sha // empty")
-          CI_SHA=${CI_SHA:-$SHA}
-          echo "Checking pull_request workflow runs on $CI_SHA"
-
-          RUNS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$CI_SHA&event=pull_request" \
-            --jq '.workflow_runs[] | {name, run_number, status, conclusion}' \
-            | jq -s 'group_by(.name) | map(max_by(.run_number)) | .[]')
-
-          if [ -z "$RUNS" ]; then
-            echo "::error::No pull_request CI runs found for $CI_SHA"
-            exit 1
-          fi
-
-          BAD=$(echo "$RUNS" | jq -r 'select(
-            .status != "completed"
-            or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
-          ) | "  - \(.name): \(.status)/\(.conclusion // "pending")"')
-
-          if [ -n "$BAD" ]; then
-            echo "::error::Some CI runs are not green:"
-            echo "$BAD"
-            exit 1
-          fi
-
-          echo "All CI runs green for $CI_SHA"
+      - name: Release preflight
+        id: preflight
+        uses: ./.github/actions/release-preflight
+        with:
+          version: ${{ inputs.version }}
+          github-token: ${{ github.token }}
 
       - name: Create or reuse draft release
         id: draft
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
-          SHA: ${{ steps.validate.outputs.sha }}
+          SHA: ${{ steps.preflight.outputs.sha }}
         run: |
           set -euo pipefail
 
@@ -124,7 +80,7 @@ jobs:
       - name: Write summary
         env:
           VERSION: ${{ inputs.version }}
-          SHA: ${{ steps.validate.outputs.sha }}
+          SHA: ${{ steps.preflight.outputs.sha }}
           RELEASE_URL: ${{ steps.draft.outputs.release_url }}
         run: |
           {
@@ -134,7 +90,7 @@ jobs:
             echo "- **SHA:** \`$SHA\`"
             echo "- **Draft release:** $RELEASE_URL"
             echo ""
-            echo "Approve the \`release\` environment on this run to publish."
+            echo "Approve the \`npm\` environment on this run to publish."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Slack — awaiting approval
@@ -143,7 +99,7 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
-          headline: "⏳ RN SDK ${{ inputs.version }}: release awaiting approval"
+          headline: "⏳ RN SDK ${{ inputs.version }}: draft ready, approve the npm deploy on this run to publish"
           title: RN SDK
           platform: GitHub release
           version_label: ${{ inputs.version }}
@@ -160,9 +116,22 @@ jobs:
           platform: GitHub release
           version_label: ${{ inputs.version }}
 
-  publish:
+  publish-sdk:
     needs: prepare
-    environment: release
+    uses: ./.github/workflows/publish-sdk.yml
+    with:
+      version: ${{ inputs.version }}
+      release_url: ${{ needs.prepare.outputs.release_url }}
+      ref: ${{ needs.prepare.outputs.sha }}
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      pull-requests: read
+
+  finalize:
+    needs: [prepare, publish-sdk]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -176,14 +145,6 @@ jobs:
         run: |
           set -euo pipefail
           gh release edit "$VERSION" --draft=false --target "$SHA" --repo "$GITHUB_REPOSITORY"
-
-      - name: Dispatch publish-sdk
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          gh workflow run publish-sdk.yml --ref "$VERSION" --repo "$GITHUB_REPOSITORY"
 
       - name: Dispatch publish-example
         env:
