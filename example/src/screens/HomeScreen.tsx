@@ -87,6 +87,12 @@ export function HomeScreen() {
         return;
       }
 
+      if (Klaviyo.handleFormsPreviewLink(url)) {
+        // The link came from the form editor's Preview on device QR code or copied link
+        console.log('[App] Started a forms preview');
+        return;
+      }
+
       // If false, Klaviyo didn't handle this URL — route normally
       // e.g., navigate using React Navigation: navigation.navigate(parseUrl(url))
       console.log('Navigate to url', url);
