@@ -5,7 +5,35 @@ on:
     types: [published]
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Release preflight
+        uses: ./.github/actions/release-preflight
+        with:
+          version: ${{ github.event.release.tag_name }}
+          github-token: ${{ github.token }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          title: RN SDK
+          platform: npm (preflight)
+          version_label: ${{ github.event.release.tag_name }}
+          release_url: ${{ github.event.release.html_url }}
+
   publish-sdk:
+    needs: preflight
     runs-on: ubuntu-24.04
     environment: npm
     permissions:
