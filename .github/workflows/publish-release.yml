@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (X.Y.Z)'
+        description: 'Version to release (X.Y.Z or X.Y.Z-<prerelease>)'
         required: true
         type: string
       ref:
-        description: 'Branch or SHA to release; defaults to the default branch'
+        description: 'Branch (e.g. master, rel/*) or SHA to release; defaults to the default branch'
         required: false
         default: ''
         type: string
@@ -71,7 +71,11 @@ jobs:
             fi
             echo "Reusing existing draft release: $URL"
           else
-            URL=$(gh release create "$VERSION" --draft --generate-notes --target "$SHA" --title "$VERSION")
+            PRERELEASE_FLAG=()
+            if [[ "$VERSION" == *-* ]]; then
+              PRERELEASE_FLAG=(--prerelease)
+            fi
+            URL=$(gh release create "$VERSION" --draft --generate-notes --target "$SHA" --title "$VERSION" "${PRERELEASE_FLAG[@]}")
             echo "Created draft release: $URL"
           fi
 
@@ -144,7 +148,11 @@ jobs:
           SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           set -euo pipefail
-          gh release edit "$VERSION" --draft=false --target "$SHA" --repo "$GITHUB_REPOSITORY"
+          if [[ "$VERSION" == *-* ]]; then
+            gh release edit "$VERSION" --draft=false --prerelease=true --latest=false --target "$SHA" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release edit "$VERSION" --draft=false --prerelease=false --latest --target "$SHA" --repo "$GITHUB_REPOSITORY"
+          fi
 
       - name: Dispatch publish-example
         env:
@@ -152,7 +160,12 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          gh workflow run publish-example.yml --ref "$VERSION" -f platform=both --repo "$GITHUB_REPOSITORY"
+          # App Store Connect only accepts numeric MARKETING_VERSION values, so prereleases deploy the example app to Android only.
+          PLATFORM=both
+          if [[ "$VERSION" == *-* ]]; then
+            PLATFORM=android
+          fi
+          gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
 
       - name: Write summary
         env:
