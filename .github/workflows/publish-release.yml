@@ -160,11 +160,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          # App Store Connect only accepts numeric MARKETING_VERSION values, so prereleases deploy the example app to Android only.
           PLATFORM=both
-          if [[ "$VERSION" == *-* ]]; then
-            PLATFORM=android
-          fi
           gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
 
       - name: Write summary
