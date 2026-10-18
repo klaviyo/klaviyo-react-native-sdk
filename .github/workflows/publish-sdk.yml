@@ -45,7 +45,14 @@ jobs:
 
       - name: Read package version
         id: pkg
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "dist_tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -68,6 +75,7 @@ jobs:
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
+          tag: ${{ steps.pkg.outputs.dist_tag }}
 
       - name: Verify version on npm
         timeout-minutes: 10
@@ -95,7 +103,7 @@ jobs:
           result: success
           title: RN SDK
           platform: npm
-          version_label: ${{ steps.publish.outputs.type != '' && steps.pkg.outputs.version || format('{0} (already on npm, nothing published)', steps.pkg.outputs.version) }}
+          version_label: ${{ steps.publish.outputs.type != '' && format('{0} (npm dist-tag {1})', steps.pkg.outputs.version, steps.pkg.outputs.dist_tag) || format('{0} (already on npm, nothing published)', steps.pkg.outputs.version) }}
           release_url: ${{ github.event.release.html_url }}
 
       - name: Notify Slack on failure

@@ -1,8 +1,8 @@
 name: Release preflight
-description: Fails unless the version is X.Y.Z, matches package.json at the checked-out commit, and the pull_request CI runs for that commit are green.
+description: Fails unless the version is X.Y.Z or X.Y.Z-<prerelease>, matches package.json at the checked-out commit, and the pull_request CI runs for that commit are green.
 inputs:
   version:
-    description: Release version (X.Y.Z)
+    description: Release version (X.Y.Z or X.Y.Z-<prerelease>)
     required: true
   github-token:
     description: Token with actions:read and pull-requests:read
@@ -26,8 +26,8 @@ runs:
         VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::error::Version '$VERSION' does not match X.Y.Z"
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::Version '$VERSION' does not match X.Y.Z or X.Y.Z-<prerelease>"
           exit 1
         fi
         PKG_VERSION=$(node -p "require('./package.json').version")
