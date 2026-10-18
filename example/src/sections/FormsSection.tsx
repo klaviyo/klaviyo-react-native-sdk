@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useForms } from '../hooks/useForms';
 import { styles } from '../Styles';
@@ -17,9 +17,21 @@ export function FormsSection() {
         isLeftActive={forms.formsRegistered}
         onLeftPress={forms.handleRegisterForms}
         onRightPress={forms.handleUnregisterForms}
-        leftDisabled={forms.formsRegistered}
-        rightDisabled={!forms.formsRegistered}
+        leftDisabled={forms.formsRegistered || forms.formsFailed}
+        rightDisabled={!forms.formsRegistered && !forms.formsFailed}
       />
+      {forms.formsRegistered && <Text>Registration requested</Text>}
+      {forms.formsFailed && (
+        <>
+          <Text>Forms initialization failed</Text>
+          <ActionButton
+            title={`Retry (${forms.retriesRemaining} remaining)`}
+            onPress={forms.handleRetryForms}
+            disabled={forms.retriesRemaining === 0}
+            withTopSpacing
+          />
+        </>
+      )}
       <ActionButton
         title={`Show Lifecycle Events (${forms.lifecycleEvents.length})`}
         onPress={forms.handleShowEventsModal}

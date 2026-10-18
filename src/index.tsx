@@ -7,7 +7,7 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
-import { parseFormLifecycleEvent } from './Forms';
+import { formatFormConfiguration, parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
 import {
   type Subscription,
@@ -45,6 +45,12 @@ function isLocationAvailable(): boolean {
 
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
+
+const formsEpochPrefix = `${Date.now()}-${Math.random()}`;
+let formsEpochSequence = 0;
+let formsRegistrationEpoch: string | null = null;
+let formsFailureCallback: (() => void) | undefined;
+let formsFailureSubscription: { remove: () => void } | null = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -116,9 +122,35 @@ export const Klaviyo: KlaviyoInterface = {
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     if (!isFormsAvailable()) return;
-    KlaviyoReactNativeSdk.registerForInAppForms(configuration);
+    formsFailureCallback = configuration?.onFailure;
+    if (formsRegistrationEpoch === null) {
+      const epoch = `${formsEpochPrefix}-${++formsEpochSequence}`;
+      formsRegistrationEpoch = epoch;
+      const eventEmitter = new NativeEventEmitter(
+        NativeModules.KlaviyoReactNativeSdk
+      );
+      formsFailureSubscription = eventEmitter.addListener(
+        'KlaviyoFormsFailure',
+        (data: { registrationEpoch?: unknown }) => {
+          if (
+            formsRegistrationEpoch === epoch &&
+            data?.registrationEpoch === epoch
+          ) {
+            formsFailureCallback?.();
+          }
+        }
+      );
+    }
+    KlaviyoReactNativeSdk.registerForInAppForms(
+      formatFormConfiguration(configuration),
+      formsRegistrationEpoch
+    );
   },
   unregisterFromInAppForms(): void {
+    formsRegistrationEpoch = null;
+    formsFailureCallback = undefined;
+    formsFailureSubscription?.remove();
+    formsFailureSubscription = null;
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
@@ -195,6 +227,17 @@ export const Klaviyo: KlaviyoInterface = {
     };
   },
 };
+
+if (typeof module !== 'undefined') {
+  const hotModule = module as typeof module & {
+    hot?: { dispose(callback: () => void): void };
+  };
+  hotModule.hot?.dispose(() => {
+    if (formsRegistrationEpoch !== null) {
+      Klaviyo.unregisterFromInAppForms();
+    }
+  });
+}
 
 export { type Event, type EventProperties, EventName } from './Event';
 export {

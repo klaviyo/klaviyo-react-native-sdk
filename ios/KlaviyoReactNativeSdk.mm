@@ -5,6 +5,15 @@
 #import "klaviyo_react_native_sdk-Swift.h"
 #endif
 
+@interface KlaviyoReactNativeSdk ()
+@property (atomic, assign) BOOL formsInvalidated;
+@property (atomic, assign) NSUInteger formsGeneration;
+@property (nonatomic, copy) NSString *formsRegistrationEpoch;
+@property (nonatomic, copy) void (^formsFailureForwarder)(void);
+@end
+
+static __weak KlaviyoReactNativeSdk *formsOwner;
+static __weak KlaviyoReactNativeSdk *lifecycleOwner;
 
 @implementation KlaviyoReactNativeSdk
 RCT_EXPORT_MODULE()
@@ -15,7 +24,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"FormLifecycleEvent"];
+    return @[@"FormLifecycleEvent", @"KlaviyoFormsFailure"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -128,16 +137,59 @@ RCT_EXPORT_METHOD(createSubscription: (NSDictionary *) subscription)
     [KlaviyoBridge createSubscriptionWithSubscription:subscription];
 }
 
-RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
+RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration registrationEpoch:(NSString *)registrationEpoch) {
+    NSUInteger generation = self.formsGeneration;
+    __weak __typeof__(self) weakSelf = self;
     dispatch_async(dispatch_get_main_queue(), ^{
-        [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration];
+        if (self.formsInvalidated || self.formsGeneration != generation) return;
+        if ((formsOwner && formsOwner != self) ||
+            (self.formsRegistrationEpoch && ![self.formsRegistrationEpoch isEqualToString:registrationEpoch])) {
+            [KlaviyoBridge unregisterFromInAppForms];
+        }
+        if (![self.formsRegistrationEpoch isEqualToString:registrationEpoch]) {
+            self.formsRegistrationEpoch = registrationEpoch;
+            self.formsFailureForwarder = ^{
+                __strong __typeof__(weakSelf) strongSelf = weakSelf;
+                if (strongSelf && !strongSelf.formsInvalidated && strongSelf.formsGeneration == generation &&
+                    [strongSelf.formsRegistrationEpoch isEqualToString:registrationEpoch] && formsOwner == strongSelf) {
+                    [strongSelf sendEventWithName:@"KlaviyoFormsFailure" body:@{@"registrationEpoch": registrationEpoch}];
+                }
+            };
+        }
+        formsOwner = self;
+        [KlaviyoBridge registerForInAppFormsWithConfiguration:configuration onFailure:self.formsFailureForwarder];
     });
 }
 
 RCT_EXPORT_METHOD(unregisterFromInAppForms) {
+    NSUInteger generation;
+    @synchronized (self) {
+        generation = ++self.formsGeneration;
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
-        [KlaviyoBridge unregisterFromInAppForms];
+        if (self.formsInvalidated || self.formsGeneration != generation) return;
+        [self clearFormsRegistration];
     });
+}
+
+- (void)clearFormsRegistration {
+    self.formsRegistrationEpoch = nil;
+    self.formsFailureForwarder = nil;
+    if (formsOwner != self) return;
+    formsOwner = nil;
+    [KlaviyoBridge unregisterFromInAppForms];
+}
+
+- (void)invalidate {
+    @synchronized (self) {
+        self.formsInvalidated = YES;
+        ++self.formsGeneration;
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self clearFormsRegistration];
+        [self clearFormLifecycleHandler];
+    });
+    [super invalidate];
 }
 
 RCT_EXPORT_METHOD(registerGeofencing) {
@@ -163,9 +215,11 @@ RCT_EXPORT_METHOD(getCurrentGeofences: (RCTResponseSenderBlock)callback) {
 RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
     __weak __typeof__(self) weakSelf = self;
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.formsInvalidated) return;
+        lifecycleOwner = self;
         [KlaviyoBridge registerFormLifecycleHandlerWithCallback:^(NSDictionary *eventData) {
             __strong __typeof__(weakSelf) strongSelf = weakSelf;
-            if (strongSelf) {
+            if (strongSelf && !strongSelf.formsInvalidated && lifecycleOwner == strongSelf) {
                 [strongSelf sendEventWithName:@"FormLifecycleEvent" body:eventData];
             }
         }];
@@ -174,8 +228,14 @@ RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
 
 RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [KlaviyoBridge unregisterFormLifecycleHandler];
+        if (!self.formsInvalidated) [self clearFormLifecycleHandler];
     });
+}
+
+- (void)clearFormLifecycleHandler {
+    if (lifecycleOwner != self) return;
+    lifecycleOwner = nil;
+    [KlaviyoBridge unregisterFormLifecycleHandler];
 }
 
 @end
