@@ -42,6 +42,7 @@
     - [Setup](#setup-1)
       - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
     - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
+    - [Previewing Draft Forms on a Device](#previewing-draft-forms-on-a-device)
     - [Monitoring Form Lifecycle Events](#monitoring-form-lifecycle-events)
 
   - [Geofencing](#geofencing)
@@ -715,6 +716,34 @@ Klaviyo.unregisterFromInAppForms(config);
 ```
 
 Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
+
+### Previewing Draft Forms on a Device
+
+The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `setFormsPreviewToken`; pass `null` to return to published forms. You can also pass the token as `FormConfiguration.previewToken`.
+
+```typescript
+import { Klaviyo } from "klaviyo-react-native-sdk";
+
+Klaviyo.setFormsPreviewToken(token); // start a draft preview
+Klaviyo.setFormsPreviewToken(null); // back to published forms
+```
+
+The preview link is a deep link into your app with a `klaviyo-forms-preview` query parameter. Pass deep links to `handleFormsPreviewLink` before your own routing: it starts the preview and returns `true` for a preview link, and returns `false`, changing nothing, for every other link.
+
+```typescript
+import { Linking } from "react-native";
+import { Klaviyo } from "klaviyo-react-native-sdk";
+
+const handleUrl = (url: string) => {
+  if (Klaviyo.handleFormsPreviewLink(url)) return;
+  // Your own deep link handling
+};
+
+Linking.getInitialURL().then((url) => url && handleUrl(url));
+Linking.addEventListener("url", ({ url }) => handleUrl(url));
+```
+
+Both work before or after `registerForInAppForms()`. Preview tokens only read a saved draft and expire after 30 minutes. The native SDKs keep them in memory only and never log them.
 
 ### Monitoring Form Lifecycle Events
 

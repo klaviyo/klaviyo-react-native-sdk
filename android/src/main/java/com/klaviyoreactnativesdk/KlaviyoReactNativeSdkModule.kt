@@ -28,6 +28,7 @@ import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.registerFormLifecycleHandler
+import com.klaviyo.forms.setFormsPreviewToken
 import com.klaviyo.forms.unregisterFormLifecycleHandler
 import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.location.GeofencingProvider
@@ -47,6 +48,8 @@ class KlaviyoReactNativeSdkModule(
   companion object {
     const val NAME = "KlaviyoReactNativeSdk"
     private const val LOCATION = "location"
+    private const val SESSION_TIMEOUT_DURATION = "sessionTimeoutDuration"
+    private const val PREVIEW_TOKEN = "previewToken"
     private const val PROPERTIES = "properties"
     private const val LIST_ID = "listId"
     private const val CUSTOM_SOURCE = "customSource"
@@ -179,16 +182,36 @@ class KlaviyoReactNativeSdkModule(
   fun registerForInAppForms(configuration: ReadableMap?) {
     UiThreadUtil.runOnUiThread {
       try {
-        val timeout = configuration?.getDouble("sessionTimeoutDuration")?.seconds
+        val timeout =
+          configuration
+            ?.takeIf { it.hasKey(SESSION_TIMEOUT_DURATION) && !it.isNull(SESSION_TIMEOUT_DURATION) }
+            ?.getDouble(SESSION_TIMEOUT_DURATION)
+            ?.seconds
+        val previewToken =
+          configuration
+            ?.takeIf { it.hasKey(PREVIEW_TOKEN) && !it.isNull(PREVIEW_TOKEN) }
+            ?.getString(PREVIEW_TOKEN)
         Klaviyo.registerForInAppForms(
           InAppFormsConfig(
             sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
+            previewToken = previewToken,
           ),
         )
       } catch (e: MissingKlaviyoModule) {
         Registry.log.error("Forms module is not available", e)
       } catch (e: Exception) {
         Registry.log.error("Android unable to register for in app forms on main thread", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun setFormsPreviewToken(token: String?) {
+    UiThreadUtil.runOnUiThread {
+      try {
+        Klaviyo.setFormsPreviewToken(token)
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
       }
     }
   }
