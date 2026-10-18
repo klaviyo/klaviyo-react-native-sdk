@@ -7,6 +7,10 @@ inputs:
   github-token:
     description: Token with actions:read and pull-requests:read
     required: true
+  required-workflows:
+    description: Comma-separated workflow names that must have a green pull_request run for the commit
+    required: false
+    default: CI,Android CI,iOS CI
 outputs:
   sha:
     description: The checked-out commit SHA
@@ -39,6 +43,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         SHA: ${{ steps.version.outputs.sha }}
+        REQUIRED: ${{ inputs.required-workflows }}
       run: |
         set -euo pipefail
         CI_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
@@ -48,17 +53,19 @@ runs:
 
         RUNS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$CI_SHA&event=pull_request" \
           --jq '.workflow_runs[] | {name, run_number, status, conclusion}' \
-          | jq -s 'group_by(.name) | map(max_by(.run_number)) | .[]')
+          | jq -s 'group_by(.name) | map(max_by(.run_number))')
 
-        if [ -z "$RUNS" ]; then
-          echo "::error::No pull_request CI runs found for $CI_SHA"
-          exit 1
-        fi
-
-        BAD=$(echo "$RUNS" | jq -r 'select(
-          .status != "completed"
-          or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
-        ) | "  - \(.name): \(.status)/\(.conclusion // "pending")"')
+        BAD=$(echo "$RUNS" | jq -r --arg required "$REQUIRED" '
+          ($required | split(",") | map(gsub("^\\s+|\\s+$"; ""))) as $names
+          | . as $runs
+          | $names[]
+          | . as $name
+          | ([$runs[] | select(.name == $name)] | first) as $run
+          | if $run == null then "  - \($name): no run found"
+            elif $run.status != "completed"
+              or ($run.conclusion != "success" and $run.conclusion != "skipped" and $run.conclusion != "neutral")
+            then "  - \($name): \($run.status)/\($run.conclusion // "pending")"
+            else empty end')
 
         if [ -n "$BAD" ]; then
           echo "::error::Some CI runs are not green:"
