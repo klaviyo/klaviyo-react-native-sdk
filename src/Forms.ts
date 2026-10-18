@@ -4,9 +4,10 @@
 export interface KlaviyoFormsApi {
   /**
    * Load in-app forms data and display a form to the user if applicable based on the forms
-   * configured in your Klaviyo account. Note [Klaviyo.initialize] must be called first
-   * @param configuration Duration (in seconds) of the period of user inactivity after which
-   * the user's app session is terminated and the forms session is ended. Defaults to 1 Hour.
+   * configured in your Klaviyo account. Note [Klaviyo.initialize] must be called first.
+   * Returning submits registration; it does not indicate that forms are ready.
+   * Registering again updates onFailure immediately without restarting a current load.
+   * Updated timeout and replay settings apply to the next actual load.
    */
   registerForInAppForms(configuration?: FormConfiguration): void;
 
@@ -28,9 +29,61 @@ export interface KlaviyoFormsApi {
  */
 export interface FormConfiguration {
   /**
-   * Duration in seconds before the session times out
+   * Duration in seconds before the session times out. Defaults to 3600.
    */
-  readonly sessionTimeoutDuration: number;
+  readonly sessionTimeoutDuration?: number;
+  /** Positive, finite loading budget in seconds, after the initial JWT wait. Defaults to the native network timeout. */
+  readonly loadTimeout?: number;
+  /** Historical analytics replay in seconds, bounded to 0...30. Defaults to 10; zero leaves live events enabled. */
+  readonly eventReplayWindow?: number;
+  /**
+   * Called after teardown for a terminal initialization failure. Register again to retry.
+   * Each registration replaces the current handler; omitting it clears the handler.
+   * No eligible form is not a failure. This callback does not report readiness.
+   */
+  readonly onFailure?: () => void;
+}
+
+export function formatFormConfiguration(
+  configuration?: FormConfiguration
+): Record<string, number> {
+  const scalars: Record<string, number> = {};
+  const session = configuration?.sessionTimeoutDuration;
+  if (session !== undefined) {
+    if (typeof session === 'number' && Number.isFinite(session)) {
+      scalars.sessionTimeoutDuration = session;
+    } else {
+      console.warn(
+        '[Klaviyo] Invalid sessionTimeoutDuration; using the native default.'
+      );
+    }
+  }
+  const load = configuration?.loadTimeout;
+  if (load !== undefined) {
+    if (
+      typeof load === 'number' &&
+      Number.isFinite(load) &&
+      load >= 0.001 &&
+      load * 1e9 < 2 ** 64
+    ) {
+      scalars.loadTimeout = load;
+    } else {
+      console.warn(
+        '[Klaviyo] Invalid loadTimeout; using the native network timeout.'
+      );
+    }
+  }
+  const replay = configuration?.eventReplayWindow;
+  if (replay !== undefined) {
+    if (typeof replay === 'number' && !Number.isNaN(replay)) {
+      scalars.eventReplayWindow = Math.min(30, Math.max(0, replay));
+    } else {
+      console.warn(
+        '[Klaviyo] Invalid eventReplayWindow; using the native default.'
+      );
+    }
+  }
+  return scalars;
 }
 
 /**
