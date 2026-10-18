@@ -1,4 +1,7 @@
 import { NativeModules } from 'react-native';
+import { readFileSync } from 'fs';
+import { runInNewContext } from 'vm';
+import { ModuleKind, transpileModule } from 'typescript';
 import { Klaviyo } from '../index';
 import type { FormConfiguration } from '../Forms';
 import { EventName } from '../Event';
@@ -107,6 +110,29 @@ jest.mock('react-native', () => {
 // Helper to simulate native event emission
 function emitNativeEvent(eventName: string, data: any) {
   eventListeners[eventName]?.forEach((listener) => listener(data));
+}
+
+function loadRefreshableSdkModule() {
+  const source = readFileSync(require.resolve('../index'), 'utf8');
+  const { outputText } = transpileModule(source, {
+    compilerOptions: { module: ModuleKind.CommonJS },
+  });
+  let dispose: (() => void) | undefined;
+  const sdkModule = {
+    exports: {} as typeof import('../index'),
+    hot: {
+      dispose: (callback: () => void) => {
+        dispose = callback;
+      },
+    },
+  };
+  runInNewContext(outputText, {
+    module: sdkModule,
+    exports: sdkModule.exports,
+    require: (name: string) => require(name.replace(/^\.\//, '../')),
+    console,
+  });
+  return { Klaviyo: sdkModule.exports.Klaviyo, dispose: () => dispose?.() };
 }
 
 describe('Klaviyo SDK', () => {
@@ -388,6 +414,40 @@ describe('Klaviyo SDK', () => {
     const epoch = () => native.registerForInAppForms.mock.lastCall[1];
     const fail = (registrationEpoch = epoch()) =>
       emitNativeEvent('KlaviyoFormsFailure', { registrationEpoch });
+
+    it('releases the previous module transport before Fast Refresh replacement registers', () => {
+      const firstModule = loadRefreshableSdkModule();
+      const firstCallback = jest.fn();
+      firstModule.Klaviyo.registerForInAppForms({ onFailure: firstCallback });
+      const firstEpoch = epoch();
+      const queuedListener = eventListeners.KlaviyoFormsFailure?.[0];
+
+      firstModule.dispose();
+      queuedListener?.({ registrationEpoch: firstEpoch });
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(1);
+
+      const replacement = loadRefreshableSdkModule();
+      const replacementCallback = jest.fn();
+      replacement.Klaviyo.registerForInAppForms({
+        onFailure: replacementCallback,
+      });
+      expect(epoch()).not.toBe(firstEpoch);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+      firstModule.dispose();
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(1);
+      fail(firstEpoch);
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(replacementCallback).not.toHaveBeenCalled();
+      fail();
+      expect(replacementCallback).toHaveBeenCalledTimes(1);
+
+      replacement.Klaviyo.unregisterFromInAppForms();
+      replacement.dispose();
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(2);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+    });
 
     it('serializes optional seconds without sending the callback or extra fields', () => {
       const configuration: FormConfiguration = {

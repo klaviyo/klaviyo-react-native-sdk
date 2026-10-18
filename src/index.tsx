@@ -228,6 +228,17 @@ export const Klaviyo: KlaviyoInterface = {
   },
 };
 
+if (typeof module !== 'undefined') {
+  const hotModule = module as typeof module & {
+    hot?: { dispose(callback: () => void): void };
+  };
+  hotModule.hot?.dispose(() => {
+    if (formsRegistrationEpoch !== null) {
+      Klaviyo.unregisterFromInAppForms();
+    }
+  });
+}
+
 export { type Event, type EventProperties, EventName } from './Event';
 export {
   type Profile,
