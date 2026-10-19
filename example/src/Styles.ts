@@ -52,6 +52,9 @@ export const styles = StyleSheet.create({
     }),
   },
   sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
@@ -60,6 +63,13 @@ export const styles = StyleSheet.create({
   sectionHeaderText: {
     ...typography.sectionHeader,
     color: colors.text,
+  },
+  sectionHeaderActionIcon: {
+    fontSize: 18,
+    color: colors.secondaryText,
+  },
+  sectionHeaderActionIconDisabled: {
+    color: colors.disabled,
   },
 
   // Profile text field styles (label + input + button row)
