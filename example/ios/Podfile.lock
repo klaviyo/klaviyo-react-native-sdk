@@ -1992,7 +1992,7 @@ DEPENDENCIES:
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoSwiftExtension (= 5.5.0)
+  - KlaviyoSwiftExtension
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -2356,6 +2356,6 @@ SPEC CHECKSUMS:
   RNScreens: d0b84395f70841b48de7af26e45704ed4a24c62e
   Yoga: 9690ea6ce9c77aee633f4815cc42202c701edbd8
 
-PODFILE CHECKSUM: dfb5e340d8d3b8e5eb4b878c93b85f95ae367433
+PODFILE CHECKSUM: 74d648ef71b165673bc866ef8fc50690f7c75584
 
 COCOAPODS: 1.16.2
