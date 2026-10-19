@@ -1,6 +1,6 @@
 // React / React Native
 import { useEffect, useState } from 'react';
-import { SectionList, SafeAreaView, Linking, Platform } from 'react-native';
+import { SectionList, SafeAreaView, Linking } from 'react-native';
 
 // Klaviyo SDK
 import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -11,22 +11,6 @@ import { SectionHeader } from '../components/SectionHeader';
 import { AppHeader } from '../components/AppHeader';
 import { CompanyIdModal } from '../components/CompanyIdModal';
 import { useCompanyId } from '../hooks/useCompanyId';
-import { SdkInfoModal } from '../components/SdkInfoModal';
-import { buildSdkInfoEntries, buildCopyText } from '../sdkInfo';
-import type { SdkInfoEntry, SdkInfoEnv } from '../sdkInfo';
-import {
-  KLAVIYO_SDK_REF_RN,
-  KLAVIYO_SDK_REF_ANDROID,
-  KLAVIYO_SDK_REF_IOS,
-  KLAVIYO_SDK_VERSION_RN,
-  KLAVIYO_SDK_VERSION_ANDROID,
-  KLAVIYO_SDK_VERSION_IOS,
-  KLAVIYO_BUILD_APP_VERSION,
-  KLAVIYO_BUILD_NUMBER,
-  KLAVIYO_BUILD_COMMIT,
-  KLAVIYO_BUILD_BRANCH,
-  KLAVIYO_BUILD_BUILT,
-} from '@env';
 
 // Section components — each section owns the hook(s) it consumes, so state
 // changes in one section don't re-render sibling sections. No React.memo or
@@ -40,30 +24,6 @@ import { PushSection } from '../sections/PushSection';
 import { AuthSection } from '../sections/AuthSection';
 import { SubscriptionSection } from '../sections/SubscriptionSection';
 import { LoggingSection } from '../sections/LoggingSection';
-
-const SDK_INFO_PLATFORM = Platform.OS === 'android' ? 'android' : 'ios';
-const SDK_INFO_ENV: SdkInfoEnv = {
-  KLAVIYO_SDK_REF_RN,
-  KLAVIYO_SDK_REF_ANDROID,
-  KLAVIYO_SDK_REF_IOS,
-  KLAVIYO_SDK_VERSION_RN,
-  KLAVIYO_SDK_VERSION_ANDROID,
-  KLAVIYO_SDK_VERSION_IOS,
-  KLAVIYO_BUILD_APP_VERSION,
-  KLAVIYO_BUILD_NUMBER,
-  KLAVIYO_BUILD_COMMIT,
-  KLAVIYO_BUILD_BRANCH,
-  KLAVIYO_BUILD_BUILT,
-};
-const SDK_INFO_ENTRIES: SdkInfoEntry[] = buildSdkInfoEntries(
-  SDK_INFO_ENV,
-  SDK_INFO_PLATFORM
-);
-const SDK_INFO_COPY_TEXT = buildCopyText(
-  SDK_INFO_ENV,
-  SDK_INFO_PLATFORM,
-  'RN Example'
-);
 
 type SectionKey =
   | 'analytics'
@@ -117,7 +77,6 @@ export function HomeScreen() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
     useCompanyId();
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [sdkInfoVisible, setSdkInfoVisible] = useState(false);
 
   useEffect(() => {
     // Deep linking handler
@@ -147,10 +106,7 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader
-        onSettingsPress={() => setSettingsVisible(true)}
-        onInfoPress={() => setSdkInfoVisible(true)}
-      />
+      <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
       <SectionList
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -175,12 +131,6 @@ export function HomeScreen() {
           setSettingsVisible(false);
         }}
         onClose={() => setSettingsVisible(false)}
-      />
-      <SdkInfoModal
-        visible={sdkInfoVisible}
-        entries={SDK_INFO_ENTRIES}
-        copyText={SDK_INFO_COPY_TEXT}
-        onClose={() => setSdkInfoVisible(false)}
       />
     </SafeAreaView>
   );

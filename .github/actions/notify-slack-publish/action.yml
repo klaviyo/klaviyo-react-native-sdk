@@ -1,84 +1,43 @@
 name: Notify Slack of example app publish result
-description: Posts a Slack message summarizing a publish job for the React Native SDK example app. Skipped when no webhook is set.
+description: Posts a Slack message summarizing a publish job (success or failure) for the React Native SDK example app.
 inputs:
   webhook:
     description: Slack incoming webhook URL
     required: true
   result:
-    description: "'success', 'failure' or 'warning' (uploaded, but What to Test failed)"
+    description: "'success' or 'failure' — drives icon and headline"
     required: true
   platform:
-    description: "'iOS' or 'Android'"
+    description: "Human-readable platform label (e.g. 'Play Store', 'TestFlight')"
     required: true
-  store:
-    description: "'TestFlight' or 'Play internal'"
-    required: true
-  full_version:
-    description: Full derived app version, suffix included (e.g. 2.6.0-rc.7)
+  version_label:
+    description: Version string to show in the message (e.g. release tag or 'X.Y.Z (build)')
     required: false
-    default: ''
-  build:
-    description: Build number (iOS) or versionCode (Android)
-    required: false
-    default: ''
-  sdks:
-    description: One-line SDK summary from the release notes action
-    required: false
-    default: ''
-  steps_json:
-    description: toJSON(steps) from the caller, used to name the failed step
-    required: false
-    default: ''
+    default: manual
   install_url:
-    description: Install link for users already authorized for the build
-    required: false
-    default: ''
-  install_label:
-    description: Link text for install_url
-    required: false
-    default: Tap to install build
-  install_fallback:
-    description: Text shown when install_url is empty
-    required: false
-    default: ''
-  access_note:
-    description: Plain-text instructions for reaching the build. Must not contain public links; this repo's logs are public.
+    description: Optional install link to surface in the message (e.g. internal-sharing download URL). Only useful to users already authorized for the build.
     required: false
     default: ''
 
 runs:
   using: composite
   steps:
-    - name: Compose message
-      id: message
-      if: inputs.webhook != ''
-      shell: bash
-      env:
-        RESULT: ${{ inputs.result }}
-        PLATFORM: ${{ inputs.platform }}
-        STORE: ${{ inputs.store }}
-        FULL_VERSION: ${{ inputs.full_version }}
-        BUILD: ${{ inputs.build }}
-        SDKS: ${{ inputs.sdks }}
-        STEPS_JSON: ${{ inputs.steps_json }}
-        EVENT_NAME: ${{ github.event_name }}
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
-        HEAD_REF: ${{ github.head_ref }}
-        REF_NAME: ${{ github.ref_name }}
-        COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        REPO: ${{ github.repository }}
-        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        INSTALL_URL: ${{ inputs.install_url }}
-        INSTALL_LABEL: ${{ inputs.install_label }}
-        INSTALL_FALLBACK: ${{ inputs.install_fallback }}
-        ACCESS_NOTE: ${{ inputs.access_note }}
-      run: |
-        "${{ github.workspace }}/.github/scripts/slack-message.sh" > "${RUNNER_TEMP}/slack-payload.json"
-        echo "payload_file=${RUNNER_TEMP}/slack-payload.json" >> "$GITHUB_OUTPUT"
-
-    - if: inputs.webhook != ''
-      uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+    - uses: slackapi/slack-github-action@v2.1.1
       with:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
-        payload-file-path: ${{ steps.message.outputs.payload_file }}
+        payload: |
+          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+          blocks:
+            - type: "header"
+              text:
+                type: "plain_text"
+                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} RN SDK Example App: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+            - type: "section"
+              text:
+                type: "mrkdwn"
+                text: "*Repository:* ${{ github.repository }}\n*Workflow:* ${{ github.workflow }}\n*Version:* `${{ inputs.version_label }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}${{ inputs.install_url != '' && format('\n*Install:* <{0}|Tap to install build>', inputs.install_url) || '' }}"
+            - type: "section"
+              text:
+                type: "mrkdwn"
+                text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"

@@ -30,7 +30,6 @@ analytics tracking, push notifications, and in-app forms in React Native applica
 - `/ios/`: Native iOS/Swift bridge implementation
 - `/android/`: Native Android/Kotlin bridge implementation
 - `/example/`: Example React Native app demonstrating SDK usage
-- `PUBLISH_EXAMPLE.md`: How the example app's continuous deployment (Play internal track + TestFlight) works
 
 ## Development Guidelines
 
