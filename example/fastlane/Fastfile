@@ -309,6 +309,7 @@ platform :ios do
     upload_to_testflight(
       api_key: asc_api_key,
       app_identifier: APP_ID,
+      app_platform: "ios",
       distribute_only: true,
       app_version: ENV.fetch("MARKETING_VERSION"),
       build_number: ENV.fetch("BUILD_NUMBER"),
