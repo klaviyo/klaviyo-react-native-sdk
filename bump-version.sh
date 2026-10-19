@@ -56,6 +56,16 @@ if [[ -z "$new_version" ]]; then
   read -rp "Enter the new React SDK version: " new_version
 fi
 
+# Apple requires CFBundleShortVersionString to be numeric, so a prerelease
+# suffix (e.g. -rc.1) or +build metadata must not reach the pbxproj. The
+# strip/validate rule matches sdk_base_version in example/fastlane/Fastfile,
+# which derives the CI app version from the same package version.
+marketing_version="${new_version%%[-+]*}"
+if [[ ! "$marketing_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: version '$new_version' does not strip to a numeric X.Y.Z marketing version (got '$marketing_version')." >&2
+  exit 1
+fi
+
 if [[ -f "package.json" ]]; then
   jq --arg newVersion "$new_version" '.version = $newVersion' package.json > tmp.json && mv tmp.json package.json
   echo "Updated SDK version in package.json."
@@ -98,8 +108,8 @@ fi
 
 example_ios_pbxproj="example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj"
 if [[ -f "$example_ios_pbxproj" ]]; then
-  sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $new_version;/g" "$example_ios_pbxproj"
-  echo "Updated example app MARKETING_VERSION in $example_ios_pbxproj."
+  sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $marketing_version;/g" "$example_ios_pbxproj"
+  echo "Updated example app MARKETING_VERSION to $marketing_version (stripped from $new_version) in $example_ios_pbxproj."
 else
   echo "Error: $example_ios_pbxproj not found."
   exit 1
