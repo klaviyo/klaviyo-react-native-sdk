@@ -6,9 +6,9 @@ import { isNonEmptyString } from './validation';
  * Personalized In-App Forms require the SDK to present a user-identifying JWT to
  * the Klaviyo backend. The React Native SDK is a thin wrapper: the underlying
  * native iOS and Android SDKs own all token state management (caching, proactive
- * refresh, timeouts, WebView injection, and all token-related logging). The
- * wrapper's sole responsibility is to bridge the host's JS-side provider to the
- * native SDK.
+ * refresh, timeouts when waiting for a token, WebView injection, and all
+ * token-related logging). The wrapper's sole responsibility is to bridge the
+ * host's JS-side provider to the native SDK.
  */
 export interface KlaviyoAuthTokenApi {
   /**
@@ -16,10 +16,17 @@ export interface KlaviyoAuthTokenApi {
    * refresh an authentication token (JWT) for the current end-user.
    *
    * The provider is an `async` function returning the current end-user's JWT, by
-   * whatever mechanism the host application uses to obtain one (e.g. calling its
-   * auth server, exchanging an OAuth refresh token, reading from a session
-   * cache). It should read the current user fresh on each invocation rather than
-   * capturing identity at registration.
+   * whatever mechanism the host application uses to obtain a fresh token
+   * (e.g. calling its auth server or exchanging an OAuth refresh token). Read the
+   * current user fresh on each invocation rather than capturing identity at
+   * registration. Fetch a fresh JWT each time; do not cache tokens in the
+   * provider. The native SDK manages token caching and refresh.
+   *
+   * Register once and keep the provider registered across profile changes.
+   * On logout, clear the SDK profile with `resetProfile()`. Apply a timeout to
+   * every network call: the SDK does not time out or abort the provider
+   * itself. A provider that never settles blocks later token fetches until
+   * you register, unregister, or reset the profile.
    *
    * Calling this replaces any previously-registered provider. The call itself is
    * synchronous (fire-and-forget) and returns `void`, consistent with other
@@ -31,13 +38,16 @@ export interface KlaviyoAuthTokenApi {
   registerAuthTokenProvider(provider: AuthTokenProvider): void;
 
   /**
-   * Detaches a previously-registered auth token provider — e.g. on user logout.
+   * Detaches a previously-registered auth token provider to turn personalization
+   * off. This is not a logout; use `resetProfile()` to clear the SDK profile.
    *
    * Forwards to the native SDK, which clears the provider reference and tears
    * down its own token state (cached token, scheduled refresh, and the native
    * side of any in-flight fetch). A host `provider()` call that is already
    * running is not aborted — it runs to completion and its late response is
-   * ignored. Re-registering after unregister works normally.
+   * ignored. Re-registering after unregister works normally. A form that is
+   * already open keeps its token until it expires, whether you call
+   * `resetProfile()` or `unregisterAuthTokenProvider()`.
    */
   unregisterAuthTokenProvider(): void;
 }
