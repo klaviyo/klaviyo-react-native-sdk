@@ -289,7 +289,7 @@ platform :ios do
       end
 
       begin
-        upload_to_testflight(api_key: api_key, app_identifier: APP_ID, ipa: IPA_PATH, skip_waiting_for_build_processing: true, skip_submission: true)
+        upload_to_testflight(api_key: api_key, app_identifier: APP_ID, ipa: IPA_PATH, skip_waiting_for_build_processing: true, skip_submission: true, uses_non_exempt_encryption: false)
         uploaded = true
       rescue StandardError => e
         raise unless e.message.match?(IOS_CONFLICT)
@@ -315,6 +315,7 @@ platform :ios do
       build_number: ENV.fetch("BUILD_NUMBER"),
       localized_build_info: { "en-US" => { whats_new: File.read(ENV.fetch("NOTES_FILE")) } },
       skip_submission: true,
+      uses_non_exempt_encryption: false,
       wait_processing_timeout_duration: 50 * 60
     )
   end
