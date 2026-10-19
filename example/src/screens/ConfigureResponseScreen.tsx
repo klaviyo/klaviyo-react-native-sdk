@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../navigation/types';
 import {
   useAuth,
   getOutcomeKindLabel,
+  isResponseLocked,
   type ProviderResponse,
   type ProviderOutcome,
   type MockTokenOutcome,
@@ -131,6 +132,17 @@ function parseDateTimeLocalInputValue(value: string): number | null {
 export function ConfigureResponseScreen({ route, navigation }: Props) {
   const auth = useAuth();
   const original = auth.getResponse(route.params.responseId);
+  const { updateResponse } = auth;
+  const responseIndex = auth.responses.findIndex(
+    (response) => response.id === route.params.responseId
+  );
+  const responseLocked =
+    responseIndex !== -1 &&
+    isResponseLocked(
+      responseIndex,
+      auth.responses.length,
+      auth.isServed(route.params.responseId)
+    );
   const nowMs = useNowMs(1000);
   const nowSeconds = nowMs / 1000;
 
@@ -163,11 +175,11 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
     const handleDone = () => {
       // Guard against committing a stale expiry when the visible date field is
       // invalid (Done is also disabled in this state, but guard defensively).
-      if (dateInputInvalid) {
+      if (dateInputInvalid || responseLocked) {
         return;
       }
       if (draft) {
-        auth.updateResponse(draft.id, draft);
+        updateResponse(draft.id, draft);
       }
       navigation.goBack();
     };
@@ -179,13 +191,13 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
       // renders (`HeaderDoneButton`) is a stable, module-scope component.
       // eslint-disable-next-line react/no-unstable-nested-components
       headerRight: () => (
-        <HeaderDoneButton onPress={handleDone} disabled={dateInputInvalid} />
+        <HeaderDoneButton
+          onPress={handleDone}
+          disabled={dateInputInvalid || responseLocked}
+        />
       ),
     });
-    // Re-bind whenever the draft (or date-field validity) changes so Done
-    // always commits the latest edits and reflects the current validity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, draft, dateInputInvalid]);
+  }, [navigation, draft, dateInputInvalid, responseLocked, updateResponse]);
 
   if (!draft) {
     return (
