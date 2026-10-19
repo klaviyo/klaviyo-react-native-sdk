@@ -30,10 +30,10 @@
 # This repo is public, so its Actions logs are too. Never surface a public
 # install link (e.g. a TestFlight public-link `testflight.apple.com/join/...`)
 # here; only links that require a Play/App Store Connect login. The Android
-# Internal App Sharing URL is masked (::add-mask) right after it is read so
-# it only appears in the Slack message, and it is not set as the
-# android-internal-track environment URL, which the public Deployments page
-# would show.
+# Slack link is the per-build Play URL
+# (play.google.com/apps/test/<package>/<versionCode>), which only an internal
+# tester can open. It is not set as the android-internal-track environment URL,
+# which the public Deployments page would show.
 
 name: Publish Example App
 
@@ -255,17 +255,6 @@ jobs:
           CI: true
         run: fastlane android release
 
-      # Internal App Sharing gives the Slack message an install link. A
-      # failure here must not fail a deploy that already landed on the track.
-      - name: Upload to Internal App Sharing
-        id: internal_sharing
-        continue-on-error: true
-        working-directory: example
-        shell: bash
-        env:
-          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-        run: fastlane android share
-
       # Composed after the upload so the notes carry the versionCode that
       # actually shipped. 500 chars is Google's per-locale cap.
       - name: Prepare release notes
@@ -296,9 +285,9 @@ jobs:
           full_version: ${{ env.VERSION_NAME }}
           build: ${{ env.VERSION_CODE }}
           sdks: ${{ steps.release_notes.outputs.sdks }}
-          install_url: ${{ steps.internal_sharing.outputs.url }}
-          install_label: Internal App Sharing link
-          install_fallback: Internal App Sharing upload failed, see the workflow run
+          install_url: https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
+          install_label: Install Klaviyo React Native SDK Example from Google Play
+          install_fallback: Open the Play Store with an internal-tester Google account to install
 
       - name: Notify Slack on failure
         if: failure()

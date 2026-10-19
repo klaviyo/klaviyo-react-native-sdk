@@ -351,19 +351,4 @@ platform :android do
     end
     UI.user_error!("Upload still conflicting after #{max_attempts} attempts") unless uploaded
   end
-
-  desc "Upload the built bundle to Internal App Sharing and expose the masked download URL as the step output `url`"
-  lane :share do
-    log = FastlaneCore::UI.ui_object.log
-    level = log.level
-    log.level = Logger::ERROR
-    url = begin
-      upload_to_play_store_internal_app_sharing(package_name: APP_ID, json_key_data: ENV.fetch("SERVICE_ACCOUNT_JSON"), aab: AAB_PATH)
-    ensure
-      log.level = level
-    end
-    UI.user_error!("Internal App Sharing did not return a download URL") if url.to_s.empty?
-    $stdout.write("::add-mask::#{url}\n")
-    append_github("GITHUB_OUTPUT", "url", url)
-  end
 end
