@@ -34,8 +34,8 @@ import com.klaviyo.location.GeofencingProvider
 import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
-import java.io.IOException
 import java.io.Serializable
+import java.net.SocketException
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -667,7 +667,7 @@ class KlaviyoReactNativeSdkModule(
       // connectivity-driven retry classifier recognizes them; other failures
       // use a generic Throwable, which the SDK treats as non-retryable.
       if (isConnectivityError) {
-        callback.onFailure(IOException(error))
+        callback.onFailure(SocketException(error))
       } else {
         callback.onFailure(Throwable(error))
       }
