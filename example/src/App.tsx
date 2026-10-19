@@ -1,6 +1,6 @@
 // React / React Native
 import { useEffect, useState } from 'react';
-import { SectionList, SafeAreaView, Linking } from 'react-native';
+import { SectionList, SafeAreaView, Linking, Platform } from 'react-native';
 
 // Klaviyo SDK
 import { Klaviyo } from 'klaviyo-react-native-sdk';
@@ -10,6 +10,9 @@ import { styles } from './Styles';
 import { SectionHeader } from './components/SectionHeader';
 import { AppHeader } from './components/AppHeader';
 import { CompanyIdModal } from './components/CompanyIdModal';
+import { SdkInfoModal } from './components/SdkInfoModal';
+import { buildSdkInfoEntries, buildCopyText } from './sdkInfo';
+import type { SdkInfoEntry, SdkInfoEnv } from './sdkInfo';
 import { useCompanyId } from './hooks/useCompanyId';
 
 // Section components — each section owns the hook(s) it consumes, so state
@@ -27,7 +30,20 @@ import { SubscriptionSection } from './sections/SubscriptionSection';
 // This example uses `react-native-dotenv` to inline `KLAVIYO_API_KEY` from
 // example/.env at build time; see example/babel.config.js for the plugin setup.
 // Integrators are free to source the key any way they like.
-import { KLAVIYO_API_KEY } from '@env';
+import {
+  KLAVIYO_API_KEY,
+  KLAVIYO_SDK_REF_RN,
+  KLAVIYO_SDK_REF_ANDROID,
+  KLAVIYO_SDK_REF_IOS,
+  KLAVIYO_SDK_VERSION_RN,
+  KLAVIYO_SDK_VERSION_ANDROID,
+  KLAVIYO_SDK_VERSION_IOS,
+  KLAVIYO_BUILD_APP_VERSION,
+  KLAVIYO_BUILD_NUMBER,
+  KLAVIYO_BUILD_COMMIT,
+  KLAVIYO_BUILD_BRANCH,
+  KLAVIYO_BUILD_BUILT,
+} from '@env';
 
 // Fail fast if the key is missing or still set to the placeholder — the
 // example app is useless without one, and a clear module-load error beats
@@ -44,6 +60,33 @@ if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
 // If you'd rather initialize from native code, see the
 // commented references in the iOS AppDelegate and Android MainApplication
 Klaviyo.initialize(API_KEY);
+
+// Build-info rows and copy text for the (i) modal. The env vars are written
+// by example/scripts/sdk-ref.js; undefined until it has run. Kept at the
+// App level so a tabbed split of the sections leaves the header unchanged.
+const SDK_INFO_PLATFORM = Platform.OS === 'android' ? 'android' : 'ios';
+const SDK_INFO_ENV: SdkInfoEnv = {
+  KLAVIYO_SDK_REF_RN,
+  KLAVIYO_SDK_REF_ANDROID,
+  KLAVIYO_SDK_REF_IOS,
+  KLAVIYO_SDK_VERSION_RN,
+  KLAVIYO_SDK_VERSION_ANDROID,
+  KLAVIYO_SDK_VERSION_IOS,
+  KLAVIYO_BUILD_APP_VERSION,
+  KLAVIYO_BUILD_NUMBER,
+  KLAVIYO_BUILD_COMMIT,
+  KLAVIYO_BUILD_BRANCH,
+  KLAVIYO_BUILD_BUILT,
+};
+const SDK_INFO_ENTRIES: SdkInfoEntry[] = buildSdkInfoEntries(
+  SDK_INFO_ENV,
+  SDK_INFO_PLATFORM
+);
+const SDK_INFO_COPY_TEXT = buildCopyText(
+  SDK_INFO_ENV,
+  SDK_INFO_PLATFORM,
+  'RN Example'
+);
 
 type SectionKey =
   | 'analytics'
@@ -89,6 +132,7 @@ export default function App() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
     useCompanyId();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [sdkInfoVisible, setSdkInfoVisible] = useState(false);
 
   useEffect(() => {
     // Deep linking handler
@@ -118,7 +162,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
+      <AppHeader
+        onSettingsPress={() => setSettingsVisible(true)}
+        onInfoPress={() => setSdkInfoVisible(true)}
+      />
       <SectionList
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -143,6 +190,12 @@ export default function App() {
           setSettingsVisible(false);
         }}
         onClose={() => setSettingsVisible(false)}
+      />
+      <SdkInfoModal
+        visible={sdkInfoVisible}
+        entries={SDK_INFO_ENTRIES}
+        copyText={SDK_INFO_COPY_TEXT}
+        onClose={() => setSdkInfoVisible(false)}
       />
     </SafeAreaView>
   );
