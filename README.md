@@ -82,13 +82,15 @@ This SDK was developed and tested against React Native 0.86, as a new-architectu
 
 ### React Native
 
-We support all maintained [React Native versions](https://reactnative.dev/versions), 0.70+.
-We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
+We support React Native **0.76+**.
+
+On iOS, React Native 0.76 to 0.82 do not build on the latest Xcode due to a React Native issue. Use an older Xcode or
+React Native 0.83+.
 
 ### Android
 
 - `minSdkVersion` of `23+`
-- `compileSdkVersion` of `34+`
+- `compileSdkVersion` of `35+`
 
 ### iOS
 
@@ -119,18 +121,7 @@ Android installation requirements may vary depending upon your project configura
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
-#### React Native 0.74+
-
-There are no additional installation requirements. Android support is fully tested and verified.
-
-#### React Native 0.68.x - 0.72.x
-
-We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
-with the following modifications to the `android/build.gradle` file:
-
-- Set `minSdkVersion=23`
-- Set `compileSdkVersion=34`
-
+There are no additional installation requirements on React Native 0.76+.
 See [Android Troubleshooting](Troubleshooting.md#android-troubleshooting) for possible exceptions.
 
 ### iOS
