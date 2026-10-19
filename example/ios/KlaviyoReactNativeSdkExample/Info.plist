@@ -73,6 +73,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>klaviyo_app_group</key>
 	<string>org.reactjs.native.example.KlaviyoReactNativeSdkExample.shared</string>
 </dict>
