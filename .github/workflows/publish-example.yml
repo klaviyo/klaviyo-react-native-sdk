@@ -522,10 +522,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     if: |
-      github.event_name == 'release'
-      || github.event_name == 'push'
-      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      needs.deploy-ios.result == 'success' && (
+        github.event_name == 'release'
+        || github.event_name == 'push'
+        || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      )
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
