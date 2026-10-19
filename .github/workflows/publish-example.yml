@@ -507,7 +507,7 @@ jobs:
           sdks: ${{ steps.release_notes.outputs.sdks }}
           install_url: ${{ steps.result.outputs.testflight_url }}
           install_label: Open the example app in TestFlight
-          access_note: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload. Not a tester yet? Ask in #mobile-push-team to be added to the internal TestFlight group with your Apple ID email.
+          access_note: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload.
 
       - name: Notify Slack on failure
         if: failure()
