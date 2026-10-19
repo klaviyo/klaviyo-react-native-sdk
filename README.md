@@ -80,7 +80,7 @@ This SDK was developed and tested against React Native 0.86, as a new-architectu
 
 ### React Native
 
-We support React Native **0.76+**. We have tested this SDK in bare React Native template apps from 0.76 through 0.87.
+We support React Native **0.76+**.
 
 On iOS, React Native 0.76 to 0.82 do not build on the latest Xcode due to a React Native issue. Use an older Xcode or
 React Native 0.83+.
@@ -88,7 +88,7 @@ React Native 0.83+.
 ### Android
 
 - `minSdkVersion` of `23+`
-- `compileSdkVersion` of `34+`
+- `compileSdkVersion` of `35+`
 
 ### iOS
 
