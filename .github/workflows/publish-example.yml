@@ -53,6 +53,11 @@ on:
     types: [published]
   push:
     branches: [master, 'rel/**']
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.coderabbit.yaml'
   pull_request:
     types: [labeled]
 
