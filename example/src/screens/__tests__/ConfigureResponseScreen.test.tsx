@@ -31,7 +31,9 @@ jest.mock('react', () => ({
   },
 }));
 
-jest.mock('klaviyo-react-native-sdk', () => ({ Klaviyo: {} }));
+jest.mock('klaviyo-react-native-sdk', () => ({ Klaviyo: {} }), {
+  virtual: true,
+});
 jest.mock('../../hooks/useNowMs', () => ({ useNowMs: () => 0 }));
 jest.mock('../../hooks/useAuth', () => ({
   ...jest.requireActual('../../hooks/useAuth'),
