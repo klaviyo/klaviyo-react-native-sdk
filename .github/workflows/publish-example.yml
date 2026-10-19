@@ -22,7 +22,7 @@
 # App version: X.Y.Z from the SDK version on a release, X.Y.Z-rc.<build> on
 # rel/*, X.Y.Z-alpha.<build> otherwise. Android versionName carries the full
 # string; iOS CFBundleShortVersionString stays X.Y.Z and the full string goes
-# in the KlaviyoBuildInfo Info.plist key.
+# in the KlaviyoAppVersion Info.plist key.
 #
 # Deploys run only after the `checks` job (ci.yml: lint, unit tests, library
 # build) passes in the same run, on every trigger including the PR-label one.

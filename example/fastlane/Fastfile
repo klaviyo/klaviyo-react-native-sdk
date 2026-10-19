@@ -15,6 +15,7 @@ SCRIPTS = File.join(ROOT, ".github/scripts")
 XCODEPROJ = "ios/KlaviyoReactNativeSdkExample.xcodeproj"
 INFO_PLIST = File.join(EXAMPLE, "ios/KlaviyoReactNativeSdkExample/Info.plist")
 BUILD_INFO_KEY = "KlaviyoBuildInfo"
+APP_VERSION_KEY = "KlaviyoAppVersion"
 IPA_PATH = File.join(EXAMPLE, "ios/build/KlaviyoReactNativeSdkExample.ipa")
 AAB_PATH = File.join(EXAMPLE, "android/app/build/outputs/bundle/release/app-release.aab")
 PLAY_TRACK = "internal"
@@ -269,6 +270,7 @@ platform :ios do
       increment_version_number(version_number: marketing_version, xcodeproj: XCODEPROJ)
       increment_build_number(build_number: build_number, xcodeproj: XCODEPROJ)
       stamp_build_info(build_number, full_version)
+      set_info_plist_value(path: INFO_PLIST, key: APP_VERSION_KEY, value: full_version)
       set_info_plist_value(path: INFO_PLIST, key: BUILD_INFO_KEY, value: build_info_line)
       release_ipa
       assert_artifact("ios", IPA_PATH, build_number, marketing_version, full_version)

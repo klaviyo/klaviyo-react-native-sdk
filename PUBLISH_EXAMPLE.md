@@ -102,8 +102,9 @@ Both platforms are deployed by lanes in `example/fastlane/Fastfile`
   `<build>` is the Play versionCode or TestFlight build number. Android
   `versionName`, the notes and Slack carry the full string. iOS
   `CFBundleShortVersionString` is plain `X.Y.Z` (Apple allows only integers);
-  the full string, commit, branch and SDK versions are in the `KlaviyoBuildInfo`
-  Info.plist key and the in-app build info. A package version that does not
+  the full string is in the `KlaviyoAppVersion` Info.plist key, and the full
+  string, commit, branch and SDK versions are in the `KlaviyoBuildInfo` key and
+  the in-app build info. A package version that does not
   reduce to `X.Y.Z`, or a missing `EVENT_NAME`, fails the deploy.
 
 ## Build info and release notes

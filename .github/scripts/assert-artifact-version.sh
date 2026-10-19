@@ -9,7 +9,7 @@
 # iOS: reads CFBundleVersion / CFBundleShortVersionString from
 # Payload/*.app/Info.plist inside the IPA. Uses /usr/libexec/PlistBuddy on
 # macOS and falls back to python3 plistlib elsewhere. With a full version, the
-# KlaviyoBuildInfo key must start with it.
+# KlaviyoAppVersion key must equal it.
 #
 # Android: reads versionCode / versionName from the AAB's manifest with
 # aapt2 (from $ANDROID_HOME build-tools or PATH). AAB manifests are protobuf,
@@ -72,11 +72,9 @@ case "$platform" in
     actual_code=$(read_plist_value "$plist" CFBundleVersion) || fail "CFBundleVersion missing in $plist"
     actual_name=$(read_plist_value "$plist" CFBundleShortVersionString) || fail "CFBundleShortVersionString missing in $plist"
     if [ -n "$expected_full" ]; then
-      build_info=$(read_plist_value "$plist" KlaviyoBuildInfo) || fail "KlaviyoBuildInfo missing in $plist"
-      case "$build_info" in
-        "$expected_full "*) ;;
-        *) fail "$platform artifact $artifact has KlaviyoBuildInfo '$build_info', expected it to start with '$expected_full' — refusing to upload" ;;
-      esac
+      actual_full=$(read_plist_value "$plist" KlaviyoAppVersion) || fail "KlaviyoAppVersion missing in $plist"
+      [ "$actual_full" = "$expected_full" ] \
+        || fail "$platform artifact $artifact has KlaviyoAppVersion '$actual_full', expected '$expected_full' — refusing to upload"
     fi
     ;;
   android)
