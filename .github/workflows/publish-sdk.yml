@@ -1,8 +1,7 @@
 name: Publish SDK to NPM
 
+# Called only by publish-release.yml, which the npm trusted publisher names.
 on:
-  release:
-    types: [published]
   workflow_call:
     inputs:
       version:
@@ -29,12 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref || inputs.version || '' }}
+          ref: ${{ inputs.ref || inputs.version }}
 
       - name: Release preflight
         uses: ./.github/actions/release-preflight
         with:
-          version: ${{ inputs.version || github.event.release.tag_name }}
+          version: ${{ inputs.version }}
           github-token: ${{ github.token }}
 
       - name: Notify Slack on failure
@@ -45,7 +44,7 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: npm
-          full_version: ${{ inputs.version || github.event.release.tag_name }}
+          full_version: ${{ inputs.version }}
           steps_json: ${{ toJSON(steps) }}
 
   publish-sdk:
@@ -60,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref || inputs.version || '' }}
+          ref: ${{ inputs.ref || inputs.version }}
 
       - name: Read package version
         id: pkg
@@ -145,5 +144,5 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: npm
-          full_version: ${{ steps.pkg.outputs.version || inputs.version || github.event.release.tag_name }}
+          full_version: ${{ steps.pkg.outputs.version || inputs.version }}
           steps_json: ${{ toJSON(steps) }}

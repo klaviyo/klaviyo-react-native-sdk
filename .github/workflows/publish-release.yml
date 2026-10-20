@@ -1,6 +1,12 @@
 name: Publish Release
 
+# Entry point for every npm publish: the npm trusted publisher is registered
+# for this file. Runs on a release published in the GitHub UI (publishes npm
+# only; the release and tag already exist) or on dispatch (creates the draft,
+# publishes npm, then publishes the release and dispatches publish-example).
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -19,6 +25,9 @@ concurrency:
 
 permissions: {}
 
+env:
+  VERSION: ${{ inputs.version || github.event.release.tag_name }}
+
 jobs:
   prepare:
     runs-on: ubuntu-24.04
@@ -32,11 +41,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref || github.event.repository.default_branch }}
+          ref: ${{ inputs.ref || github.event.release.tag_name || github.event.repository.default_branch }}
 
       - name: Fail if tag already exists
-        env:
-          VERSION: ${{ inputs.version }}
+        if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
           if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
@@ -48,17 +56,22 @@ jobs:
         id: preflight
         uses: ./.github/actions/release-preflight
         with:
-          version: ${{ inputs.version }}
+          version: ${{ env.VERSION }}
           github-token: ${{ github.token }}
 
       - name: Create or reuse draft release
         id: draft
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
           SHA: ${{ steps.preflight.outputs.sha }}
+          EVENT_RELEASE_URL: ${{ github.event.release.html_url }}
         run: |
           set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            echo "release_url=$EVENT_RELEASE_URL" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           RELEASE_JSON=$(gh release view "$VERSION" --json isDraft,url 2>/dev/null || echo "")
 
@@ -83,7 +96,6 @@ jobs:
 
       - name: Write summary
         env:
-          VERSION: ${{ inputs.version }}
           SHA: ${{ steps.preflight.outputs.sha }}
           RELEASE_URL: ${{ steps.draft.outputs.release_url }}
         run: |
@@ -92,7 +104,7 @@ jobs:
             echo ""
             echo "- **Version:** \`$VERSION\`"
             echo "- **SHA:** \`$SHA\`"
-            echo "- **Draft release:** $RELEASE_URL"
+            echo "- **Release:** $RELEASE_URL"
             echo ""
             echo "Approve the \`npm\` environment on this run to publish."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -104,7 +116,7 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: pending
           platform: release
-          full_version: ${{ inputs.version }}
+          full_version: ${{ env.VERSION }}
 
       - name: Notify Slack on failure
         if: failure()
@@ -114,14 +126,14 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: release
-          full_version: ${{ inputs.version }}
+          full_version: ${{ env.VERSION }}
           steps_json: ${{ toJSON(steps) }}
 
   publish-sdk:
     needs: prepare
     uses: ./.github/workflows/publish-sdk.yml
     with:
-      version: ${{ inputs.version }}
+      version: ${{ inputs.version || github.event.release.tag_name }}
       release_url: ${{ needs.prepare.outputs.release_url }}
       ref: ${{ needs.prepare.outputs.sha }}
     secrets: inherit
@@ -134,6 +146,7 @@ jobs:
 
   finalize:
     needs: [prepare, publish-sdk]
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -142,7 +155,6 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
           SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           set -euo pipefail
@@ -155,7 +167,6 @@ jobs:
       - name: Dispatch publish-example
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           PLATFORM=both
@@ -163,14 +174,12 @@ jobs:
 
       - name: Write summary
         env:
-          VERSION: ${{ inputs.version }}
           RELEASE_URL: ${{ needs.prepare.outputs.release_url }}
         run: |
           {
             echo "## Published: $VERSION"
             echo ""
             echo "- **Release:** $RELEASE_URL"
-            echo "- **SDK publish:** [publish-sdk.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-sdk.yml)"
             echo "- **Example publish:** [publish-example.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-example.yml)"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -182,5 +191,5 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
           platform: release
-          full_version: ${{ inputs.version }}
+          full_version: ${{ env.VERSION }}
           steps_json: ${{ toJSON(steps) }}

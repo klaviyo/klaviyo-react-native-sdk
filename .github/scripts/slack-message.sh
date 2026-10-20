@@ -27,7 +27,7 @@ fi
 
 if [ "${PLATFORM:-}" = "release" ]; then
   if [ "${RESULT:-}" = "pending" ]; then
-    text="⏳ RN SDK ${FULL_VERSION:-?}: draft release ready, approve the npm deploy on the run to publish
+    text="⏳ RN SDK ${FULL_VERSION:-?}: awaiting approval, approve the npm deploy on the run to publish
 ${footer}"
   else
     failed=$(printf '%s' "${STEPS_JSON:-}" | jq -r '[to_entries[] | select(.value.conclusion == "failure")][0].key // "unknown step"' 2>/dev/null || echo "unknown step")
