@@ -2,7 +2,7 @@
 # Prints the Slack incoming-webhook JSON payload for an example-app, npm or
 # GitHub-release publish result.
 #
-# Env: RESULT (success|failure|warning|pending), PLATFORM (iOS|Android|npm|release), STORE, FULL_VERSION, BUILD,
+# Env: RESULT (success|failure|warning|pending|stopped), REASON, PLATFORM (iOS|Android|npm|release), STORE, FULL_VERSION, BUILD,
 # SDKS (one-line SDK summary), EVENT_NAME, RELEASE_TAG, HEAD_REF, REF_NAME,
 # COMMIT_SHA, REPO, RUN_URL, INSTALL_URL, INSTALL_LABEL, INSTALL_FALLBACK,
 # ACCESS_NOTE, STEPS_JSON (toJSON(steps), failure only).
@@ -28,6 +28,9 @@ fi
 if [ "${PLATFORM:-}" = "release" ]; then
   if [ "${RESULT:-}" = "pending" ]; then
     text="⏳ RN SDK ${FULL_VERSION:-?}: awaiting approval, approve the npm deploy on the run to publish
+${footer}"
+  elif [ "${RESULT:-}" = "stopped" ]; then
+    text="⚠️ RN SDK ${FULL_VERSION:-?} release stopped: ${REASON:-cancelled}. Nothing more will publish from this run
 ${footer}"
   else
     failed=$(printf '%s' "${STEPS_JSON:-}" | jq -r '[to_entries[] | select(.value.conclusion == "failure")][0].key // "unknown step"' 2>/dev/null || echo "unknown step")

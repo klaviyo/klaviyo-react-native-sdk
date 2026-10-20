@@ -1,6 +1,7 @@
 name: Publish SDK to NPM
 
-# Called only by publish-release.yml, which the npm trusted publisher names.
+# Called only by publish-release.yml, which runs the release preflight and is
+# the workflow the npm trusted publisher names.
 on:
   workflow_call:
     inputs:
@@ -19,36 +20,7 @@ on:
         type: string
 
 jobs:
-  preflight:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.ref || inputs.version }}
-
-      - name: Release preflight
-        uses: ./.github/actions/release-preflight
-        with:
-          version: ${{ inputs.version }}
-          github-token: ${{ github.token }}
-
-      - name: Notify Slack on failure
-        if: failure()
-        continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: npm
-          full_version: ${{ inputs.version }}
-          steps_json: ${{ toJSON(steps) }}
-
   publish-sdk:
-    needs: preflight
     runs-on: ubuntu-24.04
     environment: npm
     permissions:

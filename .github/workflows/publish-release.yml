@@ -141,8 +141,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-      actions: read
-      pull-requests: read
 
   finalize:
     needs: [prepare, publish-sdk]
@@ -193,3 +191,46 @@ jobs:
           platform: release
           full_version: ${{ env.VERSION }}
           steps_json: ${{ toJSON(steps) }}
+
+  # Rejected deployments and cancelled runs skip every failure() Slack step.
+  stopped:
+    needs: [prepare, publish-sdk, finalize]
+    if: always() && (contains(needs.*.result, 'cancelled') || needs.publish-sdk.result == 'failure')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Classify stop
+        id: reason
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANCELLED: ${{ contains(needs.*.result, 'cancelled') }}
+        run: |
+          set -euo pipefail
+          if [ "$CANCELLED" = "true" ]; then
+            echo "reason=cancelled" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A rejected deployment fails the npm job before any step runs.
+          ran=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" \
+            --jq '[.jobs[] | select(.name | endswith("/ publish-sdk")) | .steps | length] | add // 0')
+          if [ "$ran" = "0" ]; then
+            echo "reason=npm deploy rejected" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.reason.outputs.reason != ''
+        with:
+          sparse-checkout: .github
+
+      - name: Notify Slack — stopped
+        if: steps.reason.outputs.reason != ''
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: stopped
+          platform: release
+          full_version: ${{ env.VERSION }}
+          reason: ${{ steps.reason.outputs.reason }}

@@ -5,7 +5,7 @@ inputs:
     description: Slack incoming webhook URL
     required: true
   result:
-    description: "'success', 'failure', 'warning' (uploaded, but What to Test failed) or 'pending' (release only: awaiting approval)"
+    description: "'success', 'failure', 'warning' (uploaded, but What to Test failed) or 'pending' / 'stopped' (release only: awaiting approval / rejected or cancelled)"
     required: true
   platform:
     description: "'iOS', 'Android', 'npm' or 'release' (dispatch release workflow)"
@@ -22,6 +22,10 @@ inputs:
     description: "'true' when the npm version was already live and nothing was published"
     required: false
     default: 
+  reason:
+    description: Why a release stopped (result 'stopped' only)
+    required: false
+    default: ''
   full_version:
     description: Full derived app version, suffix included (e.g. 2.6.0-rc.7)
     required: false
@@ -83,6 +87,7 @@ runs:
         ACCESS_NOTE: ${{ inputs.access_note }}
         DIST_TAG: ${{ inputs.dist_tag }}
         ALREADY_PUBLISHED: ${{ inputs.already_published }}
+        REASON: ${{ inputs.reason }}
       run: |
         "${{ github.workspace }}/.github/scripts/slack-message.sh" > "${RUNNER_TEMP}/slack-payload.json"
         echo "payload_file=${RUNNER_TEMP}/slack-payload.json" >> "$GITHUB_OUTPUT"
