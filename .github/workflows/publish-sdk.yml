@@ -39,6 +39,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v5
@@ -65,46 +66,40 @@ jobs:
       - name: Prepare
         run: yarn prepare
 
-      # npm stage publish packs and stages without a 2FA prompt; a
-      # maintainer promotes the staged version later with
-      # `npm stage approve <stage-id>` (2FA required).
-      - name: Update npm for staged publishing
-        run: npm install -g npm@latest
+      # Trusted publishing (OIDC): npm exchanges this job's OIDC token for
+      # a short-lived credential, so there is no NPM_TOKEN secret to rotate.
+      # Requires npm >= 11.15 and a trust relationship on npmjs.com allowing
+      # `npm publish` from this workflow; provenance attestation is included.
+      - name: Update npm for trusted publishing
+        run: npm install -g "npm@^11.15.0"
 
-      - name: Stage on npm
+      - name: Publish to npm
         id: publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-          if npm stage publish --tag "${{ steps.pkg.outputs.dist_tag }}" --json > stage-result.json; then
-            echo "stage_id=$(jq -r '.[0].stageId // empty' stage-result.json)" >> "$GITHUB_OUTPUT"
+          if npm publish --tag "${{ steps.pkg.outputs.dist_tag }}"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(npm view "klaviyo-react-native-sdk@${{ steps.pkg.outputs.version }}" version --fetch-timeout=10000 --fetch-retries=0 2>/dev/null)" = "${{ steps.pkg.outputs.version }}" ]; then
+            echo "::warning::klaviyo-react-native-sdk@${{ steps.pkg.outputs.version }} is already on npm, nothing to do"
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
           else
-            if npm stage list klaviyo-react-native-sdk --json 2>/dev/null | jq -e --arg v "${{ steps.pkg.outputs.version }}" 'any(.[]; .version == $v)' > /dev/null; then
-              echo "::warning::klaviyo-react-native-sdk@${{ steps.pkg.outputs.version }} is already staged on npm, nothing to do"
-              echo "already_staged=true" >> "$GITHUB_OUTPUT"
-            else
-              cat stage-result.json
-              exit 1
-            fi
+            exit 1
           fi
 
-      - name: Verify staged version
-        timeout-minutes: 5
+      - name: Verify version on npm
+        timeout-minutes: 10
         env:
           VERSION: ${{ steps.pkg.outputs.version }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-          for attempt in $(seq 1 10); do
-            if npm stage list klaviyo-react-native-sdk --json 2>/dev/null | jq -e --arg v "$VERSION" 'any(.[]; .version == $v)' > /dev/null; then
-              echo "klaviyo-react-native-sdk@${VERSION} is staged on npm"
+          for attempt in $(seq 1 20); do
+            published="$(npm view "klaviyo-react-native-sdk@${VERSION}" version --fetch-timeout=10000 --fetch-retries=0 2>/dev/null || true)"
+            if [ "$published" = "$VERSION" ]; then
+              echo "klaviyo-react-native-sdk@${VERSION} is live on npm"
               exit 0
             fi
-            echo "Attempt ${attempt}/10: ${VERSION} not staged yet, retrying in 15s"
+            echo "Attempt ${attempt}/20: ${VERSION} not visible on npm yet, retrying in 15s"
             sleep 15
           done
-          echo "::error::klaviyo-react-native-sdk@${VERSION} did not appear as staged on npm"
+          echo "::error::klaviyo-react-native-sdk@${VERSION} did not appear on npm after 5 minutes"
           exit 1
 
       - name: Notify Slack on success
@@ -116,8 +111,7 @@ jobs:
           result: success
           title: RN SDK
           platform: npm
-          headline: "${{ steps.publish.outputs.already_staged == 'true' && format('✅ RN SDK: npm {0} already staged, nothing to do', steps.pkg.outputs.version) || format('📦 RN SDK: npm {0} staged — maintainer approval required (2FA)', steps.pkg.outputs.version) }}"
-          version_label: "${{ format('{0} (npm dist-tag {1})', steps.pkg.outputs.version, steps.pkg.outputs.dist_tag) }}${{ steps.publish.outputs.stage_id != '' && format(' — stage id `{0}`', steps.publish.outputs.stage_id) || '' }}"
+          version_label: ${{ steps.publish.outputs.already_published == 'true' && format('{0} (already on npm, nothing published)', steps.pkg.outputs.version) || format('{0} (npm dist-tag {1})', steps.pkg.outputs.version, steps.pkg.outputs.dist_tag) }}
           release_url: ${{ github.event.release.html_url }}
 
       - name: Notify Slack on failure
