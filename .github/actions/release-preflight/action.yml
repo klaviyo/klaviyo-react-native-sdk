@@ -1,0 +1,75 @@
+name: Release preflight
+description: Fails unless the version is X.Y.Z or X.Y.Z-<prerelease>, matches package.json at the checked-out commit, and the pull_request CI runs for that commit are green.
+inputs:
+  version:
+    description: Release version (X.Y.Z or X.Y.Z-<prerelease>)
+    required: true
+  github-token:
+    description: Token with actions:read and pull-requests:read
+    required: true
+  required-workflows:
+    description: Comma-separated workflow names that must have a green pull_request run for the commit
+    required: false
+    default: CI,Android CI,iOS CI
+outputs:
+  sha:
+    description: The checked-out commit SHA
+    value: ${{ steps.version.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check version
+      id: version
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::Version '$VERSION' does not match X.Y.Z or X.Y.Z-<prerelease>"
+          exit 1
+        fi
+        PKG_VERSION=$(node -p "require('./package.json').version")
+        if [ "$PKG_VERSION" != "$VERSION" ]; then
+          echo "::error::package.json version is '$PKG_VERSION', expected '$VERSION'"
+          exit 1
+        fi
+        echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    # Checks pull_request CI on the head commit of the PR that merged SHA (falls back to SHA).
+    - name: Check CI status
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        SHA: ${{ steps.version.outputs.sha }}
+        REQUIRED: ${{ inputs.required-workflows }}
+      run: |
+        set -euo pipefail
+        CI_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
+          --jq "[.[] | select(.merge_commit_sha == \"$SHA\")][0].head.sha // empty")
+        CI_SHA=${CI_SHA:-$SHA}
+        echo "Checking pull_request workflow runs on $CI_SHA"
+
+        RUNS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$CI_SHA&event=pull_request" \
+          --jq '.workflow_runs[] | {name, run_number, status, conclusion}' \
+          | jq -s 'group_by(.name) | map(max_by(.run_number))')
+
+        BAD=$(echo "$RUNS" | jq -r --arg required "$REQUIRED" '
+          ($required | split(",") | map(gsub("^\\s+|\\s+$"; ""))) as $names
+          | . as $runs
+          | $names[]
+          | . as $name
+          | ([$runs[] | select(.name == $name)] | first) as $run
+          | if $run == null then "  - \($name): no run found"
+            elif $run.status != "completed"
+              or ($run.conclusion != "success" and $run.conclusion != "skipped" and $run.conclusion != "neutral")
+            then "  - \($name): \($run.status)/\($run.conclusion // "pending")"
+            else empty end')
+
+        if [ -n "$BAD" ]; then
+          echo "::error::Some CI runs are not green:"
+          echo "$BAD"
+          exit 1
+        fi
+        echo "All CI runs green for $CI_SHA"

@@ -38,10 +38,12 @@ end
 def derived_version(base, build_number)
   event = ENV["EVENT_NAME"].to_s
   UI.user_error!("EVENT_NAME is not set, cannot derive the app version") if event.empty?
-  if event == "release"
-    tag = ENV["RELEASE_TAG"].to_s.sub(/\Av/, "")
+  tag_dispatch = event == "workflow_dispatch" && ENV["REF_TYPE"] == "tag"
+  if event == "release" || tag_dispatch
+    raw_tag = (tag_dispatch ? ENV["REF_NAME"] : ENV["RELEASE_TAG"]).to_s
+    tag = raw_tag.sub(/\Av/, "")
     tag_base, _, suffix = tag.partition("-")
-    UI.user_error!("release tag '#{ENV['RELEASE_TAG']}' does not match SDK version #{base}") unless tag_base == base
+    UI.user_error!("release tag '#{raw_tag}' does not match SDK version #{base}") unless tag_base == base
     return suffix.empty? ? base : "#{base}-#{suffix}"
   end
 
