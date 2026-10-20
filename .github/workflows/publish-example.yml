@@ -83,6 +83,7 @@ env:
   BRANCH: ${{ github.head_ref || github.ref_name }}
   HEAD_REF: ${{ github.head_ref }}
   REF_NAME: ${{ github.ref_name }}
+  REF_TYPE: ${{ github.ref_type }}
 
 jobs:
   # Only run for triggers that can deploy: any other PR label must not start
@@ -252,6 +253,7 @@ jobs:
           SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           CI: true
         run: fastlane android release
