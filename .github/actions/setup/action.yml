@@ -5,24 +5,20 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
+      id: node
       uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version-file: .nvmrc
 
     - name: Cache dependencies
-      id: yarn-cache
       uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       if: github.run_attempt == 1
       with:
         path: |
           **/node_modules
           .yarn/install-state.gz
-        key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-${{ hashFiles('**/package.json', '!node_modules/**') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
-          ${{ runner.os }}-yarn-
+        key: ${{ runner.os }}-yarn-node${{ steps.node.outputs.node-version }}-${{ hashFiles('yarn.lock') }}-${{ hashFiles('**/package.json', '!node_modules/**') }}
 
     - name: Install dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: yarn install --immutable
       shell: bash
