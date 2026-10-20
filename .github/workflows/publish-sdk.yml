@@ -44,10 +44,9 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          title: RN SDK
-          platform: npm (preflight)
-          version_label: ${{ inputs.version || github.event.release.tag_name }}
-          release_url: ${{ inputs.release_url || github.event.release.html_url }}
+          platform: npm
+          full_version: ${{ inputs.version || github.event.release.tag_name }}
+          steps_json: ${{ toJSON(steps) }}
 
   publish-sdk:
     needs: preflight
@@ -128,10 +127,10 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: success
-          title: RN SDK
           platform: npm
-          version_label: ${{ steps.publish.outputs.already_published == 'true' && format('{0} (already on npm, nothing published)', steps.pkg.outputs.version) || format('{0} (npm dist-tag {1})', steps.pkg.outputs.version, steps.pkg.outputs.dist_tag) }}
-          release_url: ${{ inputs.release_url || github.event.release.html_url }}
+          full_version: ${{ steps.pkg.outputs.version }}
+          dist_tag: ${{ steps.pkg.outputs.dist_tag }}
+          already_published: ${{ steps.publish.outputs.already_published }}
 
       - name: Notify Slack on failure
         if: failure()
@@ -140,7 +139,6 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          title: RN SDK
           platform: npm
-          version_label: ${{ steps.pkg.outputs.version || inputs.version || github.event.release.tag_name }}
-          release_url: ${{ inputs.release_url || github.event.release.html_url }}
+          full_version: ${{ steps.pkg.outputs.version || inputs.version || github.event.release.tag_name }}
+          steps_json: ${{ toJSON(steps) }}
