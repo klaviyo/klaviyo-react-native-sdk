@@ -18,6 +18,11 @@ on:
         required: false
         default: ''
         type: string
+      dry_run:
+        description: 'Run npm publish --dry-run and skip the npm check and success alert'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish-sdk:
@@ -67,8 +72,13 @@ jobs:
       - name: Update npm for trusted publishing
         run: npm install -g "npm@^11.15.0"
 
+      - name: Publish to npm (dry run)
+        if: inputs.dry_run
+        run: npm publish --dry-run --tag "${{ steps.pkg.outputs.dist_tag }}"
+
       - name: Publish to npm
         id: publish
+        if: ${{ !inputs.dry_run }}
         run: |
           if npm publish --tag "${{ steps.pkg.outputs.dist_tag }}"; then
             echo "published=true" >> "$GITHUB_OUTPUT"
@@ -80,6 +90,7 @@ jobs:
           fi
 
       - name: Verify version on npm
+        if: ${{ !inputs.dry_run }}
         timeout-minutes: 10
         env:
           VERSION: ${{ steps.pkg.outputs.version }}
@@ -97,7 +108,7 @@ jobs:
           exit 1
 
       - name: Notify Slack on success
-        if: success()
+        if: success() && !inputs.dry_run
         continue-on-error: true
         uses: ./.github/actions/notify-slack-publish
         with:

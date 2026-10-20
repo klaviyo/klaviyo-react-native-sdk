@@ -18,6 +18,11 @@ on:
         required: false
         default: ''
         type: string
+      dry_run:
+        description: 'Dry run: run checks, approval and npm publish --dry-run; create and publish nothing'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: publish-release
@@ -71,6 +76,7 @@ jobs:
 
       - name: Create or reuse draft release
         id: draft
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.preflight.outputs.sha }}
@@ -110,7 +116,7 @@ jobs:
           RELEASE_URL: ${{ steps.draft.outputs.release_url }}
         run: |
           {
-            echo "## Publish Release: $VERSION"
+            echo "## Publish Release: $VERSION${{ inputs.dry_run && ' (dry run)' || '' }}"
             echo ""
             echo "- **Version:** \`$VERSION\`"
             echo "- **SHA:** \`$SHA\`"
@@ -120,6 +126,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Slack — awaiting approval
+        if: ${{ !inputs.dry_run }}
         continue-on-error: true
         uses: ./.github/actions/notify-slack-publish
         with:
@@ -146,6 +153,7 @@ jobs:
       version: ${{ inputs.version || github.event.release.tag_name }}
       release_url: ${{ needs.prepare.outputs.release_url }}
       ref: ${{ needs.prepare.outputs.sha }}
+      dry_run: ${{ inputs.dry_run == true }}
     secrets: inherit
     permissions:
       contents: read
@@ -154,7 +162,7 @@ jobs:
 
   finalize:
     needs: [prepare, publish-sdk]
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
     runs-on: ubuntu-24.04
     permissions:
       contents: write
