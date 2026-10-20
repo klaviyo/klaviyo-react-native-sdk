@@ -27,7 +27,7 @@ fi
 
 if [ "${PLATFORM:-}" = "release" ]; then
   if [ "${RESULT:-}" = "pending" ]; then
-    text="⏳ RN SDK ${FULL_VERSION:-?}: awaiting approval, approve the npm deploy on the run to publish
+    text="⏳ RN SDK ${FULL_VERSION:-?}: awaiting approval, approve the npm deploy on the run to publish${REASON:+ (⚠️ ${REASON})}
 ${footer}"
   elif [ "${RESULT:-}" = "stopped" ]; then
     text="⚠️ RN SDK ${FULL_VERSION:-?} release stopped: ${REASON:-cancelled}. Nothing more will publish from this run

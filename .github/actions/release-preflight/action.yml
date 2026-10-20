@@ -11,6 +11,10 @@ inputs:
     description: Comma-separated workflow names that must have a green pull_request run for the commit
     required: false
     default: CI,Android CI,iOS CI
+  skip-ci-check:
+    description: "'true' skips the CI-green check; the version checks still run"
+    required: false
+    default: 'false'
 outputs:
   sha:
     description: The checked-out commit SHA
@@ -38,7 +42,13 @@ runs:
         echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     # Checks pull_request CI on the head commit of the PR that merged SHA (falls back to SHA).
+    - name: Skip CI status
+      if: inputs.skip-ci-check == 'true'
+      shell: bash
+      run: echo "::warning::CI check skipped by request; not verifying pull_request CI for this commit"
+
     - name: Check CI status
+      if: inputs.skip-ci-check != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}

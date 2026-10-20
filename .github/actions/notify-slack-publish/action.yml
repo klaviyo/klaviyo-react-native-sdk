@@ -23,7 +23,7 @@ inputs:
     required: false
     default: 
   reason:
-    description: Why a release stopped (result 'stopped' only)
+    description: Why a release stopped ('stopped'), or a caveat for the approver ('pending')
     required: false
     default: ''
   full_version:

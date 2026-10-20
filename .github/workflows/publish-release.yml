@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_ci_check:
+        description: 'Skip the CI-green check (version, branch and tag checks still run)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: publish-release
@@ -73,6 +78,7 @@ jobs:
         with:
           version: ${{ env.VERSION }}
           github-token: ${{ github.token }}
+          skip-ci-check: ${{ inputs.skip_ci_check == true }}
 
       - name: Create or reuse draft release
         id: draft
@@ -121,6 +127,9 @@ jobs:
             echo "- **Version:** \`$VERSION\`"
             echo "- **SHA:** \`$SHA\`"
             echo "- **Release:** $RELEASE_URL"
+            if [ "${{ inputs.skip_ci_check == true }}" = "true" ]; then
+              echo "- ⚠️ **CI check skipped:** pull_request CI for this commit was not verified"
+            fi
             echo ""
             echo "Approve the \`npm\` environment on this run to publish."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -134,6 +143,7 @@ jobs:
           result: pending
           platform: release
           full_version: ${{ env.VERSION }}
+          reason: ${{ inputs.skip_ci_check == true && 'CI check skipped' || '' }}
 
       - name: Notify Slack on failure
         if: failure()
