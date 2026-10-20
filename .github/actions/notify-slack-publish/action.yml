@@ -26,6 +26,10 @@ inputs:
     description: Optional GitHub release link to surface in the message
     required: false
     default: ''
+  headline:
+    description: Optional override for the generated headline text (icon stays as-is)
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -35,12 +39,12 @@ runs:
         webhook: ${{ inputs.webhook }}
         webhook-type: incoming-webhook
         payload: |
-          text: "${{ inputs.result == 'success' && '✅' || '🚨' }} ${{ inputs.title }}: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+          text: "${{ inputs.headline != '' && inputs.headline || format('{0} {1}: {2} {3}', inputs.result == 'success' && '✅' || '🚨', inputs.title, inputs.platform, inputs.result == 'success' && 'publish succeeded' || 'publish failed') }}"
           blocks:
             - type: "header"
               text:
                 type: "plain_text"
-                text: "${{ inputs.result == 'success' && '✅' || '🚨' }} ${{ inputs.title }}: ${{ inputs.platform }} ${{ inputs.result == 'success' && 'publish succeeded' || 'publish failed' }}"
+                text: "${{ inputs.headline != '' && inputs.headline || format('{0} {1}: {2} {3}', inputs.result == 'success' && '✅' || '🚨', inputs.title, inputs.platform, inputs.result == 'success' && 'publish succeeded' || 'publish failed') }}"
             - type: "section"
               text:
                 type: "mrkdwn"
