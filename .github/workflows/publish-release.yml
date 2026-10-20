@@ -150,6 +150,10 @@ jobs:
       contents: write
       actions: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
