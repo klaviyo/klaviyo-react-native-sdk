@@ -102,12 +102,9 @@ jobs:
         uses: ./.github/actions/notify-slack-publish
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          headline: "⏳ RN SDK ${{ inputs.version }}: draft ready, approve the npm deploy on this run to publish"
-          title: RN SDK
-          platform: GitHub release
-          version_label: ${{ inputs.version }}
-          release_url: ${{ steps.draft.outputs.release_url }}
+          result: pending
+          platform: release
+          full_version: ${{ inputs.version }}
 
       - name: Notify Slack on failure
         if: failure()
@@ -116,9 +113,9 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          title: RN SDK
-          platform: GitHub release
-          version_label: ${{ inputs.version }}
+          platform: release
+          full_version: ${{ inputs.version }}
+          steps_json: ${{ toJSON(steps) }}
 
   publish-sdk:
     needs: prepare
@@ -131,6 +128,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
       actions: read
       pull-requests: read
 
@@ -183,6 +181,6 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           result: failure
-          title: RN SDK
-          platform: GitHub release
-          version_label: ${{ inputs.version }}
+          platform: release
+          full_version: ${{ inputs.version }}
+          steps_json: ${{ toJSON(steps) }}

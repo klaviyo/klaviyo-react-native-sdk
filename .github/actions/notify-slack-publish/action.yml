@@ -5,10 +5,10 @@ inputs:
     description: Slack incoming webhook URL
     required: true
   result:
-    description: "'success', 'failure' or 'warning' (uploaded, but What to Test failed)"
+    description: "'success', 'failure', 'warning' (uploaded, but What to Test failed) or 'pending' (release only: awaiting approval)"
     required: true
   platform:
-    description: "'iOS', 'Android' or 'npm'"
+    description: "'iOS', 'Android', 'npm' or 'release' (dispatch release workflow)"
     required: true
   store:
     description: "'TestFlight' or 'Play internal' (example app only; ignored for npm)"
