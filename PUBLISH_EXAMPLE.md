@@ -69,9 +69,10 @@ preflight jobs declare no environment and cannot see environment secrets.
 
 This repo is public, so its Actions logs are too. The scripts never echo
 secrets or use `set -x`, and Slack messages only carry links that need a Play
-tester or App Store Connect login. The Android Internal App Sharing link is
-masked with `::add-mask` and appears only in Slack. Don't add steps that print
-environment variables, upload signed artifacts, or post public install links.
+tester or App Store Connect login. The Android Slack link is the per-build
+Play URL (`play.google.com/apps/test/<package>/<versionCode>`), which requires
+internal tester access. Don't add steps that print environment variables,
+upload signed artifacts, or post public install links.
 
 ## Build numbers
 
@@ -116,15 +117,16 @@ shows them in its info modal, and `.github/scripts/release-notes.sh` prints the
 same header for the store notes (500 chars on Play, 4000 on TestFlight; the
 release name and body are appended on `release: published` and cut first).
 `.github/scripts/slack-message.sh` builds the Slack message. Uploads go
-through fastlane: `pilot` and `supply` for TestFlight and Play, plus Internal
-App Sharing on Android and What to Test on iOS.
+through fastlane: `pilot` and `supply` for TestFlight and Play, plus What to
+Test on iOS.
 
 ## Getting a build as a tester
 
 Builds go to internal testers only. The Slack message links the build: the
-Internal App Sharing URL on Android (needs a Google account on the sharing
-list) and the TestFlight app page on iOS (install once Apple finishes
-processing, usually 5-30 minutes). Ask in `#mobile-push-team` to be added.
+per-build Play internal-test URL on Android (needs a Google account on the
+internal testers list) and the TestFlight app page on iOS (install once Apple
+finishes processing, usually 5-30 minutes). Ask in `#mobile-push-team` to be
+added.
 
 ## Manual trigger
 
@@ -140,8 +142,6 @@ gh workflow run publish-example.yml --ref master -f platform=both   # or android
   key, or `P12_PASSWORD` is wrong.
 - **What to Test failed but the build is on TestFlight**: check the API key's
   role, or set the notes by hand in App Store Connect.
-- **Internal App Sharing upload failed**: the deploy succeeded; only the Slack
-  install link is missing. The build is still in the Play Console.
 
 ## Pinned actions and tools
 
