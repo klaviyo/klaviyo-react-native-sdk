@@ -1,8 +1,164 @@
+require "fileutils"
+require "json"
+require "open3"
+require "tmpdir"
+
 default_platform(:ios)
 
 TEAM_ID = ENV["APPLE_TEAM_ID"]
 APP_ID = "com.klaviyoreactnativesdkexample"
 EXT_ID = "com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension"
+
+ROOT = File.expand_path("../..", __dir__)
+EXAMPLE = File.expand_path("..", __dir__)
+SCRIPTS = File.join(ROOT, ".github/scripts")
+XCODEPROJ = "ios/KlaviyoReactNativeSdkExample.xcodeproj"
+INFO_PLIST = File.join(EXAMPLE, "ios/KlaviyoReactNativeSdkExample/Info.plist")
+BUILD_INFO_KEY = "KlaviyoBuildInfo"
+APP_VERSION_KEY = "KlaviyoAppVersion"
+IPA_PATH = File.join(EXAMPLE, "ios/build/KlaviyoReactNativeSdkExample.ipa")
+AAB_PATH = File.join(EXAMPLE, "android/app/build/outputs/bundle/release/app-release.aab")
+PLAY_TRACK = "internal"
+IOS_CONFLICT = /previousBundleVersion|bundle version must be higher|has already been used|DUPLICATE|ITMS-90189|Redundant Binary Upload/i
+PLAY_CONFLICT = /version ?code.*(already been used|already exists)|apkUpgradeVersionConflict|versionCodeConflict/i
+GRADLE_DEPENDENCY_FAILURE = /Could not resolve|Could not get resource|Could not GET|Could not find|Read timed out/
+
+def append_github(file, key, value)
+  path = ENV[file]
+  File.open(path, "a") { |f| f.puts("#{key}=#{value}") } if path
+end
+
+def sdk_base_version
+  full = JSON.parse(File.read(File.join(ROOT, "package.json")))["version"]
+  base = full.sub(/[-+].*\z/, "")
+  UI.user_error!("#{full} does not reduce to a numeric X.Y.Z version") unless base.match?(/\A\d+\.\d+\.\d+\z/)
+  base
+end
+
+def derived_version(base, build_number)
+  event = ENV["EVENT_NAME"].to_s
+  UI.user_error!("EVENT_NAME is not set, cannot derive the app version") if event.empty?
+  if event == "release"
+    tag = ENV["RELEASE_TAG"].to_s.sub(/\Av/, "")
+    tag_base, _, suffix = tag.partition("-")
+    UI.user_error!("release tag '#{ENV['RELEASE_TAG']}' does not match SDK version #{base}") unless tag_base == base
+    return suffix.empty? ? base : "#{base}-#{suffix}"
+  end
+
+  channel = ENV.fetch("BRANCH", "").start_with?("rel/") ? "rc" : "alpha"
+  "#{base}-#{channel}.#{build_number}"
+end
+
+def stamp_build_info(build_number, app_version)
+  sh("node", File.join(EXAMPLE, "scripts/sdk-ref.js"),
+     "--build", build_number.to_s,
+     "--app-version", app_version,
+     "--commit", ENV.fetch("COMMIT_SHA"),
+     "--branch", ENV.fetch("BRANCH"),
+     "--built", Time.now.utc.strftime("%Y-%m-%d %H:%M UTC"))
+  FileUtils.rm_rf(Dir.glob(File.join(ENV.fetch("TMPDIR", "/tmp"), "{metro-cache,haste-map-*}")))
+end
+
+def assert_artifact(platform, artifact, code, name, full_version = nil)
+  sh(File.join(SCRIPTS, "assert-artifact-version.sh"), platform, artifact, code.to_s, name, *full_version)
+end
+
+def build_info_line
+  out, status = Open3.capture2("node", File.join(EXAMPLE, "scripts/sdk-ref.js"), "--print-build-info", "--platform", "ios")
+  UI.user_error!("sdk-ref.js --print-build-info failed") unless status.success?
+  out.strip
+end
+
+def release_notes(platform, max_length)
+  out, status = Open3.capture2(File.join(SCRIPTS, "release-notes.sh"), platform, max_length.to_s, chdir: ROOT)
+  UI.user_error!("release-notes.sh failed") unless status.success?
+  out
+end
+
+def asc_api_key
+  key_id = ENV.fetch("APP_STORE_CONNECT_API_KEY_ID")
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ISSUER_ID"),
+    key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
+  )
+end
+
+def asc_app_id
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  UI.user_error!("No App Store Connect app for #{APP_ID}") unless app
+  app.id
+end
+
+def latest_build_number(api_key, marketing_version)
+  latest_testflight_build_number(
+    api_key: api_key,
+    app_identifier: APP_ID,
+    version: marketing_version,
+    platform: "ios",
+    initial_build_number: 0
+  ).to_i
+end
+
+def highest_play_version_code
+  google_play_track_version_codes(
+    package_name: APP_ID,
+    track: PLAY_TRACK,
+    json_key_data: ENV.fetch("SERVICE_ACCOUNT_JSON")
+  ).max || 0
+end
+
+def gradle_bundle(version_code, version_name)
+  args = [
+    "./gradlew", ":app:bundleRelease",
+    "-PreleaseVersionCode=#{version_code}",
+    "-PreleaseVersionName=#{version_name}",
+    "-Pandroid.injected.signing.store.file=#{ENV.fetch('KEYSTORE_PATH')}",
+    "-Pandroid.injected.signing.store.password=#{ENV.fetch('KEY_STORE_PASSWORD')}",
+    "-Pandroid.injected.signing.key.alias=#{ENV.fetch('ALIAS')}",
+    "-Pandroid.injected.signing.key.password=#{ENV.fetch('KEY_PASSWORD')}",
+    "-Dorg.gradle.internal.http.socketTimeout=120000"
+  ]
+  max_attempts = 3
+  max_attempts.times do |i|
+    UI.message("=== Gradle attempt #{i + 1} of #{max_attempts} ===")
+    extra = i.zero? ? [] : ["--refresh-dependencies"]
+    output = +""
+    status = Open3.popen2e(*args, *extra, chdir: File.join(EXAMPLE, "android")) do |_in, io, thread|
+      io.each do |line|
+        print line
+        output << line
+      end
+      thread.value
+    end
+    return if status.success?
+    UI.user_error!("Gradle failed with a non-dependency error") unless output.match?(GRADLE_DEPENDENCY_FAILURE)
+
+    UI.important("Dependency resolution failed, waiting for JitPack before retrying")
+    sleep(60) if i < max_attempts - 1
+  end
+  UI.user_error!("Gradle failed after #{max_attempts} attempts")
+end
+
+def play_upload(version_code, release_name, notes)
+  Dir.mktmpdir do |metadata|
+    changelogs = File.join(metadata, "en-US", "changelogs")
+    FileUtils.mkdir_p(changelogs)
+    File.write(File.join(changelogs, "#{version_code}.txt"), notes)
+    upload_to_play_store(
+      package_name: APP_ID,
+      track: PLAY_TRACK,
+      aab: AAB_PATH,
+      json_key_data: ENV.fetch("SERVICE_ACCOUNT_JSON"),
+      version_name: release_name,
+      metadata_path: metadata,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_apk: true
+    )
+  end
+end
 
 platform :ios do
   # Build + sign the example app for TestFlight using fastlane match.
@@ -90,5 +246,109 @@ platform :ios do
         },
       }
     )
+  end
+
+  desc "Pick the next build number, build, sign and upload to TestFlight, retrying on a build number conflict"
+  lane :release do
+    marketing_version = sdk_base_version
+    append_github("GITHUB_ENV", "MARKETING_VERSION", marketing_version)
+
+    api_key = asc_api_key
+    append_github("GITHUB_ENV", "ASC_APP_ID", asc_app_id)
+
+    build_number = latest_build_number(api_key, marketing_version) + 1
+    append_github("GITHUB_ENV", "BUILD_NUMBER", build_number)
+
+    max_attempts = 4
+    uploaded = false
+    max_attempts.times do |i|
+      attempt = i + 1
+      full_version = derived_version(marketing_version, build_number)
+      UI.message("=== Attempt #{attempt}/#{max_attempts}: #{full_version} (#{build_number}) ===")
+      append_github("GITHUB_ENV", "FULL_VERSION", full_version)
+      FileUtils.rm_f(IPA_PATH)
+      increment_version_number(version_number: marketing_version, xcodeproj: XCODEPROJ)
+      increment_build_number(build_number: build_number, xcodeproj: XCODEPROJ)
+      stamp_build_info(build_number, full_version)
+      set_info_plist_value(path: INFO_PLIST, key: APP_VERSION_KEY, value: full_version)
+      set_info_plist_value(path: INFO_PLIST, key: BUILD_INFO_KEY, value: build_info_line)
+      release_ipa
+      assert_artifact("ios", IPA_PATH, build_number, marketing_version, full_version)
+
+      latest = begin
+        latest_build_number(api_key, marketing_version)
+      rescue StandardError => e
+        UI.important("Pre-upload build number check failed: #{e.message}")
+        0
+      end
+      if latest >= build_number && attempt < max_attempts
+        UI.important("Build #{build_number} was taken since the first lookup; rebuilding with #{latest + 1}")
+        build_number = latest + 1
+        append_github("GITHUB_ENV", "BUILD_NUMBER", build_number)
+        next
+      end
+
+      begin
+        upload_to_testflight(api_key: api_key, app_identifier: APP_ID, ipa: IPA_PATH, skip_waiting_for_build_processing: true, skip_submission: true)
+        uploaded = true
+      rescue StandardError => e
+        raise unless e.message.match?(IOS_CONFLICT)
+
+        previous = e.message[/previousBundleVersion = (\d+)/, 1].to_i
+        build_number = [build_number, previous, latest_build_number(api_key, marketing_version)].max + 1
+        UI.important("Build number conflicted at upload; retrying with #{build_number}")
+        append_github("GITHUB_ENV", "BUILD_NUMBER", build_number)
+      end
+      break if uploaded
+    end
+    UI.user_error!("Upload still conflicting after #{max_attempts} attempts") unless uploaded
+  end
+
+  desc "Set the TestFlight What to Test text on an uploaded build once Apple has processed it"
+  lane :whats_new do
+    upload_to_testflight(
+      api_key: asc_api_key,
+      app_identifier: APP_ID,
+      app_platform: "ios",
+      distribute_only: true,
+      app_version: ENV.fetch("MARKETING_VERSION"),
+      build_number: ENV.fetch("BUILD_NUMBER"),
+      localized_build_info: { "en-US" => { whats_new: File.read(ENV.fetch("NOTES_FILE")) } },
+      skip_submission: true,
+      wait_processing_timeout_duration: 50 * 60
+    )
+  end
+end
+
+platform :android do
+  desc "Pick the next versionCode, build the signed bundle and upload it to the Play internal track, retrying on a versionCode conflict"
+  lane :release do
+    base = sdk_base_version
+    code = highest_play_version_code + 1
+
+    max_attempts = 3
+    uploaded = false
+    max_attempts.times do |i|
+      version_name = derived_version(base, code)
+      UI.message("=== Attempt #{i + 1}/#{max_attempts}: #{version_name} (#{code}) ===")
+      append_github("GITHUB_ENV", "VERSION_NAME", version_name)
+      append_github("GITHUB_ENV", "VERSION_CODE", code)
+      stamp_build_info(code, version_name)
+      FileUtils.rm_rf(File.join(EXAMPLE, "android/app/build/generated"))
+      gradle_bundle(code, version_name)
+      assert_artifact("android", AAB_PATH, code, version_name)
+
+      begin
+        play_upload(code, "#{version_name} (#{code})", release_notes("android", 500))
+        uploaded = true
+      rescue StandardError => e
+        raise unless e.message.match?(PLAY_CONFLICT)
+
+        code = [highest_play_version_code, code].max + 1
+        UI.important("versionCode conflicted at upload; retrying with #{code}")
+      end
+      break if uploaded
+    end
+    UI.user_error!("Upload still conflicting after #{max_attempts} attempts") unless uploaded
   end
 end
