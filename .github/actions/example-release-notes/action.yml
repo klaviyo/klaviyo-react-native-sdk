@@ -38,12 +38,14 @@ runs:
       run: |
         set -euo pipefail
         if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$REF_TYPE" = "tag" ]; then
-          if release=$(gh release view "$REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName,name,body 2>/dev/null); then
-            RELEASE_TAG=$(jq -r '.tagName' <<<"$release")
-            RELEASE_NAME=$(jq -r '.name // .tagName' <<<"$release")
-            RELEASE_BODY=$(jq -r '.body // ""' <<<"$release")
-            export RELEASE_TAG RELEASE_NAME RELEASE_BODY
+          if ! release=$(gh release view "$REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName,name,body); then
+            echo "::error::Could not read GitHub release $REF_NAME for the store notes"
+            exit 1
           fi
+          RELEASE_TAG=$(jq -r '.tagName' <<<"$release")
+          RELEASE_NAME=$(jq -r '.name // .tagName' <<<"$release")
+          RELEASE_BODY=$(jq -r '.body // ""' <<<"$release")
+          export RELEASE_TAG RELEASE_NAME RELEASE_BODY
         fi
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
         "${{ github.workspace }}/.github/scripts/release-notes.sh" "$PLATFORM" "$MAX_LENGTH" > "$NOTES_FILE"
