@@ -1,8 +1,8 @@
 name: Prepare example app release notes
 description: >-
   Writes store release notes to a file: the build-info header from
-  example/.env, plus the release name and body on `release: published`,
-  truncated to the store's cap. Needs node on PATH.
+  example/.env, plus the release name and body on `release: published`
+  (or on a workflow_dispatch at a release tag), truncated to the store's cap. Needs node on PATH.
 inputs:
   max_length:
     description: Store character cap (500 on Play, 4000 on TestFlight)
@@ -24,6 +24,8 @@ runs:
     - id: notes
       shell: bash
       env:
+        GH_TOKEN: ${{ github.token }}
+        REF_TYPE: ${{ github.ref_type }}
         EVENT_NAME: ${{ github.event_name }}
         RELEASE_BODY: ${{ github.event.release.body }}
         RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
@@ -35,6 +37,14 @@ runs:
         MAX_LENGTH: ${{ inputs.max_length }}
       run: |
         set -euo pipefail
+        if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$REF_TYPE" = "tag" ]; then
+          if release=$(gh release view "$REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName,name,body 2>/dev/null); then
+            RELEASE_TAG=$(jq -r '.tagName' <<<"$release")
+            RELEASE_NAME=$(jq -r '.name // .tagName' <<<"$release")
+            RELEASE_BODY=$(jq -r '.body // ""' <<<"$release")
+            export RELEASE_TAG RELEASE_NAME RELEASE_BODY
+          fi
+        fi
         NOTES_FILE="${RUNNER_TEMP}/release-notes-${MAX_LENGTH}.txt"
         "${{ github.workspace }}/.github/scripts/release-notes.sh" "$PLATFORM" "$MAX_LENGTH" > "$NOTES_FILE"
         cat "$NOTES_FILE"
