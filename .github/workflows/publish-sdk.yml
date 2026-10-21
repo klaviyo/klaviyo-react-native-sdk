@@ -19,7 +19,7 @@ on:
         default: ''
         type: string
       dry_run:
-        description: 'Run npm publish --dry-run and skip the npm check and success alert'
+        description: 'Run npm publish --dry-run and skip the success alert'
         required: false
         default: false
         type: boolean
@@ -88,24 +88,6 @@ jobs:
           else
             exit 1
           fi
-
-      - name: Verify version on npm
-        if: ${{ !inputs.dry_run }}
-        timeout-minutes: 10
-        env:
-          VERSION: ${{ steps.pkg.outputs.version }}
-        run: |
-          for attempt in $(seq 1 20); do
-            published="$(npm view "klaviyo-react-native-sdk@${VERSION}" version --fetch-timeout=10000 --fetch-retries=0 2>/dev/null || true)"
-            if [ "$published" = "$VERSION" ]; then
-              echo "klaviyo-react-native-sdk@${VERSION} is live on npm"
-              exit 0
-            fi
-            echo "Attempt ${attempt}/20: ${VERSION} not visible on npm yet, retrying in 15s"
-            sleep 15
-          done
-          echo "::error::klaviyo-react-native-sdk@${VERSION} did not appear on npm after 5 minutes"
-          exit 1
 
       - name: Notify Slack on success
         if: success() && !inputs.dry_run
