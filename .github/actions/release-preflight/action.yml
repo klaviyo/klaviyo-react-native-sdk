@@ -1,5 +1,5 @@
 name: Release preflight
-description: Fails unless the version is X.Y.Z or X.Y.Z-<prerelease>, matches package.json at the checked-out commit, and the pull_request CI runs for that commit are green.
+description: Fails unless the version is X.Y.Z or X.Y.Z-<prerelease>, matches package.json at the checked-out commit, the native SDK dependencies are pinned to released versions, and the pull_request CI runs for that commit are green.
 inputs:
   version:
     description: Release version (X.Y.Z or X.Y.Z-<prerelease>)
@@ -40,6 +40,10 @@ runs:
           exit 1
         fi
         echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Check native SDK pins
+      shell: bash
+      run: '"${{ github.workspace }}/.github/scripts/check-native-pins.sh"'
 
     # Checks pull_request CI on the head commit of the PR that merged SHA (falls back to SHA).
     - name: Skip CI status
