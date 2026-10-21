@@ -8,6 +8,16 @@ set -euo pipefail
 
 errors=()
 
+# Prints Ruby statements one per line: comments stripped, and calls continued
+# across lines (trailing comma, open paren or backslash) joined.
+ruby_statements() {
+  sed -e 's/[[:space:]]*#.*$//' "$1" | awk '
+    { line = (buf == "" ? $0 : buf " " $0) }
+    /(,|\(|\\)[[:space:]]*$/ { buf = line; next }
+    { print line; buf = "" }
+    END { if (buf != "") print buf }'
+}
+
 android=$(sed -n 's/^KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=//p' android/gradle.properties | tr -d '[:space:]')
 if ! [[ "$android" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.?[0-9]+)?)?$ ]]; then
   errors+=("android/gradle.properties: KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion is '${android}', not a released version")
@@ -15,11 +25,11 @@ fi
 
 while IFS= read -r line; do
   errors+=("klaviyo-react-native-sdk.podspec: unversioned Klaviyo dependency: ${line}")
-done < <(grep -nE "^[[:space:]]*s\.dependency[[:space:]]*\(?[[:space:]]*['\"]Klaviyo[A-Za-z]*['\"][[:space:]]*\)?[[:space:]]*(#.*)?$" klaviyo-react-native-sdk.podspec || true)
+done < <(grep -E "^[[:space:]]*s\.dependency[[:space:]]*\(?[[:space:]]*['\"]Klaviyo[A-Za-z]*['\"][[:space:]]*\)?[[:space:]]*$" <(ruby_statements klaviyo-react-native-sdk.podspec) || true)
 
 while IFS= read -r line; do
   errors+=("example/ios/Podfile: Klaviyo pod not from a release: ${line}")
-done < <(grep -nE "^[[:space:]]*pod[[:space:]]*\(?[[:space:]]*['\"]Klaviyo[A-Za-z]*['\"].*(:(git|branch|commit|path|tag)[[:space:]]*=>|[^:A-Za-z_](git|branch|commit|path|tag):)" example/ios/Podfile || true)
+done < <(grep -E "^[[:space:]]*pod[[:space:]]*\(?[[:space:]]*['\"]Klaviyo[A-Za-z]*['\"].*(:(git|branch|commit|path|tag)[[:space:]]*=>|[^:A-Za-z_](git|branch|commit|path|tag):)" <(ruby_statements example/ios/Podfile) || true)
 
 if [ "${#errors[@]}" -gt 0 ]; then
   for e in "${errors[@]}"; do
