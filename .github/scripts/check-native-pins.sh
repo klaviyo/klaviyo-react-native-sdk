@@ -8,10 +8,12 @@ set -euo pipefail
 
 errors=()
 
-# Prints Ruby statements one per line: comments stripped, and calls continued
-# across lines (trailing comma, open paren or backslash) joined.
+# Prints Ruby statements one per line: comments stripped (a "#" at line start
+# or after whitespace, not "#{" interpolation), blank lines dropped, and calls
+# continued across lines (trailing comma, open paren or backslash) joined.
 ruby_statements() {
-  sed -e 's/[[:space:]]*#.*$//' "$1" | awk '
+  sed -E -e 's/(^|[[:space:]])#([^{].*)?$//' "$1" | awk '
+    /^[[:space:]]*$/ { next }
     { line = (buf == "" ? $0 : buf " " $0) }
     /(,|\(|\\)[[:space:]]*$/ { buf = line; next }
     { print line; buf = "" }
