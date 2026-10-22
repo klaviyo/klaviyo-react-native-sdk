@@ -128,6 +128,7 @@ jobs:
           fetch-depth: 0
 
       - name: Sync release to Linear
+        id: linear-sync
         continue-on-error: true
         uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
         with:
@@ -137,6 +138,7 @@ jobs:
           name: ${{ needs.publish-sdk.outputs.version }}
 
       - name: Complete release in Linear
+        if: steps.linear-sync.outcome == 'success'
         continue-on-error: true
         uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
         with:
