@@ -116,7 +116,7 @@ jobs:
 
   linear-release:
     needs: publish-sdk
-    if: ${{ !inputs.dry_run && !contains(inputs.version, '-') }}
+    if: ${{ !inputs.dry_run && !contains(inputs.version, '-') && github.event.release.prerelease != true }}
     continue-on-error: true
     runs-on: ubuntu-24.04
     permissions:
