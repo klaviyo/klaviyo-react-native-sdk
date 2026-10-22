@@ -132,7 +132,6 @@ jobs:
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
           command: sync
-          base_ref: HEAD
           version: ${{ needs.publish-sdk.outputs.version }}
           name: ${{ needs.publish-sdk.outputs.version }}
 
