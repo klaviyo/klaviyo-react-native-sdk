@@ -117,6 +117,7 @@ jobs:
   linear-release:
     needs: publish-sdk
     if: ${{ !inputs.dry_run && !contains(inputs.version, '-') }}
+    continue-on-error: true
     runs-on: ubuntu-24.04
     permissions:
       contents: read
