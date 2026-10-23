@@ -49,7 +49,7 @@ jobs:
       sha: ${{ steps.preflight.outputs.sha }}
       release_url: ${{ steps.draft.outputs.release_url }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.event.release.tag_name || github.event.repository.default_branch }}
           fetch-depth: 0
@@ -178,7 +178,7 @@ jobs:
       contents: write
       actions: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: .github
 
@@ -251,7 +251,7 @@ jobs:
             echo "reason=npm deploy rejected" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         if: steps.reason.outputs.reason != ''
         with:
           sparse-checkout: .github
