@@ -32,6 +32,8 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    outputs:
+      version: ${{ steps.pkg.outputs.version }}
 
     steps:
       - uses: actions/checkout@v5
@@ -111,3 +113,36 @@ jobs:
           platform: npm
           full_version: ${{ steps.pkg.outputs.version || inputs.version }}
           steps_json: ${{ toJSON(steps) }}
+
+  linear-release:
+    needs: publish-sdk
+    if: ${{ !inputs.dry_run && !contains(inputs.version, '-') && github.event.release.prerelease != true }}
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || inputs.version }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Sync release to Linear
+        id: linear-sync
+        continue-on-error: true
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: sync
+          version: ${{ needs.publish-sdk.outputs.version }}
+          name: ${{ needs.publish-sdk.outputs.version }}
+
+      - name: Complete release in Linear
+        if: steps.linear-sync.outcome == 'success'
+        continue-on-error: true
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: complete
+          version: ${{ needs.publish-sdk.outputs.version }}
