@@ -7,7 +7,11 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
-import { parseFormLifecycleEvent } from './Forms';
+import {
+  formsPreviewTokenParameter,
+  isValidFormsPreviewToken,
+  parseFormLifecycleEvent,
+} from './Forms';
 import type { Geofence } from './Geofencing';
 import type { AuthTokenProvider } from './AuthToken';
 import {
@@ -135,6 +139,24 @@ export const Klaviyo: KlaviyoInterface = {
   unregisterFromInAppForms(): void {
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
+  },
+  setFormsPreviewToken(token: string | null): void {
+    if (!isFormsAvailable()) return;
+    KlaviyoReactNativeSdk.setFormsPreviewToken(token ?? null);
+  },
+  handleFormsPreviewLink(url: string | null): boolean {
+    if (!url) return false;
+    const parameter = formsPreviewTokenParameter(url);
+    if (parameter === null) return false;
+    if (!isValidFormsPreviewToken(parameter)) {
+      console.warn(
+        '[Klaviyo] Warning: Ignoring forms preview link with a malformed token'
+      );
+      return false;
+    }
+    if (!isFormsAvailable()) return false;
+    KlaviyoReactNativeSdk.setFormsPreviewToken(parameter);
+    return true;
   },
   registerGeofencing(): void {
     if (!isLocationAvailable()) return;
@@ -289,7 +311,7 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
-export { FormLifecycleEventType } from './Forms';
+export { FormLifecycleEventType, FORMS_PREVIEW_TOKEN_KEY } from './Forms';
 export type {
   FormConfiguration,
   FormLifecycleEvent,

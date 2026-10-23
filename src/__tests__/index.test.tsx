@@ -9,6 +9,8 @@ import {
   allAvailableMarketing,
 } from '../Subscription';
 
+const PREVIEW_TOKEN = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_6';
+
 // Store event listeners for testing NativeEventEmitter
 const eventListeners: Record<string, Array<(data: any) => void>> = {};
 const mockRemove = jest.fn();
@@ -37,6 +39,7 @@ jest.mock('react-native', () => {
         createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        setFormsPreviewToken: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
@@ -337,6 +340,83 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
       ).toHaveBeenCalledWith(config);
+    });
+
+    it('passes a preview token in the forms configuration', () => {
+      const config = {
+        sessionTimeoutDuration: 3600,
+        previewToken: PREVIEW_TOKEN,
+      };
+
+      Klaviyo.registerForInAppForms(config);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
+      ).toHaveBeenCalledWith(config);
+    });
+
+    it('accepts a configuration with only a preview token', () => {
+      Klaviyo.registerForInAppForms({ previewToken: PREVIEW_TOKEN });
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
+      ).toHaveBeenCalledWith({ previewToken: PREVIEW_TOKEN });
+    });
+
+    it('sets and clears the forms preview token', () => {
+      Klaviyo.setFormsPreviewToken(PREVIEW_TOKEN);
+      Klaviyo.setFormsPreviewToken(null);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+      ).toHaveBeenNthCalledWith(1, PREVIEW_TOKEN);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+      ).toHaveBeenNthCalledWith(2, null);
+    });
+
+    describe('handleFormsPreviewLink', () => {
+      it('starts a preview from custom scheme and https links', () => {
+        expect(
+          Klaviyo.handleFormsPreviewLink(
+            `myapp://home?klaviyo-forms-preview=${PREVIEW_TOKEN}`
+          )
+        ).toBe(true);
+        expect(
+          Klaviyo.handleFormsPreviewLink(
+            `https://shop.example.com/a?utm=qr&klaviyo-forms-preview=${PREVIEW_TOKEN}&x=1#frag`
+          )
+        ).toBe(true);
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+        ).toHaveBeenCalledTimes(2);
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+        ).toHaveBeenCalledWith(PREVIEW_TOKEN);
+      });
+
+      it('returns false and changes nothing for other links', () => {
+        const warn = jest.spyOn(console, 'warn').mockImplementation();
+        try {
+          expect(Klaviyo.handleFormsPreviewLink(null)).toBe(false);
+          expect(Klaviyo.handleFormsPreviewLink('myapp://home')).toBe(false);
+          expect(
+            Klaviyo.handleFormsPreviewLink(
+              `https://example.com/#klaviyo-forms-preview=${PREVIEW_TOKEN}`
+            )
+          ).toBe(false);
+          expect(
+            Klaviyo.handleFormsPreviewLink(
+              'myapp://home?klaviyo-forms-preview=short'
+            )
+          ).toBe(false);
+          expect(
+            NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+          ).not.toHaveBeenCalled();
+          expect(warn).toHaveBeenCalledWith(
+            expect.not.stringContaining('short')
+          );
+        } finally {
+          warn.mockRestore();
+        }
+      });
     });
 
     it('should unregister from in-app forms', () => {
