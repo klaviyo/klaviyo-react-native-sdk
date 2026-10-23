@@ -6,7 +6,9 @@ const MOCK_JWT_HEADER = { alg: 'HS256', typ: 'JWT' };
 /**
  * Placeholder signature segment. The SDK never verifies token signatures
  * client-side, so an unsigned mock token is fine for exercising the
- * auth-token provider flow.
+ * auth-token provider flow. These mocks do not authenticate Personalized
+ * Forms; real personalization requires a server-signed JWT with the signed-in
+ * user's matching `email` claim.
  */
 const DUMMY_SIGNATURE = 'klaviyo-example-app-mock-signature';
 

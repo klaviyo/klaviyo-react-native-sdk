@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -9,11 +10,14 @@ permissions:
 jobs:
   lint:
     runs-on: macos-15
+    timeout-minutes: 30
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -37,9 +41,12 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -49,9 +56,12 @@ jobs:
 
   build-library:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup

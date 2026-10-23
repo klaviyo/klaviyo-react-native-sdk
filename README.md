@@ -42,6 +42,8 @@
     - [Setup](#setup-1)
       - [In-App Forms Session Configuration](#in-app-forms-session-configuration)
     - [Unregistering from In-App Forms](#unregistering-from-in-app-forms)
+    - [Personalized Forms Authentication](#personalized-forms-authentication)
+      - [Provider requirements](#provider-requirements)
     - [Previewing Draft Forms on a Device](#previewing-draft-forms-on-a-device)
     - [Monitoring Form Lifecycle Events](#monitoring-form-lifecycle-events)
 
@@ -81,13 +83,15 @@ This SDK was developed and tested against React Native 0.86, as a new-architectu
 
 ### React Native
 
-We support all maintained [React Native versions](https://reactnative.dev/versions), 0.70+.
-We have successfully compiled this SDK on a bare React Native template app down to `0.68.7`.
+We support React Native **0.76+**.
+
+On iOS, React Native 0.76 to 0.82 do not build on the latest Xcode due to a React Native issue. Use an older Xcode or
+React Native 0.83+.
 
 ### Android
 
 - `minSdkVersion` of `23+`
-- `compileSdkVersion` of `34+`
+- `compileSdkVersion` of `35+`
 
 ### iOS
 
@@ -118,18 +122,7 @@ Android installation requirements may vary depending upon your project configura
 The Klaviyo React Native SDK's `build.gradle` file exposes transitive dependencies upon the Klaviyo Android SDK,
 so you can import Android Klaviyo SDK references from your Kotlin/Java files without modifying your gradle configuration.
 
-#### React Native 0.74+
-
-There are no additional installation requirements. Android support is fully tested and verified.
-
-#### React Native 0.68.x - 0.72.x
-
-We have successfully compiled the Klaviyo React Native SDK in a bare React Native template app for these versions
-with the following modifications to the `android/build.gradle` file:
-
-- Set `minSdkVersion=23`
-- Set `compileSdkVersion=34`
-
+There are no additional installation requirements on React Native 0.76+.
 See [Android Troubleshooting](Troubleshooting.md#android-troubleshooting) for possible exceptions.
 
 ### iOS
@@ -716,6 +709,53 @@ Klaviyo.unregisterFromInAppForms(config);
 ```
 
 Note that after unregistering, the next call to `registerForInAppForms()` will be considered a new session by the SDK.
+
+### Personalized Forms Authentication
+
+> **Note:** Personalized Forms authentication requires native Android SDK `4.6.0` and iOS SDK `5.5.0` or later, and must be enabled for your Klaviyo account.
+
+Personalized In-App Forms show content from the signed-in user's Klaviyo profile. Your app proves who the user is with a JSON Web Token (JWT).
+
+Set up an authenticated endpoint on your backend that mints a fresh JWT for the signed-in user. Keep the signing credentials on your server. The JWT must carry valid `iat` and `exp` claims and the user's matching `email` claim. Keep the SDK's profile identifiers in sync with the signed-in user (see [Identifying a Profile](#identifying-a-profile)).
+
+After initializing the SDK, register a provider that fetches a token from your backend:
+
+```typescript
+import { Klaviyo } from 'klaviyo-react-native-sdk';
+
+Klaviyo.registerAuthTokenProvider(async () => {
+  // Replace with your own call. Apply a timeout to the request.
+  return await authService.fetchKlaviyoJWT();
+});
+```
+
+Register the provider once and keep it registered across profile changes. Read the current signed-in user on every invocation and fetch a fresh JWT each time; do not cache tokens in the provider. The native SDK manages token caching and refresh.
+
+On logout, clear the SDK profile:
+
+```typescript
+Klaviyo.resetProfile();
+```
+
+A form that is already open keeps its token until it expires, whether you call `resetProfile()` or `unregisterAuthTokenProvider()`. `unregisterAuthTokenProvider()` turns personalization off. It is not a logout.
+
+#### Provider requirements
+
+The provider has type `() => Promise<string>`. Your code must:
+
+- **Resolve or reject exactly once.** Resolve with the JWT or reject with an error for each call to the provider. The SDK calls the provider whenever it needs a fresh token.
+- **Report errors by rejecting.** Throw from your async provider instead of returning an empty or placeholder token.
+- **Bound your own work.** Apply a timeout to every network call. The SDK does not time out your provider or abort a JavaScript provider call that is already running. A provider that never settles blocks later token fetches until you register, unregister, or reset the profile.
+- **Fail fast.** If you cannot produce a token, for example when no user is signed in, throw instead of waiting or retrying.
+- **Preserve connectivity failures.** The bridge recognizes React Native `fetch` failures (`TypeError: Network request failed`) and `AbortError` so the native SDK can retry after reconnect. Rethrow the original error. For other HTTP clients, mark connectivity errors with `isConnectivityError: true`:
+
+  ```typescript
+  throw Object.assign(new Error('offline'), { isConnectivityError: true });
+  ```
+
+  An explicit `isConnectivityError: false` opts out of connectivity classification, even for an `AbortError` or a recognized `fetch` network failure.
+
+For platform details, see the native [Android](https://github.com/klaviyo/klaviyo-android-sdk/blob/4.6.0/README.md#personalized-forms-authentication) and [iOS](https://github.com/klaviyo/klaviyo-swift-sdk/blob/5.5.0/README.md#personalized-forms-authentication) guides.
 
 ### Previewing Draft Forms on a Device
 

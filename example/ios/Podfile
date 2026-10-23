@@ -92,6 +92,6 @@ end
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
-  pod 'KlaviyoSwiftExtension', '5.5.0'
+  pod 'KlaviyoSwiftExtension'
 end
 
