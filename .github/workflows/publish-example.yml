@@ -57,8 +57,23 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
+      - 'CODEOWNERS'
       - '.coderabbit.yaml'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/pull_request_template.md'
+      - '.github/workflows/android-build.yml'
+      - '.github/workflows/android-ci.yml'
+      - '.github/workflows/doc-bot.yml'
+      - '.github/workflows/ios-build.yml'
+      - '.github/workflows/ios-ci.yml'
+      - '.github/workflows/pr-target-check.yml'
+      - '.github/workflows/publish-sdk.yml'
+      - '.github/workflows/stale.yml'
+      - 'src/__tests__/**'
+      - 'example/jest.config.js'
+      - 'lefthook.yml'
   pull_request:
     types: [labeled]
 
