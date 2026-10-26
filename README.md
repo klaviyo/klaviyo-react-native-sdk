@@ -759,7 +759,7 @@ For platform details, see the native [Android](https://github.com/klaviyo/klaviy
 
 ### Previewing Draft Forms on a Device
 
-The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `setFormsPreviewToken`; pass `null` to return to published forms. You can also pass the token as `FormConfiguration.previewToken`.
+The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `setFormsPreviewToken`; pass `null` to return to published forms.
 
 ```typescript
 import { Klaviyo } from "klaviyo-react-native-sdk";

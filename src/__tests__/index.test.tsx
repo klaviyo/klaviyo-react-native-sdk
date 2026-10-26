@@ -342,25 +342,6 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalledWith(config);
     });
 
-    it('passes a preview token in the forms configuration', () => {
-      const config = {
-        sessionTimeoutDuration: 3600,
-        previewToken: PREVIEW_TOKEN,
-      };
-
-      Klaviyo.registerForInAppForms(config);
-      expect(
-        NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
-      ).toHaveBeenCalledWith(config);
-    });
-
-    it('accepts a configuration with only a preview token', () => {
-      Klaviyo.registerForInAppForms({ previewToken: PREVIEW_TOKEN });
-      expect(
-        NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
-      ).toHaveBeenCalledWith({ previewToken: PREVIEW_TOKEN });
-    });
-
     it('sets and clears the forms preview token', () => {
       Klaviyo.setFormsPreviewToken(PREVIEW_TOKEN);
       Klaviyo.setFormsPreviewToken(null);

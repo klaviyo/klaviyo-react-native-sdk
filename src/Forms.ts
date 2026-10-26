@@ -59,14 +59,7 @@ export interface FormConfiguration {
   /**
    * Duration in seconds before the session times out
    */
-  readonly sessionTimeoutDuration?: number;
-
-  /**
-   * Optional short-lived credential, generated from the Klaviyo form editor, that loads draft
-   * forms for on-device testing instead of your published forms. Never ship a preview token in a
-   * production build. Omitted or empty leaves any token set with `setFormsPreviewToken` unchanged.
-   */
-  readonly previewToken?: string;
+  readonly sessionTimeoutDuration: number;
 }
 
 /**

@@ -85,17 +85,11 @@ public class KlaviyoBridge: NSObject {
     @objc
     public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
         #if canImport(KlaviyoForms)
-        let previewToken = configuration?["previewToken"] as? String
-        let formsConfiguration: InAppFormsConfig
-        if let sessionTimeoutDuration = configuration?["sessionTimeoutDuration"] as? TimeInterval {
-            formsConfiguration = InAppFormsConfig(
-                sessionTimeoutDuration: sessionTimeoutDuration,
-                previewToken: previewToken
-            )
+        if let configurationLength = configuration?["sessionTimeoutDuration"] as? TimeInterval {
+            KlaviyoSDK().registerForInAppForms(configuration: InAppFormsConfig(sessionTimeoutDuration: configurationLength))
         } else {
-            formsConfiguration = InAppFormsConfig(previewToken: previewToken)
+            KlaviyoSDK().registerForInAppForms()
         }
-        KlaviyoSDK().registerForInAppForms(configuration: formsConfiguration)
         #endif
     }
 
