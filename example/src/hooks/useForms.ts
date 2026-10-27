@@ -69,13 +69,17 @@ export function useForms() {
   const handleApplyFormsPreviewToken = useCallback(() => {
     // An empty field clears the preview and returns to published forms.
     const token = formsPreviewToken.trim();
-    Klaviyo.setFormsPreviewToken(token === '' ? null : token);
+    if (token === '') {
+      Klaviyo.endFormsPreview();
+    } else {
+      Klaviyo.startFormsPreview(token);
+    }
   }, [formsPreviewToken]);
 
   const handleFormsPreviewEnabledChange = useCallback((enabled: boolean) => {
     setFormsPreviewEnabled(enabled);
     if (!enabled) {
-      Klaviyo.setFormsPreviewToken(null);
+      Klaviyo.endFormsPreview();
       setFormsPreviewToken('');
     }
   }, []);

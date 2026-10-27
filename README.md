@@ -759,16 +759,16 @@ For platform details, see the native [Android](https://github.com/klaviyo/klaviy
 
 ### Previewing Draft Forms on a Device
 
-The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `setFormsPreviewToken`; pass `null` to return to published forms.
+The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `startFormsPreview`, and call `endFormsPreview` to return to published forms. Starting or ending a preview restarts in-app forms, like unregistering and registering again. If you haven't called `registerForInAppForms` yet, the preview starts when you do.
 
 ```typescript
 import { Klaviyo } from "klaviyo-react-native-sdk";
 
-Klaviyo.setFormsPreviewToken(token); // start a draft preview
-Klaviyo.setFormsPreviewToken(null); // back to published forms
+Klaviyo.startFormsPreview(token); // start a draft preview
+Klaviyo.endFormsPreview(); // back to published forms
 ```
 
-The preview link is a deep link into your app with a `klaviyo-forms-preview` query parameter. Pass deep links to `handleFormsPreviewLink` before your own routing: it starts the preview and returns `true` for a preview link, and returns `false`, changing nothing, for every other link.
+The preview link is a deep link into your app with a `klaviyo-forms-preview` query parameter. Pass deep links to `handleFormsPreviewLink` before your own routing: it starts a preview session and returns `true` for a preview link, and returns `false`, changing nothing, for every other link.
 
 ```typescript
 import { Linking } from "react-native";

@@ -39,7 +39,8 @@ jest.mock('react-native', () => {
         createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
-        setFormsPreviewToken: jest.fn(),
+        startFormsPreview: jest.fn(),
+        endFormsPreview: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
@@ -342,15 +343,15 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalledWith(config);
     });
 
-    it('sets and clears the forms preview token', () => {
-      Klaviyo.setFormsPreviewToken(PREVIEW_TOKEN);
-      Klaviyo.setFormsPreviewToken(null);
+    it('starts and ends a forms preview', () => {
+      Klaviyo.startFormsPreview(PREVIEW_TOKEN);
+      Klaviyo.endFormsPreview();
       expect(
-        NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
-      ).toHaveBeenNthCalledWith(1, PREVIEW_TOKEN);
+        NativeModules.KlaviyoReactNativeSdk.startFormsPreview
+      ).toHaveBeenCalledWith(PREVIEW_TOKEN);
       expect(
-        NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
-      ).toHaveBeenNthCalledWith(2, null);
+        NativeModules.KlaviyoReactNativeSdk.endFormsPreview
+      ).toHaveBeenCalledTimes(1);
     });
 
     describe('handleFormsPreviewLink', () => {
@@ -366,10 +367,10 @@ describe('Klaviyo SDK', () => {
           )
         ).toBe(true);
         expect(
-          NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+          NativeModules.KlaviyoReactNativeSdk.startFormsPreview
         ).toHaveBeenCalledTimes(2);
         expect(
-          NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+          NativeModules.KlaviyoReactNativeSdk.startFormsPreview
         ).toHaveBeenCalledWith(PREVIEW_TOKEN);
       });
 
@@ -389,7 +390,7 @@ describe('Klaviyo SDK', () => {
             )
           ).toBe(false);
           expect(
-            NativeModules.KlaviyoReactNativeSdk.setFormsPreviewToken
+            NativeModules.KlaviyoReactNativeSdk.startFormsPreview
           ).not.toHaveBeenCalled();
           expect(warn).toHaveBeenCalledWith(
             expect.not.stringContaining('short')

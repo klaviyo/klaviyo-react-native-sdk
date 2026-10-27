@@ -134,9 +134,15 @@ RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
     });
 }
 
-RCT_EXPORT_METHOD(setFormsPreviewToken: (NSString *)token) {
+RCT_EXPORT_METHOD(startFormsPreview: (NSString *)token) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [KlaviyoBridge setFormsPreviewToken:token];
+        [KlaviyoBridge startFormsPreview:token];
+    });
+}
+
+RCT_EXPORT_METHOD(endFormsPreview) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge endFormsPreview];
     });
 }
 

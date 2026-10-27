@@ -95,9 +95,17 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func setFormsPreviewToken(_ token: String?) {
+    public static func startFormsPreview(_ token: String) {
         #if canImport(KlaviyoForms)
-        KlaviyoSDK().setFormsPreviewToken(token)
+        KlaviyoSDK().startFormsPreview(token)
+        #endif
+    }
+
+    @MainActor
+    @objc
+    public static func endFormsPreview() {
+        #if canImport(KlaviyoForms)
+        KlaviyoSDK().endFormsPreview()
         #endif
     }
 

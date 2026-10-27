@@ -140,9 +140,13 @@ export const Klaviyo: KlaviyoInterface = {
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
-  setFormsPreviewToken(token: string | null): void {
+  startFormsPreview(token: string): void {
     if (!isFormsAvailable()) return;
-    KlaviyoReactNativeSdk.setFormsPreviewToken(token ?? null);
+    KlaviyoReactNativeSdk.startFormsPreview(token);
+  },
+  endFormsPreview(): void {
+    if (!isFormsAvailable()) return;
+    KlaviyoReactNativeSdk.endFormsPreview();
   },
   handleFormsPreviewLink(url: string | null): boolean {
     if (!url) return false;
@@ -155,7 +159,7 @@ export const Klaviyo: KlaviyoInterface = {
       return false;
     }
     if (!isFormsAvailable()) return false;
-    KlaviyoReactNativeSdk.setFormsPreviewToken(parameter);
+    KlaviyoReactNativeSdk.startFormsPreview(parameter);
     return true;
   },
   registerGeofencing(): void {

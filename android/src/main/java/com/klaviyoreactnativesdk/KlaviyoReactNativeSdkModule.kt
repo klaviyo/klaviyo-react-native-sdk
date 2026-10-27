@@ -26,9 +26,10 @@ import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
+import com.klaviyo.forms.endFormsPreview
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.registerFormLifecycleHandler
-import com.klaviyo.forms.setFormsPreviewToken
+import com.klaviyo.forms.startFormsPreview
 import com.klaviyo.forms.unregisterFormLifecycleHandler
 import com.klaviyo.forms.unregisterFromInAppForms
 import com.klaviyo.location.GeofencingProvider
@@ -195,10 +196,21 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
-  fun setFormsPreviewToken(token: String?) {
+  fun startFormsPreview(token: String) {
     UiThreadUtil.runOnUiThread {
       try {
-        Klaviyo.setFormsPreviewToken(token)
+        Klaviyo.startFormsPreview(token)
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun endFormsPreview() {
+    UiThreadUtil.runOnUiThread {
+      try {
+        Klaviyo.endFormsPreview()
       } catch (e: MissingKlaviyoModule) {
         Registry.log.error("Forms module is not available", e)
       }

@@ -18,25 +18,33 @@ export interface KlaviyoFormsApi {
   unregisterFromInAppForms(): void;
 
   /**
-   * Set a forms preview token to load draft forms instead of your published forms, or pass
-   * `null` (or an empty string) to clear it and return to published forms without restarting.
+   * Start a draft in-app forms preview session with a preview token from the Klaviyo form editor.
    *
-   * A preview token is a short-lived credential generated from the Klaviyo form editor for
-   * on-device testing of draft forms. Never ship one in a production build. The native SDKs keep
-   * it in memory only, never persist or log it, and clear it when the preview ends or expires.
-   * A malformed token is ignored and clears any previous token.
+   * Starting a preview is like unregistering and registering again: if forms are registered, the
+   * current session is torn down, dismissing any form on screen, and a new session starts that
+   * loads draft forms. If {@link registerForInAppForms} hasn't been called yet, the token is held
+   * and the preview starts when forms register; no forms are shown before then.
    *
-   * May be called before or after {@link registerForInAppForms}.
-   * @param token The preview token, or `null` to clear it
+   * A preview token is a short-lived credential for on-device testing of draft forms. Never ship
+   * one in a production build. The native SDKs keep it in memory only and never persist or log it.
+   * A malformed token is ignored and changes nothing. {@link unregisterFromInAppForms} also ends
+   * the preview.
+   * @param token The preview token
    */
-  setFormsPreviewToken(token: string | null): void;
+  startFormsPreview(token: string): void;
+
+  /**
+   * End the draft in-app forms preview session. If forms are registered, they restart with
+   * published forms.
+   */
+  endFormsPreview(): void;
 
   /**
    * Start a forms preview from a deep link, such as the link or QR code from the Klaviyo form
    * editor's **Preview on device** button.
    *
    * If the link has a `klaviyo-forms-preview` query parameter holding a well-formed preview
-   * token, the token is set as if passed to {@link setFormsPreviewToken} and this returns `true`.
+   * token, a preview starts as if passed to {@link startFormsPreview} and this returns `true`.
    * Otherwise this returns `false` and changes nothing, so call it first from your deep link
    * handling (for example a `Linking` URL listener) and fall through when it returns `false`.
    * @param url The deep link that opened the app
