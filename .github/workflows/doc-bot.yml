@@ -49,3 +49,25 @@ jobs:
           git add docs
           git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
           git push
+
+      - name: Send Slack notification on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "🚨 Documentation Bot Workflow Failed"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "🚨 Documentation Bot Workflow Failed\n"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Repository:* ${{ github.repository }}\n*Ref:* `${{ github.ref_name }}`\n*Event:* ${{ github.event_name }}\n*Common Issue:* Check if GH_ACTION_ACCESS_TOKEN has expired"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
