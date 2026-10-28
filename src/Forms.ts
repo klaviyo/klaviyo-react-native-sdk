@@ -25,10 +25,9 @@ export interface KlaviyoFormsApi {
    * loads draft forms. If {@link registerForInAppForms} hasn't been called yet, the token is held
    * and the preview starts when forms register; no forms are shown before then.
    *
-   * A preview token is a short-lived credential for on-device testing of draft forms. Never ship
-   * one in a production build. The native SDKs keep it in memory only and never persist or log it.
-   * A malformed token is ignored and changes nothing. {@link unregisterFromInAppForms} also ends
-   * the preview.
+   * A preview token is a short-lived credential for on-device testing of draft forms. The native
+   * SDKs keep it in memory only and never persist or log it. A malformed token is ignored and
+   * changes nothing. {@link unregisterFromInAppForms} also ends the preview.
    * @param token The preview token
    */
   startFormsPreview(token: string): void;
