@@ -10,11 +10,11 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.klaviyo.analytics.AuthTokenProvider
 import com.klaviyo.analytics.Klaviyo
 import com.klaviyo.analytics.model.Event
 import com.klaviyo.analytics.model.EventKey
 import com.klaviyo.analytics.model.EventMetric
-import com.klaviyo.analytics.model.Keyword
 import com.klaviyo.analytics.model.Profile
 import com.klaviyo.analytics.model.ProfileKey
 import com.klaviyo.analytics.model.Subscription
@@ -37,9 +37,11 @@ import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
 import java.lang.ref.WeakReference
+import java.net.SocketException
 import java.util.Locale
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.reflect.KVisibility
 import kotlin.time.Duration.Companion.seconds
 
 class KlaviyoReactNativeSdkModule(
@@ -68,7 +70,7 @@ class KlaviyoReactNativeSdkModule(
   private fun sendEvent(
     eventName: String,
     params: WritableMap?,
-  ) {
+  ): Boolean {
     // Form lifecycle callbacks fire from the native SDK and can race the
     // host Activity/Process being torn down (background → low-memory kill,
     // config change, deep-link launch from CTA, dev-mode HMR/fast-refresh).
@@ -78,40 +80,74 @@ class KlaviyoReactNativeSdkModule(
     // Using `hasActiveCatalystInstance` (deprecated alias of
     // `hasActiveReactInstance`) for broader peer-dep range — the SDK's
     // peerDependencies allow any react-native version.
-    if (!reactContext.hasActiveCatalystInstance()) return
-    try {
+    // Returns whether the event was actually emitted, so callers that must
+    // guarantee delivery (e.g. auth-token requests awaiting a JS response) can
+    // fail fast when the bridge is unavailable rather than hang.
+    if (!reactContext.hasActiveCatalystInstance()) return false
+    return try {
       reactContext
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         .emit(eventName, params)
+      true
     } catch (e: Exception) {
       // TOCTOU race: catalyst instance was alive at the check above but is
       // being torn down by the time we call. Drop the event quietly.
       Registry.log.error("Failed to emit $eventName: catalyst instance unavailable", e)
+      false
     }
   }
 
   override fun getName(): String = NAME
 
+  // Mirrors every public singleton of the Android SDK's ProfileKey, in its declaration order.
+  // Values are read from the SDK rather than retyped, so a rename or removal upstream fails
+  // this module's build instead of silently shipping a stale string. An upstream ADDITION is
+  // not caught -- a new public key must be added here by hand. That was already true in
+  // practice: ProfileProperty in src/Profile.ts is a hand-written enum, so a new key never
+  // reached JS without a TypeScript edit either way.
+  //
+  // The SDK's identity and push keys (EXTERNAL_ID, EMAIL, PHONE_NUMBER, ANONYMOUS_ID,
+  // PUSH_TOKEN) are `internal`, not visible here, and were never exported -- JS supplies its
+  // own literals for the three it needs, in Profile.setExternalId, setEmail and setPhoneNumber.
+  // LOCATION and PROPERTIES are wrapper-owned with no SDK equivalent; their keys are
+  // intentionally lowercase to match today's output byte for byte.
+  private val profileKeys: Map<String, String> =
+    mapOf(
+      "FIRST_NAME" to ProfileKey.FIRST_NAME.name,
+      "LAST_NAME" to ProfileKey.LAST_NAME.name,
+      "ORGANIZATION" to ProfileKey.ORGANIZATION.name,
+      "TITLE" to ProfileKey.TITLE.name,
+      "IMAGE" to ProfileKey.IMAGE.name,
+      "ADDRESS1" to ProfileKey.ADDRESS1.name,
+      "ADDRESS2" to ProfileKey.ADDRESS2.name,
+      "CITY" to ProfileKey.CITY.name,
+      "COUNTRY" to ProfileKey.COUNTRY.name,
+      "LATITUDE" to ProfileKey.LATITUDE.name,
+      "LONGITUDE" to ProfileKey.LONGITUDE.name,
+      "REGION" to ProfileKey.REGION.name,
+      "ZIP" to ProfileKey.ZIP.name,
+      "TIMEZONE" to ProfileKey.TIMEZONE.name,
+      LOCATION to LOCATION,
+      PROPERTIES to PROPERTIES,
+    )
+
+  // Public EventMetric singletons, in the SDK's declaration order. The `internal` OPENED_PUSH
+  // metric is not visible here and was never exported.
+  private val eventNames: Map<String, String> =
+    mapOf(
+      "OPENED_APP" to EventMetric.OPENED_APP.name,
+      "VIEWED_PRODUCT" to EventMetric.VIEWED_PRODUCT.name,
+      "ADDED_TO_CART" to EventMetric.ADDED_TO_CART.name,
+      "STARTED_CHECKOUT" to EventMetric.STARTED_CHECKOUT.name,
+    )
+
   override fun getConstants(): MutableMap<String, Any> =
     hashMapOf(
-      "PROFILE_KEYS" to
-        this.extractConstants<ProfileKey>().toMutableMap().apply {
-          this[LOCATION] = LOCATION
-          this[PROPERTIES] = PROPERTIES
-        },
-      "EVENT_NAMES" to this.extractConstants<EventMetric>(),
+      "PROFILE_KEYS" to profileKeys,
+      "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
     )
-
-  private inline fun <reified T> extractConstants(): Map<String, String> where T : Keyword =
-    T::class
-      .nestedClasses
-      .filter {
-        it.visibility == KVisibility.PUBLIC && it.objectInstance is T
-      }.associate {
-        it.simpleName.toString() to (it.objectInstance as T).name
-      }
 
   @ReactMethod
   @OptIn(AdvancedAPI::class)
@@ -587,6 +623,144 @@ class KlaviyoReactNativeSdkModule(
       Klaviyo.unregisterFormLifecycleHandler()
     } catch (e: MissingKlaviyoModule) {
       Registry.log.error("Forms module is not available", e)
+    }
+  }
+
+  /**
+   * Pending auth token requests keyed by correlation ID. The native SDK invokes
+   * the provider on a background dispatcher and hands us a [AuthTokenProvider.Callback]
+   * to complete once the JS side responds via [respondToAuthTokenRequest]. Each
+   * entry is tagged with the registration [PendingAuthRequest.generation] it
+   * belongs to. The token itself is never logged; all token logging happens in
+   * the native SDK.
+   */
+  private val pendingAuthCallbacks = ConcurrentHashMap<String, PendingAuthRequest>()
+
+  /**
+   * Monotonic registration generation, bumped on every register and unregister
+   * (both on the main/bridge thread). A pending request carries the generation
+   * captured when its provider was registered; if that no longer matches
+   * [authTokenGeneration] at response time, the provider was torn down or
+   * replaced while the request was in flight, and the request is failed rather
+   * than answered with a different registration's token.
+   */
+  private var authTokenGeneration = 0
+
+  private data class PendingAuthRequest(
+    val callback: AuthTokenProvider.Callback,
+    val generation: Int,
+  )
+
+  @ReactMethod
+  fun registerAuthTokenProvider() {
+    try {
+      // Capture this registration's generation now; the lambda closes over it
+      // by value, so it never races on shared state from the SDK's dispatcher.
+      val generation = ++authTokenGeneration
+      Klaviyo.registerAuthTokenProvider { callback ->
+        // The native SDK keeps at most one token fetch in flight, so any entries
+        // still pending when a NEW request arrives belong to a previous fetch the
+        // SDK has already abandoned (e.g. it timed out). Android's callback API
+        // gives no per-request timeout hook (unlike iOS withTaskCancellationHandler
+        // onCancel), so this is where stale ids are reclaimed — failing them here
+        // bounds the map and honors the "timed-out ids don't resolve" contract.
+        failAndDrainPendingAuthCallbacks("Superseded by a newer auth token request")
+        val id = UUID.randomUUID().toString()
+        pendingAuthCallbacks[id] = PendingAuthRequest(callback, generation)
+        val emitted =
+          sendEvent(
+            "klaviyo:authTokenRequested",
+            Arguments.createMap().apply { putString("id", id) },
+          )
+        if (!emitted) {
+          // The JS bridge is unavailable (catalyst torn down), so no response
+          // will ever arrive. Fail fast instead of leaving the callback pending
+          // until the native SDK's timeout, and don't leak the map entry.
+          pendingAuthCallbacks.remove(id)?.callback?.onFailure(
+            IllegalStateException("Unable to reach the JS auth token provider (bridge unavailable)"),
+          )
+        }
+      }
+    } catch (e: Exception) {
+      Registry.log.error("Failed to register auth token provider", e)
+    }
+  }
+
+  @ReactMethod
+  fun unregisterAuthTokenProvider() {
+    try {
+      Klaviyo.unregisterAuthTokenProvider()
+    } catch (e: Exception) {
+      Registry.log.error("Failed to unregister auth token provider", e)
+    } finally {
+      // Bump the generation so any request stored by an in-flight provider
+      // callback that races this teardown is treated as stale at response time,
+      // then fail and drop any requests still awaiting a JS response.
+      ++authTokenGeneration
+      failAndDrainPendingAuthCallbacks("Auth token provider was unregistered")
+    }
+  }
+
+  /**
+   * Fails and evicts every pending auth token callback with [reason]. Uses
+   * remove-then-fail per key so a concurrent [respondToAuthTokenRequest] can't
+   * also resolve the same callback (preserves the callback's "invoke exactly
+   * once" contract).
+   */
+  private fun failAndDrainPendingAuthCallbacks(reason: String) {
+    pendingAuthCallbacks.keys.toList().forEach { id ->
+      pendingAuthCallbacks.remove(id)?.callback?.onFailure(IllegalStateException(reason))
+    }
+  }
+
+  @ReactMethod
+  fun respondToAuthTokenRequest(
+    id: String,
+    response: ReadableMap,
+  ) {
+    val pending = pendingAuthCallbacks.remove(id)
+    if (pending == null) {
+      // Unknown, already-resolved, or timed-out request. Nothing to do.
+      Registry.log.verbose("No pending auth token request for id $id")
+      return
+    }
+
+    if (pending.generation != authTokenGeneration) {
+      // The provider was unregistered/replaced while this request was in flight,
+      // so it belongs to a superseded registration. Fail it rather than answer
+      // it with a different registration's token.
+      pending.callback.onFailure(
+        IllegalStateException("Auth token request superseded by re-registration"),
+      )
+      return
+    }
+
+    val callback = pending.callback
+    val jwt =
+      response
+        .takeIf { it.hasKey("jwt") && it.getType("jwt") == ReadableType.String }
+        ?.getString("jwt")
+
+    if (jwt != null) {
+      callback.onSuccess(jwt)
+    } else {
+      val error =
+        response
+          .takeIf { it.hasKey("error") && it.getType("error") == ReadableType.String }
+          ?.getString("error")
+          ?: "Auth token provider returned no token"
+      val isConnectivityError =
+        response.hasKey("isConnectivityError") &&
+          response.getType("isConnectivityError") == ReadableType.Boolean &&
+          response.getBoolean("isConnectivityError")
+      // Surface connectivity failures as an IOException so the SDK's
+      // connectivity-driven retry classifier recognizes them; other failures
+      // use a generic Throwable, which the SDK treats as non-retryable.
+      if (isConnectivityError) {
+        callback.onFailure(SocketException(error))
+      } else {
+        callback.onFailure(Throwable(error))
+      }
     }
   }
 

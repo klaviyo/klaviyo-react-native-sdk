@@ -84,11 +84,14 @@ android {
         applicationId "com.klaviyoreactnativesdkexample"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode is overridable at build time via `-PreleaseVersionCode=N`
-        // so CI can inject a monotonic value from github.run_number. Local
-        // builds default to 1.
+        // CI overrides versionCode and versionName with `-PreleaseVersionCode=N`
+        // and `-PreleaseVersionName=X.Y.Z[-suffix]`. Local builds use 1 and the
+        // literal versionName below.
         versionCode Integer.parseInt(project.findProperty("releaseVersionCode")?.toString() ?: "1")
-        versionName "2.5.1"
+        versionName "2.6.1"
+        if (project.hasProperty("releaseVersionName")) {
+            versionName project.property("releaseVersionName")
+        }
         manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {

@@ -4,6 +4,7 @@ import type { KlaviyoPushApi } from './Push';
 import type { KlaviyoFormsApi } from './Forms';
 import type { KlaviyoGeofencingApi } from './Geofencing';
 import type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
+import type { KlaviyoAuthTokenApi } from './AuthToken';
 import type { KlaviyoSubscriptionApi } from './Subscription';
 
 /**
@@ -20,6 +21,7 @@ export interface KlaviyoInterface
     KlaviyoGeofencingApi,
     KlaviyoFormsApi,
     KlaviyoDeepLinkAPI,
+    KlaviyoAuthTokenApi,
     KlaviyoSubscriptionApi {
   /**
    * Initializes the Klaviyo SDK with the given API key.
