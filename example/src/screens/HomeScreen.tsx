@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { SectionList, SafeAreaView, Linking, Platform } from 'react-native';
 
 // Klaviyo SDK
-import { Klaviyo } from 'klaviyo-react-native-sdk';
+import { Klaviyo, FORMS_PREVIEW_TOKEN_KEY } from 'klaviyo-react-native-sdk';
 
 // Local components / styles
 import { styles } from '../Styles';
@@ -113,6 +113,16 @@ const renderSection = (sectionKey: SectionKey) => {
  * The example app's main screen — a `SectionList` of feature domains. This
  * contains the SDK feature sections and company settings.
  */
+const FORMS_PREVIEW_TOKEN_VALUE = new RegExp(
+  `([?&#]${FORMS_PREVIEW_TOKEN_KEY}=)[^&#]*`,
+  'g'
+);
+
+/** Returns `url` with any forms preview token value replaced by `REDACTED`. */
+function redactFormsPreviewToken(url: string): string {
+  return url.replace(FORMS_PREVIEW_TOKEN_VALUE, '$1REDACTED');
+}
+
 export function HomeScreen() {
   const { companyId, isOverridden, changeCompanyId, resetToDefault } =
     useCompanyId();
@@ -136,7 +146,7 @@ export function HomeScreen() {
 
       // If false, Klaviyo didn't handle this URL — route normally
       // e.g., navigate using React Navigation: navigation.navigate(parseUrl(url))
-      console.log('Navigate to url', url);
+      console.log('Navigate to url', redactFormsPreviewToken(url));
     };
 
     // Handle cold-start deep links (app opened via URL)
