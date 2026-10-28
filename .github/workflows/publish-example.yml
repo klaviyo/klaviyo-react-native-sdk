@@ -14,11 +14,16 @@
 #   - `deploy-example-app:android` → Android only
 #   - `deploy-example-app:ios`     → iOS only
 #
+# Releases publish once, from the tag. A master push whose tree matches the
+# current release tag skips its deploys, and a release run cancels in-flight
+# master push runs it already contains. See release-merge-check and
+# supersede-push-runs.
+#
 # Build numbers: Android versionCode is globally monotonic (highest on Play
 # + 1); iOS build numbers restart at 1 per marketing version and strictly
-# increase within it. Each job preflights the store, then retries with a
-# fresh number if the upload is rejected for a conflict (e.g. two runs racing
-# on master + rel/**).
+# increase within it. Deploys queue per platform across all runs. Each job
+# preflights the store, then retries with a fresh number if the upload is
+# rejected for a conflict.
 #
 # App version: X.Y.Z from the SDK version on a release, X.Y.Z-rc.<build> on
 # rel/*, X.Y.Z-alpha.<build> otherwise. Android versionName carries the full
@@ -78,7 +83,8 @@ on:
     types: [labeled]
 
 # A newer push to the same branch cancels the run in flight. Release, manual
-# and PR-label runs are never cancelled.
+# and PR-label runs are never cancelled by this group. Deploy jobs also queue
+# per platform (see deploy-android's concurrency).
 concurrency:
   group: publish-example-${{ github.event_name == 'push' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
@@ -101,15 +107,108 @@ env:
   REF_TYPE: ${{ github.ref_type }}
 
 jobs:
-  # Only run for triggers that can deploy: any other PR label must not start
-  # the full macOS CI.
-  checks:
-    name: Lint, test and build the library
+  # On a push to master, sets skip=true when HEAD's tree matches the tag of
+  # package.json's version (a rel/* merge-back). The release run publishes
+  # that content from the tag. The skip applies whether or not the release
+  # run's publish succeeded; retry a failed release publish from the release
+  # run. A missing tag or failed lookup leaves skip=false.
+  release-merge-check:
+    name: Check for release merge-back
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Compare HEAD with the release tag
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version package.json)
+          if ! git fetch --quiet --depth=1 origin "refs/tags/$VERSION:refs/tags/$VERSION" 2>/dev/null; then
+            echo "No tag $VERSION; deploying."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HEAD_TREE=$(git rev-parse 'HEAD^{tree}')
+          TAG_TREE=$(git rev-parse "$VERSION^{tree}")
+          if [ "$HEAD_TREE" = "$TAG_TREE" ]; then
+            echo "::notice::HEAD has the same tree as release tag $VERSION, which the release run publishes. Skipping this deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "HEAD differs from release tag $VERSION; deploying."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # On a release or tag-dispatched run that publishes both platforms, cancels
+  # in-flight master push runs of this workflow whose commit the release
+  # contains (same commit, an ancestor, or the same tree). Only master push
+  # runs are considered. It can cancel a run that is mid-upload; the deploy
+  # jobs' per-platform queue then starts this run's deploy afterwards.
+  supersede-push-runs:
+    name: Cancel superseded master publishes
     if: |
       github.event_name == 'release'
+      || (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.platform == 'both')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Cancel master publishes this release contains
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          RELEASE_TREE=$(gh api "repos/$REPO/commits/$RELEASE_SHA" --jq .commit.tree.sha)
+          gh api "repos/$REPO/actions/workflows/publish-example.yml/runs?event=push&branch=master&per_page=30" \
+            --jq '.workflow_runs[] | select(.status != "completed") | "\(.id) \(.head_sha)"' |
+          while read -r RUN_ID RUN_SHA; do
+            RUN_TREE=$(gh api "repos/$REPO/commits/$RUN_SHA" --jq .commit.tree.sha)
+            # compare/<base>...<head> is "ahead" or "identical" when head contains base.
+            STATUS=$(gh api "repos/$REPO/compare/$RUN_SHA...$RELEASE_SHA" --jq .status)
+            if [ "$RUN_TREE" = "$RELEASE_TREE" ] || [ "$STATUS" = "ahead" ] || [ "$STATUS" = "identical" ]; then
+              echo "::notice::Cancelling master publish run $RUN_ID ($RUN_SHA); this release run publishes its content."
+              if ! gh run cancel "$RUN_ID" --repo "$REPO"; then
+                RUN_STATUS=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .status)
+                if [ "$RUN_STATUS" != "completed" ]; then
+                  echo "::error::Could not cancel run $RUN_ID (status $RUN_STATUS)."
+                  exit 1
+                fi
+                echo "Run $RUN_ID finished before it could be cancelled."
+              fi
+            else
+              echo "Keeping run $RUN_ID ($RUN_SHA): it has changes the release does not."
+            fi
+          done
+
+  # Only run for triggers that can deploy: any other PR label must not start
+  # the full macOS CI. Waits for the two jobs above. Runs when they are
+  # skipped; a failed or timed-out supersede-push-runs stops the release
+  # deploy, and a failed release-merge-check leaves skip unset so the push
+  # deploys.
+  checks:
+    name: Lint, test and build the library
+    needs: [release-merge-check, supersede-push-runs]
+    if: |
+      !cancelled()
+      && (needs.supersede-push-runs.result == 'success' || needs.supersede-push-runs.result == 'skipped')
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app')))
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
@@ -125,14 +224,17 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    needs: release-merge-check
     outputs:
       ready: ${{ steps.check.outputs.android_ready }}
       missing: ${{ steps.check.outputs.android_missing }}
     if: |
-      github.event_name == 'release'
+      !cancelled()
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -157,14 +259,17 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    needs: release-merge-check
     outputs:
       ready: ${{ steps.check.outputs.ios_ready }}
       missing: ${{ steps.check.outputs.ios_missing }}
     if: |
-      github.event_name == 'release'
+      !cancelled()
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -193,12 +298,21 @@ jobs:
     timeout-minutes: 45
     environment:
       name: android-internal-track
+    # One deploy per platform at a time across every run. Waiting deploys
+    # queue FIFO (up to 100) and a started deploy is never cancelled by this
+    # group. Same setup as klaviyo-flutter-sdk's publish-example.yml.
+    concurrency:
+      group: publish-example-android
+      cancel-in-progress: false
+      queue: max
     # Run on release / push always; on workflow_dispatch when platform is
     # `both` or `android`; on labeled PR when the label is `deploy-example-app`
     # (umbrella) or `deploy-example-app:android`. Skipped (not failed) when the
     # preflight found missing secrets on a push/release trigger.
     if: |
-      (github.event_name == 'release'
+      !cancelled()
+      && needs.checks.result == 'success'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
       || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
@@ -326,6 +440,11 @@ jobs:
     environment:
       name: testflight
       url: ${{ steps.result.outputs.testflight_url }}
+    # See deploy-android's concurrency.
+    concurrency:
+      group: publish-example-ios
+      cancel-in-progress: false
+      queue: max
     needs: [checks, preflight-ios]
     outputs:
       marketing_version: ${{ steps.result.outputs.marketing_version }}
@@ -340,7 +459,9 @@ jobs:
     # (umbrella) or `deploy-example-app:ios`. Skipped (not failed) when the
     # preflight found missing secrets on a push/release trigger.
     if: |
-      (github.event_name == 'release'
+      !cancelled()
+      && needs.checks.result == 'success'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
       || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
@@ -540,7 +661,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     if: |
-      needs.deploy-ios.result == 'success' && (
+      !cancelled() && needs.deploy-ios.result == 'success' && (
         github.event_name == 'release'
         || github.event_name == 'push'
         || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
