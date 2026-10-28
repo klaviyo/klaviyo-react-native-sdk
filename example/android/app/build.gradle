@@ -88,7 +88,7 @@ android {
         // and `-PreleaseVersionName=X.Y.Z[-suffix]`. Local builds use 1 and the
         // literal versionName below.
         versionCode Integer.parseInt(project.findProperty("releaseVersionCode")?.toString() ?: "1")
-        versionName "2.6.0"
+        versionName "2.7.0"
         if (project.hasProperty("releaseVersionName")) {
             versionName project.property("releaseVersionName")
         }

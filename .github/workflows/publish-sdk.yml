@@ -1,36 +1,148 @@
 name: Publish SDK to NPM
 
+# Called only by publish-release.yml, which runs the release preflight and is
+# the workflow the npm trusted publisher names.
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to publish (X.Y.Z tag)'
+        required: true
+        type: string
+      release_url:
+        description: 'GitHub release URL'
+        required: true
+        type: string
+      ref:
+        description: 'Commit SHA or ref to check out when the tag does not exist yet'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Run npm publish --dry-run and skip the success alert'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish-sdk:
     runs-on: ubuntu-24.04
+    environment: npm
     permissions:
       contents: read
       packages: write
+      id-token: write
+    outputs:
+      version: ${{ steps.pkg.outputs.version }}
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || inputs.version }}
+
+      - name: Read package version
+        id: pkg
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "dist_tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      # Explicit `yarn prepare` IS load-bearing — do not remove without
-      # rewiring the publish path. Two reasons:
-      #   1. Yarn Berry 3 does not run the `prepare` lifecycle hook (yarn
-      #      manifest docs only list preinstall/install/postinstall/
-      #      prepack/postpack), so `yarn install` above does NOT build `lib/`.
-      #   2. JS-DevTools/npm-publish defaults to `--ignore-scripts` as a
-      #      security precaution, so `npm publish` does NOT run `prepare`
-      #      either. Setting `ignore-scripts: false` would let it, but
-      #      explicit-build-then-publish is clearer and matches local dev.
-      # Without this step, `lib/` is empty when the tarball gets uploaded
-      # and every consumer's `import 'klaviyo-react-native-sdk'` breaks.
+      # Explicit `yarn prepare` builds lib/ before the stage. Yarn Berry 3
+      # does not run the `prepare` lifecycle hook on install, and
+      # `npm stage publish` packs the working directory without running it
+      # either. Without this step the staged tarball has an empty lib/ and
+      # every consumer's `import 'klaviyo-react-native-sdk'` breaks.
       - name: Prepare
         run: yarn prepare
 
-      - uses: JS-DevTools/npm-publish@v3
+      # Trusted publishing (OIDC): npm exchanges this job's OIDC token for
+      # a short-lived credential, so there is no NPM_TOKEN secret to rotate.
+      # Requires Node >= 22.14, npm >= 11.15 and a trust relationship on
+      # npmjs.com; provenance attestation is included.
+      - name: Setup Node for trusted publishing
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          token: ${{ secrets.NPM_TOKEN }}
+          node-version: '22.14'
+
+      - name: Update npm for trusted publishing
+        run: npm install -g "npm@^11.15.0"
+
+      - name: Publish to npm (dry run)
+        if: inputs.dry_run
+        run: npm publish --dry-run --tag "${{ steps.pkg.outputs.dist_tag }}"
+
+      - name: Publish to npm
+        id: publish
+        if: ${{ !inputs.dry_run }}
+        run: |
+          if npm publish --tag "${{ steps.pkg.outputs.dist_tag }}"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(npm view "klaviyo-react-native-sdk@${{ steps.pkg.outputs.version }}" version --fetch-timeout=10000 --fetch-retries=0 2>/dev/null)" = "${{ steps.pkg.outputs.version }}" ]; then
+            echo "::warning::klaviyo-react-native-sdk@${{ steps.pkg.outputs.version }} is already on npm, nothing to do"
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            exit 1
+          fi
+
+      - name: Notify Slack on success
+        if: success() && !inputs.dry_run
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: success
+          platform: npm
+          full_version: ${{ steps.pkg.outputs.version }}
+          dist_tag: ${{ steps.pkg.outputs.dist_tag }}
+          already_published: ${{ steps.publish.outputs.already_published }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          platform: npm
+          full_version: ${{ steps.pkg.outputs.version || inputs.version }}
+          steps_json: ${{ toJSON(steps) }}
+
+  linear-release:
+    needs: publish-sdk
+    if: ${{ !inputs.dry_run && !contains(inputs.version, '-') && github.event.release.prerelease != true }}
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || inputs.version }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Sync release to Linear
+        id: linear-sync
+        continue-on-error: true
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: sync
+          version: ${{ needs.publish-sdk.outputs.version }}
+          name: ${{ needs.publish-sdk.outputs.version }}
+
+      - name: Complete release in Linear
+        if: steps.linear-sync.outcome == 'success'
+        continue-on-error: true
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
+          command: complete
+          version: ${{ needs.publish-sdk.outputs.version }}

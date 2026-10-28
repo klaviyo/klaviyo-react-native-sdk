@@ -1,0 +1,268 @@
+name: Publish Release
+
+# Entry point for every npm publish: the npm trusted publisher is registered
+# for this file. Runs on a release published in the GitHub UI (publishes npm
+# only; the release and tag already exist) or on dispatch (creates the draft,
+# publishes npm, then publishes the release and dispatches publish-example).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (X.Y.Z or X.Y.Z-<prerelease>)'
+        required: true
+        type: string
+      ref:
+        description: 'Branch (e.g. master, rel/*) or SHA to release; defaults to the default branch'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Dry run: run checks, approval and npm publish --dry-run; create and publish nothing'
+        required: false
+        default: false
+        type: boolean
+      skip_ci_check:
+        description: 'Skip the CI-green check (version, branch and tag checks still run)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  VERSION: ${{ inputs.version || github.event.release.tag_name }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    outputs:
+      sha: ${{ steps.preflight.outputs.sha }}
+      release_url: ${{ steps.draft.outputs.release_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.event.release.tag_name || github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Require a commit on master or rel/*
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --quiet origin '+refs/heads/master:refs/remotes/origin/master' '+refs/heads/rel/*:refs/remotes/origin/rel/*'
+          if [ -z "$(git branch -r --contains HEAD --list 'origin/master' 'origin/rel/*')" ]; then
+            echo "::error::$(git rev-parse HEAD) is not on master or a rel/* branch"
+            exit 1
+          fi
+
+      - name: Fail if tag already exists
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $VERSION already exists"
+            exit 1
+          fi
+
+      - name: Release preflight
+        id: preflight
+        uses: ./.github/actions/release-preflight
+        with:
+          version: ${{ env.VERSION }}
+          github-token: ${{ github.token }}
+          skip-ci-check: ${{ inputs.skip_ci_check == true }}
+
+      - name: Create or reuse draft release
+        id: draft
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.preflight.outputs.sha }}
+          EVENT_RELEASE_URL: ${{ github.event.release.html_url }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            echo "release_url=$EVENT_RELEASE_URL" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RELEASE_JSON=$(gh release view "$VERSION" --json isDraft,url 2>/dev/null || echo "")
+
+          if [ -n "$RELEASE_JSON" ]; then
+            IS_DRAFT=$(echo "$RELEASE_JSON" | jq -r '.isDraft')
+            URL=$(echo "$RELEASE_JSON" | jq -r '.url')
+            if [ "$IS_DRAFT" != "true" ]; then
+              echo "::error::Release $VERSION already exists and is published"
+              exit 1
+            fi
+            echo "Reusing existing draft release: $URL"
+          else
+            PRERELEASE_FLAG=()
+            if [[ "$VERSION" == *-* ]]; then
+              PRERELEASE_FLAG=(--prerelease)
+            fi
+            URL=$(gh release create "$VERSION" --draft --generate-notes --target "$SHA" --title "$VERSION" "${PRERELEASE_FLAG[@]}")
+            echo "Created draft release: $URL"
+          fi
+
+          echo "release_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Write summary
+        env:
+          SHA: ${{ steps.preflight.outputs.sha }}
+          RELEASE_URL: ${{ steps.draft.outputs.release_url }}
+        run: |
+          {
+            echo "## Publish Release: $VERSION${{ inputs.dry_run && ' (dry run)' || '' }}"
+            echo ""
+            echo "- **Version:** \`$VERSION\`"
+            echo "- **SHA:** \`$SHA\`"
+            echo "- **Release:** $RELEASE_URL"
+            if [ "${{ inputs.skip_ci_check == true }}" = "true" ]; then
+              echo "- ⚠️ **CI check skipped:** pull_request CI for this commit was not verified"
+            fi
+            echo ""
+            echo "Approve the \`npm\` environment on this run to publish."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack — awaiting approval
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: pending
+          platform: release
+          full_version: ${{ env.VERSION }}
+          reason: ${{ inputs.skip_ci_check == true && 'CI check skipped' || '' }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          platform: release
+          full_version: ${{ env.VERSION }}
+          steps_json: ${{ toJSON(steps) }}
+
+  publish-sdk:
+    needs: prepare
+    uses: ./.github/workflows/publish-sdk.yml
+    with:
+      version: ${{ inputs.version || github.event.release.tag_name }}
+      release_url: ${{ needs.prepare.outputs.release_url }}
+      ref: ${{ needs.prepare.outputs.sha }}
+      dry_run: ${{ inputs.dry_run == true }}
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  finalize:
+    needs: [prepare, publish-sdk]
+    if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$VERSION" == *-* ]]; then
+            gh release edit "$VERSION" --draft=false --prerelease=true --latest=false --target "$SHA" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release edit "$VERSION" --draft=false --prerelease=false --latest --target "$SHA" --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - name: Dispatch publish-example
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PLATFORM=both
+          gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
+
+      - name: Write summary
+        env:
+          RELEASE_URL: ${{ needs.prepare.outputs.release_url }}
+        run: |
+          {
+            echo "## Published: $VERSION"
+            echo ""
+            echo "- **Release:** $RELEASE_URL"
+            echo "- **Example publish:** [publish-example.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-example.yml)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: failure
+          platform: release
+          full_version: ${{ env.VERSION }}
+          steps_json: ${{ toJSON(steps) }}
+
+  # Rejected deployments and cancelled runs skip every failure() Slack step.
+  stopped:
+    needs: [prepare, publish-sdk, finalize]
+    if: always() && (contains(needs.*.result, 'cancelled') || needs.publish-sdk.result == 'failure')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Classify stop
+        id: reason
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANCELLED: ${{ contains(needs.*.result, 'cancelled') }}
+        run: |
+          set -euo pipefail
+          if [ "$CANCELLED" = "true" ]; then
+            echo "reason=cancelled" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A rejected deployment fails the npm job before any step runs.
+          ran=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" \
+            --jq '[.jobs[] | select(.name | endswith("/ publish-sdk")) | .steps | length] | add // 0')
+          if [ "$ran" = "0" ]; then
+            echo "reason=npm deploy rejected" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.reason.outputs.reason != ''
+        with:
+          sparse-checkout: .github
+
+      - name: Notify Slack — stopped
+        if: steps.reason.outputs.reason != ''
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack-publish
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          result: stopped
+          platform: release
+          full_version: ${{ env.VERSION }}
+          reason: ${{ steps.reason.outputs.reason }}
