@@ -58,21 +58,21 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - klaviyo-react-native-sdk (2.6.1):
-    - KlaviyoForms (= 5.5.1)
-    - KlaviyoLocation (= 5.5.1)
-    - KlaviyoSwift (= 5.5.1)
+  - klaviyo-react-native-sdk (2.7.0):
+    - KlaviyoForms (= 5.6.0)
+    - KlaviyoLocation (= 5.6.0)
+    - KlaviyoSwift (= 5.6.0)
     - React-Core
-  - KlaviyoCore (5.5.1):
+  - KlaviyoCore (5.6.0):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.5.1):
-    - KlaviyoCore (~> 5.5.1)
-  - KlaviyoLocation (5.5.1):
-    - KlaviyoSwift (~> 5.5.1)
-  - KlaviyoSwift (5.5.1):
+  - KlaviyoForms (5.6.0):
+    - KlaviyoCore (~> 5.6.0)
+  - KlaviyoLocation (5.6.0):
+    - KlaviyoSwift (~> 5.6.0)
+  - KlaviyoSwift (5.6.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.5.1)
-  - KlaviyoSwiftExtension (5.5.1)
+    - KlaviyoCore (~> 5.6.0)
+  - KlaviyoSwiftExtension (5.6.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -2269,12 +2269,12 @@ SPEC CHECKSUMS:
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  klaviyo-react-native-sdk: afb1aa2187e674fdef605521c6ef71fa7540174e
-  KlaviyoCore: 291eb345b586fc0c26e33ca91ee859d4e7632477
-  KlaviyoForms: 6b94788a0dc5ae2cee44613aa4c32769702db855
-  KlaviyoLocation: dc85b434d212f98e9f7186306d8507f541cacd3f
-  KlaviyoSwift: 40144002a6f60d5f3219555d391c1b9ccc6db49a
-  KlaviyoSwiftExtension: b9412155161e15b31419097b1563df82a5bf1803
+  klaviyo-react-native-sdk: ade53d6cd007cecea09294e29740dc23bb1ebe26
+  KlaviyoCore: 164331e6fdd6deec7f88f915475f173db49c6b34
+  KlaviyoForms: 6769bc3310335554b12ad3c2b33ddf4a1fd27fac
+  KlaviyoLocation: 0ec7510cf6af4e4b08729065234a9059991fd54a
+  KlaviyoSwift: 5dd413e8bdbce43b84d158c71d1c83f12e2b2965
+  KlaviyoSwiftExtension: cf82382fcc70a1077387b40c0327dd665823c946
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCTDeprecation: 5268fe9d45036e52deb765d242297f1011e17333
