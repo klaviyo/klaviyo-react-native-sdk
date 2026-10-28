@@ -67,6 +67,7 @@ class KlaviyoReactNativeSdkModule(
   @Volatile private var invalidated = false
   private var formsRegistrationEpoch: String? = null
   private var formsFailureForwarder: InAppFormsFailureHandler? = null
+  private val pendingFormGatingCallbacks = ConcurrentHashMap<String, FormLifecycleEvent.FormWillDisplay>()
 
   private fun sendEvent(
     eventName: String,
@@ -614,6 +615,12 @@ class KlaviyoReactNativeSdkModule(
                   putString("buttonLabel", event.buttonLabel)
                   putString("deepLinkUrl", event.deepLinkUrl.toString())
                 }
+
+                is FormLifecycleEvent.FormWillDisplay -> {
+                  putString("type", "formWillDisplay")
+                  putString("formType", event.formType)
+                  pendingFormGatingCallbacks[event.formId] = event
+                }
               }
             }
 
@@ -626,6 +633,21 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun respondToFormWillDisplay(
+    formId: String,
+    accepted: Boolean,
+  ) {
+    val event = pendingFormGatingCallbacks.remove(formId) ?: return
+    UiThreadUtil.runOnUiThread {
+      if (accepted) {
+        event.accept()
+      } else {
+        event.reject()
+      }
+    }
+  }
+
+  @ReactMethod
   fun unregisterFormLifecycleHandler() {
     UiThreadUtil.runOnUiThread {
       if (!invalidated) clearFormLifecycleHandler()
@@ -633,6 +655,7 @@ class KlaviyoReactNativeSdkModule(
   }
 
   private fun clearFormLifecycleHandler() {
+    pendingFormGatingCallbacks.clear()
     if (lifecycleOwner?.get() !== this) return
     lifecycleOwner = null
     try {

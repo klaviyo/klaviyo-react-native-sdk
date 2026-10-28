@@ -1992,11 +1992,11 @@ DEPENDENCIES:
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `2a6cf04fcc19d8076c06e88339d51626dc7664e6`)
-  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `2a6cf04fcc19d8076c06e88339d51626dc7664e6`)
-  - KlaviyoLocation (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `2a6cf04fcc19d8076c06e88339d51626dc7664e6`)
-  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `2a6cf04fcc19d8076c06e88339d51626dc7664e6`)
-  - KlaviyoSwiftExtension (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `2a6cf04fcc19d8076c06e88339d51626dc7664e6`)
+  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `078022a24123dd05d61850f48f10d6fb1d1414c9`)
+  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `078022a24123dd05d61850f48f10d6fb1d1414c9`)
+  - KlaviyoLocation (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `078022a24123dd05d61850f48f10d6fb1d1414c9`)
+  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `078022a24123dd05d61850f48f10d6fb1d1414c9`)
+  - KlaviyoSwiftExtension (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, commit `078022a24123dd05d61850f48f10d6fb1d1414c9`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -2100,19 +2100,19 @@ EXTERNAL SOURCES:
   klaviyo-react-native-sdk:
     :path: "../.."
   KlaviyoCore:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   RCTDeprecation:
     :path: "../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation"
@@ -2273,19 +2273,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: 2a6cf04fcc19d8076c06e88339d51626dc7664e6
+    :commit: 078022a24123dd05d61850f48f10d6fb1d1414c9
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2387,6 +2387,6 @@ SPEC CHECKSUMS:
   RNScreens: d0b84395f70841b48de7af26e45704ed4a24c62e
   Yoga: 9690ea6ce9c77aee633f4815cc42202c701edbd8
 
-PODFILE CHECKSUM: a55a60c0483916363200e98b388fccb2d9bf77d1
+PODFILE CHECKSUM: 368a6c6b2182cdb80b9ff5a7720ec61a1226da79
 
 COCOAPODS: 1.16.2

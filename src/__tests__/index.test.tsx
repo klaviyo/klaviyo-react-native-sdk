@@ -43,6 +43,7 @@ jest.mock('react-native', () => {
         unregisterFromInAppForms: jest.fn(),
         openForm: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
+        respondToFormWillDisplay: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
         unregisterAuthTokenProvider: jest.fn(),
@@ -444,6 +445,34 @@ describe('Klaviyo SDK', () => {
     const epoch = () => native.registerForInAppForms.mock.lastCall[1];
     const fail = (registrationEpoch = epoch()) =>
       emitNativeEvent('KlaviyoFormsFailure', { registrationEpoch });
+
+    it('keeps gate responses active through failure callback replacement and forms cleanup', async () => {
+      const firstCallback = jest.fn();
+      const latestCallback = jest.fn();
+      const handler = jest.fn().mockReturnValue(false);
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
+      register({ onFailure: firstCallback });
+      register({ onFailure: latestCallback });
+      fail();
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(latestCallback).toHaveBeenCalledTimes(1);
+
+      Klaviyo.unregisterFromInAppForms();
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'after-cleanup',
+        formType: 'modal',
+      });
+      await new Promise(process.nextTick);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(native.respondToFormWillDisplay).toHaveBeenCalledWith(
+        'after-cleanup',
+        false
+      );
+      expect(native.unregisterFormLifecycleHandler).not.toHaveBeenCalled();
+      unsubscribe();
+    });
 
     it.each(['unregister', 'refresh'])(
       'keeps the auth provider active after forms %s cleanup',
@@ -958,6 +987,153 @@ describe('Klaviyo SDK', () => {
       ).toHaveBeenCalledTimes(1);
     });
 
+    it('should call respondToFormWillDisplay with true when handler returns true', async () => {
+      const handler = jest.fn().mockReturnValue(true);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Wait for the Promise.resolve microtask
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should reject a native gating event with an empty form name', async () => {
+      const handler = jest.fn().mockReturnValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: '',
+        formType: 'POPUP',
+      });
+      await Promise.resolve();
+      expect(handler).toHaveBeenCalledWith({
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: '',
+        formType: 'POPUP',
+      });
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should call respondToFormWillDisplay with false when handler returns false', async () => {
+      const handler = jest.fn().mockReturnValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should default to accepting when handler returns void/undefined', async () => {
+      const handler = jest.fn(); // returns undefined
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should handle async handler returning a Promise', async () => {
+      const handler = jest.fn().mockResolvedValue(false);
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Need to flush the microtask queue for the resolved promise
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', false);
+    });
+
+    it('should default to accepting when handler throws', async () => {
+      const handler = jest.fn().mockRejectedValue(new Error('handler error'));
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+    });
+
+    it('should fail-open when handler throws synchronously', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const handler = jest.fn().mockImplementation(() => {
+        throw new Error('sync kaboom');
+      });
+      Klaviyo.registerFormLifecycleHandler(handler);
+
+      // Clear mocks from re-registration cleanup
+      jest.clearAllMocks();
+
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'abc123',
+        formName: 'Test Form',
+        formType: 'POPUP',
+      });
+
+      // Synchronous — no await needed
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('abc123', true);
+
+      consoleErrorSpy.mockRestore();
+    });
+
     it('should be safe to call the unsubscribe function more than once', () => {
       const handler = jest.fn();
       const unsubscribe = Klaviyo.registerFormLifecycleHandler(handler);
@@ -1202,6 +1378,37 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
       ).toHaveBeenCalledWith('req-1', { jwt: 'jwt-abc' });
+    });
+
+    it('keeps auth requests subscribed after lifecycle cleanup', async () => {
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('jwt-active'));
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(() => false);
+
+      unsubscribe();
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-after-forms' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-after-forms', { jwt: 'jwt-active' });
+    });
+
+    it('keeps form gating subscribed after auth provider cleanup', async () => {
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('jwt-active'));
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(() => false);
+
+      Klaviyo.unregisterAuthTokenProvider();
+      emitNativeEvent('FormLifecycleEvent', {
+        type: 'formWillDisplay',
+        formId: 'form-after-auth',
+        formType: 'POPUP',
+      });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToFormWillDisplay
+      ).toHaveBeenCalledWith('form-after-auth', false);
+      unsubscribe();
     });
 
     it('routes an empty-string resolution through the failure path', async () => {
