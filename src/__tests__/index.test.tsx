@@ -41,6 +41,7 @@ jest.mock('react-native', () => {
         createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        openForm: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
@@ -356,6 +357,22 @@ describe('Klaviyo SDK', () => {
   });
 
   describe('in-app forms', () => {
+    it.each(['form-id', '  form-id  ', 'quote\'"\\\n-id', '   '])(
+      'submits the exact form ID %p as a void command',
+      (formId) => {
+        const native = NativeModules.KlaviyoReactNativeSdk;
+        native.openForm.mockReturnValueOnce(true);
+
+        expect(Klaviyo.openForm(formId)).toBeUndefined();
+
+        expect(native.openForm).toHaveBeenCalledTimes(1);
+        expect(native.openForm).toHaveBeenCalledWith(formId);
+        expect(native.registerForInAppForms).not.toHaveBeenCalled();
+        expect(native.unregisterFromInAppForms).not.toHaveBeenCalled();
+        expect(eventListeners.KlaviyoFormsFailure ?? []).toHaveLength(0);
+      }
+    );
+
     it('should register for in-app forms with configuration', () => {
       const config = {
         sessionTimeoutDuration: 3600,
@@ -400,6 +417,16 @@ describe('Klaviyo SDK', () => {
         );
         expect(
           NativeModules.KlaviyoReactNativeSdk.unregisterFromInAppForms
+        ).not.toHaveBeenCalled();
+
+        consoleErrorSpy.mockClear();
+
+        expect(Klaviyo.openForm('form-id')).toBeUndefined();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('KlaviyoForms')
+        );
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.openForm
         ).not.toHaveBeenCalled();
       } finally {
         NativeModules.KlaviyoReactNativeSdk.getConstants.mockReturnValue(
