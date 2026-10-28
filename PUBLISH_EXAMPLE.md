@@ -19,7 +19,9 @@ secret skips the deploy green with a `::notice::` naming it; on manual and
 label deploys the preflight fails red, since a human asked for the deploy.
 
 A newer push to the same branch cancels the run in flight; release, manual and
-label runs are never cancelled. After an iOS upload, a `what-to-test` job on a
+label runs are never cancelled. Deploys queue per platform across all runs
+(`publish-example-android`, `publish-example-ios`, `queue: max`), so two runs
+never build or pick a build number at the same time. After an iOS upload, a `what-to-test` job on a
 Linux runner waits for Apple to process the build and sets its TestFlight
 **What to Test** text, so no macOS runner is held during processing.
 
@@ -73,6 +75,25 @@ tester or App Store Connect login. The Android Slack link is the per-build
 Play URL (`play.google.com/apps/test/<package>/<versionCode>`), which requires
 internal tester access. Don't add steps that print environment variables,
 upload signed artifacts, or post public install links.
+
+## Releases
+
+A release publishes once, from its tag: `publish-release.yml` dispatches this
+workflow on the tag, and the app version is `X.Y.Z`.
+
+- **Merge-back**: merging `rel/X.Y.Z` into `master` pushes an untagged merge
+  commit with the same content. The `release-merge-check` job compares the
+  pushed tree with the tag of `package.json`'s version and skips the deploys
+  when they match. The skip applies whether or not the release run's publish
+  succeeded: retry a failed release publish from the release run (re-run it,
+  or dispatch on the tag). If the merge-back carries extra changes, the trees
+  differ and the push deploys as usual.
+- **Release right after a merge**: the release run's `supersede-push-runs` job
+  cancels in-flight `master` push runs whose commit the tag already contains
+  (same commit, an ancestor, or the same tree). It only looks at `master` push
+  runs, and only when the release run publishes both platforms. It can cancel
+  an upload in progress; the per-platform queue then starts the release deploy
+  with a fresh build number.
 
 ## Build numbers
 
