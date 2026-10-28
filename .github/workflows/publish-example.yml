@@ -195,14 +195,15 @@ jobs:
 
   # Only run for triggers that can deploy: any other PR label must not start
   # the full macOS CI. Waits for the two jobs above. Runs when they are
-  # skipped; a failed supersede-push-runs stops the release deploy, and a
-  # failed release-merge-check leaves skip unset so the push deploys.
+  # skipped; a failed or timed-out supersede-push-runs stops the release
+  # deploy, and a failed release-merge-check leaves skip unset so the push
+  # deploys.
   checks:
     name: Lint, test and build the library
     needs: [release-merge-check, supersede-push-runs]
     if: |
       !cancelled()
-      && needs.supersede-push-runs.result != 'failure'
+      && (needs.supersede-push-runs.result == 'success' || needs.supersede-push-runs.result == 'skipped')
       && needs.release-merge-check.outputs.skip != 'true'
       && (github.event_name == 'release'
       || github.event_name == 'push'

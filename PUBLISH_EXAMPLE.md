@@ -93,10 +93,12 @@ published in the GitHub UI triggers it directly through `release: published`.
 - **Release right after a merge**: the release run's `supersede-push-runs` job
   cancels in-flight `master` push runs whose commit the tag already contains
   (same commit, an ancestor, or the same tree). It only looks at `master` push
-  runs, and only when the release run publishes both platforms. It can cancel
-  an upload in progress; the per-platform queue then starts the release deploy
-  with a fresh build number. If a cancel fails, the job fails and the release
-  run doesn't deploy, so the two never both upload.
+  runs, and only when the release run publishes both platforms. Cancelling
+  stops whatever the push run hasn't done yet; a push run that already
+  uploaded, or finished before the cancel, still has its build on the store.
+  It can cancel an upload in progress; the per-platform queue then starts the
+  release deploy with a fresh build number. If the job fails or times out
+  (for example, a cancel fails), the release run doesn't deploy.
 
 ## Build numbers
 
