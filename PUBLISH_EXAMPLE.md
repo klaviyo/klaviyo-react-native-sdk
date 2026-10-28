@@ -78,22 +78,25 @@ upload signed artifacts, or post public install links.
 
 ## Releases
 
-A release publishes once, from its tag: `publish-release.yml` dispatches this
-workflow on the tag, and the app version is `X.Y.Z`.
+A release publishes once, from its tag, with app version `X.Y.Z`. A release
+run through `publish-release.yml`'s workflow dispatch triggers this workflow
+from its `finalize` job, as a `workflow_dispatch` on the tag. A release
+published in the GitHub UI triggers it directly through `release: published`.
 
 - **Merge-back**: merging `rel/X.Y.Z` into `master` pushes an untagged merge
   commit with the same content. The `release-merge-check` job compares the
   pushed tree with the tag of `package.json`'s version and skips the deploys
   when they match. The skip applies whether or not the release run's publish
-  succeeded: retry a failed release publish from the release run (re-run it,
-  or dispatch on the tag). If the merge-back carries extra changes, the trees
+  succeeded: retry a failed release publish by re-running that run, or with
+  `gh workflow run publish-example.yml --ref X.Y.Z -f platform=both`. If the merge-back carries extra changes, the trees
   differ and the push deploys as usual.
 - **Release right after a merge**: the release run's `supersede-push-runs` job
   cancels in-flight `master` push runs whose commit the tag already contains
   (same commit, an ancestor, or the same tree). It only looks at `master` push
   runs, and only when the release run publishes both platforms. It can cancel
   an upload in progress; the per-platform queue then starts the release deploy
-  with a fresh build number.
+  with a fresh build number. If a cancel fails, the job fails and the release
+  run doesn't deploy, so the two never both upload.
 
 ## Build numbers
 

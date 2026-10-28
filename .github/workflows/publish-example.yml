@@ -180,20 +180,29 @@ jobs:
             STATUS=$(gh api "repos/$REPO/compare/$RUN_SHA...$RELEASE_SHA" --jq .status)
             if [ "$RUN_TREE" = "$RELEASE_TREE" ] || [ "$STATUS" = "ahead" ] || [ "$STATUS" = "identical" ]; then
               echo "::notice::Cancelling master publish run $RUN_ID ($RUN_SHA); this release run publishes its content."
-              gh run cancel "$RUN_ID" --repo "$REPO" || echo "::warning::Could not cancel run $RUN_ID"
+              if ! gh run cancel "$RUN_ID" --repo "$REPO"; then
+                RUN_STATUS=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .status)
+                if [ "$RUN_STATUS" != "completed" ]; then
+                  echo "::error::Could not cancel run $RUN_ID (status $RUN_STATUS)."
+                  exit 1
+                fi
+                echo "Run $RUN_ID finished before it could be cancelled."
+              fi
             else
               echo "Keeping run $RUN_ID ($RUN_SHA): it has changes the release does not."
             fi
           done
 
   # Only run for triggers that can deploy: any other PR label must not start
-  # the full macOS CI. Waits for the two jobs above; !cancelled() lets it run
-  # when they are skipped or fail.
+  # the full macOS CI. Waits for the two jobs above. Runs when they are
+  # skipped; a failed supersede-push-runs stops the release deploy, and a
+  # failed release-merge-check leaves skip unset so the push deploys.
   checks:
     name: Lint, test and build the library
     needs: [release-merge-check, supersede-push-runs]
     if: |
       !cancelled()
+      && needs.supersede-push-runs.result != 'failure'
       && needs.release-merge-check.outputs.skip != 'true'
       && (github.event_name == 'release'
       || github.event_name == 'push'
