@@ -62,7 +62,7 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
-      - 'CODEOWNERS'
+      - '.github/CODEOWNERS'
       - '.coderabbit.yaml'
       - '.cursor/**'
       - '.github/ISSUE_TEMPLATE/**'
