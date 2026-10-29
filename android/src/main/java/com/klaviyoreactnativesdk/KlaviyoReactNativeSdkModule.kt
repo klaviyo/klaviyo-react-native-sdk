@@ -1,7 +1,9 @@
 package com.klaviyoreactnativesdk
 
+import android.net.Uri
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Callback
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -27,6 +29,7 @@ import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.endFormsPreview
+import com.klaviyo.forms.handleFormsPreviewLink
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.registerFormLifecycleHandler
 import com.klaviyo.forms.startFormsPreview
@@ -202,6 +205,24 @@ class KlaviyoReactNativeSdkModule(
         Klaviyo.startFormsPreview(token)
       } catch (e: MissingKlaviyoModule) {
         Registry.log.error("Forms module is not available", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun handleFormsPreviewLink(
+    url: String,
+    promise: Promise,
+  ) {
+    UiThreadUtil.runOnUiThread {
+      try {
+        promise.resolve(Klaviyo.handleFormsPreviewLink(Uri.parse(url)))
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+        promise.resolve(false)
+      } catch (e: Exception) {
+        Registry.log.error("Android unable to handle the forms preview link", e)
+        promise.resolve(false)
       }
     }
   }

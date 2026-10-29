@@ -7,11 +7,7 @@ import {
 } from './Profile';
 import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
-import {
-  formsPreviewTokenParameter,
-  isValidFormsPreviewToken,
-  parseFormLifecycleEvent,
-} from './Forms';
+import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
 import type { AuthTokenProvider } from './AuthToken';
 import {
@@ -148,19 +144,14 @@ export const Klaviyo: KlaviyoInterface = {
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.endFormsPreview();
   },
-  handleFormsPreviewLink(url: string | null): boolean {
+  async handleFormsPreviewLink(url: string | null): Promise<boolean> {
     if (!url) return false;
-    const parameter = formsPreviewTokenParameter(url);
-    if (parameter === null) return false;
-    if (!isValidFormsPreviewToken(parameter)) {
-      console.warn(
-        '[Klaviyo] Warning: Ignoring forms preview link with a malformed token'
-      );
+    if (!isFormsAvailable()) return false;
+    try {
+      return await KlaviyoReactNativeSdk.handleFormsPreviewLink(url);
+    } catch {
       return false;
     }
-    if (!isFormsAvailable()) return false;
-    KlaviyoReactNativeSdk.startFormsPreview(parameter);
-    return true;
   },
   registerGeofencing(): void {
     if (!isLocationAvailable()) return;

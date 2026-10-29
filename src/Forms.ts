@@ -42,14 +42,18 @@ export interface KlaviyoFormsApi {
    * Start a forms preview from a deep link, such as the link or QR code from the Klaviyo form
    * editor's **Preview on device** button.
    *
-   * If the link has a `klaviyo-forms-preview` query parameter holding a well-formed preview
-   * token, a preview starts as if passed to {@link startFormsPreview} and this returns `true`.
-   * Otherwise this returns `false` and changes nothing, so call it first from your deep link
-   * handling (for example a `Linking` URL listener) and fall through when it returns `false`.
+   * Forwards the link to the native SDK and resolves `true` only when the native SDK started a
+   * preview — that is, the link carries a well-formed `klaviyo-forms-preview` token. Resolves
+   * `false`, changing nothing, for a null, empty, or non-preview link, for an unparsable link,
+   * and on any native failure, so call it first from your deep link handling (for example a
+   * `Linking` URL listener) and fall through when it resolves `false`.
+   *
+   * Never rejects: safe to call before [Klaviyo.initialize] for cold-start links; the native
+   * SDKs hold the token until forms register.
    * @param url The deep link that opened the app
-   * @returns `true` if the link started a forms preview
+   * @returns Resolves `true` if the link started a forms preview, `false` otherwise
    */
-  handleFormsPreviewLink(url: string | null): boolean;
+  handleFormsPreviewLink(url: string | null): Promise<boolean>;
 
   /**
    * Register a handler to receive form lifecycle events.
@@ -73,42 +77,6 @@ export interface FormConfiguration {
  * Key carrying a forms preview token as a deep link query parameter
  */
 export const FORMS_PREVIEW_TOKEN_KEY = 'klaviyo-forms-preview';
-
-const FORMS_PREVIEW_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
-
-/**
- * True if `token` is a well-formed forms preview token. Does not trim.
- */
-export function isValidFormsPreviewToken(token: unknown): token is string {
-  return typeof token === 'string' && FORMS_PREVIEW_TOKEN_PATTERN.test(token);
-}
-
-/**
- * The raw {@link FORMS_PREVIEW_TOKEN_KEY} query parameter of `url`, or `null` if the link has
- * no such parameter. Works for custom schemes and https links with any host and path, and
- * ignores the fragment. Parsed by hand because `URLSearchParams` is incomplete on Hermes.
- */
-export function formsPreviewTokenParameter(url: string): string | null {
-  const queryStart = url.indexOf('?');
-  if (queryStart === -1) return null;
-  const fragmentStart = url.indexOf('#', queryStart);
-  const query = url.slice(
-    queryStart + 1,
-    fragmentStart === -1 ? undefined : fragmentStart
-  );
-  for (const pair of query.split('&')) {
-    const separator = pair.indexOf('=');
-    const key = separator === -1 ? pair : pair.slice(0, separator);
-    if (key !== FORMS_PREVIEW_TOKEN_KEY) continue;
-    const value = separator === -1 ? '' : pair.slice(separator + 1);
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
-    }
-  }
-  return null;
-}
 
 /**
  * String constants for form lifecycle event types.

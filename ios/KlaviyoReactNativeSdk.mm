@@ -140,6 +140,18 @@ RCT_EXPORT_METHOD(startFormsPreview: (NSString *)token) {
     });
 }
 
+RCT_EXPORT_METHOD(handleFormsPreviewLink: (NSString *)url
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        @try {
+            resolve(@([KlaviyoBridge handleFormsPreviewLink:url]));
+        } @catch (NSException *exception) {
+            resolve(@NO);
+        }
+    });
+}
+
 RCT_EXPORT_METHOD(endFormsPreview) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge endFormsPreview];

@@ -41,6 +41,7 @@ jest.mock('react-native', () => {
         unregisterFromInAppForms: jest.fn(),
         startFormsPreview: jest.fn(),
         endFormsPreview: jest.fn(),
+        handleFormsPreviewLink: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
@@ -355,49 +356,60 @@ describe('Klaviyo SDK', () => {
     });
 
     describe('handleFormsPreviewLink', () => {
-      it('starts a preview from custom scheme and https links', () => {
+      it('resolves true when the native SDK starts a preview', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          true
+        );
+        const url = `myapp://home?klaviyo-forms-preview=${PREVIEW_TOKEN}`;
+        await expect(Klaviyo.handleFormsPreviewLink(url)).resolves.toBe(true);
         expect(
+          NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink
+        ).toHaveBeenCalledWith(url);
+      });
+
+      it('resolves false when the native SDK does not start a preview', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          false
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+      });
+
+      it('resolves false when the native call rejects or throws', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockRejectedValue(
+          new Error('bridge error')
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockImplementation(
+          () => {
+            throw new Error('sync throw');
+          }
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+      });
+
+      it('resolves false for a null or empty link without calling native', async () => {
+        await expect(Klaviyo.handleFormsPreviewLink(null)).resolves.toBe(false);
+        await expect(Klaviyo.handleFormsPreviewLink('')).resolves.toBe(false);
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not reject before initialize', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          true
+        );
+        await expect(
           Klaviyo.handleFormsPreviewLink(
             `myapp://home?klaviyo-forms-preview=${PREVIEW_TOKEN}`
           )
-        ).toBe(true);
-        expect(
-          Klaviyo.handleFormsPreviewLink(
-            `https://shop.example.com/a?utm=qr&klaviyo-forms-preview=${PREVIEW_TOKEN}&x=1#frag`
-          )
-        ).toBe(true);
-        expect(
-          NativeModules.KlaviyoReactNativeSdk.startFormsPreview
-        ).toHaveBeenCalledTimes(2);
-        expect(
-          NativeModules.KlaviyoReactNativeSdk.startFormsPreview
-        ).toHaveBeenCalledWith(PREVIEW_TOKEN);
-      });
-
-      it('returns false and changes nothing for other links', () => {
-        const warn = jest.spyOn(console, 'warn').mockImplementation();
-        try {
-          expect(Klaviyo.handleFormsPreviewLink(null)).toBe(false);
-          expect(Klaviyo.handleFormsPreviewLink('myapp://home')).toBe(false);
-          expect(
-            Klaviyo.handleFormsPreviewLink(
-              `https://example.com/#klaviyo-forms-preview=${PREVIEW_TOKEN}`
-            )
-          ).toBe(false);
-          expect(
-            Klaviyo.handleFormsPreviewLink(
-              'myapp://home?klaviyo-forms-preview=short'
-            )
-          ).toBe(false);
-          expect(
-            NativeModules.KlaviyoReactNativeSdk.startFormsPreview
-          ).not.toHaveBeenCalled();
-          expect(warn).toHaveBeenCalledWith(
-            expect.not.stringContaining('short')
-          );
-        } finally {
-          warn.mockRestore();
-        }
+        ).resolves.toBe(true);
       });
     });
 
