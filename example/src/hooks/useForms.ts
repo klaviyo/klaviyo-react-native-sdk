@@ -15,6 +15,7 @@ const MAX_LIFECYCLE_EVENTS = 100;
 const MAX_FORM_RETRIES = 2;
 
 export function useForms() {
+  const [formId, setFormId] = useState('');
   const [formsRegistered, setFormsRegistered] = useState(false);
   const [formsFailed, setFormsFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -86,6 +87,12 @@ export function useForms() {
     console.log('[useForms] registered → false');
   };
 
+  const handleOpenForm = () => {
+    if (!formId.trim()) return;
+    Klaviyo.openForm(formId);
+    console.log('[useForms] open requested:', formId);
+  };
+
   const handleShowEventsModal = useCallback(() => {
     setEventsModalVisible(true);
   }, []);
@@ -99,6 +106,9 @@ export function useForms() {
   }, []);
 
   return {
+    formId,
+    setFormId,
+    handleOpenForm,
     formsRegistered,
     formsFailed,
     retriesRemaining: MAX_FORM_RETRIES - retryCount,

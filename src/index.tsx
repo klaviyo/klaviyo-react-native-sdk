@@ -168,6 +168,10 @@ export const Klaviyo: KlaviyoInterface = {
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  openForm(formId: string): void {
+    if (!isFormsAvailable()) return;
+    KlaviyoReactNativeSdk.openForm(formId);
+  },
   registerGeofencing(): void {
     if (!isLocationAvailable()) return;
     KlaviyoReactNativeSdk.registerGeofencing();

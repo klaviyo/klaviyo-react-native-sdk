@@ -27,6 +27,7 @@ import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
 import com.klaviyo.forms.InAppFormsFailureHandler
+import com.klaviyo.forms.openForm
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.registerFormLifecycleHandler
 import com.klaviyo.forms.unregisterFormLifecycleHandler
@@ -249,6 +250,21 @@ class KlaviyoReactNativeSdkModule(
     UiThreadUtil.runOnUiThread {
       if (invalidated || formsGeneration.get() != generation) return@runOnUiThread
       clearFormsRegistration()
+    }
+  }
+
+  @ReactMethod
+  fun openForm(formId: String) {
+    val generation = formsGeneration.get()
+    UiThreadUtil.runOnUiThread {
+      if (invalidated || formsGeneration.get() != generation) return@runOnUiThread
+      try {
+        Klaviyo.openForm(formId)
+      } catch (e: MissingKlaviyoModule) {
+        Registry.log.error("Forms module is not available", e)
+      } catch (e: Exception) {
+        Registry.log.error("Android unable to open form on main thread", e)
+      }
     }
   }
 

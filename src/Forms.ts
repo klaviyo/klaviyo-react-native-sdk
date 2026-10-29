@@ -19,6 +19,12 @@ export interface KlaviyoFormsApi {
   unregisterFromInAppForms(): void;
 
   /**
+   * Requests a form by its exact ID after registering for in-app forms.
+   * Returning submits the command; lifecycle events report actual presentation.
+   */
+  openForm(formId: string): void;
+
+  /**
    * Register a handler to receive form lifecycle events.
    * @param handler Function to be called when form lifecycle events occur
    * @returns A function to unsubscribe from lifecycle events

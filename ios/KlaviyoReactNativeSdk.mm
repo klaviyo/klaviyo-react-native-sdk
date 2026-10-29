@@ -172,6 +172,14 @@ RCT_EXPORT_METHOD(unregisterFromInAppForms) {
     });
 }
 
+RCT_EXPORT_METHOD(openForm:(NSString *)formId) {
+    NSUInteger generation = self.formsGeneration;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.formsInvalidated || self.formsGeneration != generation) return;
+        [KlaviyoBridge openForm:formId];
+    });
+}
+
 - (void)clearFormsRegistration {
     self.formsRegistrationEpoch = nil;
     self.formsFailureForwarder = nil;

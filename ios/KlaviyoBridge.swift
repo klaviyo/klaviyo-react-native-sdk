@@ -122,6 +122,14 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
+    public static func openForm(_ formId: String) {
+        #if canImport(KlaviyoForms)
+        KlaviyoSDK().openForm(formId)
+        #endif
+    }
+
+    @MainActor
+    @objc
     public static func registerFormLifecycleHandler(callback: @escaping ([String: Any]) -> Void) {
         #if canImport(KlaviyoForms)
         KlaviyoSDK().registerFormLifecycleHandler { event in
