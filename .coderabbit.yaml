@@ -23,7 +23,7 @@ reviews:
     eslint:
       enabled: true
   path_instructions:
-    - path: "src/**,android/**,ios/**"
+    - path: "{src,android,ios}/**"
       instructions: >
         This is public SDK source code (TypeScript with Kotlin/Swift native modules). Prioritize:
         - Crashes and unhandled errors on realistic inputs.
