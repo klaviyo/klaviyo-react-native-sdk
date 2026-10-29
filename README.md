@@ -762,25 +762,25 @@ For platform details, see the native [Android](https://github.com/klaviyo/klaviy
 The Klaviyo form editor's **Preview on device** button gives you a short-lived preview token, a QR code, and a preview link for the draft form. To start a preview from a pasted token, call `startFormsPreview`, and call `endFormsPreview` to return to published forms. Starting or ending a preview restarts in-app forms, like unregistering and registering again. If you haven't called `registerForInAppForms` yet, the preview starts when you do.
 
 ```typescript
-import { Klaviyo } from "klaviyo-react-native-sdk";
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
 Klaviyo.startFormsPreview(token); // start a draft preview
 Klaviyo.endFormsPreview(); // back to published forms
 ```
 
-The preview link is a deep link into your app with a `klaviyo-forms-preview` query parameter. Pass deep links to `handleFormsPreviewLink` before your own routing: it starts a preview session and returns `true` for a preview link, and returns `false`, changing nothing, for every other link.
+The preview link is a deep link into your app with a `klaviyo-forms-preview` query parameter. Pass deep links to `handleFormsPreviewLink` before your own routing: when the In-App Forms module is included, it starts a preview session and resolves `true` for a preview link, and resolves `false`, changing nothing, for every other link. It never rejects, so it is safe to call before `initialize` for cold-start links.
 
 ```typescript
-import { Linking } from "react-native";
-import { Klaviyo } from "klaviyo-react-native-sdk";
+import { Linking } from 'react-native';
+import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-const handleUrl = (url: string) => {
-  if (Klaviyo.handleFormsPreviewLink(url)) return;
+const handleUrl = async (url: string) => {
+  if (await Klaviyo.handleFormsPreviewLink(url)) return;
   // Your own deep link handling
 };
 
 Linking.getInitialURL().then((url) => url && handleUrl(url));
-Linking.addEventListener("url", ({ url }) => handleUrl(url));
+Linking.addEventListener('url', ({ url }) => handleUrl(url));
 ```
 
 Both work before or after `registerForInAppForms()`. Preview tokens only read a saved draft and expire after 30 minutes. The native SDKs keep them in memory only and never log them.

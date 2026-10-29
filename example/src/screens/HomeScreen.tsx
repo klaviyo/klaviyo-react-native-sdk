@@ -131,14 +131,14 @@ export function HomeScreen() {
 
   useEffect(() => {
     // Deep linking handler
-    const handleUrl = (url: string) => {
+    const handleUrl = async (url: string) => {
       if (Klaviyo.handleUniversalTrackingLink(url)) {
         // Klaviyo is handling a universal click tracking link
         console.log('[App] Klaviyo tracking link:', url);
         return;
       }
 
-      if (Klaviyo.handleFormsPreviewLink(url)) {
+      if (await Klaviyo.handleFormsPreviewLink(url)) {
         // The link came from the form editor's Preview on device QR code or copied link
         console.log('[App] Started a forms preview');
         return;
