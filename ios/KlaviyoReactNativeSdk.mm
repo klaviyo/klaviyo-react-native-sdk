@@ -172,6 +172,10 @@ RCT_EXPORT_METHOD(registerFormLifecycleHandler) {
     });
 }
 
+RCT_EXPORT_METHOD(respondToFormWillDisplay: (NSString *)formId accepted:(BOOL)accepted) {
+    [KlaviyoBridge respondToFormWillDisplayWithFormId:formId accepted:accepted];
+}
+
 RCT_EXPORT_METHOD(unregisterFormLifecycleHandler) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge unregisterFormLifecycleHandler];

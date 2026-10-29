@@ -56,6 +56,8 @@ class KlaviyoReactNativeSdkModule(
     private const val WHATSAPP = "whatsapp"
   }
 
+  private val pendingFormGatingCallbacks = ConcurrentHashMap<String, FormLifecycleEvent.FormWillDisplay>()
+
   private fun sendEvent(
     eventName: String,
     params: WritableMap?,
@@ -514,6 +516,12 @@ class KlaviyoReactNativeSdkModule(
                   putString("buttonLabel", event.buttonLabel)
                   putString("deepLinkUrl", event.deepLinkUrl.toString())
                 }
+
+                is FormLifecycleEvent.FormWillDisplay -> {
+                  putString("type", "formWillDisplay")
+                  putString("formType", event.formType)
+                  pendingFormGatingCallbacks[event.formId] = event
+                }
               }
             }
 
@@ -526,7 +534,23 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun respondToFormWillDisplay(
+    formId: String,
+    accepted: Boolean,
+  ) {
+    val event = pendingFormGatingCallbacks.remove(formId) ?: return
+    UiThreadUtil.runOnUiThread {
+      if (accepted) {
+        event.accept()
+      } else {
+        event.reject()
+      }
+    }
+  }
+
+  @ReactMethod
   fun unregisterFormLifecycleHandler() {
+    pendingFormGatingCallbacks.clear()
     UiThreadUtil.runOnUiThread {
       try {
         Klaviyo.unregisterFormLifecycleHandler()

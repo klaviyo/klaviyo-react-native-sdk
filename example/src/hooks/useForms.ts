@@ -39,6 +39,17 @@ export function useForms() {
           MAX_LIFECYCLE_EVENTS
         )
       );
+      if (event.type === 'formWillDisplay') {
+        // Uncomment to block a specific form.
+        // if (event.formId === 'FORM_ID_TO_BLOCK') {
+        //   return false;
+        // }
+        console.log(
+          `[useForms] accepting form ${event.formId} (${event.formType})`
+        );
+        return true;
+      }
+      return undefined;
     });
     return () => {
       console.log('[useForms] unsubscribing from form lifecycle events');

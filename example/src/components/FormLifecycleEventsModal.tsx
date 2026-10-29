@@ -20,6 +20,8 @@ interface FormLifecycleEventsModalProps {
 
 const eventLabel = (type: FormLifecycleEventType): string => {
   switch (type) {
+    case FormLifecycleEventType.WillDisplay:
+      return 'Will Display';
     case FormLifecycleEventType.Shown:
       return 'Shown';
     case FormLifecycleEventType.Dismissed:
@@ -76,6 +78,11 @@ export const FormLifecycleEventsModal: React.FC<
                 <Text
                   style={styles.eventDetail}
                 >{`formName: ${JSON.stringify(event.formName)}`}</Text>
+                {event.type === FormLifecycleEventType.WillDisplay && (
+                  <Text style={styles.eventDetail}>
+                    {`formType: ${JSON.stringify(event.formType)}`}
+                  </Text>
+                )}
                 {event.type === FormLifecycleEventType.CtaClicked && (
                   <>
                     <Text
