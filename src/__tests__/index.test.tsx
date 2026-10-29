@@ -9,6 +9,8 @@ import {
   allAvailableMarketing,
 } from '../Subscription';
 
+const PREVIEW_TOKEN = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_6';
+
 // Store event listeners for testing NativeEventEmitter
 const eventListeners: Record<string, Array<(data: any) => void>> = {};
 const mockRemove = jest.fn();
@@ -37,6 +39,9 @@ jest.mock('react-native', () => {
         createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
+        startFormsPreview: jest.fn(),
+        endFormsPreview: jest.fn(),
+        handleFormsPreviewLink: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
         registerAuthTokenProvider: jest.fn(),
@@ -337,6 +342,75 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
       ).toHaveBeenCalledWith(config);
+    });
+
+    it('starts and ends a forms preview', () => {
+      Klaviyo.startFormsPreview(PREVIEW_TOKEN);
+      Klaviyo.endFormsPreview();
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.startFormsPreview
+      ).toHaveBeenCalledWith(PREVIEW_TOKEN);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.endFormsPreview
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    describe('handleFormsPreviewLink', () => {
+      it('resolves true when the native SDK starts a preview', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          true
+        );
+        const url = `myapp://home?klaviyo-forms-preview=${PREVIEW_TOKEN}`;
+        await expect(Klaviyo.handleFormsPreviewLink(url)).resolves.toBe(true);
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink
+        ).toHaveBeenCalledWith(url);
+      });
+
+      it('resolves false when the native SDK does not start a preview', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          false
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+      });
+
+      it('resolves false when the native call rejects or throws', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockRejectedValue(
+          new Error('bridge error')
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockImplementation(
+          () => {
+            throw new Error('sync throw');
+          }
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink('myapp://home')
+        ).resolves.toBe(false);
+      });
+
+      it('resolves false for a null or empty link without calling native', async () => {
+        await expect(Klaviyo.handleFormsPreviewLink(null)).resolves.toBe(false);
+        await expect(Klaviyo.handleFormsPreviewLink('')).resolves.toBe(false);
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not reject before initialize', async () => {
+        NativeModules.KlaviyoReactNativeSdk.handleFormsPreviewLink.mockResolvedValue(
+          true
+        );
+        await expect(
+          Klaviyo.handleFormsPreviewLink(
+            `myapp://home?klaviyo-forms-preview=${PREVIEW_TOKEN}`
+          )
+        ).resolves.toBe(true);
+      });
     });
 
     it('should unregister from in-app forms', () => {

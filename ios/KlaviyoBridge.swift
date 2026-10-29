@@ -95,6 +95,33 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
+    public static func startFormsPreview(_ token: String) {
+        #if canImport(KlaviyoForms)
+        KlaviyoSDK().startFormsPreview(token)
+        #endif
+    }
+
+    @MainActor
+    @objc
+    public static func handleFormsPreviewLink(_ url: String) -> Bool {
+        #if canImport(KlaviyoForms)
+        guard let link = URL(string: url) else { return false }
+        return KlaviyoSDK().handleFormsPreviewLink(link)
+        #else
+        return false
+        #endif
+    }
+
+    @MainActor
+    @objc
+    public static func endFormsPreview() {
+        #if canImport(KlaviyoForms)
+        KlaviyoSDK().endFormsPreview()
+        #endif
+    }
+
+    @MainActor
+    @objc
     public static func unregisterFromInAppForms() {
         #if canImport(KlaviyoForms)
         KlaviyoSDK().unregisterFromInAppForms()

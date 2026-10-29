@@ -134,6 +134,30 @@ RCT_EXPORT_METHOD(registerForInAppForms: (NSDictionary *)configuration) {
     });
 }
 
+RCT_EXPORT_METHOD(startFormsPreview: (NSString *)token) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge startFormsPreview:token];
+    });
+}
+
+RCT_EXPORT_METHOD(handleFormsPreviewLink: (NSString *)url
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        @try {
+            resolve(@([KlaviyoBridge handleFormsPreviewLink:url]));
+        } @catch (NSException *exception) {
+            resolve(@NO);
+        }
+    });
+}
+
+RCT_EXPORT_METHOD(endFormsPreview) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [KlaviyoBridge endFormsPreview];
+    });
+}
+
 RCT_EXPORT_METHOD(unregisterFromInAppForms) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [KlaviyoBridge unregisterFromInAppForms];

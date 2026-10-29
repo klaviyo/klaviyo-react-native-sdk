@@ -21,7 +21,7 @@ inputs:
   already_published:
     description: "'true' when the npm version was already live and nothing was published"
     required: false
-    default: 
+    default:
   reason:
     description: Why a release stopped ('stopped'), or a caveat for the approver ('pending')
     required: false
