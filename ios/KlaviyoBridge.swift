@@ -1,3 +1,4 @@
+import Foundation
 import KlaviyoSwift
 #if canImport(KlaviyoForms)
 import KlaviyoForms
@@ -83,14 +84,32 @@ public class KlaviyoBridge: NSObject {
 
     @MainActor
     @objc
-    public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
+    public static func registerForInAppForms(
+        configuration: [String: AnyObject]? = nil,
+        onFailure: @escaping () -> Void
+    ) {
         #if canImport(KlaviyoForms)
-        if let configurationLength = configuration?["sessionTimeoutDuration"] as? TimeInterval {
-            KlaviyoSDK().registerForInAppForms(configuration: InAppFormsConfig(sessionTimeoutDuration: configurationLength))
-        } else {
-            KlaviyoSDK().registerForInAppForms()
-        }
+        KlaviyoSDK().registerForInAppForms(configuration: InAppFormsConfig(
+            sessionTimeoutDuration: finiteSeconds(configuration, key: "sessionTimeoutDuration") ?? 3600,
+            loadTimeout: finiteSeconds(configuration, key: "loadTimeout"),
+            eventReplayWindow: finiteSeconds(configuration, key: "eventReplayWindow") ?? 10,
+            onFailure: onFailure
+        ))
         #endif
+    }
+
+    private static func finiteSeconds(_ configuration: [String: AnyObject]?, key: String) -> TimeInterval? {
+        guard let value = configuration?[key] else { return nil }
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite else {
+            NSLog("[Klaviyo] Invalid %@; using the native default.", key)
+            return nil
+        }
+        if key == "loadTimeout", number.doubleValue < 0.001 || number.doubleValue * 1e9 >= pow(2, 64) {
+            NSLog("[Klaviyo] Invalid loadTimeout; using the native network timeout.")
+            return nil
+        }
+        return number.doubleValue
     }
 
     @MainActor

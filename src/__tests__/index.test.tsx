@@ -1,5 +1,9 @@
 import { NativeModules } from 'react-native';
+import { readFileSync } from 'fs';
+import { runInNewContext } from 'vm';
+import { ModuleKind, transpileModule } from 'typescript';
 import { Klaviyo } from '../index';
+import type { FormConfiguration } from '../Forms';
 import { EventName } from '../Event';
 import { ProfileProperty } from '../Profile';
 import {
@@ -111,8 +115,32 @@ function emitNativeEvent(eventName: string, data: any) {
   eventListeners[eventName]?.forEach((listener) => listener(data));
 }
 
+function loadRefreshableSdkModule() {
+  const source = readFileSync(require.resolve('../index'), 'utf8');
+  const { outputText } = transpileModule(source, {
+    compilerOptions: { module: ModuleKind.CommonJS },
+  });
+  let dispose: (() => void) | undefined;
+  const sdkModule = {
+    exports: {} as typeof import('../index'),
+    hot: {
+      dispose: (callback: () => void) => {
+        dispose = callback;
+      },
+    },
+  };
+  runInNewContext(outputText, {
+    module: sdkModule,
+    exports: sdkModule.exports,
+    require: (name: string) => require(name.replace(/^\.\//, '../')),
+    console,
+  });
+  return { Klaviyo: sdkModule.exports.Klaviyo, dispose: () => dispose?.() };
+}
+
 describe('Klaviyo SDK', () => {
   beforeEach(() => {
+    Klaviyo.unregisterFromInAppForms();
     // Clear all mocks and event listeners before each test
     jest.clearAllMocks();
     Object.keys(eventListeners).forEach((key) => delete eventListeners[key]);
@@ -336,7 +364,7 @@ describe('Klaviyo SDK', () => {
       Klaviyo.registerForInAppForms(config);
       expect(
         NativeModules.KlaviyoReactNativeSdk.registerForInAppForms
-      ).toHaveBeenCalledWith(config);
+      ).toHaveBeenCalledWith(config, expect.any(String));
     });
 
     it('should unregister from in-app forms', () => {
@@ -378,6 +406,248 @@ describe('Klaviyo SDK', () => {
           defaultConstants
         );
         consoleErrorSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('forms failure transport', () => {
+    const native = NativeModules.KlaviyoReactNativeSdk;
+    const register = (configuration?: Record<string, unknown>) =>
+      Klaviyo.registerForInAppForms(configuration as never);
+    const epoch = () => native.registerForInAppForms.mock.lastCall[1];
+    const fail = (registrationEpoch = epoch()) =>
+      emitNativeEvent('KlaviyoFormsFailure', { registrationEpoch });
+
+    it.each(['unregister', 'refresh'])(
+      'keeps the auth provider active after forms %s cleanup',
+      async (cleanup) => {
+        const sdkModule = loadRefreshableSdkModule();
+        const provider = jest.fn().mockResolvedValue('jwt-after-cleanup');
+        const onFailure = jest.fn();
+        sdkModule.Klaviyo.registerAuthTokenProvider(provider);
+        sdkModule.Klaviyo.registerForInAppForms({ onFailure });
+        const registrationEpoch = epoch();
+
+        if (cleanup === 'refresh') {
+          sdkModule.dispose();
+        } else {
+          sdkModule.Klaviyo.unregisterFromInAppForms();
+        }
+        fail(registrationEpoch);
+        emitNativeEvent('klaviyo:authTokenRequested', { id: 'after-cleanup' });
+        await new Promise(process.nextTick);
+
+        expect(onFailure).not.toHaveBeenCalled();
+        expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+        expect(eventListeners['klaviyo:authTokenRequested']).toHaveLength(1);
+        expect(native.unregisterAuthTokenProvider).not.toHaveBeenCalled();
+        expect(native.respondToAuthTokenRequest).toHaveBeenCalledWith(
+          'after-cleanup',
+          { jwt: 'jwt-after-cleanup' }
+        );
+        sdkModule.Klaviyo.unregisterAuthTokenProvider();
+      }
+    );
+
+    it('releases the previous module transport before Fast Refresh replacement registers', () => {
+      const firstModule = loadRefreshableSdkModule();
+      const firstCallback = jest.fn();
+      firstModule.Klaviyo.registerForInAppForms({ onFailure: firstCallback });
+      const firstEpoch = epoch();
+      const queuedListener = eventListeners.KlaviyoFormsFailure?.[0];
+
+      firstModule.dispose();
+      queuedListener?.({ registrationEpoch: firstEpoch });
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(1);
+
+      const replacement = loadRefreshableSdkModule();
+      const replacementCallback = jest.fn();
+      replacement.Klaviyo.registerForInAppForms({
+        onFailure: replacementCallback,
+      });
+      expect(epoch()).not.toBe(firstEpoch);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+      firstModule.dispose();
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(1);
+      fail(firstEpoch);
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(replacementCallback).not.toHaveBeenCalled();
+      fail();
+      expect(replacementCallback).toHaveBeenCalledTimes(1);
+
+      replacement.Klaviyo.unregisterFromInAppForms();
+      replacement.dispose();
+      expect(native.unregisterFromInAppForms).toHaveBeenCalledTimes(2);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+    });
+
+    it('serializes optional seconds without sending the callback or extra fields', () => {
+      const configuration: FormConfiguration = {
+        loadTimeout: 5.5,
+        eventReplayWindow: 2,
+        onFailure: jest.fn(),
+      };
+      register({
+        ...configuration,
+        extra: 'ignored',
+      });
+      expect(native.registerForInAppForms).toHaveBeenLastCalledWith(
+        { loadTimeout: 5.5, eventReplayWindow: 2 },
+        expect.any(String)
+      );
+    });
+
+    it('preserves omitted native defaults', () => {
+      register();
+      expect(native.registerForInAppForms).toHaveBeenLastCalledWith(
+        {},
+        expect.any(String)
+      );
+    });
+
+    it.each([0, -1, NaN, Infinity, 0.00001, 1e30, '5'])(
+      'omits invalid loadTimeout %s with a diagnostic',
+      (loadTimeout) => {
+        const warning = jest.spyOn(console, 'warn').mockImplementation();
+        try {
+          register({ loadTimeout });
+          expect(native.registerForInAppForms).toHaveBeenLastCalledWith(
+            {},
+            expect.any(String)
+          );
+          expect(warning).toHaveBeenCalledWith(
+            expect.stringContaining('loadTimeout')
+          );
+        } finally {
+          warning.mockRestore();
+        }
+      }
+    );
+
+    it.each([
+      [0, 0],
+      [-2, 0],
+      [90, 30],
+      [Infinity, 30],
+      [-Infinity, 0],
+    ])('bounds replay %s to %s', (eventReplayWindow, expected) => {
+      register({ eventReplayWindow });
+      expect(native.registerForInAppForms).toHaveBeenLastCalledWith(
+        { eventReplayWindow: expected },
+        expect.any(String)
+      );
+    });
+
+    it('omits nonfinite session and NaN replay values', () => {
+      const warning = jest.spyOn(console, 'warn').mockImplementation();
+      try {
+        register({ sessionTimeoutDuration: Infinity, eventReplayWindow: NaN });
+        expect(native.registerForInAppForms).toHaveBeenLastCalledWith(
+          {},
+          expect.any(String)
+        );
+      } finally {
+        warning.mockRestore();
+      }
+    });
+
+    it('receives failure during native registration before any public listener exists', () => {
+      const callback = jest.fn();
+      native.registerForInAppForms.mockImplementationOnce(
+        (_config: unknown, registrationEpoch: string) => fail(registrationEpoch)
+      );
+      register({ onFailure: callback });
+      expect(callback).toHaveBeenCalledWith();
+    });
+
+    it('uses the latest callback without replacing the listener or epoch', () => {
+      const first = jest.fn();
+      const second = jest.fn();
+      register({ onFailure: first });
+      const initialEpoch = epoch();
+      register({ onFailure: second, loadTimeout: 4 });
+      expect(epoch()).toBe(initialEpoch);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+      fail();
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows adding a callback after registering without one, and omission clears it', () => {
+      const callback = jest.fn();
+      register();
+      register({ onFailure: callback });
+      fail();
+      register();
+      fail();
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+    });
+
+    it('keeps private failures independent of lifecycle listener removal', () => {
+      const callback = jest.fn();
+      register({ onFailure: callback });
+      const unsubscribe = Klaviyo.registerFormLifecycleHandler(jest.fn());
+      unsubscribe();
+      fail();
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects queued callbacks and events from an unregistered epoch', () => {
+      const callback = jest.fn();
+      register({ onFailure: callback });
+      const previousEpoch = epoch();
+      const queuedListener = eventListeners.KlaviyoFormsFailure?.[0];
+      Klaviyo.unregisterFromInAppForms();
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(0);
+      register({ onFailure: callback });
+      expect(epoch()).not.toBe(previousEpoch);
+      queuedListener?.({ registrationEpoch: previousEpoch });
+      fail(previousEpoch);
+      expect(callback).not.toHaveBeenCalled();
+      fail();
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps immediate host retries and subsequent actual failures subscribed', () => {
+      const retryCallback = jest.fn();
+      register({ onFailure: () => register({ onFailure: retryCallback }) });
+      fail();
+      fail();
+      fail();
+      expect(retryCallback).toHaveBeenCalledTimes(2);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+    });
+
+    it('keeps a replacement registration made after unregister inside the callback', () => {
+      const retryCallback = jest.fn();
+      register({
+        onFailure: () => {
+          Klaviyo.unregisterFromInAppForms();
+          register({ onFailure: retryCallback });
+        },
+      });
+      fail();
+      fail();
+      expect(retryCallback).toHaveBeenCalledTimes(1);
+      expect(eventListeners.KlaviyoFormsFailure).toHaveLength(1);
+    });
+
+    it('does not attach a private listener when Forms is unavailable', () => {
+      const constants = native.getConstants();
+      const diagnostic = jest.spyOn(console, 'error').mockImplementation();
+      native.getConstants.mockReturnValueOnce({
+        ...constants,
+        FORMS_AVAILABLE: false,
+      });
+      try {
+        register({ onFailure: jest.fn() });
+        expect(native.registerForInAppForms).not.toHaveBeenCalled();
+        expect(eventListeners.KlaviyoFormsFailure ?? []).toHaveLength(0);
+      } finally {
+        diagnostic.mockRestore();
       }
     });
   });

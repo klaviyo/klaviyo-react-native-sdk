@@ -12,10 +12,12 @@ export type FormLifecycleLogEntry = {
 
 // Ring-buffer cap — new entries push oldest out once we hit this many.
 const MAX_LIFECYCLE_EVENTS = 100;
+const MAX_FORM_RETRIES = 2;
 
 export function useForms() {
-  // Registered state always starts false — set to true only after a successful register call.
   const [formsRegistered, setFormsRegistered] = useState(false);
+  const [formsFailed, setFormsFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Lifecycle event log — newest first, capped at MAX_LIFECYCLE_EVENTS.
   const [lifecycleEvents, setLifecycleEvents] = useState<
@@ -43,22 +45,44 @@ export function useForms() {
     return () => {
       console.log('[useForms] unsubscribing from form lifecycle events');
       unsubscribe();
+      Klaviyo.unregisterFromInAppForms();
     };
   }, []);
 
-  const handleRegisterForms = () => {
-    // Passed explicitly here to demonstrate the FormConfiguration shape;
-    // 3600s matches the SDK default, so this call is behaviorally equivalent
-    // to calling registerForInAppForms() with no argument. Lower values
-    // (e.g. 30) are useful for rapid testing.
-    Klaviyo.registerForInAppForms({ sessionTimeoutDuration: 3600 });
+  const requestFormsRegistration = () => {
     setFormsRegistered(true);
-    console.log('[useForms] registered → true');
+    setFormsFailed(false);
+    Klaviyo.registerForInAppForms({
+      sessionTimeoutDuration: 3600,
+      loadTimeout: 15,
+      eventReplayWindow: 10,
+      onFailure: () => {
+        console.log(
+          '[useForms] forms initialization failed; use Retry to try again'
+        );
+        setFormsRegistered(false);
+        setFormsFailed(true);
+      },
+    });
+    console.log('[useForms] registration requested; readiness is not reported');
+  };
+
+  const handleRegisterForms = () => {
+    setRetryCount(0);
+    requestFormsRegistration();
+  };
+
+  const handleRetryForms = () => {
+    if (!formsFailed || retryCount >= MAX_FORM_RETRIES) return;
+    setRetryCount(retryCount + 1);
+    requestFormsRegistration();
   };
 
   const handleUnregisterForms = () => {
     Klaviyo.unregisterFromInAppForms();
     setFormsRegistered(false);
+    setFormsFailed(false);
+    setRetryCount(0);
     console.log('[useForms] registered → false');
   };
 
@@ -76,6 +100,9 @@ export function useForms() {
 
   return {
     formsRegistered,
+    formsFailed,
+    retriesRemaining: MAX_FORM_RETRIES - retryCount,
+    handleRetryForms,
     handleRegisterForms,
     handleUnregisterForms,
     lifecycleEvents,

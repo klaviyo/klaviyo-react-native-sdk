@@ -26,6 +26,7 @@ import com.klaviyo.core.utils.AdvancedAPI
 import com.klaviyo.forms.FormLifecycleEvent
 import com.klaviyo.forms.FormsProvider
 import com.klaviyo.forms.InAppFormsConfig
+import com.klaviyo.forms.InAppFormsFailureHandler
 import com.klaviyo.forms.registerForInAppForms
 import com.klaviyo.forms.registerFormLifecycleHandler
 import com.klaviyo.forms.unregisterFormLifecycleHandler
@@ -35,10 +36,12 @@ import com.klaviyo.location.LocationManager
 import com.klaviyo.location.registerGeofencing
 import com.klaviyo.location.unregisterGeofencing
 import java.io.Serializable
+import java.lang.ref.WeakReference
 import java.net.SocketException
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
 class KlaviyoReactNativeSdkModule(
@@ -54,7 +57,15 @@ class KlaviyoReactNativeSdkModule(
     private const val EMAIL = "email"
     private const val SMS = "sms"
     private const val WHATSAPP = "whatsapp"
+    private var formsOwner: WeakReference<KlaviyoReactNativeSdkModule>? = null
+    private var lifecycleOwner: WeakReference<KlaviyoReactNativeSdkModule>? = null
   }
+
+  private val formsGeneration = AtomicLong()
+
+  @Volatile private var invalidated = false
+  private var formsRegistrationEpoch: String? = null
+  private var formsFailureForwarder: InAppFormsFailureHandler? = null
 
   private fun sendEvent(
     eventName: String,
@@ -176,13 +187,52 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
-  fun registerForInAppForms(configuration: ReadableMap?) {
+  fun registerForInAppForms(
+    configuration: ReadableMap?,
+    registrationEpoch: String,
+  ) {
+    val generation = formsGeneration.get()
     UiThreadUtil.runOnUiThread {
+      if (invalidated || formsGeneration.get() != generation) return@runOnUiThread
       try {
-        val timeout = configuration?.getDouble("sessionTimeoutDuration")?.seconds
+        if (formsOwner?.get()?.let { it !== this } == true ||
+          (formsRegistrationEpoch != null && formsRegistrationEpoch != registrationEpoch)
+        ) {
+          Klaviyo.unregisterFromInAppForms()
+        }
+        if (formsRegistrationEpoch != registrationEpoch) {
+          formsRegistrationEpoch = registrationEpoch
+          val weakModule = WeakReference(this)
+          formsFailureForwarder =
+            InAppFormsFailureHandler {
+              weakModule.get()?.let { module ->
+                if (!module.invalidated && module.formsGeneration.get() == generation &&
+                  module.formsRegistrationEpoch == registrationEpoch && formsOwner?.get() === module
+                ) {
+                  module.sendEvent(
+                    "KlaviyoFormsFailure",
+                    Arguments.createMap().apply { putString("registrationEpoch", registrationEpoch) },
+                  )
+                }
+              }
+            }
+        }
+        formsOwner = WeakReference(this)
+        val timeout = configuration.finiteSeconds("sessionTimeoutDuration")?.seconds
+        val loadTimeout =
+          configuration.finiteSeconds("loadTimeout")?.let { seconds ->
+            seconds.takeIf { it >= 0.001 && it * 1e9 < 18446744073709551616.0 }?.seconds ?: run {
+              Registry.log.warning("Invalid loadTimeout; using the native network timeout.")
+              null
+            }
+          }
+        val replay = configuration.finiteSeconds("eventReplayWindow")?.coerceIn(0.0, 30.0)?.seconds
         Klaviyo.registerForInAppForms(
           InAppFormsConfig(
             sessionTimeoutDuration = timeout ?: InAppFormsConfig.DEFAULT_SESSION_TIMEOUT,
+            loadTimeout = loadTimeout,
+            eventReplayWindow = replay ?: InAppFormsConfig.DEFAULT_EVENT_REPLAY_WINDOW,
+            onFailure = formsFailureForwarder,
           ),
         )
       } catch (e: MissingKlaviyoModule) {
@@ -195,13 +245,42 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun unregisterFromInAppForms() {
+    val generation = formsGeneration.incrementAndGet()
     UiThreadUtil.runOnUiThread {
-      try {
-        Klaviyo.unregisterFromInAppForms()
-      } catch (e: MissingKlaviyoModule) {
-        Registry.log.error("Forms module is not available", e)
-      }
+      if (invalidated || formsGeneration.get() != generation) return@runOnUiThread
+      clearFormsRegistration()
     }
+  }
+
+  private fun ReadableMap?.finiteSeconds(key: String): Double? {
+    if (this == null || !hasKey(key) || isNull(key)) return null
+    if (getType(key) == ReadableType.Number) {
+      getDouble(key).takeIf { it.isFinite() }?.let { return it }
+    }
+    Registry.log.warning("Invalid $key; using the native default.")
+    return null
+  }
+
+  private fun clearFormsRegistration() {
+    formsRegistrationEpoch = null
+    formsFailureForwarder = null
+    if (formsOwner?.get() !== this) return
+    formsOwner = null
+    try {
+      Klaviyo.unregisterFromInAppForms()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Forms module is not available", e)
+    }
+  }
+
+  override fun invalidate() {
+    invalidated = true
+    formsGeneration.incrementAndGet()
+    UiThreadUtil.runOnUiThread {
+      clearFormsRegistration()
+      clearFormLifecycleHandler()
+    }
+    super.invalidate()
   }
 
   @ReactMethod
@@ -494,8 +573,13 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun registerFormLifecycleHandler() {
     UiThreadUtil.runOnUiThread {
+      if (invalidated) return@runOnUiThread
       try {
+        val weakModule = WeakReference(this)
+        lifecycleOwner = weakModule
         Klaviyo.registerFormLifecycleHandler { event ->
+          val module = weakModule.get() ?: return@registerFormLifecycleHandler
+          if (module.invalidated || lifecycleOwner?.get() !== module) return@registerFormLifecycleHandler
           val params =
             Arguments.createMap().apply {
               putString("formId", event.formId)
@@ -517,7 +601,7 @@ class KlaviyoReactNativeSdkModule(
               }
             }
 
-          sendEvent("FormLifecycleEvent", params)
+          module.sendEvent("FormLifecycleEvent", params)
         }
       } catch (e: MissingKlaviyoModule) {
         Registry.log.error("Forms module is not available", e)
@@ -528,11 +612,17 @@ class KlaviyoReactNativeSdkModule(
   @ReactMethod
   fun unregisterFormLifecycleHandler() {
     UiThreadUtil.runOnUiThread {
-      try {
-        Klaviyo.unregisterFormLifecycleHandler()
-      } catch (e: MissingKlaviyoModule) {
-        Registry.log.error("Forms module is not available", e)
-      }
+      if (!invalidated) clearFormLifecycleHandler()
+    }
+  }
+
+  private fun clearFormLifecycleHandler() {
+    if (lifecycleOwner?.get() !== this) return
+    lifecycleOwner = null
+    try {
+      Klaviyo.unregisterFormLifecycleHandler()
+    } catch (e: MissingKlaviyoModule) {
+      Registry.log.error("Forms module is not available", e)
     }
   }
 
