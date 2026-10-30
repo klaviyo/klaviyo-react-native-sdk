@@ -39,9 +39,16 @@ export const CompanyIdModal: React.FC<CompanyIdModalProps> = ({
   const canSave = trimmed.length > 0 && trimmed !== currentCompanyId;
 
   return (
-    <BaseModal visible={visible} onClose={onClose} title="Company ID">
+    <BaseModal
+      visible={visible}
+      onClose={onClose}
+      title="Company ID"
+      testID="company_id_modal"
+    >
       <Text style={styles.label}>Active</Text>
-      <Text style={styles.currentKey}>{currentCompanyId}</Text>
+      <Text style={styles.currentKey} testID="company_id_current_text">
+        {currentCompanyId}
+      </Text>
       {isOverridden && (
         <Text style={styles.defaultHint}>
           {`Default: ${DEFAULT_COMPANY_ID}`}
@@ -61,12 +68,17 @@ export const CompanyIdModal: React.FC<CompanyIdModalProps> = ({
         autoCorrect={false}
         returnKeyType="done"
         onSubmitEditing={() => canSave && onSave(trimmed)}
+        testID="company_id_input"
+        accessibilityLabel="Change Company ID"
       />
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.button, styles.cancelButton]}
           onPress={onClose}
+          testID="company_id_cancel_button"
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
@@ -78,6 +90,10 @@ export const CompanyIdModal: React.FC<CompanyIdModalProps> = ({
           ]}
           onPress={() => canSave && onSave(trimmed)}
           disabled={!canSave}
+          testID="company_id_save_button"
+          accessibilityRole="button"
+          accessibilityLabel="Save Company ID"
+          accessibilityState={{ disabled: !canSave }}
         >
           <Text
             style={[
@@ -94,6 +110,9 @@ export const CompanyIdModal: React.FC<CompanyIdModalProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.resetButton]}
           onPress={onReset}
+          testID="company_id_reset_button"
+          accessibilityRole="button"
+          accessibilityLabel="Reset Company ID to default"
         >
           <Text style={styles.resetButtonText}>Reset to Default</Text>
         </TouchableOpacity>

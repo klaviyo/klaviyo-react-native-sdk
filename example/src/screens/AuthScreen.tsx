@@ -130,6 +130,7 @@ export function AuthScreen() {
     <ScrollView
       style={sharedStyles.container}
       contentContainerStyle={sharedStyles.scrollContent}
+      testID="auth_screen"
     >
       {/* 1. Provider toggle */}
       <View style={sharedStyles.section}>
@@ -138,6 +139,8 @@ export function AuthScreen() {
           <Switch
             value={auth.providerEnabled}
             onValueChange={auth.toggleProvider}
+            testID="auth_provider_switch"
+            accessibilityLabel="Auth token provider"
           />
         </View>
         <Text style={styles.footerText}>
@@ -153,6 +156,7 @@ export function AuthScreen() {
           title="Provider responses"
           actionIcon={'➕'}
           actionAccessibilityLabel="Add response"
+          actionTestID="auth_add_response_button"
           onActionPress={auth.addResponse}
         />
         {auth.responses.map((response, index) => {
@@ -166,6 +170,7 @@ export function AuthScreen() {
             <View
               key={response.id}
               style={[styles.responseRow, locked && styles.responseRowLocked]}
+              testID={`auth_response_row_${index}`}
             >
               <TouchableOpacity
                 style={styles.responseRowMain}
@@ -175,6 +180,10 @@ export function AuthScreen() {
                     responseId: response.id,
                   })
                 }
+                testID={`auth_response_row_${index}_configure_button`}
+                accessibilityRole="button"
+                accessibilityLabel={`Configure call ${index + 1}: ${getOutcomeLabel(response.outcome)}`}
+                accessibilityState={{ disabled: locked }}
               >
                 <View style={styles.responseRowHeader}>
                   {isCurrent && <View style={styles.currentDot} />}
@@ -197,6 +206,10 @@ export function AuthScreen() {
                   disabled={locked}
                   onPress={() => auth.duplicateResponse(response.id)}
                   hitSlop={8}
+                  testID={`auth_response_row_${index}_duplicate_button`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Duplicate call ${index + 1}`}
+                  accessibilityState={{ disabled: locked }}
                 >
                   <Text
                     style={[
@@ -211,6 +224,10 @@ export function AuthScreen() {
                   disabled={!canDelete}
                   onPress={() => auth.deleteResponse(response.id)}
                   hitSlop={8}
+                  testID={`auth_response_row_${index}_delete_button`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete call ${index + 1}`}
+                  accessibilityState={{ disabled: !canDelete }}
                 >
                   <Text
                     style={[
@@ -245,6 +262,7 @@ export function AuthScreen() {
           title="Auth logs"
           actionIcon={'🗑'}
           actionAccessibilityLabel="Clear auth logs"
+          actionTestID="auth_clear_logs_button"
           actionDisabled={auth.logs.length === 0}
           onActionPress={auth.clearLogs}
         />
@@ -258,7 +276,11 @@ export function AuthScreen() {
           </Text>
         ) : (
           auth.logs.map((log) => (
-            <View key={log.id} style={styles.logRow}>
+            <View
+              key={log.id}
+              style={styles.logRow}
+              testID={`auth_log_row_${log.id}`}
+            >
               <Text style={styles.logTimestamp}>
                 {new Date(log.timestampMs).toLocaleTimeString()}
               </Text>
@@ -280,6 +302,7 @@ export function AuthScreen() {
         visible={explainerVisible}
         onClose={() => setExplainerVisible(false)}
         title="Refresh estimate"
+        testID="auth_refresh_explainer_modal"
       >
         <Text style={styles.explainerText}>
           Mirrors the SDK&apos;s proactive-refresh target: roughly 90% of the
@@ -291,6 +314,7 @@ export function AuthScreen() {
         </Text>
         <ActionButton
           title="Close"
+          testID="auth_refresh_explainer_close_button"
           onPress={() => setExplainerVisible(false)}
           withTopSpacing
         />

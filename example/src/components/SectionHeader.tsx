@@ -7,6 +7,8 @@ interface SectionHeaderProps {
   /** Icon (e.g. an emoji glyph) for an optional right-aligned header action, such as "clear". Omit for a plain title-only header. */
   actionIcon?: string;
   actionAccessibilityLabel?: string;
+  /** Stable ID for the header action, e.g. `auth_add_response_button`. */
+  actionTestID?: string;
   actionDisabled?: boolean;
   onActionPress?: () => void;
 }
@@ -21,17 +23,23 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
   actionIcon,
   actionAccessibilityLabel,
+  actionTestID,
   actionDisabled = false,
   onActionPress,
 }) => {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{title}</Text>
+      <Text style={styles.sectionHeaderText} accessibilityRole="header">
+        {title}
+      </Text>
       {onActionPress && actionIcon && (
         <TouchableOpacity
           onPress={onActionPress}
           disabled={actionDisabled}
+          testID={actionTestID}
+          accessibilityRole="button"
           accessibilityLabel={actionAccessibilityLabel}
+          accessibilityState={{ disabled: actionDisabled }}
           hitSlop={8}
         >
           <Text

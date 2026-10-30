@@ -27,7 +27,12 @@ export const SdkInfoModal: React.FC<SdkInfoModalProps> = ({
   onClose,
 }) => {
   return (
-    <BaseModal visible={visible} onClose={onClose} title="Build info">
+    <BaseModal
+      visible={visible}
+      onClose={onClose}
+      title="Build info"
+      testID="sdk_info_modal"
+    >
       {entries.map((entry) => (
         <View key={entry.label} style={styles.row}>
           <Text style={styles.label}>{entry.label}</Text>
@@ -37,10 +42,19 @@ export const SdkInfoModal: React.FC<SdkInfoModalProps> = ({
       <TouchableOpacity
         style={styles.copyButton}
         onPress={() => shareBuildInfo(copyText)}
+        testID="sdk_info_copy_button"
+        accessibilityRole="button"
+        accessibilityLabel="Copy build info"
       >
         <Text style={styles.copyButtonText}>Copy build info</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={onClose}
+        testID="sdk_info_close_button"
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      >
         <Text style={styles.closeButtonText}>Close</Text>
       </TouchableOpacity>
     </BaseModal>

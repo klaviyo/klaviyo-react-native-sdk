@@ -6,6 +6,8 @@ interface BaseModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
+  /** Stable ID on the modal card, so tests can wait for it to appear. */
+  testID: string;
   children: React.ReactNode;
   // Cap on container height — pass when content can grow (lists). Omit for
   // content-sized modals.
@@ -21,6 +23,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   visible,
   onClose,
   title,
+  testID,
   children,
   maxHeight,
 }) => {
@@ -35,8 +38,11 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       <View style={styles.overlay}>
         <View
           style={[styles.container, maxHeight !== undefined && { maxHeight }]}
+          testID={testID}
         >
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
           {children}
         </View>
       </View>
