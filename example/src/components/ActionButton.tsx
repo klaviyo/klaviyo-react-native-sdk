@@ -4,6 +4,10 @@ import { styles } from '../Styles';
 
 interface ActionButtonProps {
   title: string;
+  /** Stable ID for UI tests and automation, e.g. `push_request_permission_button`. */
+  testID: string;
+  /** Overrides the spoken label when `title` alone is ambiguous out of context. */
+  accessibilityLabel?: string;
   onPress: () => void;
   disabled?: boolean;
   destructive?: boolean;
@@ -16,6 +20,8 @@ interface ActionButtonProps {
  */
 export const ActionButton: React.FC<ActionButtonProps> = ({
   title,
+  testID,
+  accessibilityLabel,
   onPress,
   disabled = false,
   destructive = false,
@@ -33,6 +39,10 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled }}
     >
       <Text
         style={[

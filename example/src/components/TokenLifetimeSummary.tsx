@@ -101,6 +101,7 @@ export function TokenLifetimeSummary({
             <TouchableOpacity
               onPress={onInfoPress}
               hitSlop={8}
+              testID="auth_refresh_info_button"
               accessibilityRole="button"
               accessibilityLabel="About refresh timing"
             >

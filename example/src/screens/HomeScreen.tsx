@@ -154,6 +154,7 @@ export function HomeScreen() {
       <SectionList
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
+        testID="home_section_list"
         sections={SECTIONS}
         keyExtractor={(item) => item}
         renderItem={({ item }) => renderSection(item)}

@@ -19,6 +19,8 @@ if (
 
 interface CollapsibleWarningProps {
   title: string;
+  /** Stable ID for the expand/collapse header row. */
+  testID: string;
   initiallyExpanded?: boolean;
   children: React.ReactNode;
 }
@@ -36,6 +38,7 @@ interface CollapsibleWarningProps {
  */
 export const CollapsibleWarning: React.FC<CollapsibleWarningProps> = ({
   title,
+  testID,
   initiallyExpanded = false,
   children,
 }) => {
@@ -62,6 +65,7 @@ export const CollapsibleWarning: React.FC<CollapsibleWarningProps> = ({
         // padding, which is dead space anyway, without making the collapsed
         // warning taller — the point of collapsing it was to take up less room.
         hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
+        testID={testID}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded }}

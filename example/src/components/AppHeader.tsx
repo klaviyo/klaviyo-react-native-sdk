@@ -19,6 +19,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           onPress={onInfoPress}
           style={styles.settingsButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          testID="sdk_info_button"
           accessibilityLabel="SDK version info"
           accessibilityRole="button"
         >
@@ -28,6 +29,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           onPress={onSettingsPress}
           style={styles.settingsButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          testID="settings_button"
           accessibilityLabel="Open settings"
           accessibilityRole="button"
         >

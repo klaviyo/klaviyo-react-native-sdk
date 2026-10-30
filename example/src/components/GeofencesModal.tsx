@@ -27,6 +27,7 @@ export const GeofencesModal: React.FC<GeofencesModalProps> = ({
       onClose={onClose}
       title={`Monitored Geofences (${geofences.length})`}
       maxHeight="80%"
+      testID="geofences_modal"
     >
       {geofences.length === 0 ? (
         <Text style={styles.emptyText}>
@@ -35,9 +36,10 @@ export const GeofencesModal: React.FC<GeofencesModalProps> = ({
       ) : (
         <FlatList<Geofence>
           data={geofences}
+          testID="geofences_list"
           keyExtractor={(item) => item.identifier}
           renderItem={({ item, index }) => (
-            <View style={styles.geofenceItem}>
+            <View style={styles.geofenceItem} testID={`geofence_row_${index}`}>
               <Text style={styles.geofenceName}>
                 {`${index + 1}. ${item.identifier}`}
               </Text>
@@ -51,7 +53,13 @@ export const GeofencesModal: React.FC<GeofencesModalProps> = ({
           )}
         />
       )}
-      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={onClose}
+        testID="geofences_close_button"
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      >
         <Text style={styles.closeButtonText}>Close</Text>
       </TouchableOpacity>
     </BaseModal>
