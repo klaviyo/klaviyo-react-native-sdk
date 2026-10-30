@@ -100,6 +100,12 @@ native Android and iOS SDKs. Essential for testing changes across all three SDKs
 ./configure-sdk.sh -r --android=COMMIT_HASH_OR_BRANCH_NAME --ios=COMMIT_HASH_OR_BRANCH_NAME
 ```
 
+## UI test IDs
+
+- Give every new interactive or asserted-on control a snake_case test ID: `testID` here (iOS `accessibilityIdentifier`, Flutter `Semantics(identifier:)` + `ValueKey`, Android `Modifier.testTag`), e.g. `push_request_permission_button`.
+- Before adding an ID, check the existing names, and reuse the shared name for a control that also exists in the other Klaviyo SDK example apps (Android, iOS, Expo, Flutter).
+- When you rename or remove a control, update its ID and every test or automation that references it.
+
 ## Pull Requests
 
 If prompted to create a pull request, favor starting it in draft unless asked otherwise.
