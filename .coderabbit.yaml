@@ -13,7 +13,6 @@ reviews:
     - "!**/Pods/**"
     - "!**/yarn.lock"
   auto_review:
-    drafts: false
     base_branches:
       - ".*"
   tools:
