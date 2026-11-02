@@ -2273,19 +2273,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: 8445065dbc6b71cd238128ede2a13d54204b5407
+    :commit: a1505961d29b1363ee38529a67bd0638953800f4
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 8445065dbc6b71cd238128ede2a13d54204b5407
+    :commit: a1505961d29b1363ee38529a67bd0638953800f4
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 8445065dbc6b71cd238128ede2a13d54204b5407
+    :commit: a1505961d29b1363ee38529a67bd0638953800f4
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 8445065dbc6b71cd238128ede2a13d54204b5407
+    :commit: a1505961d29b1363ee38529a67bd0638953800f4
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: 8445065dbc6b71cd238128ede2a13d54204b5407
+    :commit: a1505961d29b1363ee38529a67bd0638953800f4
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
