@@ -101,6 +101,9 @@ env:
   HEAD_REF: ${{ github.head_ref }}
   REF_NAME: ${{ github.ref_name }}
   REF_TYPE: ${{ github.ref_type }}
+  SOURCE_LABEL: ${{ github.event_name == 'release' && format('release {0}', github.event.release.tag_name) || github.head_ref || github.ref_name }}
+  SLACK_USERNAME: React Native Example App
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
 jobs:
   # On a push to master, sets skip=true when HEAD's tree matches the tag of
@@ -315,20 +318,27 @@ jobs:
       && needs.preflight-android.outputs.ready == 'true'
 
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - id: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
       - name: Prep example app
+        id: prep
         uses: ./.github/actions/example-publish-prep
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # bundleRelease invokes Metro via the RN Gradle plugin; node + yarn must be on PATH.
       - name: Setup
+        id: setup
         uses: ./.github/actions/setup
 
       - name: Set up JDK 17
+        id: jdk
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: 'zulu'
@@ -336,12 +346,14 @@ jobs:
           java-package: jdk
 
       - name: Add Google Services from Secrets
+        id: google_services
         run: 'echo "$GOOGLE_SERVICES_JSON" > ./example/android/app/google-services.json'
         shell: bash
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       - name: Decode upload keystore
+        id: keystore
         run: echo "$SIGNING_KEY" | base64 -d > "${RUNNER_TEMP}/upload.jks"
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -354,11 +366,13 @@ jobs:
         run: ./pack-and-test.sh setup
 
       - name: Set up Ruby
+        id: ruby
         uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
           ruby-version: '3.2'
 
       - name: Install fastlane
+        id: fastlane
         shell: bash
         run: gem install -g .github/pins/fastlane/Gemfile --no-document
 
@@ -401,33 +415,73 @@ jobs:
         shell: bash
         run: rm -f example/android/app/google-services.json example/.env
 
+      - name: Classify cancellation
+        id: stop
+        if: cancelled()
+        env:
+          TIMEOUT_MINUTES: 45
+        run: |
+          elapsed=$(( $(date +%s) - ${JOB_START:-$(date +%s)} ))
+          if [ "$elapsed" -ge $(( TIMEOUT_MINUTES * 60 - 60 )) ]; then
+            echo "timed_out=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find failed step
+        id: failed
+        if: failure() || cancelled()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              prep: "Prep example app",
+              setup: "Setup",
+              jdk: "Set up JDK 17",
+              google_services: "Add Google Services from Secrets",
+              keystore: "Decode upload keystore",
+              pack_sdk: "Pack SDK + flip example to packed install",
+              ruby: "Set up Ruby",
+              fastlane: "Install fastlane",
+              build_and_deploy: "Build & deploy to Internal Track",
+              release_notes: "Prepare release notes"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure" or .value.conclusion == "cancelled")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
       - name: Notify Slack on success
         if: success()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          platform: Android
-          store: Play internal
-          full_version: ${{ env.VERSION_NAME }}
-          build: ${{ env.VERSION_CODE }}
-          sdks: ${{ steps.release_notes.outputs.sdks }}
-          install_url: https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
-          install_label: Install Klaviyo React Native SDK Example from Google Play
-          install_fallback: Open the Play Store with an internal-tester Google account to install
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: React Native Example App (Android) deployed to Play internal
+          body: Install with a Google account on the internal testers list.
+          fields: |
+            Build: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+            SDKs: ${{ steps.release_notes.outputs.sdks }}
+            Source: ${{ env.SOURCE_LABEL }} (${{ github.event_name }})
+            Commit: ${{ env.COMMIT_SHA }}
+          links: |
+            Install|https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
       - name: Notify Slack on failure
-        if: failure()
-        uses: ./.github/actions/notify-slack-publish
+        if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          steps_json: ${{ toJSON(steps) }}
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: Android
-          store: Play internal
-          full_version: ${{ env.VERSION_NAME }}
-          build: ${{ env.VERSION_CODE }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
+          title: React Native Example App (Android) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          fields: |
+            Build: ${{ env.VERSION_NAME && format('{0} ({1})', env.VERSION_NAME, env.VERSION_CODE) || 'not built' }}
+            Source: ${{ env.SOURCE_LABEL }} (${{ github.event_name }})
+            Commit: ${{ env.COMMIT_SHA }}
+          links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   deploy-ios:
     name: Publish to TestFlight
@@ -448,6 +502,7 @@ jobs:
       build_number: ${{ steps.result.outputs.build_number }}
       app_id: ${{ steps.result.outputs.app_id }}
       notes: ${{ steps.result.outputs.notes }}
+      slack_ts: ${{ steps.slack_success.outputs.ts }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     # Run on release / push always; on workflow_dispatch when platform is
@@ -464,20 +519,27 @@ jobs:
       && needs.preflight-ios.outputs.ready == 'true'
 
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - id: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
       - name: Prep example app
+        id: prep
         uses: ./.github/actions/example-publish-prep
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # The RN Xcode build phase invokes Metro during archive; node + yarn must be on PATH.
       - name: Setup
+        id: setup
         uses: ./.github/actions/setup
 
       - name: Set up Ruby
+        id: ruby
         uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
           # ruby-version is read from example/.ruby-version. bundler-cache:true
@@ -491,12 +553,14 @@ jobs:
       # explicitly into the active Ruby so `fastlane` resolves deterministically.
       # Kept out of example/Gemfile to avoid bloating the CocoaPods-only bundle.
       - name: Install fastlane
+        id: fastlane
         shell: bash
         run: gem install -g .github/pins/fastlane/Gemfile --no-document
 
       # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
       # push delivery works against the published build.
       - name: Inject GoogleService-Info.plist
+        id: google_services
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         shell: bash
@@ -504,6 +568,7 @@ jobs:
 
       # See ios-build.yml's Cache Pods step for the cache-key rationale.
       - name: Cache Pods
+        id: cache_pods
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: example/ios/Pods
@@ -516,6 +581,7 @@ jobs:
       # before "Install CocoaPods dependencies" so pod install picks up the
       # packed-mode resolution.
       - name: Pack SDK + flip example to packed install
+        id: pack_sdk
         shell: bash
         run: ./pack-and-test.sh setup
 
@@ -538,6 +604,7 @@ jobs:
 
       # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key
+        id: write_key
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
@@ -622,35 +689,77 @@ jobs:
             ssh-agent -k 2>/dev/null || true
           fi
 
+      - name: Classify cancellation
+        id: stop
+        if: cancelled()
+        env:
+          TIMEOUT_MINUTES: 45
+        run: |
+          elapsed=$(( $(date +%s) - ${JOB_START:-$(date +%s)} ))
+          if [ "$elapsed" -ge $(( TIMEOUT_MINUTES * 60 - 60 )) ]; then
+            echo "timed_out=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find failed step
+        id: failed
+        if: failure() || cancelled()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              prep: "Prep example app",
+              setup: "Setup",
+              ruby: "Set up Ruby",
+              fastlane: "Install fastlane",
+              google_services: "Inject GoogleService-Info.plist",
+              cache_pods: "Cache Pods",
+              pack_sdk: "Pack SDK + flip example to packed install",
+              pod_install: "Install CocoaPods dependencies",
+              write_key: "Write App Store Connect API key",
+              build_sign_upload: "Build, sign & upload to TestFlight",
+              release_notes: "Prepare release notes",
+              result: "Record uploaded version"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure" or .value.conclusion == "cancelled")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
       - name: Notify Slack on success
+        id: slack_success
         if: success()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          platform: iOS
-          store: TestFlight
-          full_version: ${{ env.FULL_VERSION }}
-          build: ${{ env.BUILD_NUMBER }}
-          sdks: ${{ steps.release_notes.outputs.sdks }}
-          install_url: ${{ steps.result.outputs.testflight_url }}
-          install_label: Open the example app in TestFlight
-          access_note: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload.
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: React Native Example App (iOS) uploaded to TestFlight
+          body: Install version ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }}) once Apple finishes processing it, usually 5–30 min after upload.
+          fields: |
+            Build: ${{ env.FULL_VERSION }} (${{ env.BUILD_NUMBER }})
+            SDKs: ${{ steps.release_notes.outputs.sdks }}
+            Source: ${{ env.SOURCE_LABEL }} (${{ github.event_name }})
+            Commit: ${{ env.COMMIT_SHA }}
+          links: |
+            TestFlight|${{ steps.result.outputs.testflight_url }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
       - name: Notify Slack on failure
-        if: failure()
-        uses: ./.github/actions/notify-slack-publish
+        if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          steps_json: ${{ toJSON(steps) }}
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: iOS
-          store: TestFlight
-          full_version: ${{ env.FULL_VERSION }}
-          build: ${{ env.BUILD_NUMBER }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
+          title: React Native Example App (iOS) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          fields: |
+            Build: ${{ env.FULL_VERSION && format('{0} ({1})', env.FULL_VERSION, env.BUILD_NUMBER) || 'not built' }}
+            Source: ${{ env.SOURCE_LABEL }} (${{ github.event_name }})
+            Commit: ${{ env.COMMIT_SHA }}
+          links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
-  # Runs on Linux so no macOS runner is held while Apple processes the build.
   what-to-test:
     name: Set TestFlight "What to Test"
     needs: deploy-ios
@@ -727,14 +836,16 @@ jobs:
       - name: Warn on Slack when What to Test failed
         if: steps.setup_ruby.outcome == 'failure' || steps.install_fastlane.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: warning
-          platform: iOS
-          store: TestFlight
-          full_version: ${{ needs.deploy-ios.outputs.full_version }}
-          build: ${{ needs.deploy-ios.outputs.build_number }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ needs.deploy-ios.outputs.slack_ts }}
+          status: warning
+          title: React Native Example App (iOS) uploaded to TestFlight, but setting What to Test failed
+          fields: |
+            Build: ${{ needs.deploy-ios.outputs.full_version }} (${{ needs.deploy-ios.outputs.build_number }})
+            Source: ${{ env.SOURCE_LABEL }} (${{ github.event_name }})
+            Commit: ${{ env.COMMIT_SHA }}
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.

@@ -48,7 +48,7 @@ preflight jobs declare no environment and cannot see environment secrets.
 | `APPLE_TEAM_ID`                       | iOS     | Apple Developer team ID                                                               |
 | `BUILD_CERTIFICATE_BASE64`            | iOS     | Base64-encoded `.p12` with the Apple Distribution certificate **and its private key** |
 | `P12_PASSWORD`                        | iOS     | Password for that `.p12`                                                              |
-| `SLACK_WEBHOOK_URL`                   | both    | Incoming webhook for deploy notifications (optional; Slack steps skip when unset)     |
+| `SLACK_BOT_TOKEN`                     | both    | Slack bot token for deploy notifications (optional; Slack steps skip when unset)      |
 
 ## One-time setup (humans)
 
@@ -142,7 +142,7 @@ refs, derived app version, build number, commit, branch and build time to
 shows them in its info modal, and `.github/scripts/release-notes.sh` prints the
 same header for the store notes (500 chars on Play, 4000 on TestFlight; the
 release name and body are appended on `release: published` and cut first).
-`.github/scripts/slack-message.sh` builds the Slack message. Uploads go
+`.github/actions/notify-slack` posts the Slack message. Uploads go
 through fastlane: `pilot` and `supply` for TestFlight and Play, plus What to
 Test on iOS.
 

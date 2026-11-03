@@ -23,6 +23,15 @@ on:
         required: false
         default: false
         type: boolean
+      slack_thread_ts:
+        description: 'Slack message ts to reply under; leave empty to post a new message'
+        required: false
+        default: ''
+        type: string
+
+env:
+  SLACK_USERNAME: React Native SDK
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
 jobs:
   publish-sdk:
@@ -36,7 +45,11 @@ jobs:
       version: ${{ steps.pkg.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - id: checkout
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || inputs.version }}
 
@@ -52,6 +65,7 @@ jobs:
           fi
 
       - name: Setup
+        id: setup
         uses: ./.github/actions/setup
 
       # Explicit `yarn prepare` builds lib/ before the stage. Yarn Berry 3
@@ -60,6 +74,7 @@ jobs:
       # either. Without this step the staged tarball has an empty lib/ and
       # every consumer's `import 'klaviyo-react-native-sdk'` breaks.
       - name: Prepare
+        id: prepare
         run: yarn prepare
 
       # Trusted publishing (OIDC): npm exchanges this job's OIDC token for
@@ -67,14 +82,17 @@ jobs:
       # Requires Node >= 22.14, npm >= 11.15 and a trust relationship on
       # npmjs.com; provenance attestation is included.
       - name: Setup Node for trusted publishing
+        id: node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22.14'
 
       - name: Update npm for trusted publishing
+        id: npm
         run: npm install -g "npm@^11.15.0"
 
       - name: Publish to npm (dry run)
+        id: publish_dry_run
         if: inputs.dry_run
         run: npm publish --dry-run --tag "${{ steps.pkg.outputs.dist_tag }}"
 
@@ -91,28 +109,75 @@ jobs:
             exit 1
           fi
 
+      - name: Checkout Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
       - name: Notify Slack on success
         if: success() && !inputs.dry_run
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./_slack/.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          platform: npm
-          full_version: ${{ steps.pkg.outputs.version }}
-          dist_tag: ${{ steps.pkg.outputs.dist_tag }}
-          already_published: ${{ steps.publish.outputs.already_published }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: success
+          title: React Native SDK ${{ steps.pkg.outputs.version }} ${{ steps.publish.outputs.already_published == 'true' && 'already on npm, nothing to do' || 'published to npm' }}
+          fields: |
+            Version: ${{ steps.pkg.outputs.version }}
+            dist-tag: ${{ steps.pkg.outputs.dist_tag }}
+          links: npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ steps.pkg.outputs.version }}
+
+      - name: Classify cancellation
+        id: stop
+        if: cancelled()
+        env:
+          TIMEOUT_MINUTES: 360
+        run: |
+          elapsed=$(( $(date +%s) - ${JOB_START:-$(date +%s)} ))
+          if [ "$elapsed" -ge $(( TIMEOUT_MINUTES * 60 - 60 )) ]; then
+            echo "timed_out=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find failed step
+        id: failed
+        if: failure() || cancelled()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              pkg: "Read package version",
+              setup: "Setup",
+              prepare: "Prepare",
+              node: "Setup Node for trusted publishing",
+              npm: "Update npm for trusted publishing",
+              publish_dry_run: "Publish to npm (dry run)",
+              publish: "Publish to npm"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure" or .value.conclusion == "cancelled")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack on failure
-        if: failure()
+        if: failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./_slack/.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: npm
-          full_version: ${{ steps.pkg.outputs.version || inputs.version }}
-          steps_json: ${{ toJSON(steps) }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
+          title: React Native SDK ${{ steps.pkg.outputs.version || inputs.version }} npm publish ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          fields: |
+            Version: ${{ steps.pkg.outputs.version || inputs.version }}
+            Commit: ${{ inputs.ref || inputs.version }}
 
   linear-release:
     needs: publish-sdk
