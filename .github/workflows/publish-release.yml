@@ -37,6 +37,8 @@ permissions: {}
 
 env:
   VERSION: ${{ inputs.version || github.event.release.tag_name }}
+  SLACK_USERNAME: React Native SDK
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
 jobs:
   prepare:
@@ -48,13 +50,16 @@ jobs:
     outputs:
       sha: ${{ steps.preflight.outputs.sha }}
       release_url: ${{ steps.draft.outputs.release_url }}
+      slack_ts: ${{ steps.slack_pending.outputs.ts }}
     steps:
-      - uses: actions/checkout@v5
+      - id: checkout
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.event.release.tag_name || github.event.repository.default_branch }}
           fetch-depth: 0
 
       - name: Require a commit on master or rel/*
+        id: branch
         run: |
           set -euo pipefail
           git fetch --no-tags --quiet origin '+refs/heads/master:refs/remotes/origin/master' '+refs/heads/rel/*:refs/remotes/origin/rel/*'
@@ -64,6 +69,7 @@ jobs:
           fi
 
       - name: Fail if tag already exists
+        id: tag
         if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
@@ -117,6 +123,7 @@ jobs:
           echo "release_url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Write summary
+        id: summary
         env:
           SHA: ${{ steps.preflight.outputs.sha }}
           RELEASE_URL: ${{ steps.draft.outputs.release_url }}
@@ -134,27 +141,76 @@ jobs:
             echo "Approve the \`npm\` environment on this run to publish."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Notify Slack — awaiting approval
+      - name: Checkout Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Notify Slack release awaiting approval
+        id: slack_pending
         if: ${{ !inputs.dry_run }}
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./_slack/.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: pending
-          platform: release
-          full_version: ${{ env.VERSION }}
-          reason: ${{ inputs.skip_ci_check == true && 'CI check skipped' || '' }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: pending
+          title: React Native SDK ${{ env.VERSION }} awaiting approval${{ inputs.skip_ci_check && ' (CI check skipped)' || '' }}
+          body: Approve the `npm` environment on this run to publish.
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ steps.preflight.outputs.sha }}
+            Requested by: ${{ github.actor }}
+          links: ${{ steps.draft.outputs.release_url && format('Release|{0}', steps.draft.outputs.release_url) || '' }}
 
-      - name: Notify Slack on failure
+      - name: Find failed step
+        id: failed
+        if: failure()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              branch: "Require a commit on master or rel/*",
+              tag: "Fail if tag already exists",
+              preflight: "Release preflight",
+              draft: "Create or reuse draft release",
+              summary: "Write summary"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack release failure
+        id: slack_failure
         if: failure()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./_slack/.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: release
-          full_version: ${{ env.VERSION }}
-          steps_json: ${{ toJSON(steps) }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack_pending.outputs.ts }}
+          status: failure
+          title: React Native SDK ${{ env.VERSION }} release failed
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ steps.preflight.outputs.sha }}
+            Stage: Preflight and draft
+
+      - name: Reply with failure details
+        if: failure() && steps.slack_failure.outputs.ts != ''
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ steps.slack_failure.outputs.ts }}
+          status: failure
+          title: Failed at ${{ steps.failed.outputs.step }}
 
   publish-sdk:
     needs: prepare
@@ -164,6 +220,7 @@ jobs:
       release_url: ${{ needs.prepare.outputs.release_url }}
       ref: ${{ needs.prepare.outputs.sha }}
       dry_run: ${{ inputs.dry_run == true }}
+      slack_thread_ts: ${{ needs.prepare.outputs.slack_ts }}
     secrets: inherit
     permissions:
       contents: read
@@ -177,12 +234,18 @@ jobs:
     permissions:
       contents: write
       actions: write
+    env:
+      SLACK_TS: ${{ needs.prepare.outputs.slack_ts }}
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@v5
         with:
-          sparse-checkout: .github
+          sparse-checkout: .github/actions
+          persist-credentials: false
 
       - name: Publish release
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ needs.prepare.outputs.sha }}
@@ -195,6 +258,7 @@ jobs:
           fi
 
       - name: Dispatch publish-example
+        id: dispatch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -203,6 +267,7 @@ jobs:
           gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
 
       - name: Write summary
+        id: summary
         env:
           RELEASE_URL: ${{ needs.prepare.outputs.release_url }}
         run: |
@@ -213,21 +278,98 @@ jobs:
             echo "- **Example publish:** [publish-example.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish-example.yml)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Notify Slack on failure
+      - name: Notify Slack release published
+        if: success()
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ env.SLACK_TS }}
+          status: success
+          title: React Native SDK ${{ env.VERSION }} published${{ contains(env.VERSION, '-') && ' (prerelease)' || '' }}
+          body: Published to npm and released on GitHub. Example app deploy dispatched at the tag.
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ needs.prepare.outputs.sha }}
+          links: |
+            Release|${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.VERSION }}
+            npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
+
+      - name: Find failed step
+        id: failed
+        if: failure()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              publish: "Publish release",
+              dispatch: "Dispatch publish-example",
+              summary: "Write summary"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack release failure
+        id: slack_failure
         if: failure()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: release
-          full_version: ${{ env.VERSION }}
-          steps_json: ${{ toJSON(steps) }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ env.SLACK_TS }}
+          status: failure
+          title: React Native SDK ${{ env.VERSION }} release failed
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ needs.prepare.outputs.sha }}
+            Stage: Finalize
+
+      - name: Reply with failure details
+        if: failure() && steps.slack_failure.outputs.ts != ''
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ steps.slack_failure.outputs.ts }}
+          status: failure
+          title: Failed at ${{ steps.failed.outputs.step }}
+
+  released:
+    needs: [prepare, publish-sdk]
+    if: github.event_name == 'release' && needs.publish-sdk.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - name: Notify Slack release published
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.prepare.outputs.slack_ts }}
+          status: success
+          title: React Native SDK ${{ env.VERSION }} published to npm
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ needs.prepare.outputs.sha }}
+          links: |
+            Release|${{ github.event.release.html_url }}
+            npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
 
   # Rejected deployments and cancelled runs skip every failure() Slack step.
   stopped:
     needs: [prepare, publish-sdk, finalize]
-    if: always() && (contains(needs.*.result, 'cancelled') || needs.publish-sdk.result == 'failure')
+    if: always() && !inputs.dry_run && (contains(needs.*.result, 'cancelled') || needs.publish-sdk.result == 'failure')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -241,7 +383,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$CANCELLED" = "true" ]; then
-            echo "reason=cancelled" >> "$GITHUB_OUTPUT"
+            echo "reason=cancelled or timed out" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # A rejected deployment fails the npm job before any step runs.
@@ -249,20 +391,29 @@ jobs:
             --jq '[.jobs[] | select(.name | endswith("/ publish-sdk")) | .steps | length] | add // 0')
           if [ "$ran" = "0" ]; then
             echo "reason=npm deploy rejected" >> "$GITHUB_OUTPUT"
+          else
+            echo "reason=npm publish failed" >> "$GITHUB_OUTPUT"
+            echo "status=failure" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v5
-        if: steps.reason.outputs.reason != ''
-        with:
-          sparse-checkout: .github
-
-      - name: Notify Slack — stopped
+      - name: Checkout Slack action
         if: steps.reason.outputs.reason != ''
         continue-on-error: true
-        uses: ./.github/actions/notify-slack-publish
+        uses: actions/checkout@v5
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: stopped
-          platform: release
-          full_version: ${{ env.VERSION }}
-          reason: ${{ steps.reason.outputs.reason }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - name: Notify Slack release stopped
+        if: steps.reason.outputs.reason != ''
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.prepare.outputs.slack_ts }}
+          status: ${{ steps.reason.outputs.status || 'stopped' }}
+          title: React Native SDK ${{ env.VERSION }} release stopped, ${{ steps.reason.outputs.reason }}
+          body: Nothing more will publish from this run.${{ steps.reason.outputs.status == 'failure' && ' Failure details are in this thread.' || '' }}
+          fields: |
+            Version: ${{ env.VERSION }}
+            Commit: ${{ needs.prepare.outputs.sha }}
