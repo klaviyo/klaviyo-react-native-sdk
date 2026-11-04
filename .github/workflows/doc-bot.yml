@@ -14,7 +14,6 @@ on:
       - 'README.md'
       - 'tsconfig.json'
       - 'tsconfig.build.json'
-      - 'yarn.lock'
       - '.github/workflows/doc-bot.yml'
   workflow_dispatch:
 
@@ -81,7 +80,8 @@ jobs:
     # Posts when build or deploy failed, or when deploy succeeded; stays quiet on cancellation or a skipped deploy.
     if: always() && (contains(needs.*.result, 'failure') || needs.deploy.result == 'success')
     runs-on: ubuntu-24.04
-    permissions: {}
+    permissions:
+      contents: read
     steps:
       - name: Checkout Slack action
         continue-on-error: true
