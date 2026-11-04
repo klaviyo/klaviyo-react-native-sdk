@@ -257,6 +257,8 @@ const event: Event = {
 Klaviyo.createEvent(event);
 ```
 
+To record which currency `value` is in, set `valueCurrency` to an ISO 4217 code such as `'USD'`.
+
 You can also create an event by providing a string for the event name as follows:
 
 ```typescript
