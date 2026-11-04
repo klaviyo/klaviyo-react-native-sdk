@@ -214,34 +214,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      actions: read
       contents: read
     outputs:
       slack_ts: ${{ steps.slack.outputs.ts }}
     steps:
-      - name: Find the parent message of a superseded push run
-        id: superseded
-        if: github.event_name == 'push'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          prev=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish-example.yml/runs?event=push&branch=$BRANCH&status=cancelled&per_page=10" \
-            --jq "[.workflow_runs[] | select(.id < $GITHUB_RUN_ID)][0].id // empty")
-          [ -n "$prev" ] || exit 0
-          jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prev/jobs?per_page=100")
-          if [ "$(jq '[.jobs[] | select(.name == "Update the deploy message" and .conclusion == "success")] | length' <<<"$jobs")" != 0 ]; then
-            exit 0
-          fi
-          job=$(jq -r '[.jobs[] | select(.name == "Announce the deploy")][0].id // empty' <<<"$jobs")
-          [ -n "$job" ] || exit 0
-          ts=$(gh api "repos/$GITHUB_REPOSITORY/check-runs/$job/annotations" --jq '[.[] | select(.title == "slack_ts")][0].message // empty')
-          [ -n "$ts" ] || exit 0
-          echo "ts=$ts" >> "$GITHUB_OUTPUT"
-          echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$prev" >> "$GITHUB_OUTPUT"
-
       - name: Compute short commit
         env:
           SHA: ${{ env.COMMIT_SHA }}
@@ -255,20 +231,6 @@ jobs:
           sparse-checkout: .github/actions
           persist-credentials: false
           path: _slack
-
-      - name: Mark the superseded run's message as stopped
-        if: steps.superseded.outputs.ts != ''
-        continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
-        with:
-          token: ${{ secrets.SLACK_BOT_TOKEN }}
-          ts: ${{ steps.superseded.outputs.ts }}
-          status: stopped
-          title: React Native Example App deploy superseded by a newer push
-          body: A newer push to `${{ github.ref_name }}` cancelled this run before it finished.
-          links: |
-            Cancelled run|${{ steps.superseded.outputs.run_url }}
-            Newer commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
       - name: Notify Slack deploy started
         id: slack
@@ -285,13 +247,6 @@ jobs:
             Requested by: ${{ github.actor }}
           links: |
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
-
-      - name: Publish the message ts for a newer run
-        if: steps.slack.outputs.ts != ''
-        continue-on-error: true
-        env:
-          SLACK_TS: ${{ steps.slack.outputs.ts }}
-        run: echo "::notice title=slack_ts::$SLACK_TS"
 
   # Only run for triggers that can deploy: any other PR label must not start
   # the full macOS CI. Waits for the two jobs above. Runs when they are
