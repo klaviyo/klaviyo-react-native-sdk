@@ -537,7 +537,8 @@ With this in place, RN Firebase keeps receiving messages:
   message, Klaviyo pushes included.
 - RN Firebase's service no longer runs, so `messaging().onTokenRefresh` stops firing.
   `KlaviyoPushService` still forwards new tokens to Klaviyo. If other code in your app needs the
-  token, read it with `messaging().getToken()` at startup instead of relying on `onTokenRefresh`.
+  token, read it with `messaging().getToken()` at startup and each time the app returns to the
+  foreground instead of relying on `onTokenRefresh`.
 
 The [example app](./example/android/app/src/main/AndroidManifest.xml) uses this configuration.
 

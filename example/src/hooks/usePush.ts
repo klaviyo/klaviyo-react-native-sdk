@@ -27,13 +27,16 @@ export function usePush() {
 
     // Re-check permission whenever the app returns to the foreground — the
     // user may have toggled the setting from the OS Settings app. The Klaviyo
-    // SDK handles the permission-change side effects internally on resume;
-    // this listener is purely to keep the example UI in sync.
+    // SDK handles the permission-change side effects internally on resume.
+    // The token is also re-fetched and passed to Klaviyo here.
     const appStateSubscription = AppState.addEventListener(
       'change',
       (nextState) => {
         if (nextState === 'active') {
           checkPushPermissionStatus().then(setPushNotificationsEnabled);
+          fetchAndSetPushToken().then((token) => {
+            if (token) setPushToken(token);
+          });
         }
       }
     );
@@ -57,9 +60,11 @@ export function usePush() {
       };
     }
 
-    // onTokenRefresh delivers the FCM registration token. On Android that's
-    // what Klaviyo expects and what we want to display. On iOS, Klaviyo uses
-    // the APNs device token (returned by getAPNSToken), NOT the FCM token —
+    // onTokenRefresh delivers the FCM registration token. On Android it does
+    // not fire while KlaviyoPushService is the app's MESSAGING_EVENT service
+    // (see AndroidManifest.xml); the foreground re-fetch above covers token
+    // changes there. On iOS, Klaviyo uses the APNs device token (returned by
+    // getAPNSToken), NOT the FCM token —
     // so on iOS we re-fetch APNs when Firebase signals a token change and
     // ignore the FCM token itself. The refresh also covers server-initiated
     // token rotation and the "APNs ready" moment after the user grants
