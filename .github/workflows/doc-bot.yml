@@ -101,9 +101,9 @@ jobs:
           status: success
           title: React Native SDK docs deployed to GitHub Pages
           fields: |
-            Repository: ${{ github.repository }}
-            Ref: ${{ github.ref_name }}
-            Event: ${{ github.event_name }}
+            Repository: `${{ github.repository }}`
+            Branch: `${{ github.ref_name }}`
+            Event: `${{ github.event_name }}`
           links: |
             Docs|${{ needs.deploy.outputs.page_url }}
 
@@ -114,9 +114,9 @@ jobs:
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           status: failure
-          title: Documentation Bot workflow failed
+          title: '`Documentation Bot` workflow failed'
           body: 'Common issue: check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be "GitHub Actions").'
           fields: |
-            Repository: ${{ github.repository }}
-            Ref: ${{ github.ref_name }}
-            Event: ${{ github.event_name }}
+            Repository: `${{ github.repository }}`
+            Branch: `${{ github.ref_name }}`
+            Event: `${{ github.event_name }}`

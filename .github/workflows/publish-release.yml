@@ -49,6 +49,7 @@ jobs:
       pull-requests: read
     outputs:
       sha: ${{ steps.preflight.outputs.sha }}
+      short_sha: ${{ steps.preflight.outputs.short_sha }}
       release_url: ${{ steps.draft.outputs.release_url }}
       slack_ts: ${{ steps.slack_pending.outputs.ts }}
     steps:
@@ -159,13 +160,15 @@ jobs:
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           status: pending
-          title: React Native SDK ${{ env.VERSION }} awaiting approval${{ inputs.skip_ci_check && ' (CI check skipped)' || '' }}
+          title: React Native SDK `${{ env.VERSION }}` awaiting approval${{ inputs.skip_ci_check && ' (CI check skipped)' || '' }}
           body: Approve the `npm` environment on this run to publish.
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ steps.preflight.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ steps.preflight.outputs.short_sha }}`
             Requested by: ${{ github.actor }}
-          links: ${{ steps.draft.outputs.release_url && format('Release|{0}', steps.draft.outputs.release_url) || '' }}
+          links: |
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.preflight.outputs.sha }}
+            ${{ steps.draft.outputs.release_url && format('Release|{0}', steps.draft.outputs.release_url) || '' }}
 
       - name: Find failed step
         id: failed
@@ -196,10 +199,10 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ steps.slack_pending.outputs.ts }}
           status: failure
-          title: React Native SDK ${{ env.VERSION }} release failed
+          title: React Native SDK `${{ env.VERSION }}` release failed
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ steps.preflight.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ steps.preflight.outputs.short_sha }}`
             Stage: Preflight and draft
 
       - name: Reply with failure details
@@ -295,14 +298,15 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ env.SLACK_TS }}
           status: success
-          title: React Native SDK ${{ env.VERSION }} published${{ contains(env.VERSION, '-') && ' (prerelease)' || '' }}
+          title: React Native SDK `${{ env.VERSION }}` published${{ contains(env.VERSION, '-') && ' (prerelease)' || '' }}
           body: Published to npm and released on GitHub. The example app deploy replies in this thread.
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ needs.prepare.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ needs.prepare.outputs.short_sha }}`
           links: |
             Release|${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.VERSION }}
             npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
 
       - name: Find failed step
         id: failed
@@ -330,10 +334,10 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ env.SLACK_TS }}
           status: failure
-          title: React Native SDK ${{ env.VERSION }} release failed
+          title: React Native SDK `${{ env.VERSION }}` release failed
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ needs.prepare.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ needs.prepare.outputs.short_sha }}`
             Stage: Finalize
 
       - name: Reply with failure details
@@ -367,13 +371,14 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.prepare.outputs.slack_ts }}
           status: success
-          title: React Native SDK ${{ env.VERSION }} published to npm
+          title: React Native SDK `${{ env.VERSION }}` published to npm
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ needs.prepare.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ needs.prepare.outputs.short_sha }}`
           links: |
             Release|${{ github.event.release.html_url }}
             npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
 
   # Rejected deployments and cancelled runs skip every failure() Slack step.
   stopped:
@@ -421,8 +426,8 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.prepare.outputs.slack_ts }}
           status: ${{ steps.reason.outputs.status || 'stopped' }}
-          title: React Native SDK ${{ env.VERSION }} release stopped, ${{ steps.reason.outputs.reason }}
+          title: React Native SDK `${{ env.VERSION }}` release stopped, ${{ steps.reason.outputs.reason }}
           body: Nothing more will publish from this run.${{ steps.reason.outputs.status == 'failure' && ' Failure details are in this thread.' || '' }}
           fields: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ needs.prepare.outputs.sha }}
+            Version: `${{ env.VERSION }}`
+            Commit: `${{ needs.prepare.outputs.short_sha }}`
