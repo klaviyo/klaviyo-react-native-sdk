@@ -7,6 +7,15 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'src/**'
+      - '!src/__tests__/**'
+      - 'package.json'
+      - 'README.md'
+      - 'tsconfig.json'
+      - 'tsconfig.build.json'
+      - 'yarn.lock'
+      - '.github/workflows/doc-bot.yml'
   workflow_dispatch:
 
 permissions: {}
@@ -59,16 +68,18 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
-  notify-failure:
-    name: Notify Slack on failure
+  notify:
+    name: Notify Slack
     needs: [build, deploy]
-    # Runs only if build or deploy failed; skipped on success, cancellation, or a skipped deploy.
-    if: failure()
+    # Posts when build or deploy failed, or when deploy succeeded; stays quiet on cancellation or a skipped deploy.
+    if: always() && (contains(needs.*.result, 'failure') || needs.deploy.result == 'success')
     runs-on: ubuntu-24.04
     permissions: {}
     steps:
@@ -81,7 +92,23 @@ jobs:
           persist-credentials: false
           path: _slack
 
+      - name: Send Slack notification on success
+        if: needs.deploy.result == 'success'
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: React Native SDK docs deployed to GitHub Pages
+          fields: |
+            Repository: ${{ github.repository }}
+            Ref: ${{ github.ref_name }}
+            Event: ${{ github.event_name }}
+          links: |
+            Docs|${{ needs.deploy.outputs.page_url }}
+
       - name: Send Slack notification on failure
+        if: contains(needs.*.result, 'failure')
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:

@@ -264,7 +264,16 @@ jobs:
         run: |
           set -euo pipefail
           PLATFORM=both
-          gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
+          # True when the workflow file at $VERSION declares slack_thread_ts.
+          takes_thread_ts() {
+            gh api "repos/$GITHUB_REPOSITORY/contents/.github/workflows/publish-example.yml?ref=$VERSION" \
+              -H "Accept: application/vnd.github.raw" | grep -q '^[[:space:]]*slack_thread_ts:'
+          }
+          if [ -n "$SLACK_TS" ] && takes_thread_ts; then
+            gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" -f "slack_thread_ts=$SLACK_TS" --repo "$GITHUB_REPOSITORY"
+          else
+            gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
+          fi
 
       - name: Write summary
         id: summary
@@ -287,7 +296,7 @@ jobs:
           ts: ${{ env.SLACK_TS }}
           status: success
           title: React Native SDK ${{ env.VERSION }} published${{ contains(env.VERSION, '-') && ' (prerelease)' || '' }}
-          body: Published to npm and released on GitHub. Example app deploy dispatched at the tag.
+          body: Published to npm and released on GitHub. The example app deploy replies in this thread.
           fields: |
             Version: ${{ env.VERSION }}
             Commit: ${{ needs.prepare.outputs.sha }}
