@@ -307,7 +307,11 @@ describe('Klaviyo SDK', () => {
       Klaviyo.createEvent(event);
       expect(
         NativeModules.KlaviyoReactNativeSdk.createEvent
-      ).toHaveBeenCalledWith(event);
+      ).toHaveBeenCalledWith({
+        name: EventName.STARTED_CHECKOUT_METRIC,
+        value: 10,
+        valueCurrency: 'EUR',
+      });
     });
   });
 
