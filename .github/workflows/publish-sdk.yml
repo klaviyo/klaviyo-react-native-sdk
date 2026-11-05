@@ -65,6 +65,33 @@ jobs:
         with:
           ref: ${{ inputs.ref || inputs.version }}
 
+      - name: Checkout Slack action
+        if: always()
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Notify Slack npm publish started
+        id: slack
+        if: ${{ !inputs.dry_run }}
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: pending
+          title: React Native SDK `${{ inputs.version }}` publishing to npm
+          fields: |
+            Version: `${{ inputs.version }}`
+            Commit: `${{ steps.commit.outputs.short }}`
+          links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
+
       - name: Read package version
         id: pkg
         run: |
@@ -121,22 +148,13 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout Slack action
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Notify Slack on success
         if: success() && !inputs.dry_run
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack.outputs.ts }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: success
           title: React Native SDK `${{ steps.pkg.outputs.version }}` ${{ steps.publish.outputs.already_published == 'true' && 'already on npm, nothing to do' || 'published to npm' }}
@@ -184,6 +202,7 @@ jobs:
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack.outputs.ts }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
           title: React Native SDK `${{ steps.pkg.outputs.version || inputs.version }}` npm publish ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
