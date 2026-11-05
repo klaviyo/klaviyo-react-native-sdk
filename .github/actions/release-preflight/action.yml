@@ -19,6 +19,9 @@ outputs:
   sha:
     description: The checked-out commit SHA
     value: ${{ steps.version.outputs.sha }}
+  short_sha:
+    description: The checked-out commit SHA, first 7 characters
+    value: ${{ steps.version.outputs.short_sha }}
 
 runs:
   using: composite
@@ -39,7 +42,9 @@ runs:
           echo "::error::package.json version is '$PKG_VERSION', expected '$VERSION'"
           exit 1
         fi
-        echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        sha=$(git rev-parse HEAD)
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        echo "short_sha=${sha:0:7}" >> "$GITHUB_OUTPUT"
 
     - name: Check native SDK pins
       shell: bash

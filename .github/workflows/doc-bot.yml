@@ -7,9 +7,21 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'src/**'
+      - '!src/__tests__/**'
+      - 'package.json'
+      - 'README.md'
+      - 'tsconfig.json'
+      - 'tsconfig.build.json'
+      - '.github/workflows/doc-bot.yml'
   workflow_dispatch:
 
 permissions: {}
+
+env:
+  SLACK_USERNAME: React Native SDK
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
 # One Pages deployment at a time. Don't cancel an in-flight deploy; a newer push queues behind it.
 concurrency:
@@ -55,36 +67,56 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
-  notify-failure:
-    name: Notify Slack on failure
+  notify:
+    name: Notify Slack
     needs: [build, deploy]
-    # Runs only if build or deploy failed; skipped on success, cancellation, or a skipped deploy.
-    if: failure()
+    # Posts when build or deploy failed, or when deploy succeeded; stays quiet on cancellation or a skipped deploy.
+    if: always() && (contains(needs.*.result, 'failure') || needs.deploy.result == 'success')
     runs-on: ubuntu-24.04
-    permissions: {}
+    permissions:
+      contents: read
     steps:
-      - name: Send Slack notification on failure
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "🚨 Documentation Bot Workflow Failed"
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "🚨 Documentation Bot Workflow Failed\n"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Repository:* ${{ github.repository }}\n*Ref:* `${{ github.ref_name }}`\n*Event:* ${{ github.event_name }}\n*Common Issue:* Check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be \"GitHub Actions\")"
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Send Slack notification on success
+        if: needs.deploy.result == 'success'
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: React Native SDK docs deployed to GitHub Pages
+          fields: |
+            Repository: `${{ github.repository }}`
+            Branch: `${{ github.ref_name }}`
+            Event: `${{ github.event_name }}`
+          links: |
+            Docs|${{ needs.deploy.outputs.page_url }}
+
+      - name: Send Slack notification on failure
+        if: contains(needs.*.result, 'failure')
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: failure
+          title: '`Documentation Bot` workflow failed'
+          body: 'Common issue: check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be "GitHub Actions").'
+          fields: |
+            Repository: `${{ github.repository }}`
+            Branch: `${{ github.ref_name }}`
+            Event: `${{ github.event_name }}`

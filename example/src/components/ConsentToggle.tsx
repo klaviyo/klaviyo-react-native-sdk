@@ -6,6 +6,8 @@ import { colors } from '../theme';
 
 interface ConsentToggleProps {
   label: string;
+  /** Stable ID for the switch, e.g. `subscription_email_marketing_switch`. */
+  testID: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
@@ -19,6 +21,7 @@ interface ConsentToggleProps {
  */
 export const ConsentToggle: React.FC<ConsentToggleProps> = ({
   label,
+  testID,
   value,
   onValueChange,
   disabled = false,
@@ -37,6 +40,7 @@ export const ConsentToggle: React.FC<ConsentToggleProps> = ({
       onValueChange={onValueChange}
       disabled={disabled}
       trackColor={{ false: colors.border, true: colors.primary }}
+      testID={testID}
       accessibilityLabel={label}
     />
   </View>

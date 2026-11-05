@@ -5,6 +5,12 @@ import { styles } from '../Styles';
 interface ToggleButtonsProps {
   leftLabel: string;
   rightLabel: string;
+  /** Stable IDs for UI tests and automation, e.g. `forms_register_button`. */
+  leftTestID: string;
+  rightTestID: string;
+  /** Override the spoken labels when `leftLabel`/`rightLabel` are ambiguous out of context. */
+  leftAccessibilityLabel?: string;
+  rightAccessibilityLabel?: string;
   isLeftActive: boolean;
   onLeftPress: () => void;
   onRightPress: () => void;
@@ -18,6 +24,10 @@ interface ToggleButtonsProps {
 export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
   leftLabel,
   rightLabel,
+  leftTestID,
+  rightTestID,
+  leftAccessibilityLabel,
+  rightAccessibilityLabel,
   isLeftActive,
   onLeftPress,
   onRightPress,
@@ -34,6 +44,10 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
         ]}
         onPress={onLeftPress}
         disabled={leftDisabled}
+        testID={leftTestID}
+        accessibilityRole="button"
+        accessibilityLabel={leftAccessibilityLabel ?? leftLabel}
+        accessibilityState={{ disabled: leftDisabled, selected: isLeftActive }}
       >
         <Text
           style={[
@@ -52,6 +66,13 @@ export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
         ]}
         onPress={onRightPress}
         disabled={rightDisabled}
+        testID={rightTestID}
+        accessibilityRole="button"
+        accessibilityLabel={rightAccessibilityLabel ?? rightLabel}
+        accessibilityState={{
+          disabled: rightDisabled,
+          selected: !isLeftActive,
+        }}
       >
         <Text
           style={[

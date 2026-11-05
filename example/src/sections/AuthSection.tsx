@@ -20,6 +20,7 @@ export function AuthSection() {
     <View style={styles.section}>
       <ActionButton
         title="Configure auth token provider"
+        testID="auth_configure_provider_button"
         onPress={() => navigation.navigate('AuthScreen')}
       />
     </View>

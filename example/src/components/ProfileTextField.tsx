@@ -4,6 +4,11 @@ import { styles } from '../Styles';
 
 interface ProfileTextFieldProps {
   label: string;
+  /**
+   * Stable ID prefix: the input gets `${testID}_input` and the Set button
+   * `${testID}_set_button`, e.g. `profile_email_input`.
+   */
+  testID: string;
   value: string;
   onChangeText: (text: string) => void;
   onSetPress?: () => void;
@@ -22,6 +27,7 @@ interface ProfileTextFieldProps {
  */
 export const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
   label,
+  testID,
   value,
   onChangeText,
   onSetPress,
@@ -42,6 +48,8 @@ export const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
           keyboardType={keyboardType}
           autoCapitalize="none"
           autoCorrect={false}
+          testID={`${testID}_input`}
+          accessibilityLabel={label}
         />
         {onSetPress && (
           <TouchableOpacity
@@ -51,6 +59,10 @@ export const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
             ]}
             onPress={onSetPress}
             disabled={isEmpty}
+            testID={`${testID}_set_button`}
+            accessibilityRole="button"
+            accessibilityLabel={`Set ${label}`}
+            accessibilityState={{ disabled: isEmpty }}
           >
             <Text style={styles.profileFieldButtonText}>Set</Text>
           </TouchableOpacity>

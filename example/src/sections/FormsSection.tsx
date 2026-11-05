@@ -16,6 +16,10 @@ export function FormsSection() {
       <ToggleButtons
         leftLabel="Register"
         rightLabel="Unregister"
+        leftTestID="forms_register_button"
+        rightTestID="forms_unregister_button"
+        leftAccessibilityLabel="Register for in-app forms"
+        rightAccessibilityLabel="Unregister from in-app forms"
         isLeftActive={forms.formsRegistered}
         onLeftPress={forms.handleRegisterForms}
         onRightPress={forms.handleUnregisterForms}
@@ -38,6 +42,7 @@ export function FormsSection() {
       )}
       <ActionButton
         title={`Show Lifecycle Events (${forms.lifecycleEvents.length})`}
+        testID="forms_show_lifecycle_events_button"
         onPress={forms.handleShowEventsModal}
         withTopSpacing
       />

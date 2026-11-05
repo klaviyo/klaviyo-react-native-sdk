@@ -38,6 +38,14 @@ const OUTCOME_KINDS: ProviderOutcome['kind'][] = [
   'otherError',
 ];
 
+/** snake_case test-ID segment per outcome kind, e.g. `configure_response_outcome_mock_token_button`. */
+const OUTCOME_KIND_TEST_IDS: Record<ProviderOutcome['kind'], string> = {
+  customToken: 'custom_token',
+  mockToken: 'mock_token',
+  networkError: 'network_error',
+  otherError: 'other_error',
+};
+
 /** Clamps a delay to the 0-10s range in 0.25s steps. */
 function clampDelaySeconds(value: number): number {
   const clamped = Math.min(10, Math.max(0, value));
@@ -77,7 +85,15 @@ function HeaderDoneButton({
   disabled?: boolean;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} hitSlop={8} disabled={disabled}>
+    <TouchableOpacity
+      onPress={onPress}
+      hitSlop={8}
+      disabled={disabled}
+      testID="configure_response_done_button"
+      accessibilityRole="button"
+      accessibilityLabel="Done"
+      accessibilityState={{ disabled: !!disabled }}
+    >
       <Text style={[styles.doneButton, disabled && styles.doneButtonDisabled]}>
         Done
       </Text>
@@ -245,6 +261,7 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
     <ScrollView
       style={sharedStyles.container}
       contentContainerStyle={sharedStyles.scrollContent}
+      testID="configure_response_screen"
     >
       <View style={sharedStyles.section}>
         <SectionHeader title="Outcome" />
@@ -254,6 +271,10 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
               key={kind}
               style={[styles.pill, outcome.kind === kind && styles.pillActive]}
               onPress={() => selectOutcomeKind(kind)}
+              testID={`configure_response_outcome_${OUTCOME_KIND_TEST_IDS[kind]}_button`}
+              accessibilityRole="button"
+              accessibilityLabel={getOutcomeKindLabel(kind)}
+              accessibilityState={{ selected: outcome.kind === kind }}
             >
               <Text
                 style={[
@@ -300,10 +321,15 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                 multiline={tokenRevealed}
                 placeholder="Paste a JWT"
                 placeholderTextColor={colors.placeholderText}
+                testID="configure_response_custom_token_input"
+                accessibilityLabel="Custom token"
               />
               <TouchableOpacity
                 onPress={() => setTokenRevealed((prev) => !prev)}
                 hitSlop={8}
+                testID="configure_response_token_visibility_button"
+                accessibilityRole="button"
+                accessibilityLabel={tokenRevealed ? 'Hide token' : 'Show token'}
               >
                 <Text style={styles.eyeToggle}>
                   {tokenRevealed ? 'Hide' : 'Show'}
@@ -330,6 +356,8 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
             <ToggleButtons
               leftLabel="Valid token"
               rightLabel="Malformed token"
+              leftTestID="configure_response_mock_valid_button"
+              rightTestID="configure_response_mock_malformed_button"
               isLeftActive={outcome.mockKind === 'valid'}
               onLeftPress={() => updateMockOutcome({ mockKind: 'valid' })}
               onRightPress={() => updateMockOutcome({ mockKind: 'malformed' })}
@@ -342,6 +370,10 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
               <ToggleButtons
                 leftLabel="Duration"
                 rightLabel="Date"
+                leftTestID="configure_response_expiration_duration_button"
+                rightTestID="configure_response_expiration_date_button"
+                leftAccessibilityLabel="Expiration by duration"
+                rightAccessibilityLabel="Expiration by date"
                 isLeftActive={outcome.expirationMode === 'duration'}
                 onLeftPress={() => {
                   setDateInputText(null);
@@ -370,6 +402,12 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                         onPress={() =>
                           updateMockOutcome({ durationSeconds: preset.seconds })
                         }
+                        // Negative presets ("already expired") get a `minus_` prefix
+                        // so the ID stays free of `-`.
+                        testID={`configure_response_duration_${preset.seconds < 0 ? `minus_${-preset.seconds}` : preset.seconds}s_button`}
+                        accessibilityRole="button"
+                        accessibilityLabel={preset.label}
+                        accessibilityState={{ selected: isActive }}
                       >
                         <Text
                           style={[
@@ -404,6 +442,8 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
                     placeholderTextColor={colors.placeholderText}
                     autoCapitalize="none"
                     autoCorrect={false}
+                    testID="configure_response_expiration_date_input"
+                    accessibilityLabel="Expires at (local time)"
                   />
                   {dateInputInvalid && (
                     <Text style={styles.dateError}>
@@ -499,10 +539,17 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
             onPress={() => updateDelaySeconds(draft.delaySeconds - 0.25)}
             disabled={draft.delaySeconds <= 0}
             hitSlop={8}
+            testID="configure_response_delay_decrement_button"
+            accessibilityRole="button"
+            accessibilityLabel="Decrease delay"
+            accessibilityState={{ disabled: draft.delaySeconds <= 0 }}
           >
             <Text style={styles.stepperButtonText}>−</Text>
           </TouchableOpacity>
-          <Text style={styles.delayValue}>
+          <Text
+            style={styles.delayValue}
+            testID="configure_response_delay_text"
+          >
             {draft.delaySeconds.toFixed(2)}s
           </Text>
           <TouchableOpacity
@@ -510,6 +557,10 @@ export function ConfigureResponseScreen({ route, navigation }: Props) {
             onPress={() => updateDelaySeconds(draft.delaySeconds + 0.25)}
             disabled={draft.delaySeconds >= 10}
             hitSlop={8}
+            testID="configure_response_delay_increment_button"
+            accessibilityRole="button"
+            accessibilityLabel="Increase delay"
+            accessibilityState={{ disabled: draft.delaySeconds >= 10 }}
           >
             <Text style={styles.stepperButtonText}>+</Text>
           </TouchableOpacity>

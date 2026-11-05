@@ -12,6 +12,8 @@ export function LoggingSection() {
       <ToggleButtons
         leftLabel="Enable Logging"
         rightLabel="Disable Logging"
+        leftTestID="logging_enable_button"
+        rightTestID="logging_disable_button"
         isLeftActive={logging.loggingEnabled}
         onLeftPress={() => logging.handleSetLoggingEnabled(true)}
         onRightPress={() => logging.handleSetLoggingEnabled(false)}
