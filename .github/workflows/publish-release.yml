@@ -54,7 +54,7 @@ jobs:
       slack_ts: ${{ steps.slack_pending.outputs.ts }}
     steps:
       - id: checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.event.release.tag_name || github.event.repository.default_branch }}
           fetch-depth: 0
@@ -145,7 +145,7 @@ jobs:
       - name: Checkout Slack action
         if: always()
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -242,7 +242,7 @@ jobs:
     steps:
       - name: Checkout Slack action
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/actions
           persist-credentials: false
@@ -359,7 +359,7 @@ jobs:
     steps:
       - name: Checkout Slack action
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/actions
           persist-credentials: false
@@ -413,7 +413,7 @@ jobs:
       - name: Checkout Slack action
         if: steps.reason.outputs.reason != ''
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/actions
           persist-credentials: false
