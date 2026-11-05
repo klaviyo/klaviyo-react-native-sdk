@@ -210,7 +210,7 @@ jobs:
       && (github.event_name == 'release'
       || github.event_name == 'push'
       || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app')))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(fromJSON('["deploy-example-app","deploy-example-app:android","deploy-example-app:ios"]'), github.event.label.name)))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -1012,6 +1012,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Compute short commit
         env:
@@ -1020,7 +1021,9 @@ jobs:
 
       - name: Classify the deploy
         id: result
+        continue-on-error: true
         env:
+          GH_TOKEN: ${{ github.token }}
           SUPERSEDE: ${{ needs.supersede-push-runs.result }}
           CHECKS: ${{ needs.checks.result }}
           ANDROID: ${{ needs.deploy-android.result }}
@@ -1077,6 +1080,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout Slack action
+        if: always()
         continue-on-error: true
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
