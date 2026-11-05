@@ -66,6 +66,8 @@ jobs:
           ref: ${{ inputs.ref || inputs.version }}
 
       - name: Checkout Slack action
+        if: always()
+        timeout-minutes: 2
         continue-on-error: true
         uses: actions/checkout@v5
         with:
@@ -77,6 +79,7 @@ jobs:
       - name: Notify Slack npm publish started
         id: slack
         if: ${{ !inputs.dry_run }}
+        timeout-minutes: 2
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:

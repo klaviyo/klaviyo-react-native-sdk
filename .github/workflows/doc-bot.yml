@@ -43,6 +43,7 @@ jobs:
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Checkout Slack action
+        timeout-minutes: 2
         continue-on-error: true
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -53,6 +54,7 @@ jobs:
 
       - name: Notify Slack docs deploy started
         id: slack
+        timeout-minutes: 2
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:
@@ -114,8 +116,8 @@ jobs:
   notify:
     name: Update the docs message
     needs: [announce, build, deploy]
-    # Quiet on a skipped deploy (non-master dispatch), which never announced.
-    if: always() && needs.announce.outputs.slack_ts != ''
+    # Posts a new message when the announce failed to return a ts.
+    if: always() && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
     permissions:
       contents: read

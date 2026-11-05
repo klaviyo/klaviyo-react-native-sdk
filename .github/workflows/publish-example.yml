@@ -224,6 +224,7 @@ jobs:
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Checkout Slack action
+        timeout-minutes: 2
         continue-on-error: true
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -234,6 +235,7 @@ jobs:
 
       - name: Notify Slack deploy started
         id: slack
+        timeout-minutes: 2
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:
@@ -1005,7 +1007,7 @@ jobs:
     name: Update the deploy message
     needs:
       [announce, progress, supersede-push-runs, checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
-    if: always() && needs.announce.outputs.slack_ts != ''
+    if: always() && (needs.announce.outputs.slack_ts != '' || inputs.slack_thread_ts != '')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -1089,6 +1091,7 @@ jobs:
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.announce.outputs.slack_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
           status: ${{ steps.result.outputs.status }}
           title: ${{ steps.result.outputs.title }}
           body: ${{ (needs.deploy-android.result != 'skipped' || needs.deploy-ios.result != 'skipped') && 'Details for each platform are in the thread.' || '' }}
