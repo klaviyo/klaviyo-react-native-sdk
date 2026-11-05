@@ -29,8 +29,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  announce:
+    name: Announce the docs deploy
+    # Only master is published, even if the workflow is dispatched from another branch.
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      slack_ts: ${{ steps.slack.outputs.ts }}
+    steps:
+      - name: Compute short commit
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Notify Slack docs deploy started
+        id: slack
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: pending
+          title: React Native SDK docs deploying to GitHub Pages
+          fields: |
+            Branch: `${{ github.ref_name }}`
+            Commit: `${{ env.SHORT_SHA }}`
+            Event: `${{ github.event_name }}`
+
   build:
     name: Build TypeDoc
+    needs: announce
+    if: always()
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -75,14 +112,17 @@ jobs:
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   notify:
-    name: Notify Slack
-    needs: [build, deploy]
-    # Posts when build or deploy failed, or when deploy succeeded; stays quiet on cancellation or a skipped deploy.
-    if: always() && (contains(needs.*.result, 'failure') || needs.deploy.result == 'success')
+    name: Update the docs message
+    needs: [announce, build, deploy]
+    # Quiet on a skipped deploy (non-master dispatch), which never announced.
+    if: always() && needs.announce.outputs.slack_ts != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
+      - name: Compute short commit
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
       - name: Checkout Slack action
         continue-on-error: true
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -92,31 +132,18 @@ jobs:
           persist-credentials: false
           path: _slack
 
-      - name: Send Slack notification on success
-        if: needs.deploy.result == 'success'
+      - name: Update the Slack docs message
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          status: success
-          title: React Native SDK docs deployed to GitHub Pages
+          ts: ${{ needs.announce.outputs.slack_ts }}
+          status: ${{ needs.deploy.result == 'success' && 'success' || contains(needs.*.result, 'failure') && 'failure' || 'stopped' }}
+          title: ${{ needs.deploy.result == 'success' && 'React Native SDK docs deployed to GitHub Pages' || contains(needs.*.result, 'failure') && '`Documentation Bot` workflow failed' || 'React Native SDK docs deploy stopped' }}
+          body: >-
+            ${{ contains(needs.*.result, 'failure') && needs.deploy.result != 'success' && 'Common issue: check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be "GitHub Actions").' || '' }}
           fields: |
-            Repository: `${{ github.repository }}`
             Branch: `${{ github.ref_name }}`
+            Commit: `${{ env.SHORT_SHA }}`
             Event: `${{ github.event_name }}`
-          links: |
-            Docs|${{ needs.deploy.outputs.page_url }}
-
-      - name: Send Slack notification on failure
-        if: contains(needs.*.result, 'failure')
-        continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
-        with:
-          token: ${{ secrets.SLACK_BOT_TOKEN }}
-          status: failure
-          title: '`Documentation Bot` workflow failed'
-          body: 'Common issue: check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be "GitHub Actions").'
-          fields: |
-            Repository: `${{ github.repository }}`
-            Branch: `${{ github.ref_name }}`
-            Event: `${{ github.event_name }}`
+          links: ${{ needs.deploy.outputs.page_url && format('Docs|{0}', needs.deploy.outputs.page_url) || '' }}

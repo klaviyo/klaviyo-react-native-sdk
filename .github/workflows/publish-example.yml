@@ -197,15 +197,15 @@ jobs:
             fi
           done
 
-  # One parent Slack message per run: this job posts it, the deploy jobs reply
-  # in its thread and `report` updates it. When publish-release.yml passes
-  # slack_thread_ts, that release message is the parent and this job is skipped.
+  # One live Slack message per run: this job posts it as pending, `progress`
+  # and `report` edit it, and the deploy jobs reply in its thread. When
+  # publish-release.yml passes slack_thread_ts, the message is a reply in the
+  # release thread instead of a new top-level post.
   announce:
     name: Announce the deploy
     needs: release-merge-check
     if: |
       !cancelled()
-      && inputs.slack_thread_ts == ''
       && needs.release-merge-check.outputs.skip != 'true'
       && (github.event_name == 'release'
       || github.event_name == 'push'
@@ -238,9 +238,10 @@ jobs:
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
           status: pending
-          title: React Native Example App deploy started
-          body: Each platform replies in this thread.
+          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          body: Running checks. Each platform replies in this thread.
           fields: |
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
@@ -267,6 +268,49 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
+
+  # Edits the live message once the checks pass and the deploys can start.
+  progress:
+    name: Update the deploy message
+    needs: [announce, checks]
+    if: |
+      !cancelled()
+      && needs.announce.outputs.slack_ts != ''
+      && needs.checks.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Update the Slack deploy message
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.announce.outputs.slack_ts }}
+          status: pending
+          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          body: Checks passed, deploying. Each platform replies in this thread.
+          fields: |
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Requested by: ${{ github.actor }}
+          links: |
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   # Verifies the platform's required secrets exist before a deploy runs.
   # Environment secrets are not visible here (no environment: is declared),
@@ -518,7 +562,7 @@ jobs:
         uses: ./.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
           status: success
           title: React Native Example App (Android) deployed to Play internal
           body: Install with a Google account on the internal testers list.
@@ -537,7 +581,7 @@ jobs:
         uses: ./.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
           status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
           title: React Native Example App (Android) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
           fields: |
@@ -800,7 +844,7 @@ jobs:
         uses: ./.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
           status: success
           title: React Native Example App (iOS) uploaded to TestFlight
           body: Install version `${{ env.FULL_VERSION }}` (`${{ env.BUILD_NUMBER }}`) once Apple finishes processing it, usually 5–30 min after upload.
@@ -819,7 +863,7 @@ jobs:
         uses: ./.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
           status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
           title: React Native Example App (iOS) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
           fields: |
@@ -912,7 +956,7 @@ jobs:
         uses: ./.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
           status: warning
           title: React Native Example App (iOS) uploaded to TestFlight, but setting What to Test failed
           fields: |
@@ -954,71 +998,13 @@ jobs:
               if (e.status !== 404) throw e;
             }
 
-  # A failed gate (supersede-push-runs, checks or a preflight) skips both
-  # deploys, so no deploy job reports it. Names the failed job(s) in the
-  # parent message's thread.
-  blocked:
-    name: Report a blocked deploy
-    needs: [announce, supersede-push-runs, checks, preflight-android, preflight-ios]
-    if: always() && contains(needs.*.result, 'failure')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: Compute short commit
-        env:
-          SHA: ${{ env.COMMIT_SHA }}
-        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
-
-      - name: Name the failed jobs
-        id: failed
-        env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          names=$(jq -r '
-            {
-              "supersede-push-runs": "`Cancel superseded master publishes`",
-              checks: "`Lint, test and build the library`",
-              "preflight-android": "`Check Android deploy secrets`",
-              "preflight-ios": "`Check iOS deploy secrets`"
-            } as $names
-            | [to_entries[] | select(.key != "announce" and .value.result == "failure") | ($names[.key] // .key)]
-            | join(", ")
-          ' <<<"$NEEDS_JSON")
-          echo "names=$names" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout Slack action
-        if: steps.failed.outputs.names != ''
-        continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
-      - name: Notify Slack deploy blocked
-        if: steps.failed.outputs.names != ''
-        continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
-        with:
-          token: ${{ secrets.SLACK_BOT_TOKEN }}
-          thread_ts: ${{ needs.announce.outputs.slack_ts || inputs.slack_thread_ts }}
-          status: failure
-          title: React Native Example App deploy blocked, ${{ steps.failed.outputs.names }} failed
-          fields: |
-            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
-            Commit: `${{ env.SHORT_SHA }}`
-          links: |
-            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
-
-  # Updates the parent message that `announce` posted with the final result.
-  # A release message passed in through slack_thread_ts is left to publish-release.yml.
+  # Edits the message that `announce` posted to its final result. A failed gate
+  # (supersede-push-runs, checks or a preflight) skips both deploys, so it is
+  # reported here as blocked.
   report:
     name: Update the deploy message
     needs:
-      [announce, supersede-push-runs, checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
+      [announce, progress, supersede-push-runs, checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
     if: always() && needs.announce.outputs.slack_ts != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1035,11 +1021,20 @@ jobs:
         env:
           SUPERSEDE: ${{ needs.supersede-push-runs.result }}
           CHECKS: ${{ needs.checks.result }}
-          PREFLIGHT_ANDROID: ${{ needs.preflight-android.result }}
-          PREFLIGHT_IOS: ${{ needs.preflight-ios.result }}
           ANDROID: ${{ needs.deploy-android.result }}
           IOS: ${{ needs.deploy-ios.result }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
+          gate_names=$(jq -r '
+            {
+              "supersede-push-runs": "`Cancel superseded master publishes`",
+              checks: "`Lint, test and build the library`",
+              "preflight-android": "`Check Android deploy secrets`",
+              "preflight-ios": "`Check iOS deploy secrets`"
+            } as $names
+            | [to_entries[] | select($names[.key] != null and .value.result == "failure") | $names[.key]]
+            | join(", ")
+          ' <<<"$NEEDS_JSON")
           describe() {
             case "$1" in
               success) echo "deployed" ;;
@@ -1054,12 +1049,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           if [ "$ANDROID" = failure ] || [ "$IOS" = failure ]; then
             status=failure; title="React Native Example App deploy failed"
-          elif [ "$PREFLIGHT_ANDROID" = failure ] || [ "$PREFLIGHT_IOS" = failure ]; then
-            status=failure; title="React Native Example App deploy failed, required secrets are missing"
-          elif [ "$CHECKS" = failure ]; then
-            status=failure; title="React Native Example App deploy failed, checks did not pass"
-          elif [ "$SUPERSEDE" = failure ]; then
-            status=failure; title="React Native Example App deploy failed, superseded runs could not be cancelled"
+          elif [ -n "$gate_names" ]; then
+            status=failure; title="React Native Example App deploy blocked, $gate_names failed"
           elif [ "$ANDROID" = cancelled ] || [ "$IOS" = cancelled ] || [ "$CHECKS" = cancelled ] || [ "$SUPERSEDE" = cancelled ]; then
             timed_out=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" --jq '
               [.jobs[]
