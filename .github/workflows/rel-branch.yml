@@ -1,0 +1,466 @@
+name: Release Branch
+
+# Creates a rel/X.Y.Z branch from base (default master) containing the version bump commit.
+# Does nothing if that branch already exists. Opens a draft PR from it into master if it has none.
+#
+# Run by hand or from the CLI (gh workflow run rel-branch.yml -f bump=minor).
+#
+# The weekday schedule (13:00 UTC, Mon-Fri) runs with the defaults: bump=minor, steps=1, base=master.
+# That keeps a branch for the next minor release open: e.g. with 2.7.0 released it creates rel/2.8.0,
+# and no-ops until 2.8.0 is tagged, then creates rel/2.9.0 the next weekday morning.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the latest stable version to increment
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+      steps:
+        description: How many increments past the latest stable release
+        type: number
+        default: 1
+      version:
+        description: Explicit X.Y.Z, overrides bump and steps
+        type: string
+        required: false
+      base:
+        description: Branch, tag or sha to cut from
+        type: string
+        required: false
+        default: master
+      triggered_by:
+        description: Person to credit in Slack when another workflow starts this one
+        type: string
+        required: false
+      android:
+        description: Native Android SDK to pin (version or rel/* branch); empty leaves it unchanged
+        type: string
+        required: false
+        default: ''
+      ios:
+        description: Native iOS SDK to pin (version or rel/* branch); empty leaves it unchanged
+        type: string
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 13 * * 1-5'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  SLACK_ACTION_DIR: _slack
+  SLACK_USERNAME: React Native SDK
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
+  GIT_AUTHOR_NAME: github-actions[bot]
+  GIT_AUTHOR_EMAIL: 41898333+github-actions[bot]@users.noreply.github.com
+  GIT_COMMITTER_NAME: github-actions[bot]
+  GIT_COMMITTER_EMAIL: 41898333+github-actions[bot]@users.noreply.github.com
+
+concurrency:
+  group: rel-branch
+  cancel-in-progress: false
+
+jobs:
+  rel_branch:
+    name: Create release branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      branch: ${{ steps.resolve.outputs.branch }}
+      triggered_by: ${{ steps.trigger.outputs.value }}
+    steps:
+      - name: Check out base
+        id: checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.base || 'master' }}
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve
+        env:
+          BUMP: ${{ inputs.bump || 'minor' }}
+          STEPS: ${{ github.event_name != 'workflow_dispatch' && 1 || inputs.steps }}
+          EXPLICIT_VERSION: ${{ inputs.version }}
+          BASE: ${{ inputs.base || 'master' }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$EXPLICIT_VERSION" ]; then
+            if ! [[ "$EXPLICIT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::version must look like X.Y.Z, got '$EXPLICIT_VERSION'"
+              exit 1
+            fi
+            version=$EXPLICIT_VERSION
+          else
+            if ! [[ "$STEPS" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::steps must be a positive integer, got '$STEPS'"
+              exit 1
+            fi
+            latest=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$latest" ]; then
+              echo "::error::No stable X.Y.Z tag found"
+              exit 1
+            fi
+            IFS=. read -r major minor patch <<< "$latest"
+            case "$BUMP" in
+              major) major=$((major + STEPS)); minor=0; patch=0 ;;
+              minor) minor=$((minor + STEPS)); patch=0 ;;
+              patch) patch=$((patch + STEPS)) ;;
+              *) echo "::error::bump must be patch, minor or major, got '$BUMP'"; exit 1 ;;
+            esac
+            version="$major.$minor.$patch"
+            echo "Latest stable release is $latest"
+          fi
+
+          echo "Target version $version from $BASE"
+          {
+            echo "version=$version"
+            echo "branch=rel/$version"
+            echo "short_sha=$(git rev-parse --short HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve trigger
+        id: trigger
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TRIGGERED_BY: ${{ inputs.triggered_by }}
+          ACTOR: ${{ github.triggering_actor || github.actor }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" = schedule ]; then
+            value=schedule
+          elif [ -n "$INPUT_TRIGGERED_BY" ]; then
+            value=$INPUT_TRIGGERED_BY
+          elif [[ "$ACTOR" == *"[bot]" ]]; then
+            value="Release Branch (automation)"
+          else
+            value=$ACTOR
+          fi
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
+      - name: Create branch
+        id: push
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" > /dev/null; then
+            echo "$BRANCH already exists on origin, nothing to do"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ./bump-version.sh -v "$VERSION" --skip-native --skip-install
+
+          if git diff --quiet; then
+            echo "::error::bump-version.sh changed nothing"
+            exit 1
+          fi
+
+          git diff --stat
+          git commit -a -m "rel: bump version to $VERSION"
+
+          if git push --force-with-lease="refs/heads/$BRANCH:" origin "HEAD:refs/heads/$BRANCH"; then
+            echo "Created $BRANCH"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" > /dev/null; then
+            echo "$BRANCH was created by another run, nothing to do"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Push of $BRANCH was rejected"
+            exit 1
+          fi
+
+      - name: Open draft PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
+          STEPS: ${{ github.event_name != 'workflow_dispatch' && 1 || inputs.steps }}
+          EXPLICIT_VERSION: ${{ inputs.version }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          IFS=. read -r _ minor patch <<< "$VERSION"
+          if [ "$patch" != 0 ]; then
+            label="patch-release"
+          elif [ "$minor" != 0 ]; then
+            label="minor-release"
+          else
+            label="major-release"
+          fi
+          if ! gh label list --repo "$GITHUB_REPOSITORY" --search "$label" --json name --jq '.[].name' | grep -qx "$label"; then
+            gh label create "$label" --repo "$GITHUB_REPOSITORY"
+          fi
+
+          url=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --base master --state open --json url --jq '.[0].url // empty')
+          if [ -n "$url" ]; then
+            echo "$BRANCH already has a PR: $url"
+            gh pr edit "$url" --add-label "$label"
+            echo "url=$url" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/compare/master...$BRANCH" --jq .ahead_by)" = 0 ]; then
+            echo "::error::$BRANCH has no commits ahead of master, so GitHub can't open its release PR. Add the version bump to $BRANCH."
+            exit 1
+          fi
+
+          assignee=()
+          if [[ "$ACTOR" != *"[bot]" ]]; then
+            assignee=(--assignee "$ACTOR")
+          fi
+
+          # Ship day is the last weekday of a month and test week is the five weekdays ending on it.
+          # Releases are slated for the first month whose test week has not started yet, plus (steps - 1) months.
+          # 2026-11-06 -> November, 2026-11-24 -> December (the November test week starts on 2026-11-24),
+          # 2026-12-31 -> January. An explicit version adds no months.
+          title="rel: $VERSION"
+          if [ "$patch" = 0 ]; then
+            month=$(python3 - "$STEPS" "$EXPLICIT_VERSION" "${SLATE_TODAY:-}" <<'PY'
+          import calendar
+          import datetime
+          import sys
+
+          steps, explicit, today_arg = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+          today = datetime.date.fromisoformat(today_arg) if today_arg else datetime.date.today()
+
+
+          def test_week_start(year, month):
+              day = datetime.date(year, month, calendar.monthrange(year, month)[1])
+              while day.weekday() > 4:
+                  day -= datetime.timedelta(days=1)
+              weekdays = 1
+              while weekdays < 5:
+                  day -= datetime.timedelta(days=1)
+                  if day.weekday() < 5:
+                      weekdays += 1
+              return day
+
+
+          year, month = today.year, today.month
+          if today >= test_week_start(year, month):
+              month += 1
+          month += 0 if explicit else steps - 1
+          year += (month - 1) // 12
+          month = (month - 1) % 12 + 1
+          print(calendar.month_name[month])
+          PY
+            )
+            title="rel: $VERSION (slated for $month)"
+          fi
+
+          # shellcheck disable=SC2016
+          body=$(printf 'Release PR for `%s`. Feature PRs for this release target `%s`. Merge this after `%s` is published.\n\nOpened by [Release Branch](%s).' "$VERSION" "$BRANCH" "$VERSION" "$RUN_URL")
+          url=$(gh pr create --repo "$GITHUB_REPOSITORY" --draft --base master --head "$BRANCH" "${assignee[@]}" --title "$title" --label "$label" --body "$body")
+          echo "Opened $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check out Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          path: ${{ env.SLACK_ACTION_DIR }}
+          persist-credentials: false
+
+      - name: Notify Slack of new release branch
+        if: success() && steps.push.outputs.created == 'true'
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: React Native SDK release branch `${{ steps.resolve.outputs.branch }}` created from `${{ inputs.base || 'master' }}`
+          fields: |
+            Version: `${{ steps.resolve.outputs.version }}`
+            Base: `${{ inputs.base || 'master' }}`
+            Trigger: `${{ github.event_name }}`
+            Triggered by: `${{ steps.trigger.outputs.value }}`
+          links: |
+            Branch|${{ github.server_url }}/${{ github.repository }}/tree/${{ steps.resolve.outputs.branch }}
+            Pull request|${{ steps.pr.outputs.url }}
+
+      - name: Notify Slack of failure
+        if: failure()
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: failure
+          title: ${{ steps.resolve.outputs.branch && format('React Native SDK release branch `{0}` could not be created', steps.resolve.outputs.branch) || 'React Native SDK release branch could not be created' }}
+          fields: |
+            Base: `${{ inputs.base || 'master' }}`
+            Trigger: `${{ github.event_name }}`
+            Triggered by: `${{ steps.trigger.outputs.value || github.triggering_actor || github.actor }}`
+
+  pin:
+    name: Pin native SDKs
+    needs: rel_branch
+    if: needs.rel_branch.result == 'success' && (inputs.android != '' || inputs.ios != '')
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      VERSION: ${{ needs.rel_branch.outputs.version }}
+      BRANCH: ${{ needs.rel_branch.outputs.branch }}
+      PIN_BRANCH: chore/pin-natives-${{ needs.rel_branch.outputs.version }}
+      ANDROID: ${{ inputs.android }}
+      IOS: ${{ inputs.ios }}
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.rel_branch.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Continue an open pin branch
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --heads origin "refs/heads/$PIN_BRANCH" > /dev/null; then
+            git fetch --quiet origin "+refs/heads/$PIN_BRANCH:refs/remotes/origin/$PIN_BRANCH"
+            git switch -c "$PIN_BRANCH" "origin/$PIN_BRANCH"
+            git merge --no-edit "origin/$BRANCH"
+            echo "Continuing $PIN_BRANCH so earlier pins are kept"
+          else
+            git switch -c "$PIN_BRANCH"
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up Ruby and Bundler
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: example
+          bundler-cache: true
+
+      - name: Pin native SDKs
+        run: |
+          set -euo pipefail
+
+          args=()
+          if [ -n "$ANDROID" ]; then
+            args+=(--android "$ANDROID")
+          fi
+          if [ -n "$IOS" ]; then
+            args+=(--ios "$IOS")
+          fi
+          ./configure-sdk.sh "${args[@]}"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+
+          yarn install --no-immutable
+          (cd example && yarn install --no-immutable)
+          (cd example/ios && bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension)
+
+      - name: Commit pin
+        id: commit
+        env:
+          PIN_PATHS: android/gradle.properties klaviyo-react-native-sdk.podspec example/android/app/build.gradle example/ios/Podfile example/ios/Podfile.lock yarn.lock
+        run: |
+          set -euo pipefail
+
+          read -ra paths <<< "$PIN_PATHS"
+          git add -- "${paths[@]}"
+          if git diff --cached --quiet; then
+            echo "Native pins already match $BRANCH, nothing to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --cached --stat
+
+          pinned=()
+          [ -n "$ANDROID" ] && pinned+=("android $ANDROID")
+          [ -n "$IOS" ] && pinned+=("ios $IOS")
+          joined=$(IFS=,; echo "${pinned[*]}")
+          summary=${joined//,/, }
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+
+          git commit -m "chore: pin native SDKs ($summary) on $BRANCH"
+          git push origin "HEAD:refs/heads/$PIN_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open pin PR
+        id: pr
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.commit.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # shellcheck disable=SC2016
+          body=$(printf 'Pins the native SDKs on `%s`: %s.\n\nOpened by [Release Branch](%s).' "$BRANCH" "$SUMMARY" "$RUN_URL")
+          title="chore: pin native SDKs for $BRANCH"
+
+          url=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$PIN_BRANCH" --base "$BRANCH" --state open --json url --jq '.[0].url // empty')
+          if [ -n "$url" ]; then
+            gh pr edit "$url" --title "$title" --body "$body"
+          else
+            url=$(gh pr create --repo "$GITHUB_REPOSITORY" --base "$BRANCH" --head "$PIN_BRANCH" --title "$title" --body "$body")
+          fi
+          echo "Pin PR: $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check out Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          path: ${{ env.SLACK_ACTION_DIR }}
+          persist-credentials: false
+
+      - name: Notify Slack of pin PR
+        if: success() && steps.pr.outputs.url
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: ${{ env.SLACK_USERNAME }} native pins for `${{ needs.rel_branch.outputs.branch }}` opened
+          fields: |
+            Pinned: ${{ steps.commit.outputs.summary }}
+            Triggered by: `${{ needs.rel_branch.outputs.triggered_by }}`
+          links: |
+            Pull request|${{ steps.pr.outputs.url }}
+
+      - name: Notify Slack of pin failure
+        if: failure()
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: failure
+          title: ${{ env.SLACK_USERNAME }} native pins for `${{ needs.rel_branch.outputs.branch }}` could not be opened
+          fields: |
+            Triggered by: `${{ needs.rel_branch.outputs.triggered_by }}`

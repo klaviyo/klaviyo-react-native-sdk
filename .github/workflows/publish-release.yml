@@ -36,6 +36,7 @@ concurrency:
 permissions: {}
 
 env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
   VERSION: ${{ inputs.version || github.event.release.tag_name }}
   SLACK_USERNAME: React Native SDK
   SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
@@ -165,7 +166,7 @@ jobs:
           fields: |
             Version: `${{ env.VERSION }}`
             Commit: `${{ steps.preflight.outputs.short_sha }}`
-            Requested by: ${{ github.actor }}
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: |
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.preflight.outputs.sha }}
             ${{ steps.draft.outputs.release_url && format('Release|{0}', steps.draft.outputs.release_url) || '' }}
@@ -204,6 +205,7 @@ jobs:
             Version: `${{ env.VERSION }}`
             Commit: `${{ steps.preflight.outputs.short_sha }}`
             Stage: Preflight and draft
+            Triggered by: `${{ env.TRIGGERED_BY }}`
 
       - name: Reply with failure details
         if: failure() && steps.slack_failure.outputs.ts != ''
@@ -267,16 +269,28 @@ jobs:
         run: |
           set -euo pipefail
           PLATFORM=both
-          # True when the workflow file at $VERSION declares slack_thread_ts.
-          takes_thread_ts() {
+          # True when the workflow file at $VERSION declares the input named by $1.
+          takes_input() {
             gh api "repos/$GITHUB_REPOSITORY/contents/.github/workflows/publish-example.yml?ref=$VERSION" \
-              -H "Accept: application/vnd.github.raw" | grep -q '^[[:space:]]*slack_thread_ts:'
+              -H "Accept: application/vnd.github.raw" | grep -q "^[[:space:]]*$1:"
           }
-          if [ -n "$SLACK_TS" ] && takes_thread_ts; then
-            gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" -f "slack_thread_ts=$SLACK_TS" --repo "$GITHUB_REPOSITORY"
-          else
-            gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
+          args=()
+          if [ -n "$SLACK_TS" ] && takes_input slack_thread_ts; then
+            args+=(-f "slack_thread_ts=$SLACK_TS")
           fi
+          if takes_input triggered_by; then
+            args+=(-f "triggered_by=$TRIGGERED_BY")
+          fi
+          gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY" "${args[@]}"
+
+      - name: Dispatch next release branch
+        if: ${{ !cancelled() && steps.publish.outcome == 'success' && !contains(env.VERSION, '-') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run rel-branch.yml --repo "$GITHUB_REPOSITORY" --ref master -f "base=$VERSION" -f "triggered_by=$TRIGGERED_BY"
+          echo "Dispatched rel-branch.yml from $VERSION"
 
       - name: Write summary
         id: summary
@@ -303,6 +317,7 @@ jobs:
           fields: |
             Version: `${{ env.VERSION }}`
             Commit: `${{ needs.prepare.outputs.short_sha }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: |
             Release|${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.VERSION }}
             npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
@@ -339,6 +354,7 @@ jobs:
             Version: `${{ env.VERSION }}`
             Commit: `${{ needs.prepare.outputs.short_sha }}`
             Stage: Finalize
+            Triggered by: `${{ env.TRIGGERED_BY }}`
 
       - name: Reply with failure details
         if: failure() && steps.slack_failure.outputs.ts != ''
@@ -375,6 +391,7 @@ jobs:
           fields: |
             Version: `${{ env.VERSION }}`
             Commit: `${{ needs.prepare.outputs.short_sha }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: |
             Release|${{ github.event.release.html_url }}
             npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ env.VERSION }}
@@ -431,3 +448,4 @@ jobs:
           fields: |
             Version: `${{ env.VERSION }}`
             Commit: `${{ needs.prepare.outputs.short_sha }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
