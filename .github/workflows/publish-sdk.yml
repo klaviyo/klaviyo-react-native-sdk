@@ -30,6 +30,7 @@ on:
         type: string
 
 env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
   SLACK_USERNAME: React Native SDK
   SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
@@ -90,6 +91,7 @@ jobs:
           fields: |
             Version: `${{ inputs.version }}`
             Commit: `${{ steps.commit.outputs.short }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
 
       - name: Read package version
@@ -161,6 +163,7 @@ jobs:
           fields: |
             Version: `${{ steps.pkg.outputs.version }}`
             Dist-tag: `${{ steps.pkg.outputs.dist_tag }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ steps.pkg.outputs.version }}
 
       - name: Classify cancellation
@@ -209,6 +212,23 @@ jobs:
           fields: |
             Version: `${{ steps.pkg.outputs.version || inputs.version }}`
             Commit: `${{ steps.commit.outputs.short }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+          links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
+
+      - name: Notify Slack on cancel
+        if: cancelled() && steps.stop.outputs.timed_out != 'true' && steps.slack.outputs.ts != ''
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack.outputs.ts }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: stopped
+          title: React Native SDK `${{ steps.pkg.outputs.version || inputs.version }}` npm publish cancelled
+          fields: |
+            Version: `${{ steps.pkg.outputs.version || inputs.version }}`
+            Commit: `${{ steps.commit.outputs.short }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
 
   linear-release:
