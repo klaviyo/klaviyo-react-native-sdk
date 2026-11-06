@@ -364,7 +364,7 @@ jobs:
 
           yarn install --no-immutable
           (cd example && yarn install --no-immutable)
-          (cd example/ios && bundle exec pod install)
+          (cd example/ios && bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension)
 
       - name: Commit pin
         id: commit
