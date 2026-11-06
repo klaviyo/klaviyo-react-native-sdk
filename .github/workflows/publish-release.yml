@@ -279,7 +279,7 @@ jobs:
           fi
 
       - name: Dispatch next release branch
-        if: ${{ !inputs.dry_run && !contains(env.VERSION, '-') }}
+        if: ${{ !contains(env.VERSION, '-') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
