@@ -48,10 +48,49 @@ jobs:
       - name: Record job start
         run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
 
+      - name: Compute short commit
+        id: commit
+        env:
+          REF: ${{ inputs.ref || inputs.version }}
+        run: |
+          short=$REF
+          if [[ "$short" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "link=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$short" >> "$GITHUB_OUTPUT"
+            short=${short:0:7}
+          fi
+          echo "short=$short" >> "$GITHUB_OUTPUT"
+
       - id: checkout
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || inputs.version }}
+
+      - name: Checkout Slack action
+        if: always()
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Notify Slack npm publish started
+        id: slack
+        if: ${{ !inputs.dry_run }}
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: pending
+          title: React Native SDK `${{ inputs.version }}` publishing to npm
+          fields: |
+            Version: `${{ inputs.version }}`
+            Commit: `${{ steps.commit.outputs.short }}`
+          links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
 
       - name: Read package version
         id: pkg
@@ -109,28 +148,19 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout Slack action
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Notify Slack on success
         if: success() && !inputs.dry_run
         continue-on-error: true
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack.outputs.ts }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: success
-          title: React Native SDK ${{ steps.pkg.outputs.version }} ${{ steps.publish.outputs.already_published == 'true' && 'already on npm, nothing to do' || 'published to npm' }}
+          title: React Native SDK `${{ steps.pkg.outputs.version }}` ${{ steps.publish.outputs.already_published == 'true' && 'already on npm, nothing to do' || 'published to npm' }}
           fields: |
-            Version: ${{ steps.pkg.outputs.version }}
-            dist-tag: ${{ steps.pkg.outputs.dist_tag }}
+            Version: `${{ steps.pkg.outputs.version }}`
+            Dist-tag: `${{ steps.pkg.outputs.dist_tag }}`
           links: npm|https://www.npmjs.com/package/klaviyo-react-native-sdk/v/${{ steps.pkg.outputs.version }}
 
       - name: Classify cancellation
@@ -172,12 +202,14 @@ jobs:
         uses: ./_slack/.github/actions/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ steps.slack.outputs.ts }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
-          title: React Native SDK ${{ steps.pkg.outputs.version || inputs.version }} npm publish ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          title: React Native SDK `${{ steps.pkg.outputs.version || inputs.version }}` npm publish ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
           fields: |
-            Version: ${{ steps.pkg.outputs.version || inputs.version }}
-            Commit: ${{ inputs.ref || inputs.version }}
+            Version: `${{ steps.pkg.outputs.version || inputs.version }}`
+            Commit: `${{ steps.commit.outputs.short }}`
+          links: ${{ steps.commit.outputs.link && format('Commit|{0}', steps.commit.outputs.link) || '' }}
 
   linear-release:
     needs: publish-sdk
