@@ -541,9 +541,8 @@ With this in place, RN Firebase keeps receiving messages:
   `messaging().onMessage` and `messaging().setBackgroundMessageHandler` still fire for every
   message, Klaviyo pushes included.
 - RN Firebase's service no longer runs, so `messaging().onTokenRefresh` stops firing.
-  `KlaviyoPushService` still forwards new tokens to Klaviyo. If other code in your app needs the
-  token, read it with `messaging().getToken()` at startup and each time the app returns to the
-  foreground instead of relying on `onTokenRefresh`.
+  `KlaviyoPushService.onNewToken` forwards token rotations to Klaviyo natively, so your app doesn't
+  need to do anything.
 
 The [example app](./example/android/app/src/main/AndroidManifest.xml) uses this configuration,
 including the optional `android:priority="1"`.
