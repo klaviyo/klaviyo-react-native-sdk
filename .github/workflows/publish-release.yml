@@ -284,7 +284,7 @@ jobs:
           gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY" "${args[@]}"
 
       - name: Dispatch next release branch
-        if: ${{ !contains(env.VERSION, '-') }}
+        if: ${{ !cancelled() && steps.publish.outcome == 'success' && !contains(env.VERSION, '-') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
