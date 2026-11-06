@@ -332,6 +332,19 @@ jobs:
           ref: ${{ needs.rel_branch.outputs.branch }}
           fetch-depth: 0
 
+      - name: Continue an open pin branch
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --heads origin "refs/heads/$PIN_BRANCH" > /dev/null; then
+            git fetch --quiet origin "+refs/heads/$PIN_BRANCH:refs/remotes/origin/$PIN_BRANCH"
+            git switch -c "$PIN_BRANCH" "origin/$PIN_BRANCH"
+            git merge --no-edit "origin/$BRANCH"
+            echo "Continuing $PIN_BRANCH so earlier pins are kept"
+          else
+            git switch -c "$PIN_BRANCH"
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
@@ -388,9 +401,8 @@ jobs:
           summary=${joined//,/, }
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
-          git switch -c "$PIN_BRANCH"
           git commit -m "chore: pin native SDKs ($summary) on $BRANCH"
-          git push --force-with-lease origin "HEAD:refs/heads/$PIN_BRANCH"
+          git push origin "HEAD:refs/heads/$PIN_BRANCH"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Open pin PR
