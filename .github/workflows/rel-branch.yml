@@ -29,6 +29,20 @@ on:
         type: string
         required: false
         default: master
+      triggered_by:
+        description: Person to credit in Slack when another workflow starts this one
+        type: string
+        required: false
+      android:
+        description: Native Android SDK to pin (version or rel/* branch); empty leaves it unchanged
+        type: string
+        required: false
+        default: ''
+      ios:
+        description: Native iOS SDK to pin (version or rel/* branch); empty leaves it unchanged
+        type: string
+        required: false
+        default: ''
   schedule:
     - cron: '0 13 * * 1-5'
 
@@ -55,6 +69,10 @@ jobs:
     name: Create release branch
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      branch: ${{ steps.resolve.outputs.branch }}
+      triggered_by: ${{ steps.trigger.outputs.value }}
     steps:
       - name: Check out base
         id: checkout
@@ -107,6 +125,26 @@ jobs:
             echo "short_sha=$(git rev-parse --short HEAD)"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Resolve trigger
+        id: trigger
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TRIGGERED_BY: ${{ inputs.triggered_by }}
+          ACTOR: ${{ github.triggering_actor || github.actor }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" = schedule ]; then
+            value=schedule
+          elif [ -n "$INPUT_TRIGGERED_BY" ]; then
+            value=$INPUT_TRIGGERED_BY
+          elif [[ "$ACTOR" == *"[bot]" ]]; then
+            value="Release Branch (automation)"
+          else
+            value=$ACTOR
+          fi
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
       - name: Create branch
         id: push
         env:
@@ -148,6 +186,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.resolve.outputs.version }}
           BRANCH: ${{ steps.resolve.outputs.branch }}
+          STEPS: ${{ github.event_name != 'workflow_dispatch' && 1 || inputs.steps }}
+          EXPLICIT_VERSION: ${{ inputs.version }}
           ACTOR: ${{ github.actor }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -183,9 +223,48 @@ jobs:
             assignee=(--assignee "$ACTOR")
           fi
 
+          # Ship day is the last weekday of a month and test week is the five weekdays ending on it.
+          # Releases are slated for the first month whose test week has not started yet, plus (steps - 1) months.
+          # 2026-11-06 -> November, 2026-11-24 -> December (the November test week starts on 2026-11-24),
+          # 2026-12-31 -> January. An explicit version adds no months.
+          title="rel: $VERSION"
+          if [ "$patch" = 0 ]; then
+            month=$(python3 - "$STEPS" "$EXPLICIT_VERSION" "${SLATE_TODAY:-}" <<'PY'
+          import calendar
+          import datetime
+          import sys
+
+          steps, explicit, today_arg = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+          today = datetime.date.fromisoformat(today_arg) if today_arg else datetime.date.today()
+
+
+          def test_week_start(year, month):
+              day = datetime.date(year, month, calendar.monthrange(year, month)[1])
+              while day.weekday() > 4:
+                  day -= datetime.timedelta(days=1)
+              weekdays = 1
+              while weekdays < 5:
+                  day -= datetime.timedelta(days=1)
+                  if day.weekday() < 5:
+                      weekdays += 1
+              return day
+
+
+          year, month = today.year, today.month
+          if today >= test_week_start(year, month):
+              month += 1
+          month += 0 if explicit else steps - 1
+          year += (month - 1) // 12
+          month = (month - 1) % 12 + 1
+          print(calendar.month_name[month])
+          PY
+            )
+            title="rel: $VERSION (slated for $month)"
+          fi
+
           # shellcheck disable=SC2016
           body=$(printf 'Release PR for `%s`. Feature PRs for this release target `%s`. Merge this after `%s` is published.\n\nOpened by [Release Branch](%s).' "$VERSION" "$BRANCH" "$VERSION" "$RUN_URL")
-          url=$(gh pr create --repo "$GITHUB_REPOSITORY" --draft --base master --head "$BRANCH" "${assignee[@]}" --title "rel: $VERSION" --label "$label" --body "$body")
+          url=$(gh pr create --repo "$GITHUB_REPOSITORY" --draft --base master --head "$BRANCH" "${assignee[@]}" --title "$title" --label "$label" --body "$body")
           echo "Opened $url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
@@ -212,7 +291,7 @@ jobs:
             Version: `${{ steps.resolve.outputs.version }}`
             Base: `${{ inputs.base || 'master' }}`
             Trigger: `${{ github.event_name }}`
-            Author: ${{ github.actor }}
+            Triggered by: `${{ steps.trigger.outputs.value }}`
           links: |
             Branch|${{ github.server_url }}/${{ github.repository }}/tree/${{ steps.resolve.outputs.branch }}
             Pull request|${{ steps.pr.outputs.url }}
@@ -229,4 +308,144 @@ jobs:
           fields: |
             Base: `${{ inputs.base || 'master' }}`
             Trigger: `${{ github.event_name }}`
-            Author: ${{ github.actor }}
+            Triggered by: `${{ steps.trigger.outputs.value || github.triggering_actor || github.actor }}`
+
+  pin:
+    name: Pin native SDKs
+    needs: rel_branch
+    if: needs.rel_branch.result == 'success' && (inputs.android != '' || inputs.ios != '')
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      VERSION: ${{ needs.rel_branch.outputs.version }}
+      BRANCH: ${{ needs.rel_branch.outputs.branch }}
+      PIN_BRANCH: chore/pin-natives-${{ needs.rel_branch.outputs.version }}
+      ANDROID: ${{ inputs.android }}
+      IOS: ${{ inputs.ios }}
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.rel_branch.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up Ruby and Bundler
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: example
+          bundler-cache: true
+
+      - name: Pin native SDKs
+        run: |
+          set -euo pipefail
+
+          args=()
+          if [ -n "$ANDROID" ]; then
+            args+=(--android "$ANDROID")
+          fi
+          if [ -n "$IOS" ]; then
+            args+=(--ios "$IOS")
+          fi
+          ./configure-sdk.sh "${args[@]}"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+
+          yarn install --no-immutable
+          (cd example && yarn install --no-immutable)
+          (cd example/ios && bundle exec pod install)
+
+      - name: Commit pin
+        id: commit
+        run: |
+          set -euo pipefail
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Native pins already match $BRANCH, nothing to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --cached --stat
+
+          pinned=()
+          [ -n "$ANDROID" ] && pinned+=("android $ANDROID")
+          [ -n "$IOS" ] && pinned+=("ios $IOS")
+          joined=$(IFS=,; echo "${pinned[*]}")
+          summary=${joined//,/, }
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+
+          git switch -c "$PIN_BRANCH"
+          git commit -m "chore: pin native SDKs ($summary) on $BRANCH"
+          git push --force-with-lease origin "HEAD:refs/heads/$PIN_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open pin PR
+        id: pr
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.commit.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # shellcheck disable=SC2016
+          body=$(printf 'Pins the native SDKs on `%s`: %s.\n\nOpened by [Release Branch](%s).' "$BRANCH" "$SUMMARY" "$RUN_URL")
+          title="chore: pin native SDKs for $BRANCH"
+
+          url=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$PIN_BRANCH" --base "$BRANCH" --state open --json url --jq '.[0].url // empty')
+          if [ -n "$url" ]; then
+            gh pr edit "$url" --title "$title" --body "$body"
+          else
+            url=$(gh pr create --repo "$GITHUB_REPOSITORY" --base "$BRANCH" --head "$PIN_BRANCH" --title "$title" --body "$body")
+          fi
+          echo "Pin PR: $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check out Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          path: ${{ env.SLACK_ACTION_DIR }}
+          persist-credentials: false
+
+      - name: Notify Slack of pin PR
+        if: success() && steps.pr.outputs.url
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: success
+          title: ${{ env.SLACK_USERNAME }} native pins for `${{ needs.rel_branch.outputs.branch }}` opened
+          fields: |
+            Pinned: ${{ steps.commit.outputs.summary }}
+            Triggered by: `${{ needs.rel_branch.outputs.triggered_by }}`
+          links: |
+            Pull request|${{ steps.pr.outputs.url }}
+
+      - name: Notify Slack of pin failure
+        if: failure()
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: failure
+          title: ${{ env.SLACK_USERNAME }} native pins for `${{ needs.rel_branch.outputs.branch }}` could not be opened
+          fields: |
+            Triggered by: `${{ needs.rel_branch.outputs.triggered_by }}`
