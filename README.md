@@ -515,17 +515,22 @@ you don't change your manifest, RN Firebase's service receives every message, an
 notifications are never displayed or tracked. No error is logged.
 
 To fix this, declare `KlaviyoPushService` in your app's `android/app/src/main/AndroidManifest.xml`,
-inside the `<application>` element, with `android:priority="1"` on the intent-filter:
+inside the `<application>` element. Your app's own manifest is merged ahead of every library
+manifest, so this declaration is the one FCM picks:
 
 ```xml
 <service
     android:name="com.klaviyo.pushFcm.KlaviyoPushService"
     android:exported="false">
-    <intent-filter android:priority="1">
+    <intent-filter>
         <action android:name="com.google.firebase.MESSAGING_EVENT" />
     </intent-filter>
 </service>
 ```
+
+Optionally, add `android:priority="1"` to the intent-filter as a safeguard: FCM then picks Klaviyo
+by priority instead of manifest order, in case your declaration doesn't end up first in the merged
+manifest.
 
 If you subclass `KlaviyoPushService`, put your subclass's fully qualified class name in
 `android:name` instead. Declare only one service for `MESSAGING_EVENT` in your app manifest.
@@ -540,7 +545,8 @@ With this in place, RN Firebase keeps receiving messages:
   token, read it with `messaging().getToken()` at startup and each time the app returns to the
   foreground instead of relying on `onTokenRefresh`.
 
-The [example app](./example/android/app/src/main/AndroidManifest.xml) uses this configuration.
+The [example app](./example/android/app/src/main/AndroidManifest.xml) uses this configuration,
+including the optional `android:priority="1"`.
 
 #### Rich Push
 
