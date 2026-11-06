@@ -535,14 +535,9 @@ manifest.
 If you subclass `KlaviyoPushService`, put your subclass's fully qualified class name in
 `android:name` instead. Declare only one service for `MESSAGING_EVENT` in your app manifest.
 
-With this in place, RN Firebase keeps receiving messages:
-
-- RN Firebase handles incoming messages in its own `BroadcastReceiver`, not in its service, so
-  `messaging().onMessage` and `messaging().setBackgroundMessageHandler` still fire for every
-  message, Klaviyo pushes included.
-- RN Firebase's service no longer runs, so `messaging().onTokenRefresh` stops firing.
-  `KlaviyoPushService.onNewToken` forwards token rotations to Klaviyo natively, so your app doesn't
-  need to do anything.
+RN Firebase keeps receiving messages with this in place. It handles incoming messages in its own
+`BroadcastReceiver`, not in its service, so `messaging().onMessage` and
+`messaging().setBackgroundMessageHandler` still fire for every message, Klaviyo pushes included.
 
 The [example app](./example/android/app/src/main/AndroidManifest.xml) uses this configuration,
 including the optional `android:priority="1"`.
