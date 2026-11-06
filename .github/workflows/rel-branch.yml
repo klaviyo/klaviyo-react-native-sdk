@@ -368,10 +368,13 @@ jobs:
 
       - name: Commit pin
         id: commit
+        env:
+          PIN_PATHS: android/gradle.properties klaviyo-react-native-sdk.podspec example/android/app/build.gradle example/ios/Podfile example/ios/Podfile.lock yarn.lock
         run: |
           set -euo pipefail
 
-          git add -A
+          read -ra paths <<< "$PIN_PATHS"
+          git add -- "${paths[@]}"
           if git diff --cached --quiet; then
             echo "Native pins already match $BRANCH, nothing to commit"
             echo "changed=false" >> "$GITHUB_OUTPUT"
