@@ -9,8 +9,6 @@ name: Release Branch
 # That keeps a branch for the next minor release open: e.g. with 2.7.0 released it creates rel/2.8.0,
 # and no-ops until 2.8.0 is tagged, then creates rel/2.9.0 the next weekday morning.
 on:
-  push: # POC-TEMP
-    branches: [ecm/rel-branch-workflow] # POC-TEMP
   workflow_dispatch:
     inputs:
       bump:
@@ -315,7 +313,7 @@ jobs:
   pin:
     name: Pin native SDKs
     needs: rel_branch
-    if: needs.rel_branch.result == 'success' && (github.event_name == 'push' || inputs.android != '' || inputs.ios != '') # POC-TEMP
+    if: needs.rel_branch.result == 'success' && (inputs.android != '' || inputs.ios != '')
     runs-on: macos-latest
     timeout-minutes: 60
     permissions:
@@ -325,8 +323,8 @@ jobs:
       VERSION: ${{ needs.rel_branch.outputs.version }}
       BRANCH: ${{ needs.rel_branch.outputs.branch }}
       PIN_BRANCH: chore/pin-natives-${{ needs.rel_branch.outputs.version }}
-      ANDROID: ${{ github.event_name == 'push' && 'rel/4.7.0' || inputs.android }} # POC-TEMP
-      IOS: ${{ github.event_name == 'push' && 'rel/5.7.0' || inputs.ios }} # POC-TEMP
+      ANDROID: ${{ inputs.android }}
+      IOS: ${{ inputs.ios }}
     steps:
       - name: Check out release branch
         uses: actions/checkout@v5
