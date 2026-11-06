@@ -278,6 +278,15 @@ jobs:
             gh workflow run publish-example.yml --ref "$VERSION" -f platform="$PLATFORM" --repo "$GITHUB_REPOSITORY"
           fi
 
+      - name: Dispatch next release branch
+        if: ${{ !inputs.dry_run && !contains(env.VERSION, '-') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run rel-branch.yml --repo "$GITHUB_REPOSITORY" --ref master -f "base=$VERSION"
+          echo "Dispatched rel-branch.yml from $VERSION"
+
       - name: Write summary
         id: summary
         env:
