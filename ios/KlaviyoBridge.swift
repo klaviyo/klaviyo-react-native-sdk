@@ -409,6 +409,7 @@ public class KlaviyoBridge: NSObject {
             name: eventType,
             properties: fixNSNumberTypes(event["properties"] as Any) as? [String: Any],
             value: event["value"] as? Double,
+            valueCurrency: event["valueCurrency"] as? String,
             uniqueId: event["uniqueId"] as? String
         )
 

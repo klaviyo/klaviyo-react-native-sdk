@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
 import { Klaviyo } from '../index';
-import { EventName } from '../Event';
+import { EventName, type Event } from '../Event';
 import { ProfileProperty } from '../Profile';
 import {
   ALL_AVAILABLE_MARKETING,
@@ -295,6 +295,23 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.createEvent
       ).toHaveBeenCalledWith(event);
+    });
+
+    it('should pass valueCurrency through to the native module', () => {
+      const event: Event = {
+        name: EventName.STARTED_CHECKOUT_METRIC,
+        value: 10,
+        valueCurrency: 'EUR',
+      };
+
+      Klaviyo.createEvent(event);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createEvent
+      ).toHaveBeenCalledWith({
+        name: EventName.STARTED_CHECKOUT_METRIC,
+        value: 10,
+        valueCurrency: 'EUR',
+      });
     });
   });
 
