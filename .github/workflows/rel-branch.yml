@@ -384,7 +384,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          read -ra paths <<< "$PIN_PATHS"
+          read -ra candidates <<< "$PIN_PATHS"
+          paths=()
+          for path in "${candidates[@]}"; do
+            [ -e "$path" ] && paths+=("$path")
+          done
           git add -- "${paths[@]}"
           if git diff --cached --quiet; then
             echo "Native pins already match $BRANCH, nothing to commit"
