@@ -533,7 +533,9 @@ by priority instead of manifest order, in case your declaration doesn't end up f
 manifest.
 
 If you subclass `KlaviyoPushService`, put your subclass's fully qualified class name in
-`android:name` instead. Declare only one service for `MESSAGING_EVENT` in your app manifest.
+`android:name` instead. Declare only one service for `MESSAGING_EVENT` in your app manifest. The
+native SDK's own `KlaviyoPushService` declaration is still merged in from its library manifest, but
+it lands after yours, so your subclass still receives every message and you don't need to remove it.
 
 RN Firebase keeps receiving messages with this in place. It handles incoming messages in its own
 `BroadcastReceiver`, not in its service, so `messaging().onMessage` and
