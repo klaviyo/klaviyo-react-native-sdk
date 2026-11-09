@@ -420,6 +420,14 @@ class KlaviyoReactNativeSdkModule(
         klaviyoEvent.uniqueId = uniqueId
       }
 
+    event
+      .takeIf {
+        it.hasKey("valueCurrency") && it.getType("valueCurrency") == ReadableType.String
+      }?.getString("valueCurrency")
+      ?.let { valueCurrency ->
+        klaviyoEvent.setValueCurrency(valueCurrency)
+      }
+
     // Explicitly cast value to double if it exists
     try {
       event
