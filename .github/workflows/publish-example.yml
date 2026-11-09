@@ -60,6 +60,11 @@ on:
         required: false
         default: ''
         type: string
+      triggered_by:
+        description: 'Login of the person who started the run; leave empty to use the actor'
+        required: false
+        default: ''
+        type: string
   release:
     types: [published]
   push:
@@ -99,6 +104,7 @@ permissions:
 # github.sha is the synthetic merge commit and github.ref_name is
 # "123/merge", so both prefer the PR head.
 env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || inputs.triggered_by || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
   EVENT_NAME: ${{ github.event_name }}
   RELEASE_TAG: ${{ github.event.release.tag_name }}
   COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -242,13 +248,15 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: pending
-          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
           body: Running checks. Each platform replies in this thread.
           fields: |
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
-            Requested by: ${{ github.actor }}
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   # Only run for triggers that can deploy: any other PR label must not start
@@ -305,13 +313,15 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.announce.outputs.slack_ts }}
           status: pending
-          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
           body: Checks passed, deploying. Each platform replies in this thread.
           fields: |
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
-            Requested by: ${{ github.actor }}
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   # Verifies the platform's required secrets exist before a deploy runs.
@@ -573,6 +583,8 @@ jobs:
             SDKs: `${{ steps.release_notes.outputs.sdks }}`
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
             Install|https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
@@ -590,6 +602,8 @@ jobs:
             Build: ${{ env.VERSION_NAME && format('`{0}` (`{1}`)', env.VERSION_NAME, env.VERSION_CODE) || '`not built`' }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   deploy-ios:
@@ -855,6 +869,8 @@ jobs:
             SDKs: `${{ steps.release_notes.outputs.sdks }}`
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
             TestFlight|${{ steps.result.outputs.testflight_url }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
@@ -872,6 +888,8 @@ jobs:
             Build: ${{ env.FULL_VERSION && format('`{0}` (`{1}`)', env.FULL_VERSION, env.BUILD_NUMBER) || '`not built`' }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   what-to-test:
@@ -965,6 +983,8 @@ jobs:
             Build: `${{ needs.deploy-ios.outputs.full_version }}` (`${{ needs.deploy-ios.outputs.build_number }}`)
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
@@ -1067,7 +1087,7 @@ jobs:
             if [ "$timed_out" != 0 ]; then
               title="React Native Example App deploy timed out"
             else
-              title="React Native Example App deploy stopped, run cancelled"
+              title="React Native Example App deploy cancelled"
             fi
           elif [ "$ANDROID" != success ] && [ "$IOS" != success ]; then
             status=info; title="React Native Example App deploy skipped, nothing deployed"
@@ -1104,5 +1124,8 @@ jobs:
             iOS: ${{ steps.result.outputs.ios }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
