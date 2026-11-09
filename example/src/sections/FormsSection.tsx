@@ -28,12 +28,14 @@ export function FormsSection() {
       />
       <ConsentToggle
         label="Forms preview"
+        testID="forms_preview_switch"
         value={forms.formsPreviewEnabled}
         onValueChange={forms.handleFormsPreviewEnabledChange}
       />
       {forms.formsPreviewEnabled && (
         <ProfileTextField
           label="Forms preview token"
+          testID="forms_preview_token"
           value={forms.formsPreviewToken}
           onChangeText={forms.setFormsPreviewToken}
           onSetPress={forms.handleApplyFormsPreviewToken}
