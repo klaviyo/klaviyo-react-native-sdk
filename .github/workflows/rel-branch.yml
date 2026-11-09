@@ -76,7 +76,7 @@ jobs:
     steps:
       - name: Check out base
         id: checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.base || 'master' }}
           fetch-depth: 0
@@ -294,7 +294,7 @@ jobs:
       - name: Check out Slack action
         if: always()
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -351,7 +351,7 @@ jobs:
       IOS: ${{ inputs.ios }}
     steps:
       - name: Check out release branch
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.X_REPO_PAT }}
           ref: ${{ needs.rel_branch.outputs.branch }}
@@ -371,7 +371,7 @@ jobs:
           fi
 
       - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
 
@@ -460,7 +460,7 @@ jobs:
       - name: Check out Slack action
         if: always()
         continue-on-error: true
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
