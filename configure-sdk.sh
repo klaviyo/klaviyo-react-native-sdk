@@ -19,12 +19,14 @@ OPTIONS:
 
   -a, --android[=<value>]
       Specify Android SDK configuration:
-        - Version, branch, commit hash or filepath to local SDK
+        - A released version (X.Y.Z, optionally -alpha/-beta/-rc) gives a release pin
+        - A branch, commit hash or filepath to local SDK gives a dev pin
         - Default: If --local, ../../klaviyo-android-sdk, else cached version in gradle.properties
 
   -i, --ios[=<value>]
       Specify iOS/Swift SDK configuration:
-        - Version, branch, commit hash or filepath to local SDK
+        - A released version (X.Y.Z, optionally -alpha/-beta/-rc) gives a release pin
+        - A branch, commit hash or filepath to local SDK gives a dev pin
         - Default: If --local, ../../../klaviyo-swift-sdk, else podspec version
 
   -s, --skip-pod-install
@@ -34,10 +36,18 @@ EXAMPLES:
   # Use both local SDKs with default paths
   ./configure-sdk.sh --local
 
-  # Configure Android or iOS SDKs to specific version, branch, commit or filepath
-  ./configure-sdk.sh --android [version/branch/commit/filepath]
-  ./configure-sdk.sh --ios [version/branch/commit/filepath]
+  # Release pin: both SDKs to released versions
+  ./configure-sdk.sh --android 4.7.0 --ios 5.7.0
+
+  # Dev pin: a branch, commit or filepath
+  ./configure-sdk.sh --android [branch/commit/filepath]
+  ./configure-sdk.sh --ios [branch/commit/filepath]
 EOF
+}
+
+# Matches the released-version regex in .github/scripts/check-native-pins.sh
+function is_release_version() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.?[0-9]+)?)?$ ]]
 }
 
 # Default SDK paths
@@ -319,7 +329,9 @@ function configure_android_gradle() {
       save_cached=false
       echo "Resetting to gradle.properties version: $cached_version"
       android_sdk_version="$cached_version"
-    elif [[ ! "$android_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ && ! "$android_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
+    elif is_release_version "$android_sdk_version"; then
+      save_cached=false
+    elif [[ ! "$android_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
       # Replace slashes with tildes and append "-SNAPSHOT"
       android_sdk_version="${android_sdk_version//\//~}-SNAPSHOT"
     fi
@@ -362,10 +374,25 @@ function configure_pods() {
   local ext_marker_line
   ext_marker_line=$(grep -n "# Insert override klaviyo-swift-sdk extension pod below this line when needed" "$podfile" | cut -d: -f1)
 
-  if [[ "$swift_sdk_version" == "podspec" ]]; then
+  if [[ "$swift_sdk_version" == "podspec" ]] || is_release_version "$swift_sdk_version"; then
     # Restore default extension pod entry (deleted above with the main pods)
     sed -i '' "${ext_marker_line}a\\${nl}  pod 'KlaviyoSwiftExtension'${nl}" "$podfile"
-    echo "Restored to $podspec"
+
+    if [[ "$swift_sdk_version" == "podspec" ]]; then
+      echo "Restored to $podspec"
+      return
+    fi
+
+    local dep
+    for dep in KlaviyoSwift KlaviyoForms KlaviyoLocation; do
+      sed -i '' -E "s/(s\\.dependency \"$dep\")( ##)?, \"[^\"]*\"/\\1/" "$podspec"
+      sed -i '' -E "s/(s\\.dependency \"$dep\")\$/\\1, \"$swift_sdk_version\"/" "$podspec"
+      if ! grep -qE "s\\.dependency \"$dep\", \"$swift_sdk_version\"" "$podspec"; then
+        echo "Error: failed to pin $dep to $swift_sdk_version in $podspec." >&2
+        exit 1
+      fi
+    done
+    echo "Pinned KlaviyoSwift, KlaviyoForms, and KlaviyoLocation to $swift_sdk_version in $podspec"
     return
   fi
 
@@ -382,10 +409,7 @@ function configure_pods() {
   target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
 
   for dependency in "${dependencies[@]}"; do
-    if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
-      #Semantic version
-      podfile_entry="pod '$dependency', '$swift_sdk_version'"
-    elif [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
+    if [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
       # Relative file path
       podfile_entry="pod '$dependency', :path => '$swift_sdk_version'"
     elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
@@ -404,9 +428,7 @@ function configure_pods() {
 
   # Insert KlaviyoSwiftExtension override into the Extension target (separate marker)
   local ext_entry
-  if [[ "$swift_sdk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
-    ext_entry="pod 'KlaviyoSwiftExtension', '$swift_sdk_version'"
-  elif [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
+  if [[ "$swift_sdk_version" =~ ^(\./|\.\./).* ]]; then
     ext_entry="pod 'KlaviyoSwiftExtension', :path => '$swift_sdk_version'"
   elif [[ "$swift_sdk_version" =~ ^[a-f0-9]{7,40}$ ]]; then
     ext_entry="pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :commit => '$swift_sdk_version'"
