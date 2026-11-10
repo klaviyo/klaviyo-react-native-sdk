@@ -58,21 +58,21 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - klaviyo-react-native-sdk (2.7.0):
+  - klaviyo-react-native-sdk (2.8.0):
     - KlaviyoForms
     - KlaviyoLocation
     - KlaviyoSwift
     - React-Core
-  - KlaviyoCore (5.6.0):
+  - KlaviyoCore (5.7.0):
     - AnyCodable-FlightSchool
-  - KlaviyoForms (5.6.0):
-    - KlaviyoCore (~> 5.6.0)
-  - KlaviyoLocation (5.6.0):
-    - KlaviyoSwift (~> 5.6.0)
-  - KlaviyoSwift (5.6.0):
+  - KlaviyoForms (5.7.0):
+    - KlaviyoCore (~> 5.7.0)
+  - KlaviyoLocation (5.7.0):
+    - KlaviyoSwift (~> 5.7.0)
+  - KlaviyoSwift (5.7.0):
     - AnyCodable-FlightSchool
-    - KlaviyoCore (~> 5.6.0)
-  - KlaviyoSwiftExtension (5.6.0)
+    - KlaviyoCore (~> 5.7.0)
+  - KlaviyoSwiftExtension (5.7.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -1992,11 +1992,11 @@ DEPENDENCIES:
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - klaviyo-react-native-sdk (from `../..`)
-  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews-5.6.0`)
-  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews-5.6.0`)
-  - KlaviyoLocation (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews-5.6.0`)
-  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews-5.6.0`)
-  - KlaviyoSwiftExtension (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews-5.6.0`)
+  - KlaviyoCore (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews`)
+  - KlaviyoForms (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews`)
+  - KlaviyoLocation (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews`)
+  - KlaviyoSwift (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews`)
+  - KlaviyoSwiftExtension (from `https://github.com/klaviyo/klaviyo-swift-sdk.git`, branch `feat/in-app-forms-previews`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -2100,19 +2100,19 @@ EXTERNAL SOURCES:
   klaviyo-react-native-sdk:
     :path: "../.."
   KlaviyoCore:
-    :branch: feat/in-app-forms-previews-5.6.0
+    :branch: feat/in-app-forms-previews
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :branch: feat/in-app-forms-previews-5.6.0
+    :branch: feat/in-app-forms-previews
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :branch: feat/in-app-forms-previews-5.6.0
+    :branch: feat/in-app-forms-previews
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :branch: feat/in-app-forms-previews-5.6.0
+    :branch: feat/in-app-forms-previews
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :branch: feat/in-app-forms-previews-5.6.0
+    :branch: feat/in-app-forms-previews
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   RCTDeprecation:
     :path: "../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation"
@@ -2273,19 +2273,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   KlaviyoCore:
-    :commit: 794af8377846340663161cde7b4cc5a0bee5645e
+    :commit: 38d5d565c7616c61318da6bb8be947cdda51db9d
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoForms:
-    :commit: 794af8377846340663161cde7b4cc5a0bee5645e
+    :commit: 38d5d565c7616c61318da6bb8be947cdda51db9d
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoLocation:
-    :commit: 794af8377846340663161cde7b4cc5a0bee5645e
+    :commit: 38d5d565c7616c61318da6bb8be947cdda51db9d
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwift:
-    :commit: 794af8377846340663161cde7b4cc5a0bee5645e
+    :commit: 38d5d565c7616c61318da6bb8be947cdda51db9d
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
   KlaviyoSwiftExtension:
-    :commit: 794af8377846340663161cde7b4cc5a0bee5645e
+    :commit: 38d5d565c7616c61318da6bb8be947cdda51db9d
     :git: https://github.com/klaviyo/klaviyo-swift-sdk.git
 
 SPEC CHECKSUMS:
@@ -2300,12 +2300,12 @@ SPEC CHECKSUMS:
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  klaviyo-react-native-sdk: 59c60cd9b6406cfe485864d7bab0d444b69f65db
-  KlaviyoCore: 2d37d5031e800ffa56c995878c228c27c1c99c29
-  KlaviyoForms: 6769bc3310335554b12ad3c2b33ddf4a1fd27fac
-  KlaviyoLocation: 0ec7510cf6af4e4b08729065234a9059991fd54a
-  KlaviyoSwift: c070c026f441d6a69ec129b9e6afb500fc523049
-  KlaviyoSwiftExtension: cf82382fcc70a1077387b40c0327dd665823c946
+  klaviyo-react-native-sdk: 6d6af199551ba4e52c4c1576ded6a13ebb36392a
+  KlaviyoCore: 8e3dbde57ac89c41e7c901e67f484fbf392daf3d
+  KlaviyoForms: 9b990f6643740f1cce79c647da2776e42d9a0840
+  KlaviyoLocation: 8c284208af7f83773aafc2d09741290dd5b768b9
+  KlaviyoSwift: b91fccf35873e680c66f3213229ecbfe81c03552
+  KlaviyoSwiftExtension: 494cb231101f6fc1ed30e802bef519578fecf0b0
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCTDeprecation: 5268fe9d45036e52deb765d242297f1011e17333
@@ -2387,6 +2387,6 @@ SPEC CHECKSUMS:
   RNScreens: d0b84395f70841b48de7af26e45704ed4a24c62e
   Yoga: 9690ea6ce9c77aee633f4815cc42202c701edbd8
 
-PODFILE CHECKSUM: fc45a1f5bff9607031de117338bac21bb2683457
+PODFILE CHECKSUM: f704cf48caffe077f21eb0b5fafe2cc991f2865a
 
 COCOAPODS: 1.16.2
