@@ -11,10 +11,6 @@ on:
       - 'master'
   workflow_dispatch:
 
-env:
-  SLACK_USERNAME: React Native SDK
-  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
-
 jobs:
   dependency-submission:
     name: Submit Gradle Dependency Graph
