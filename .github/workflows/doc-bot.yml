@@ -20,6 +20,7 @@ on:
 permissions: {}
 
 env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
   SLACK_USERNAME: React Native SDK
   SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
 
@@ -45,7 +46,7 @@ jobs:
       - name: Checkout Slack action
         timeout-minutes: 2
         continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -65,6 +66,7 @@ jobs:
             Branch: `${{ github.ref_name }}`
             Commit: `${{ env.SHORT_SHA }}`
             Event: `${{ github.event_name }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
 
   build:
     name: Build TypeDoc
@@ -76,7 +78,7 @@ jobs:
       pages: read # configure-pages reads the Pages site config
     steps:
       - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -127,7 +129,7 @@ jobs:
 
       - name: Checkout Slack action
         continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -148,4 +150,5 @@ jobs:
             Branch: `${{ github.ref_name }}`
             Commit: `${{ env.SHORT_SHA }}`
             Event: `${{ github.event_name }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
           links: ${{ needs.deploy.outputs.page_url && format('Docs|{0}', needs.deploy.outputs.page_url) || '' }}

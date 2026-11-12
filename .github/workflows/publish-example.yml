@@ -60,6 +60,11 @@ on:
         required: false
         default: ''
         type: string
+      triggered_by:
+        description: 'Login of the person who started the run; leave empty to use the actor'
+        required: false
+        default: ''
+        type: string
   release:
     types: [published]
   push:
@@ -99,6 +104,7 @@ permissions:
 # github.sha is the synthetic merge commit and github.ref_name is
 # "123/merge", so both prefer the PR head.
 env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || inputs.triggered_by || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
   EVENT_NAME: ${{ github.event_name }}
   RELEASE_TAG: ${{ github.event.release.tag_name }}
   COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -126,7 +132,7 @@ jobs:
     outputs:
       skip: ${{ steps.check.outputs.skip }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -226,7 +232,7 @@ jobs:
       - name: Checkout Slack action
         timeout-minutes: 2
         continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -242,13 +248,15 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts }}
           status: pending
-          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
           body: Running checks. Each platform replies in this thread.
           fields: |
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
-            Requested by: ${{ github.actor }}
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   # Only run for triggers that can deploy: any other PR label must not start
@@ -291,7 +299,7 @@ jobs:
 
       - name: Checkout Slack action
         continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -305,13 +313,15 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.announce.outputs.slack_ts }}
           status: pending
-          title: React Native Example App deploying `${{ env.SOURCE_LABEL }}`
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
           body: Checks passed, deploying. Each platform replies in this thread.
           fields: |
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
-            Requested by: ${{ github.actor }}
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   # Verifies the platform's required secrets exist before a deploy runs.
@@ -337,7 +347,7 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
       || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -372,7 +382,7 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
       || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -429,7 +439,7 @@ jobs:
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
       - id: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -446,7 +456,7 @@ jobs:
 
       - name: Set up JDK 17
         id: jdk
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -573,6 +583,8 @@ jobs:
             SDKs: `${{ steps.release_notes.outputs.sdks }}`
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
             Install|https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
@@ -590,6 +602,8 @@ jobs:
             Build: ${{ env.VERSION_NAME && format('`{0}` (`{1}`)', env.VERSION_NAME, env.VERSION_CODE) || '`not built`' }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   deploy-ios:
@@ -636,7 +650,7 @@ jobs:
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
       - id: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -682,7 +696,7 @@ jobs:
       # See ios-build.yml's Cache Pods step for the cache-key rationale.
       - name: Cache Pods
         id: cache_pods
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: example/ios/Pods
           key: ${{ runner.os }}-pods-publish-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec') }}
@@ -855,6 +869,8 @@ jobs:
             SDKs: `${{ steps.release_notes.outputs.sdks }}`
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
             TestFlight|${{ steps.result.outputs.testflight_url }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
@@ -872,6 +888,8 @@ jobs:
             Build: ${{ env.FULL_VERSION && format('`{0}` (`{1}`)', env.FULL_VERSION, env.BUILD_NUMBER) || '`not built`' }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   what-to-test:
@@ -892,7 +910,7 @@ jobs:
           SHA: ${{ env.COMMIT_SHA }}
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -965,6 +983,8 @@ jobs:
             Build: `${{ needs.deploy-ios.outputs.full_version }}` (`${{ needs.deploy-ios.outputs.build_number }}`)
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
@@ -983,7 +1003,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Remove label
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           LABEL_NAME: ${{ github.event.label.name }}
         with:
@@ -1067,7 +1087,7 @@ jobs:
             if [ "$timed_out" != 0 ]; then
               title="React Native Example App deploy timed out"
             else
-              title="React Native Example App deploy stopped, run cancelled"
+              title="React Native Example App deploy cancelled"
             fi
           elif [ "$ANDROID" != success ] && [ "$IOS" != success ]; then
             status=info; title="React Native Example App deploy skipped, nothing deployed"
@@ -1082,7 +1102,7 @@ jobs:
       - name: Checkout Slack action
         if: always()
         continue-on-error: true
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           sparse-checkout: .github/actions
@@ -1104,5 +1124,8 @@ jobs:
             iOS: ${{ steps.result.outputs.ios }}
             Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
             Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
           links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
             Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
