@@ -18,7 +18,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -41,7 +41,7 @@ jobs:
         run: echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > example/ios/GoogleService-Info.plist
 
       - name: Cache turborepo for iOS
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.TURBO_CACHE_DIR }}
           key: ${{ runner.os }}-turborepo-ios-${{ inputs.new-architecture }}-${{ hashFiles('yarn.lock') }}
@@ -53,7 +53,7 @@ jobs:
       # in the key: pod install re-evaluates source_files globs and rewrites
       # Pods.xcodeproj on every run, so it can't go stale.
       - name: Cache Pods
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: example/ios/Pods
           key: ${{ runner.os }}-pods-${{ inputs.new-architecture }}-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec') }}
