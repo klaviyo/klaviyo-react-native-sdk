@@ -90,3 +90,6 @@ example/.env
 .tarballs/
 .pack-mode-active
 *.workspace-backup
+
+# TypeDoc output (yarn generate-docs); published to GitHub Pages by CI
+docs/

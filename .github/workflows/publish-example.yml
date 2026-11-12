@@ -2,9 +2,10 @@
 # iOS are independent jobs.
 #
 # Triggers:
-#   - workflow_dispatch     (manual; choose `both` / `android` / `ios`)
+#   - workflow_dispatch     (manual or tag-dispatch from publish-release.yml;
+#                           choose `both` / `android` / `ios`)
 #   - release: published    (both platforms)
-#   - push to master        (both platforms)
+#   - push to master/rel/** (both platforms)
 #   - pull_request: labeled (label drives platform selection — see below)
 #
 # Label conventions (cleanup-label removes them after the run so reapplying
@@ -12,6 +13,33 @@
 #   - `deploy-example-app`         → both platforms
 #   - `deploy-example-app:android` → Android only
 #   - `deploy-example-app:ios`     → iOS only
+#
+# Releases publish once, from the tag. A master push whose tree matches the
+# current release tag skips its deploys, and a release run cancels in-flight
+# master push runs it already contains. See release-merge-check and
+# supersede-push-runs.
+#
+# Build numbers: Android versionCode is globally monotonic (highest on Play
+# + 1); iOS build numbers restart at 1 per marketing version and strictly
+# increase within it. Deploys queue per platform across all runs. Each job
+# preflights the store, then retries with a fresh number if the upload is
+# rejected for a conflict.
+#
+# App version: X.Y.Z from the SDK version on a release, X.Y.Z-rc.<build> on
+# rel/*, X.Y.Z-alpha.<build> otherwise. Android versionName carries the full
+# string; iOS CFBundleShortVersionString stays X.Y.Z and the full string goes
+# in the KlaviyoAppVersion Info.plist key.
+#
+# Deploys run only after the `checks` job (ci.yml: lint, unit tests, library
+# build) passes in the same run, on every trigger including the PR-label one.
+#
+# This repo is public, so its Actions logs are too. Never surface a public
+# install link (e.g. a TestFlight public-link `testflight.apple.com/join/...`)
+# here; only links that require a Play/App Store Connect login. The Android
+# Slack link is the per-build Play URL
+# (play.google.com/apps/test/<package>/<versionCode>), which only an internal
+# tester can open. It is not set as the android-internal-track environment URL,
+# which the public Deployments page would show.
 
 name: Publish Example App
 
@@ -27,206 +55,619 @@ on:
           - both
           - android
           - ios
+      slack_thread_ts:
+        description: 'Slack message ts to reply in (set by publish-release.yml)'
+        required: false
+        default: ''
+        type: string
+      triggered_by:
+        description: 'Login of the person who started the run; leave empty to use the actor'
+        required: false
+        default: ''
+        type: string
   release:
     types: [published]
   push:
-    branches: [master]
+    branches: [master, 'rel/**']
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/CODEOWNERS'
+      - '.coderabbit.yaml'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/pull_request_template.md'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - '.github/actions/**'
+      - 'AGENTS.md'
+      - 'src/__tests__/**'
+      - 'example/jest.config.js'
+      - 'lefthook.yml'
   pull_request:
     types: [labeled]
 
+# A newer push to the same branch cancels the run in flight. Release, manual
+# and PR-label runs are never cancelled by this group. Deploy jobs also queue
+# per platform (see deploy-android's concurrency).
+concurrency:
+  group: publish-example-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+permissions:
+  contents: read
+
+# Shared event fields for every step that stamps build info or renders
+# notes/Slack, so the app, the store notes and the Slack message can never
+# disagree about the commit, branch or trigger. On pull_request events
+# github.sha is the synthetic merge commit and github.ref_name is
+# "123/merge", so both prefer the PR head.
+env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || inputs.triggered_by || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
+  EVENT_NAME: ${{ github.event_name }}
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+  COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  BRANCH: ${{ github.head_ref || github.ref_name }}
+  HEAD_REF: ${{ github.head_ref }}
+  REF_NAME: ${{ github.ref_name }}
+  REF_TYPE: ${{ github.ref_type }}
+  SOURCE_LABEL: ${{ github.event_name == 'release' && format('release {0}', github.event.release.tag_name) || github.head_ref || github.ref_name }}
+  SLACK_USERNAME: React Native Example App
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
+
 jobs:
-  deploy-android:
-    name: Publish to Play Store internal track
+  # On a push to master, sets skip=true when HEAD's tree matches the tag of
+  # package.json's version (a rel/* merge-back). The release run publishes
+  # that content from the tag. The skip applies whether or not the release
+  # run's publish succeeded; retry a failed release publish from the release
+  # run. A missing tag or failed lookup leaves skip=false.
+  release-merge-check:
+    name: Check for release merge-back
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
-    # Run on release / push always; on workflow_dispatch when platform is
-    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
-    # (umbrella) or `deploy-example-app:android`.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare HEAD with the release tag
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version package.json)
+          if ! git fetch --quiet --depth=1 origin "refs/tags/$VERSION:refs/tags/$VERSION" 2>/dev/null; then
+            echo "No tag $VERSION; deploying."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HEAD_TREE=$(git rev-parse 'HEAD^{tree}')
+          TAG_TREE=$(git rev-parse "$VERSION^{tree}")
+          if [ "$HEAD_TREE" = "$TAG_TREE" ]; then
+            echo "::notice::HEAD has the same tree as release tag $VERSION, which the release run publishes. Skipping this deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "HEAD differs from release tag $VERSION; deploying."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # On a release or tag-dispatched run that publishes both platforms, cancels
+  # in-flight master push runs of this workflow whose commit the release
+  # contains (same commit, an ancestor, or the same tree). Only master push
+  # runs are considered. It can cancel a run that is mid-upload; the deploy
+  # jobs' per-platform queue then starts this run's deploy afterwards.
+  supersede-push-runs:
+    name: Cancel superseded master publishes
     if: |
       github.event_name == 'release'
+      || (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.platform == 'both')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Cancel master publishes this release contains
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          RELEASE_TREE=$(gh api "repos/$REPO/commits/$RELEASE_SHA" --jq .commit.tree.sha)
+          gh api "repos/$REPO/actions/workflows/publish-example.yml/runs?event=push&branch=master&per_page=30" \
+            --jq '.workflow_runs[] | select(.status != "completed") | "\(.id) \(.head_sha)"' |
+          while read -r RUN_ID RUN_SHA; do
+            RUN_TREE=$(gh api "repos/$REPO/commits/$RUN_SHA" --jq .commit.tree.sha)
+            # compare/<base>...<head> is "ahead" or "identical" when head contains base.
+            STATUS=$(gh api "repos/$REPO/compare/$RUN_SHA...$RELEASE_SHA" --jq .status)
+            if [ "$RUN_TREE" = "$RELEASE_TREE" ] || [ "$STATUS" = "ahead" ] || [ "$STATUS" = "identical" ]; then
+              echo "::notice::Cancelling master publish run $RUN_ID ($RUN_SHA); this release run publishes its content."
+              if ! gh run cancel "$RUN_ID" --repo "$REPO"; then
+                RUN_STATUS=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .status)
+                if [ "$RUN_STATUS" != "completed" ]; then
+                  echo "::error::Could not cancel run $RUN_ID (status $RUN_STATUS)."
+                  exit 1
+                fi
+                echo "Run $RUN_ID finished before it could be cancelled."
+              fi
+            else
+              echo "Keeping run $RUN_ID ($RUN_SHA): it has changes the release does not."
+            fi
+          done
+
+  # One live Slack message per run: this job posts it as pending, `progress`
+  # and `report` edit it, and the deploy jobs reply in its thread. When
+  # publish-release.yml passes slack_thread_ts, the message is a reply in the
+  # release thread instead of a new top-level post.
+  announce:
+    name: Announce the deploy
+    needs: release-merge-check
+    if: |
+      !cancelled()
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
+      || github.event_name == 'push'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(fromJSON('["deploy-example-app","deploy-example-app:android","deploy-example-app:ios"]'), github.event.label.name)))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      slack_ts: ${{ steps.slack.outputs.ts }}
+    steps:
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Checkout Slack action
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Notify Slack deploy started
+        id: slack
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: pending
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
+          body: Running checks. Each platform replies in this thread.
+          fields: |
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
+
+  # Only run for triggers that can deploy: any other PR label must not start
+  # the full macOS CI. Waits for the two jobs above. Runs when they are
+  # skipped; a failed or timed-out supersede-push-runs stops the release
+  # deploy, and a failed release-merge-check leaves skip unset so the push
+  # deploys.
+  checks:
+    name: Lint, test and build the library
+    needs: [release-merge-check, supersede-push-runs]
+    if: |
+      !cancelled()
+      && (needs.supersede-push-runs.result == 'success' || needs.supersede-push-runs.result == 'skipped')
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
+      || github.event_name == 'push'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, 'deploy-example-app')))
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  # Edits the live message once the checks pass and the deploys can start.
+  progress:
+    name: Update the deploy message
+    needs: [announce, checks]
+    if: |
+      !cancelled()
+      && needs.announce.outputs.slack_ts != ''
+      && needs.checks.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Checkout Slack action
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Update the Slack deploy message
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.announce.outputs.slack_ts }}
+          status: pending
+          title: "${{ github.event_name == 'pull_request' && format('React Native Example App deploying PR #{0}', github.event.pull_request.number) || format('React Native Example App deploying `{0}`', env.SOURCE_LABEL) }}"
+          body: Checks passed, deploying. Each platform replies in this thread.
+          fields: |
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
+
+  # Verifies the platform's required secrets exist before a deploy runs.
+  # Environment secrets are not visible here (no environment: is declared),
+  # so the store secrets must be repository secrets. Missing secrets skip the
+  # deploy on push/release (ready=false, green) and fail on
+  # workflow_dispatch / label deploys.
+  preflight-android:
+    name: Check Android deploy secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    needs: release-merge-check
+    outputs:
+      ready: ${{ steps.check.outputs.android_ready }}
+      missing: ${{ steps.check.outputs.android_missing }}
+    if: |
+      !cancelled()
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check secrets
+        id: check
+        shell: bash
+        env:
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: .github/scripts/check-secrets.sh android
+
+  preflight-ios:
+    name: Check iOS deploy secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    needs: release-merge-check
+    outputs:
+      ready: ${{ steps.check.outputs.ios_ready }}
+      missing: ${{ steps.check.outputs.ios_missing }}
+    if: |
+      !cancelled()
+      && needs.release-merge-check.outputs.skip != 'true'
+      && (github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check secrets
+        id: check
+        shell: bash
+        env:
+          KLAVIYO_EXAMPLE_API_KEY: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: .github/scripts/check-secrets.sh ios
+
+  deploy-android:
+    name: Publish to Play Store internal track
+    needs: [checks, preflight-android, announce]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: android-internal-track
+    # One deploy per platform at a time across every run. Waiting deploys
+    # queue FIFO (up to 100) and a started deploy is never cancelled by this
+    # group. Same setup as klaviyo-flutter-sdk's publish-example.yml.
+    concurrency:
+      group: publish-example-android
+      cancel-in-progress: false
+      queue: max
+    # Run on release / push always; on workflow_dispatch when platform is
+    # `both` or `android`; on labeled PR when the label is `deploy-example-app`
+    # (umbrella) or `deploy-example-app:android`. Skipped (not failed) when the
+    # preflight found missing secrets on a push/release trigger.
+    if: |
+      !cancelled()
+      && needs.checks.result == 'success'
+      && (github.event_name == 'release'
+      || github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:android')))
+      && needs.preflight-android.outputs.ready == 'true'
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Prep example app
+        id: prep
         uses: ./.github/actions/example-publish-prep
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # bundleRelease invokes Metro via the RN Gradle plugin; node + yarn must be on PATH.
       - name: Setup
+        id: setup
         uses: ./.github/actions/setup
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        id: jdk
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: 'zulu'
           java-version: '17'
           java-package: jdk
 
       - name: Add Google Services from Secrets
+        id: google_services
         run: 'echo "$GOOGLE_SERVICES_JSON" > ./example/android/app/google-services.json'
         shell: bash
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       - name: Decode upload keystore
+        id: keystore
         run: echo "$SIGNING_KEY" | base64 -d > "${RUNNER_TEMP}/upload.jks"
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
 
-      # Read versionName (kept in sync with SDK version by bump-version.sh)
-      # so Slack notifications can include it on success or failure.
-      - name: Read versionName
-        shell: bash
-        run: |
-          VERSION_NAME=$(grep -oE 'versionName "[^"]+"' example/android/app/build.gradle | head -1 | sed -E 's/versionName "([^"]+)"/\1/')
-          echo "Version name: $VERSION_NAME"
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-
-      # Auth for the Play Edits API preflight below.
-      - uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-
-      # Pick highest+1 versionCode. /edits/{id}/bundles returns ALL bundles
-      # for the app, not edit-scoped. The androidpublisher scope is required
-      # explicitly — the default cloud-platform scope returns empty.
-      - name: Resolve next versionCode from Play
-        shell: bash
-        env:
-          PACKAGE_NAME: com.klaviyoreactnativesdkexample
-        run: |
-          set -euo pipefail
-          TOKEN=$(gcloud auth print-access-token --scopes=https://www.googleapis.com/auth/androidpublisher)
-          AUTH="Authorization: Bearer $TOKEN"
-          API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME"
-
-          # `-f` aborts on HTTP error so we don't silently fall back to
-          # HIGHEST=0 and hit a confusing version-code conflict at upload.
-          EDIT_ID=$(curl -fsS -X POST -H "$AUTH" -H "Content-Type: application/json" "$API/edits" -d '{}' | jq -r '.id')
-          BUNDLES=$(curl -fsS -H "$AUTH" "$API/edits/$EDIT_ID/bundles")
-          curl -fsS -X DELETE -H "$AUTH" "$API/edits/$EDIT_ID" >/dev/null
-
-          HIGHEST=$(echo "$BUNDLES" | jq '[.bundles[]?.versionCode // 0] | max // 0')
-          NEXT=$(( HIGHEST + 1 ))
-          echo "Highest existing versionCode: $HIGHEST"
-          echo "Next versionCode: $NEXT"
-          echo "VERSION_CODE=$NEXT" >> $GITHUB_ENV
-
-      # Build the example app against the SDK as `npm install`-ed from a
-      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
-      # podspec/build.gradle path bugs, and stale `lib/` builds before the
-      # AAB hits Play's internal track. Cleanup (`restore`) is intentionally
-      # skipped — the runner is ephemeral. See pack-and-test.sh for details.
+      # Builds the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. See pack-and-test.sh.
       - name: Pack SDK + flip example to packed install
+        id: pack_sdk
         shell: bash
         run: ./pack-and-test.sh setup
 
-      # Inline signing via -Pandroid.injected.signing.* — AGP produces a
-      # properly v2/v3-signed AAB in one pass (Play rejects double-signed AABs).
-      - name: Assemble Release Bundle
+      - name: Set up Ruby
+        id: ruby
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          ruby-version: '3.2'
+
+      - name: Install fastlane
+        id: fastlane
+        shell: bash
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
+
+      # The android release lane picks the next versionCode from the Play
+      # internal track, derives the versionName from it, builds and signs the
+      # bundle, and uploads it, rebuilding with a fresh code and name when the
+      # upload is rejected for a conflict.
+      - name: Build & deploy to Internal Track
+        id: build_and_deploy
+        working-directory: example
         shell: bash
         env:
+          KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
-          # Prevent Metro from trying to start a dev server during the build
-          CI: true
-        run: |
-          cd example/android && ./gradlew :app:bundleRelease \
-            -PreleaseVersionCode=${{ env.VERSION_CODE }} \
-            -Pandroid.injected.signing.store.file="${RUNNER_TEMP}/upload.jks" \
-            -Pandroid.injected.signing.store.password="${KEY_STORE_PASSWORD}" \
-            -Pandroid.injected.signing.key.alias="${ALIAS}" \
-            -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
-
-      # On `release: published`, write the GitHub release body into a
-      # `whatsnew-en-US` file so the upload action attaches it as Play Store
-      # release notes. Truncate to 500 chars per Google's per-locale cap.
-      # Other triggers (workflow_dispatch / push / labeled PR) skip this and
-      # the release lands without notes.
-      - name: Prepare release notes
-        if: github.event_name == 'release'
-        shell: bash
-        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           RELEASE_BODY: ${{ github.event.release.body }}
-        run: |
-          mkdir -p "${RUNNER_TEMP}/whatsnew"
-          # Bash parameter expansion truncates by character (locale-aware,
-          # ubuntu-24.04 runners default to en_US.UTF-8), so emojis or
-          # non-ASCII text near the boundary don't get split mid-byte —
-          # which would produce invalid UTF-8 and risk a Play Store reject.
-          printf '%s' "${RELEASE_BODY:0:500}" > "${RUNNER_TEMP}/whatsnew/whatsnew-en-US"
-          echo "WHATSNEW_DIR=${RUNNER_TEMP}/whatsnew" >> "${GITHUB_ENV}"
+          RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CI: true
+        run: fastlane android release
 
-      - name: Deploy to Internal Track
-        id: play_upload
-        uses: r0adkll/upload-google-play@v1.1.3
+      # Composed after the upload so the notes carry the versionCode that
+      # actually shipped. 500 chars is Google's per-locale cap.
+      - name: Prepare release notes
+        id: release_notes
+        uses: ./.github/actions/example-release-notes
         with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.klaviyoreactnativesdkexample
-          releaseFiles: example/android/app/build/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
-          whatsNewDirectory: ${{ env.WHATSNEW_DIR }}
+          max_length: 500
+          platform: android
 
       - name: Clean up keystore
         if: always()
         run: rm -f "${RUNNER_TEMP}/upload.jks"
 
+      - name: Clean up google-services.json and example/.env
+        if: always()
+        shell: bash
+        run: rm -f example/android/app/google-services.json example/.env
+
+      - name: Classify cancellation
+        id: stop
+        if: cancelled()
+        env:
+          TIMEOUT_MINUTES: 45
+        run: |
+          elapsed=$(( $(date +%s) - ${JOB_START:-$(date +%s)} ))
+          if [ "$elapsed" -ge $(( TIMEOUT_MINUTES * 60 - 60 )) ]; then
+            echo "timed_out=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find failed step
+        id: failed
+        if: failure() || cancelled()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              prep: "Prep example app",
+              setup: "Setup",
+              jdk: "Set up JDK 17",
+              google_services: "Add Google Services from Secrets",
+              keystore: "Decode upload keystore",
+              pack_sdk: "Pack SDK + flip example to packed install",
+              ruby: "Set up Ruby",
+              fastlane: "Install fastlane",
+              build_and_deploy: "Build & deploy to Internal Track",
+              release_notes: "Prepare release notes"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure" or .value.conclusion == "cancelled")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
       - name: Notify Slack on success
         if: success()
-        uses: ./.github/actions/notify-slack-publish
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          platform: Play Store
-          version_label: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
-          # The action emits this for every non-internalsharing track too —
-          # it's the standard `play.google.com/apps/test/<pkg>/<code>` URL,
-          # only resolvable by users already authorized for the build.
-          install_url: ${{ steps.play_upload.outputs.internalSharingDownloadUrl }}
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
+          status: success
+          title: React Native Example App (Android) deployed to Play internal
+          body: Install with a Google account on the internal testers list.
+          fields: |
+            Build: `${{ env.VERSION_NAME }}` (`${{ env.VERSION_CODE }}`)
+            SDKs: `${{ steps.release_notes.outputs.sdks }}`
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: |
+            Install|https://play.google.com/apps/test/com.klaviyoreactnativesdkexample/${{ env.VERSION_CODE }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
       - name: Notify Slack on failure
-        if: failure()
-        uses: ./.github/actions/notify-slack-publish
+        if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: Play Store
-          version_label: ${{ env.VERSION_NAME || '?' }} (${{ env.VERSION_CODE || '?' }})
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
+          status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
+          title: React Native Example App (Android) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          fields: |
+            Build: ${{ env.VERSION_NAME && format('`{0}` (`{1}`)', env.VERSION_NAME, env.VERSION_CODE) || '`not built`' }}
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
   deploy-ios:
     name: Publish to TestFlight
     runs-on: macos-26
+    timeout-minutes: 45
+    environment:
+      name: testflight
+      url: ${{ steps.result.outputs.testflight_url }}
+    # See deploy-android's concurrency.
+    concurrency:
+      group: publish-example-ios
+      cancel-in-progress: false
+      queue: max
+    needs: [checks, preflight-ios, announce]
+    outputs:
+      marketing_version: ${{ steps.result.outputs.marketing_version }}
+      full_version: ${{ steps.result.outputs.full_version }}
+      build_number: ${{ steps.result.outputs.build_number }}
+      app_id: ${{ steps.result.outputs.app_id }}
+      notes: ${{ steps.result.outputs.notes }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     # Run on release / push always; on workflow_dispatch when platform is
     # `both` or `ios`; on labeled PR when the label is `deploy-example-app`
-    # (umbrella) or `deploy-example-app:ios`.
+    # (umbrella) or `deploy-example-app:ios`. Skipped (not failed) when the
+    # preflight found missing secrets on a push/release trigger.
     if: |
-      github.event_name == 'release'
+      !cancelled()
+      && needs.checks.result == 'success'
+      && (github.event_name == 'release'
       || github.event_name == 'push'
       || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
-      || (github.event_name == 'pull_request' && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios')))
+      && needs.preflight-ios.outputs.ready == 'true'
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Prep example app
+        id: prep
         uses: ./.github/actions/example-publish-prep
         with:
           api_key: ${{ secrets.KLAVIYO_EXAMPLE_API_KEY }}
 
       # The RN Xcode build phase invokes Metro during archive; node + yarn must be on PATH.
       - name: Setup
+        id: setup
         uses: ./.github/actions/setup
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        id: ruby
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
           # ruby-version is read from example/.ruby-version. bundler-cache:true
           # also runs `bundle install --frozen` against example/Gemfile, so
@@ -234,9 +675,19 @@ jobs:
           working-directory: example
           bundler-cache: true
 
+      # setup-ruby switches the job to the example's pinned Ruby, which hides the
+      # runner's preinstalled fastlane and doesn't have it as a gem. Install it
+      # explicitly into the active Ruby so `fastlane` resolves deterministically.
+      # Kept out of example/Gemfile to avoid bloating the CocoaPods-only bundle.
+      - name: Install fastlane
+        id: fastlane
+        shell: bash
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
+
       # Real GoogleService-Info.plist (com.klaviyoreactnativesdkexample) so
       # push delivery works against the published build.
       - name: Inject GoogleService-Info.plist
+        id: google_services
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         shell: bash
@@ -244,22 +695,20 @@ jobs:
 
       # See ios-build.yml's Cache Pods step for the cache-key rationale.
       - name: Cache Pods
-        uses: actions/cache@v5
+        id: cache_pods
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: example/ios/Pods
           key: ${{ runner.os }}-pods-publish-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock', 'example/.ruby-version', '*.podspec') }}
           restore-keys: |
             ${{ runner.os }}-pods-publish-
 
-      # Build the example app against the SDK as `npm install`-ed from a
-      # tarball, not the workspace symlink. Catches `files`-allowlist drift,
-      # podspec path bugs, and stale `lib/` builds before the IPA hits
-      # TestFlight. Cleanup (`restore`) is intentionally skipped — the
-      # runner is ephemeral. See pack-and-test.sh for details. Must run
-      # before "Install CocoaPods dependencies" so that pod install picks
-      # up the packed-mode resolution (marker is set, react-native.config.js
-      # points at example/node_modules/<sdk>).
+      # Builds the example app against the SDK as `npm install`-ed from a
+      # tarball, not the workspace symlink. See pack-and-test.sh. Must run
+      # before "Install CocoaPods dependencies" so pod install picks up the
+      # packed-mode resolution.
       - name: Pack SDK + flip example to packed install
+        id: pack_sdk
         shell: bash
         run: ./pack-and-test.sh setup
 
@@ -271,6 +720,7 @@ jobs:
       # like RCTAppDependencyProvider.h. With pack-and-test having flipped
       # the marker above, this pod install runs in packed mode.
       - name: Install CocoaPods dependencies
+        id: pod_install
         working-directory: example/ios
         shell: bash
         env:
@@ -281,6 +731,7 @@ jobs:
 
       # Apple tools auto-discover the .p8 at this conventional path.
       - name: Write App Store Connect API key
+        id: write_key
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
@@ -291,190 +742,268 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
-      # MARKETING_VERSION is kept in sync with the SDK by bump-version.sh.
-      - name: Read marketing version
-        shell: bash
-        run: |
-          MARKETING_VERSION=$(grep -m1 'MARKETING_VERSION = ' example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj | awk -F' = ' '{print $2}' | tr -d '; ')
-          echo "Marketing version: $MARKETING_VERSION"
-          echo "MARKETING_VERSION=$MARKETING_VERSION" >> $GITHUB_ENV
-
-      # Pick latest+1 CFBundleVersion (mirrors the Android preflight). `jwt`
-      # is installed inline rather than added to example/Gemfile.
-      - name: Resolve next build number from App Store Connect
+      # The ios release lane picks the next build number from TestFlight,
+      # derives the full app version from it, builds, signs (match, read-only)
+      # and uploads, rebuilding with a fresh number and version when the upload
+      # is rejected for a conflict. ssh-agent is started
+      # inline because its env can't cross workflow steps.
+      - name: Build, sign & upload to TestFlight
+        id: build_sign_upload
+        working-directory: example
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          BUNDLE_ID: com.klaviyoreactnativesdkexample
-        shell: bash
-        run: |
-          gem install jwt --no-document --silent
-          ruby <<'RUBY'
-          require 'jwt'
-          require 'json'
-          require 'net/http'
-          require 'openssl'
-          require 'uri'
-
-          key_id    = ENV.fetch('APP_STORE_CONNECT_API_KEY_ID')
-          issuer    = ENV.fetch('APP_STORE_CONNECT_API_KEY_ISSUER_ID')
-          bundle_id = ENV.fetch('BUNDLE_ID')
-
-          p8_path   = File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
-          private_key = OpenSSL::PKey::EC.new(File.read(p8_path))
-
-          now = Time.now.to_i
-          token = JWT.encode(
-            { iss: issuer, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' },
-            private_key,
-            'ES256',
-            { kid: key_id }
-          )
-
-          def get(uri, token)
-            req = Net::HTTP::Get.new(uri, 'Authorization' => "Bearer #{token}")
-            res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |h| h.request(req) }
-            raise "ASC API #{uri}: HTTP #{res.code}\n#{res.body}" unless res.is_a?(Net::HTTPSuccess)
-            JSON.parse(res.body)
-          end
-
-          apps = get(URI("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=#{bundle_id}&limit=1"), token)
-          raise "No app record in App Store Connect for bundleId=#{bundle_id}. Create the app listing first." if apps['data'].empty?
-          app_id = apps['data'][0]['id']
-
-          # Fetch all builds and take the numeric max — `uploadedDate` can
-          # be null. limit=200 is the API max; pagination needed past that.
-          builds = get(URI("https://api.appstoreconnect.apple.com/v1/builds?filter[app]=#{app_id}&limit=200"), token)
-          versions = builds['data'].map { |b| b['attributes']['version'].to_i }
-          latest = versions.empty? ? 0 : versions.max
-          next_build = latest + 1
-
-          puts "Latest TestFlight build for #{bundle_id}: #{latest}"
-          puts "Next build number: #{next_build}"
-          File.open(ENV.fetch('GITHUB_ENV'), 'a') { |f| f.puts "BUILD_NUMBER=#{next_build}" }
-          RUBY
-
-      # agvtool updates CFBundleVersion across all targets.
-      - name: Set build number on project
-        working-directory: example/ios
-        shell: bash
-        run: xcrun agvtool new-version -all "$BUILD_NUMBER"
-
-      # Team ID is stamped from a secret (checked-in plist uses a placeholder).
-      # signingCertificate is forced to "Apple Distribution" so exportArchive
-      # doesn't fall back to the legacy "iOS Distribution" cert family.
-      - name: Stamp signing config into ExportOptions.plist
-        working-directory: example/ios
-        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        shell: bash
-        run: |
-          /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist
-          # PlistBuddy errors on Add when the key exists, so try Add then Set.
-          /usr/libexec/PlistBuddy -c "Add :signingCertificate string Apple Distribution" ExportOptions.plist 2>/dev/null \
-            || /usr/libexec/PlistBuddy -c "Set :signingCertificate Apple Distribution" ExportOptions.plist
-
-      # Cloud-managed signing: -allowProvisioningUpdates lets xcodebuild
-      # register/refresh the distribution cert and provisioning profiles
-      # via App Store Connect using the API key flags.
-      - name: Archive
-        working-directory: example/ios
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          # RN build-phase scripts read this directly to wire codegen outputs.
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           RCT_NEW_ARCH_ENABLED: '1'
-          # Prevent Metro from starting a dev server.
-          CI: true
+          CI: 'true'
         shell: bash
         run: |
-          # DO NOT `rm -rf ./build` — pod install writes new-arch codegen
-          # headers (RCTAppDependencyProvider.h etc.) into ./build/generated/ios
-          # and xcodebuild reads them from there during archive.
-          rm -rf KlaviyoReactNativeSdkExample.xcarchive
-          # `-destination "generic/platform=iOS"` pins archive to iOS device.
-          # Without it, xcodebuild picks "My Mac" (Designed-for-iPad scheme
-          # on Apple Silicon advertises it as valid) and uses Development
-          # signing rules.
-          xcodebuild -workspace KlaviyoReactNativeSdkExample.xcworkspace \
-            -scheme KlaviyoReactNativeSdkExample \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            archive -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$MATCH_DEPLOY_KEY" | ssh-add -
+          CERT_P12_PATH="$RUNNER_TEMP/dist.p12"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 -d > "$CERT_P12_PATH"
+          export CERT_P12_PATH
+          fastlane ios release
 
-      - name: Export IPA
-        working-directory: example/ios
-        env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-        shell: bash
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath KlaviyoReactNativeSdkExample.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+      # What to Test is composed here, after the final upload, so it carries
+      # the build number that actually shipped. 4000 chars is App Store
+      # Connect's whatsNew cap.
+      - name: Prepare release notes
+        id: release_notes
+        uses: ./.github/actions/example-release-notes
+        with:
+          max_length: 4000
+          platform: ios
 
-      # altool with the API key — no Apple ID / app-specific password / 2FA dance.
-      - name: Upload to TestFlight
-        working-directory: example/ios
-        env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+      - name: Record uploaded version
+        id: result
         shell: bash
+        env:
+          NOTES_FILE: ${{ steps.release_notes.outputs.notes_file }}
         run: |
-          xcrun altool --upload-app --type ios \
-            --file "build/KlaviyoReactNativeSdkExample.ipa" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+          DELIM="EOF-$RANDOM-$RANDOM"
+          {
+            echo "marketing_version=$MARKETING_VERSION"
+            echo "full_version=$FULL_VERSION"
+            echo "build_number=$BUILD_NUMBER"
+            echo "app_id=$ASC_APP_ID"
+            echo "testflight_url=https://beta.itunes.apple.com/v1/app/$ASC_APP_ID"
+            echo "notes<<$DELIM"
+            cat "$NOTES_FILE"
+            echo ""
+            echo "$DELIM"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Clean up API key
         if: always()
         shell: bash
         run: rm -rf "$HOME/.appstoreconnect/private_keys"
 
+      - name: Clean up distribution certificate, ssh key and config files
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/dist.p12" example/ios/GoogleService-Info.plist example/.env
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh-add -D 2>/dev/null || true
+            ssh-agent -k 2>/dev/null || true
+          fi
+
+      - name: Classify cancellation
+        id: stop
+        if: cancelled()
+        env:
+          TIMEOUT_MINUTES: 45
+        run: |
+          elapsed=$(( $(date +%s) - ${JOB_START:-$(date +%s)} ))
+          if [ "$elapsed" -ge $(( TIMEOUT_MINUTES * 60 - 60 )) ]; then
+            echo "timed_out=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find failed step
+        id: failed
+        if: failure() || cancelled()
+        env:
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: |
+          step=$(jq -r '
+            {
+              checkout: "Checkout repository",
+              prep: "Prep example app",
+              setup: "Setup",
+              ruby: "Set up Ruby",
+              fastlane: "Install fastlane",
+              google_services: "Inject GoogleService-Info.plist",
+              cache_pods: "Cache Pods",
+              pack_sdk: "Pack SDK + flip example to packed install",
+              pod_install: "Install CocoaPods dependencies",
+              write_key: "Write App Store Connect API key",
+              build_sign_upload: "Build, sign & upload to TestFlight",
+              release_notes: "Prepare release notes",
+              result: "Record uploaded version"
+            } as $names
+            | ([to_entries[] | select(.value.conclusion == "failure" or .value.conclusion == "cancelled")][0].key) as $key
+            | if $key == null then "unknown step" else ($names[$key] // $key) end
+          ' <<<"$STEPS_JSON")
+          echo "step=$step" >> "$GITHUB_OUTPUT"
+
       - name: Notify Slack on success
         if: success()
-        uses: ./.github/actions/notify-slack-publish
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: success
-          platform: TestFlight
-          version_label: ${{ env.MARKETING_VERSION }} (${{ env.BUILD_NUMBER }})
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
+          status: success
+          title: React Native Example App (iOS) uploaded to TestFlight
+          body: Install version `${{ env.FULL_VERSION }}` (`${{ env.BUILD_NUMBER }}`) once Apple finishes processing it, usually 5–30 min after upload.
+          fields: |
+            Build: `${{ env.FULL_VERSION }}` (`${{ env.BUILD_NUMBER }}`)
+            SDKs: `${{ steps.release_notes.outputs.sdks }}`
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: |
+            TestFlight|${{ steps.result.outputs.testflight_url }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
 
       - name: Notify Slack on failure
-        if: failure()
-        uses: ./.github/actions/notify-slack-publish
+        if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          result: failure
-          platform: TestFlight
-          version_label: ${{ env.MARKETING_VERSION || '?' }} (${{ env.BUILD_NUMBER || '?' }})
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
+          status: ${{ job.status == 'cancelled' && 'stopped' || 'failure' }}
+          title: React Native Example App (iOS) deploy ${{ job.status == 'cancelled' && 'timed out' || 'failed' }} at ${{ steps.failed.outputs.step }}
+          fields: |
+            Build: ${{ env.FULL_VERSION && format('`{0}` (`{1}`)', env.FULL_VERSION, env.BUILD_NUMBER) || '`not built`' }}
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}
+
+  what-to-test:
+    name: Set TestFlight "What to Test"
+    needs: [deploy-ios, announce]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    if: |
+      !cancelled() && needs.deploy-ios.result == 'success' && (
+        github.event_name == 'release'
+        || github.event_name == 'push'
+        || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+        || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.label.name == 'deploy-example-app' || github.event.label.name == 'deploy-example-app:ios'))
+      )
+    steps:
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        id: setup_ruby
+        continue-on-error: true
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        with:
+          ruby-version: '3.2'
+
+      - name: Write App Store Connect API key
+        id: write_key
+        continue-on-error: true
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        shell: bash
+        run: |
+          KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEY_DIR"
+          echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          chmod 600 "$KEY_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+
+      - name: Save What to Test notes
+        id: save_notes
+        continue-on-error: true
+        shell: bash
+        env:
+          NOTES: ${{ needs.deploy-ios.outputs.notes }}
+        run: printf '%s' "$NOTES" > "$GITHUB_WORKSPACE/what-to-test.txt"
+
+      - name: Install fastlane
+        id: install_fastlane
+        if: steps.setup_ruby.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: gem install -g .github/pins/fastlane/Gemfile --no-document
+
+      - name: Set What to Test on the uploaded build
+        id: set_whats_new
+        if: steps.setup_ruby.outcome == 'success' && steps.install_fastlane.outcome == 'success' && steps.write_key.outcome == 'success' && steps.save_notes.outcome == 'success'
+        continue-on-error: true
+        working-directory: example
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          MARKETING_VERSION: ${{ needs.deploy-ios.outputs.marketing_version }}
+          BUILD_NUMBER: ${{ needs.deploy-ios.outputs.build_number }}
+          NOTES_FILE: ${{ github.workspace }}/what-to-test.txt
+        shell: bash
+        run: fastlane ios whats_new
+
+      - name: Clean up API key
+        if: always()
+        shell: bash
+        run: rm -rf "$HOME/.appstoreconnect/private_keys"
+
+      # The build is already on TestFlight; a failure here only costs the
+      # notes, so warn instead of failing the run.
+      - name: Warn on Slack when What to Test failed
+        if: steps.setup_ruby.outcome == 'failure' || steps.install_fastlane.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
+        continue-on-error: true
+        uses: ./.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
+          status: warning
+          title: React Native Example App (iOS) uploaded to TestFlight, but setting What to Test failed
+          fields: |
+            Build: `${{ needs.deploy-ios.outputs.full_version }}` (`${{ needs.deploy-ios.outputs.build_number }}`)
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
 
   # Remove the deploy-example-app[:platform] label after the run so reapplying
   # re-triggers. Handles all three variants: umbrella, :android, :ios.
   cleanup-label:
     name: Remove deploy-example-app label
-    needs: [deploy-android, deploy-ios]
+    needs:
+      [checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
     if: |
       always()
       && github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
       && startsWith(github.event.label.name, 'deploy-example-app')
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       pull-requests: write
     steps:
       - name: Remove label
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           LABEL_NAME: ${{ github.event.label.name }}
         with:
@@ -490,3 +1019,113 @@ jobs:
               // 404 = label already gone (e.g. removed manually mid-run).
               if (e.status !== 404) throw e;
             }
+
+  # Edits the message that `announce` posted to its final result. A failed gate
+  # (supersede-push-runs, checks or a preflight) skips both deploys, so it is
+  # reported here as blocked.
+  report:
+    name: Update the deploy message
+    needs:
+      [announce, progress, supersede-push-runs, checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
+    if: always() && (needs.announce.outputs.slack_ts != '' || inputs.slack_thread_ts != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Compute short commit
+        env:
+          SHA: ${{ env.COMMIT_SHA }}
+        run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Classify the deploy
+        id: result
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUPERSEDE: ${{ needs.supersede-push-runs.result }}
+          CHECKS: ${{ needs.checks.result }}
+          ANDROID: ${{ needs.deploy-android.result }}
+          IOS: ${{ needs.deploy-ios.result }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          gate_names=$(jq -r '
+            {
+              "supersede-push-runs": "`Cancel superseded master publishes`",
+              checks: "`Lint, test and build the library`",
+              "preflight-android": "`Check Android deploy secrets`",
+              "preflight-ios": "`Check iOS deploy secrets`"
+            } as $names
+            | [to_entries[] | select($names[.key] != null and .value.result == "failure") | $names[.key]]
+            | join(", ")
+          ' <<<"$NEEDS_JSON")
+          describe() {
+            case "$1" in
+              success) echo "deployed" ;;
+              failure) echo "failed" ;;
+              cancelled) echo "stopped" ;;
+              *) echo "not deployed" ;;
+            esac
+          }
+          {
+            echo "android=$(describe "$ANDROID")"
+            echo "ios=$(describe "$IOS")"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$ANDROID" = failure ] || [ "$IOS" = failure ]; then
+            status=failure; title="React Native Example App deploy failed"
+          elif [ -n "$gate_names" ]; then
+            status=failure; title="React Native Example App deploy blocked, $gate_names failed"
+          elif [ "$ANDROID" = cancelled ] || [ "$IOS" = cancelled ] || [ "$CHECKS" = cancelled ] || [ "$SUPERSEDE" = cancelled ]; then
+            timed_out=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" --jq '
+              [.jobs[]
+                | select(.name == "Publish to Play Store internal track" or .name == "Publish to TestFlight")
+                | select(.conclusion == "cancelled" and .started_at != null and .completed_at != null)
+                | select((.completed_at | fromdate) - (.started_at | fromdate) >= 45 * 60 - 60)]
+              | length' || echo 0)
+            status=stopped
+            if [ "$timed_out" != 0 ]; then
+              title="React Native Example App deploy timed out"
+            else
+              title="React Native Example App deploy cancelled"
+            fi
+          elif [ "$ANDROID" != success ] && [ "$IOS" != success ]; then
+            status=info; title="React Native Example App deploy skipped, nothing deployed"
+          else
+            status=success; title="React Native Example App deployed"
+          fi
+          {
+            echo "status=$status"
+            echo "title=$title"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Slack action
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+          path: _slack
+
+      - name: Update the Slack deploy message
+        continue-on-error: true
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.announce.outputs.slack_ts }}
+          thread_ts: ${{ inputs.slack_thread_ts }}
+          status: ${{ steps.result.outputs.status }}
+          title: ${{ steps.result.outputs.title }}
+          body: ${{ (needs.deploy-android.result != 'skipped' || needs.deploy-ios.result != 'skipped') && 'Details for each platform are in the thread.' || '' }}
+          fields: |
+            Android: ${{ steps.result.outputs.android }}
+            iOS: ${{ steps.result.outputs.ios }}
+            Source: `${{ env.SOURCE_LABEL }}` (${{ github.event_name }})
+            Commit: `${{ env.SHORT_SHA }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+            ${{ github.event.pull_request && github.event.pull_request.user.login != env.TRIGGERED_BY && format('PR author: `{0}`', github.event.pull_request.user.login) || '' }}
+          links: |
+            ${{ github.event.pull_request.html_url && format('Pull request|{0}', github.event.pull_request.html_url) || '' }}
+            Commit|${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}

@@ -31,6 +31,31 @@ swift_version=""
 skip_native=false
 skip_install=false
 
+# In-place sed that works with both BSD (macOS) and GNU (Linux) sed.
+sed_inplace() {
+  local file="${@: -1}"
+  sed -i.bak "$@" && rm -f "$file.bak"
+}
+
+# Sets a top-level string key in a plist. PlistBuddy is macOS-only, so fall
+# back to python3 there.
+set_plist_value() { # plist-file key value
+  if [ -x /usr/libexec/PlistBuddy ]; then
+    /usr/libexec/PlistBuddy -c "Set :$2 $3" "$1"
+  else
+    python3 - "$1" "$2" "$3" <<'PY'
+import plistlib, sys
+
+path, key, value = sys.argv[1:4]
+with open(path, 'rb') as f:
+    data = plistlib.load(f)
+data[key] = value
+with open(path, 'wb') as f:
+    plistlib.dump(data, f)
+PY
+  fi
+}
+
 require_arg() {
   if [[ -z "${2:-}" || "$2" =~ ^- ]]; then
     echo "Error: $1 requires a version argument" >&2
@@ -56,6 +81,16 @@ if [[ -z "$new_version" ]]; then
   read -rp "Enter the new React SDK version: " new_version
 fi
 
+# Apple requires CFBundleShortVersionString to be numeric, so a prerelease
+# suffix (e.g. -rc.1) or +build metadata must not reach the pbxproj. The
+# strip/validate rule matches sdk_base_version in example/fastlane/Fastfile,
+# which derives the CI app version from the same package version.
+marketing_version="${new_version%%[-+]*}"
+if [[ ! "$marketing_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: version '$new_version' does not strip to a numeric X.Y.Z marketing version (got '$marketing_version')." >&2
+  exit 1
+fi
+
 if [[ -f "package.json" ]]; then
   jq --arg newVersion "$new_version" '.version = $newVersion' package.json > tmp.json && mv tmp.json package.json
   echo "Updated SDK version in package.json."
@@ -67,7 +102,7 @@ fi
 # Update klaviyo_sdk_version in iOS plist file
 plist_file="ios/klaviyo-sdk-configuration.plist"
 if [[ -f "$plist_file" ]]; then
-  /usr/libexec/PlistBuddy -c "Set :klaviyo_sdk_version $new_version" "$plist_file"
+  set_plist_value "$plist_file" klaviyo_sdk_version "$new_version"
   echo "Updated klaviyo_sdk_version in $plist_file."
 else
   echo "Error: $plist_file not found."
@@ -77,7 +112,7 @@ fi
 # Update klaviyo_sdk_version_override in Android strings.xml
 android_strings="android/src/main/res/values/strings.xml"
 if [[ -f "$android_strings" ]]; then
-  sed -i '' "s/<string name=\"klaviyo_sdk_version_override\">.*<\/string>/<string name=\"klaviyo_sdk_version_override\">$new_version<\/string>/" "$android_strings"
+  sed_inplace "s/<string name=\"klaviyo_sdk_version_override\">.*<\/string>/<string name=\"klaviyo_sdk_version_override\">$new_version<\/string>/" "$android_strings"
   echo "Updated klaviyo_sdk_version_override in $android_strings."
 else
   echo "Error: $android_strings not found."
@@ -89,7 +124,7 @@ fi
 # uploads carry the SDK version they're demonstrating.
 example_android_gradle="example/android/app/build.gradle"
 if [[ -f "$example_android_gradle" ]]; then
-  sed -i '' "s/versionName \"[^\"]*\"/versionName \"$new_version\"/" "$example_android_gradle"
+  sed_inplace "s/versionName \"[^\"]*\"/versionName \"$new_version\"/" "$example_android_gradle"
   echo "Updated example app versionName in $example_android_gradle."
 else
   echo "Error: $example_android_gradle not found."
@@ -98,8 +133,8 @@ fi
 
 example_ios_pbxproj="example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj"
 if [[ -f "$example_ios_pbxproj" ]]; then
-  sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $new_version;/g" "$example_ios_pbxproj"
-  echo "Updated example app MARKETING_VERSION in $example_ios_pbxproj."
+  sed_inplace "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $marketing_version;/g" "$example_ios_pbxproj"
+  echo "Updated example app MARKETING_VERSION to $marketing_version (stripped from $new_version) in $example_ios_pbxproj."
 else
   echo "Error: $example_ios_pbxproj not found."
   exit 1
@@ -120,48 +155,7 @@ else
     read -rp "Enter the Swift SDK version: " swift_version
   fi
 
-  # Reset any local SDK overrides before re-pinning. Re-uses configure-sdk.sh
-  # as the single source of truth for cleanup logic. This handles:
-  #   - Android: stale `# saved:` comments, localCompositeBuild flags
-  #   - iOS: Podfile pod entries, commented podspec pins, KlaviyoSwiftExtension overrides
-  echo "Resetting iOS and Android overrides via configure-sdk.sh..."
-  ./configure-sdk.sh --android gradle.properties --ios podspec --skip-pod-install
-
-  gradle_properties="./android/gradle.properties"
-  if [[ -f "$gradle_properties" ]]; then
-    sed -i '' "s/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=.*/KlaviyoReactNativeSdk_klaviyoAndroidSdkVersion=$android_version/" "$gradle_properties"
-    echo "Updated Android SDK version in $gradle_properties."
-  else
-    echo "Error: $gradle_properties not found."
-    exit 1
-  fi
-
-  # Pin KlaviyoSwift, KlaviyoForms, KlaviyoLocation in the podspec.
-  # Accepts any of these starting forms per dep line (configure-sdk.sh can leave
-  # the second form behind when overriding to a branch/path; the bare form is
-  # what lands when working against an unreleased native version):
-  #   s.dependency "Name"
-  #   s.dependency "Name" ##, "old"
-  #   s.dependency "Name", "old"
-  # All three are normalized to: s.dependency "Name", "$swift_version"
-  podspec_file="klaviyo-react-native-sdk.podspec"
-  if [[ -f "$podspec_file" ]]; then
-    for dep in KlaviyoSwift KlaviyoForms KlaviyoLocation; do
-      # 1. Strip any existing pin or commented pin -> bare
-      sed -i '' -E "s/(s\\.dependency \"$dep\")( ##)?, \"[^\"]*\"/\\1/" "$podspec_file"
-      # 2. Append the new pin to the bare line
-      sed -i '' -E "s/(s\\.dependency \"$dep\")\$/\\1, \"$swift_version\"/" "$podspec_file"
-      # 3. Verify -- fail loud rather than silently shipping unpinned
-      if ! grep -qE "s\\.dependency \"$dep\", \"$swift_version\"" "$podspec_file"; then
-        echo "Error: failed to pin $dep to $swift_version in $podspec_file." >&2
-        exit 1
-      fi
-    done
-    echo "Pinned KlaviyoSwift, KlaviyoForms, and KlaviyoLocation to $swift_version in $podspec_file."
-  else
-    echo "Error: $podspec_file not found."
-    exit 1
-  fi
+  ./configure-sdk.sh --android "$android_version" --ios "$swift_version" --skip-pod-install
 fi
 
 # --- Install steps (skippable) ---

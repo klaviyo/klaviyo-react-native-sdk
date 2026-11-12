@@ -5,7 +5,6 @@ import KlaviyoForms
 #if canImport(KlaviyoLocation)
 @_spi(KlaviyoPrivate) import KlaviyoLocation
 #endif
-@_spi(KlaviyoPrivate) import KlaviyoCore
 
 @objc
 public class KlaviyoBridge: NSObject {
@@ -72,6 +71,16 @@ public class KlaviyoBridge: NSObject {
         KlaviyoSDK().initialize(with: apiKey)
     }
 
+    @objc
+    public static func setLoggingEnabled(_ enabled: Bool) {
+        _ = KlaviyoSDK().setLoggingEnabled(enabled)
+    }
+
+    @objc
+    public static func isLoggingEnabled() -> Bool {
+        return KlaviyoSDK().isLoggingEnabled
+    }
+
     @MainActor
     @objc
     public static func registerForInAppForms(configuration: [String: AnyObject]? = nil) {
@@ -122,6 +131,129 @@ public class KlaviyoBridge: NSObject {
         #if canImport(KlaviyoForms)
         KlaviyoSDK().unregisterFormLifecycleHandler()
         #endif
+    }
+
+    // MARK: - Auth token bridging
+
+    /// Pending auth token requests keyed by correlation ID. The native SDK's
+    /// async provider closure suspends on a continuation stored here until the
+    /// JS side responds (or the request is cancelled by the SDK's timeout).
+    ///
+    /// A `CheckedContinuation` must be resumed exactly once. All access is
+    /// serialized through `authTokenLock`, and every resume path first removes
+    /// the entry from the dictionary — whichever path removes it wins and
+    /// resumes; any later path finds nothing and is a no-op.
+    private static var pendingAuthTokenRequests: [String: CheckedContinuation<String, Error>] = [:]
+    private static let authTokenLock = NSLock()
+
+    /// Registers a wrapper-owned auth token provider with the native SDK. When
+    /// the SDK invokes the provider, this generates a correlation ID, emits it
+    /// to JS via `emit`, and suspends until the JS side responds through
+    /// `respondToAuthTokenRequest(id:jwt:error:)`.
+    ///
+    /// The token itself never crosses through here in a loggable form and is
+    /// never logged; all token logging happens in the native SDK.
+    @objc
+    public static func registerAuthTokenProvider(emit: @escaping @Sendable ([String: Any]) -> Bool) {
+        KlaviyoSDK().registerAuthTokenProvider { () async throws -> String in
+            let id = UUID().uuidString
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    authTokenLock.lock()
+                    pendingAuthTokenRequests[id] = continuation
+                    authTokenLock.unlock()
+                    if !emit(["id": id]) {
+                        // The JS bridge is unavailable (module deallocated), so
+                        // no response will arrive. Fail fast instead of waiting
+                        // for the SDK timeout, and evict so nothing leaks.
+                        authTokenLock.lock()
+                        let pending = pendingAuthTokenRequests.removeValue(forKey: id)
+                        authTokenLock.unlock()
+                        pending?.resume(throwing: authTokenError(
+                            "Unable to reach the JS auth token provider (bridge unavailable)"
+                        ))
+                    }
+                }
+            } onCancel: {
+                // The SDK cancels the provider task on timeout. Resolve the
+                // continuation with cancellation and evict it so nothing leaks.
+                //
+                // If cancellation lands in the narrow window before the
+                // operation stores the continuation, this finds nothing to
+                // remove (a safe no-op) and the operation still stores + emits
+                // afterward. That only costs a spurious `authTokenRequested`
+                // event: the SDK re-checks cancellation after the provider
+                // returns and discards the stale token before caching it.
+                authTokenLock.lock()
+                let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
+                authTokenLock.unlock()
+                continuation?.resume(throwing: CancellationError())
+            }
+        }
+    }
+
+    @objc
+    public static func unregisterAuthTokenProvider() {
+        KlaviyoSDK().unregisterAuthTokenProvider()
+        // Defense-in-depth + parity with Android: proactively fail any pending
+        // requests. The SDK's unregister cancels the in-flight fetch (which
+        // trips the `onCancel` above), but draining here doesn't rely on that
+        // cross-module behavior. The lock-guarded remove keeps resolution
+        // exactly-once — whichever path claims a continuation first wins.
+        failAllPendingAuthTokenRequests(reason: "Auth token provider was unregistered")
+    }
+
+    private static func failAllPendingAuthTokenRequests(reason: String) {
+        authTokenLock.lock()
+        let pending = pendingAuthTokenRequests
+        pendingAuthTokenRequests.removeAll()
+        authTokenLock.unlock()
+        for (_, continuation) in pending {
+            continuation.resume(throwing: authTokenError(reason))
+        }
+    }
+
+    private static func authTokenError(_ message: String) -> NSError {
+        NSError(
+            domain: "KlaviyoReactNativeSdk",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    /// Resolves a pending auth token request. Called from JS once the host
+    /// provider has produced a token (`jwt`) or failed (`error`). Unknown or
+    /// already-resolved IDs are ignored.
+    ///
+    /// When `isConnectivityError` is `true`, the failure is surfaced as a
+    /// `URLError` with a connectivity code so the SDK's connectivity-driven
+    /// refresh retry (which classifies via `URLError.isConnectivityError`)
+    /// recognizes it. Other failures use a generic error, which the SDK treats
+    /// as non-retryable.
+    @objc
+    public static func respondToAuthTokenRequest(id: String, jwt: String?, error: String?, isConnectivityError: Bool) {
+        authTokenLock.lock()
+        let continuation = pendingAuthTokenRequests.removeValue(forKey: id)
+        authTokenLock.unlock()
+
+        guard let continuation else {
+            // Already resolved/cancelled, or never existed. Nothing to do.
+            return
+        }
+
+        if let jwt {
+            continuation.resume(returning: jwt)
+        } else {
+            let message = error ?? "Auth token provider returned no token"
+            if isConnectivityError {
+                continuation.resume(throwing: URLError(
+                    .notConnectedToInternet,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
+            } else {
+                continuation.resume(throwing: authTokenError(message))
+            }
+        }
     }
 
     @MainActor
@@ -281,6 +413,123 @@ public class KlaviyoBridge: NSObject {
         )
 
         KlaviyoSDK().create(event: event)
+    }
+
+    /// Subscribes the current profile to a Klaviyo list.
+    ///
+    /// The payload mirrors the wire format the Android bridge reads, so both platforms accept an
+    /// identical dictionary from JS.
+    @objc
+    public static func createSubscription(subscription: [String: AnyObject]) {
+        guard let listId = subscription["listId"] as? String,
+              !listId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            NSLog("[Klaviyo] Error: Subscription listId is required")
+            return
+        }
+
+        let customSource = subscription["customSource"] as? String
+
+        // Only a *missing* channels key means "all available marketing" — the broad grant is
+        // reachable solely through the named factory on this SDK and the JS layer. An absent key
+        // subscripts to nil; a JS `null` bridges to NSNull, which is a malformed value rather than
+        // an omission and must not reach the fallback below.
+        guard let channelsValue = subscription["channels"] else {
+            KlaviyoSDK().create(
+                subscription: .allAvailableMarketing(listId: listId, customSource: customSource)
+            )
+            return
+        }
+
+        // Present but not an object — including NSNull — is malformed, and is rejected rather than
+        // quietly widening consent to every identified channel. Matches Android, which rejects a
+        // present non-Map channels value.
+        guard let channelsDict = channelsValue as? [String: AnyObject] else {
+            NSLog("[Klaviyo] Error: Subscription channels must be an object when present")
+            return
+        }
+
+        let channels = Subscription.Channels(
+            email: emailConsent(from: channelsDict, key: "email"),
+            sms: messagingConsent(from: channelsDict, key: "sms"),
+            whatsapp: messagingConsent(from: channelsDict, key: "whatsapp")
+        )
+
+        KlaviyoSDK().create(
+            subscription: Subscription(listId: listId, channels: channels, customSource: customSource)
+        )
+    }
+
+    /// Reads one channel's consent array off the JS payload, or `nil` when the key is absent so
+    /// that channel is left untouched. An empty array stays empty, so the native SDK's own
+    /// validation reports it rather than this bridge silently dropping the channel.
+    ///
+    /// A present-but-wrong-type value (e.g. a string instead of an array) is also treated as an
+    /// omitted channel, but unlike a genuinely absent key, it's warned about first: silently
+    /// applying the same behavior as "not specified" could otherwise mask a caller mistake.
+    ///
+    /// A non-string entry is skipped individually rather than discarding the whole channel, so a
+    /// partially malformed array still applies the consent values it does carry. Only a direct
+    /// native caller can reach this — the TypeScript layer rejects the input first. Android drops
+    /// entries the same way.
+    private static func consentValues(from channels: [String: AnyObject], key: String) -> [String]? {
+        guard let rawValue = channels[key] else { return nil }
+
+        guard let rawValues = rawValue as? [AnyObject] else {
+            NSLog("[Klaviyo] Warning: Ignoring non-array \(key) consent value")
+            return nil
+        }
+
+        return rawValues.compactMap { rawValue in
+            guard let stringValue = rawValue as? String else {
+                NSLog("[Klaviyo] Warning: Ignoring non-string \(key) consent entry")
+                return nil
+            }
+            return stringValue
+        }
+    }
+
+    /// Maps one channel's JS consent array onto ``Subscription/Channels/Email``.
+    ///
+    /// An unrecognized value is skipped rather than failing the whole request: skipping only ever
+    /// narrows the consent granted, and it keeps a newer JS layer from breaking against an older
+    /// native SDK. Android skips unknown values the same way.
+    private static func emailConsent(
+        from channels: [String: AnyObject],
+        key: String
+    ) -> Subscription.Channels.Email? {
+        guard let rawValues = consentValues(from: channels, key: key) else { return nil }
+
+        var consent: Subscription.Channels.Email = []
+        for rawValue in rawValues {
+            switch rawValue {
+            case "marketing": consent.insert(.marketing)
+            case "open_tracking": consent.insert(.openTracking)
+            default:
+                NSLog("[Klaviyo] Warning: Ignoring unrecognized \(key) consent type '\(rawValue)'")
+                continue
+            }
+        }
+        return consent
+    }
+
+    /// SMS/WhatsApp counterpart to ``emailConsent(from:key:)``.
+    private static func messagingConsent(
+        from channels: [String: AnyObject],
+        key: String
+    ) -> Subscription.Channels.Messaging? {
+        guard let rawValues = consentValues(from: channels, key: key) else { return nil }
+
+        var consent: Subscription.Channels.Messaging = []
+        for rawValue in rawValues {
+            switch rawValue {
+            case "marketing": consent.insert(.marketing)
+            case "transactional": consent.insert(.transactional)
+            default:
+                NSLog("[Klaviyo] Warning: Ignoring unrecognized \(key) consent type '\(rawValue)'")
+                continue
+            }
+        }
+        return consent
     }
 
     static func getEventMetricsName(_ str: String) -> Event.EventName? {

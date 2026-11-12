@@ -2,6 +2,12 @@ import { NativeModules } from 'react-native';
 import { Klaviyo } from '../index';
 import { EventName } from '../Event';
 import { ProfileProperty } from '../Profile';
+import {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from '../Subscription';
 
 // Store event listeners for testing NativeEventEmitter
 const eventListeners: Record<string, Array<(data: any) => void>> = {};
@@ -13,6 +19,8 @@ jest.mock('react-native', () => {
     NativeModules: {
       KlaviyoReactNativeSdk: {
         initialize: jest.fn(),
+        setLoggingEnabled: jest.fn(),
+        isLoggingEnabled: jest.fn(),
         setProfile: jest.fn(),
         setExternalId: jest.fn(),
         getExternalId: jest.fn(),
@@ -26,10 +34,14 @@ jest.mock('react-native', () => {
         setPushToken: jest.fn(),
         getPushToken: jest.fn(),
         createEvent: jest.fn(),
+        createSubscription: jest.fn(),
         registerForInAppForms: jest.fn(),
         unregisterFromInAppForms: jest.fn(),
         registerFormLifecycleHandler: jest.fn(),
         unregisterFormLifecycleHandler: jest.fn(),
+        registerAuthTokenProvider: jest.fn(),
+        unregisterAuthTokenProvider: jest.fn(),
+        respondToAuthTokenRequest: jest.fn(),
         registerGeofencing: jest.fn(),
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
@@ -117,6 +129,38 @@ describe('Klaviyo SDK', () => {
       expect(
         NativeModules.KlaviyoReactNativeSdk.initialize
       ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('SDK logging', () => {
+    it('should call the native setLoggingEnabled method with the provided value', () => {
+      Klaviyo.setLoggingEnabled(false);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledWith(false);
+
+      Klaviyo.setLoggingEnabled(true);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledWith(true);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.setLoggingEnabled
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it('should get logging state through callback correctly', () => {
+      const callback = jest.fn();
+      Klaviyo.isLoggingEnabled(callback);
+
+      // Simulate the native callback invocation
+      const isLoggingEnabledCall =
+        NativeModules.KlaviyoReactNativeSdk.isLoggingEnabled.mock.calls[0][0];
+      isLoggingEnabledCall(true);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.isLoggingEnabled
+      ).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledWith(true);
     });
   });
 
@@ -833,6 +877,526 @@ describe('Klaviyo SDK', () => {
         expect.stringContaining('missing required field(s): deepLinkUrl')
       );
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('auth token provider', () => {
+    // The event listener is async (awaits the host provider), so tests must
+    // flush the microtask queue after emitting before asserting on the
+    // resulting `respondToAuthTokenRequest` call.
+    const flushPromises = () => new Promise(process.nextTick);
+
+    it('registers the native provider and subscribes to the request event', () => {
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('jwt-123'));
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.registerAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('invokes the provider and responds with the jwt on success', async () => {
+      const provider = jest.fn().mockResolvedValue('jwt-abc');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-1' });
+      await flushPromises();
+
+      expect(provider).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-1', { jwt: 'jwt-abc' });
+    });
+
+    it('routes an empty-string resolution through the failure path', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest.fn().mockResolvedValue('');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-empty' });
+      await flushPromises();
+
+      const call = (
+        NativeModules.KlaviyoReactNativeSdk
+          .respondToAuthTokenRequest as jest.Mock
+      ).mock.calls[0];
+      expect(call[0]).toBe('req-empty');
+      expect(call[1]).not.toHaveProperty('jwt');
+      // The empty resolution is routed through the failure path; the forwarded
+      // error is the redacted type (the thrown Error), not raw text.
+      expect(call[1].error).toBe('Error');
+      expect(call[1].isConnectivityError).toBe(false);
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('responds with a redacted error type when the provider rejects', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      // Host error text (which could contain the JWT) must not be forwarded —
+      // only the error type is sent to native.
+      const provider = jest
+        .fn()
+        .mockRejectedValue(new Error('auth server down token=secret'));
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-2' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-2', {
+        error: 'Error',
+        isConnectivityError: false,
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('flags connectivity errors so native can arm retry', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest
+        .fn()
+        .mockRejectedValue(new TypeError('Network request failed'));
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-net' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-net', {
+        error: 'TypeError',
+        isConnectivityError: true,
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('honors an explicit isConnectivityError marker on the rejection', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const provider = jest
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new Error('offline'), { isConnectivityError: true })
+        );
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-marker' });
+      await flushPromises();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).toHaveBeenCalledWith('req-marker', {
+        error: 'Error',
+        isConnectivityError: true,
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not log the token contents on success', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      Klaviyo.registerAuthTokenProvider(() => Promise.resolve('secret-jwt'));
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-3' });
+      await flushPromises();
+
+      for (const spy of [consoleWarnSpy, consoleErrorSpy, consoleLogSpy]) {
+        for (const call of spy.mock.calls) {
+          expect(call.join(' ')).not.toContain('secret-jwt');
+        }
+      }
+      consoleWarnSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('ignores requests with a missing or empty id', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', {});
+      emitNativeEvent('klaviyo:authTokenRequested', { id: '' });
+      await flushPromises();
+
+      expect(provider).not.toHaveBeenCalled();
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid id')
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('unregisters the native provider and removes the listener', () => {
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+      // Clear counts from registration (which may tear down a leftover
+      // subscription from a prior test) so we assert only the explicit
+      // unregister call below.
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterAuthTokenProvider as jest.Mock
+      ).mockClear();
+
+      Klaviyo.unregisterAuthTokenProvider();
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops forwarding requests after unregistering', async () => {
+      const provider = jest.fn().mockResolvedValue('jwt');
+      Klaviyo.registerAuthTokenProvider(provider);
+      Klaviyo.unregisterAuthTokenProvider();
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-4' });
+      await flushPromises();
+
+      expect(provider).not.toHaveBeenCalled();
+    });
+
+    it('drops a token fetched after the provider is unregistered mid-flight', async () => {
+      // A slow provider that resolves after the user has logged out
+      // (unregister) must not hand the now-stale token to native.
+      let resolveProvider!: (value: string) => void;
+      const provider = jest.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveProvider = resolve;
+          })
+      );
+      Klaviyo.registerAuthTokenProvider(provider);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-inflight' });
+      // provider() is now in flight; log out before it resolves.
+      Klaviyo.unregisterAuthTokenProvider();
+      resolveProvider('jwt-after-logout');
+      await flushPromises();
+
+      expect(provider).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.respondToAuthTokenRequest
+      ).not.toHaveBeenCalled();
+    });
+
+    it('replaces the previous listener when re-registering', () => {
+      const provider1 = jest.fn().mockResolvedValue('jwt-1');
+      const provider2 = jest.fn().mockResolvedValue('jwt-2');
+
+      Klaviyo.registerAuthTokenProvider(provider1);
+      mockRemove.mockClear();
+      (
+        NativeModules.KlaviyoReactNativeSdk
+          .unregisterAuthTokenProvider as jest.Mock
+      ).mockClear();
+
+      Klaviyo.registerAuthTokenProvider(provider2);
+
+      // The previous subscription is torn down before the new one is added,
+      // and the native side is unregistered so pending requests are drained.
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.unregisterAuthTokenProvider
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes a request to only the most recently registered provider', async () => {
+      const provider1 = jest.fn().mockResolvedValue('jwt-1');
+      const provider2 = jest.fn().mockResolvedValue('jwt-2');
+
+      Klaviyo.registerAuthTokenProvider(provider1);
+      Klaviyo.registerAuthTokenProvider(provider2);
+
+      emitNativeEvent('klaviyo:authTokenRequested', { id: 'req-5' });
+      await flushPromises();
+
+      expect(provider1).not.toHaveBeenCalled();
+      expect(provider2).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('subscriptions', () => {
+    it('should bridge per-channel consent as wire-format arrays', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: {
+          email: [EmailConsent.Marketing, EmailConsent.OpenTracking],
+          sms: [MessagingConsent.Marketing],
+          whatsapp: [MessagingConsent.Transactional],
+        },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: {
+          email: ['marketing', 'open_tracking'],
+          sms: ['marketing'],
+          whatsapp: ['transactional'],
+        },
+      });
+    });
+
+    it('should include customSource when provided', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+        customSource: 'Checkout screen',
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: { email: ['marketing'] },
+        customSource: 'Checkout screen',
+      });
+    });
+
+    it('should omit customSource when absent', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      const payload = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(payload).not.toHaveProperty('customSource');
+    });
+
+    it('should omit the channels key entirely for the all-available-marketing sentinel', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: ALL_AVAILABLE_MARKETING,
+      });
+
+      const payload = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(payload).not.toHaveProperty('channels');
+      expect(payload).toEqual({ listId: 'ABC123' });
+    });
+
+    it('should omit the channels key for the allAvailableMarketing factory', () => {
+      Klaviyo.createSubscription(
+        allAvailableMarketing('ABC123', 'Signup form')
+      );
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        customSource: 'Signup form',
+      });
+    });
+
+    it('should leave an omitted channel absent rather than sending an empty array', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      const { channels } = (
+        NativeModules.KlaviyoReactNativeSdk.createSubscription as jest.Mock
+      ).mock.calls[0][0];
+      expect(channels).not.toHaveProperty('sms');
+      expect(channels).not.toHaveProperty('whatsapp');
+    });
+
+    it('should pass an explicitly empty channel through for native validation', () => {
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [] },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).toHaveBeenCalledWith({
+        listId: 'ABC123',
+        channels: { email: [] },
+      });
+    });
+
+    it('should not bridge a blank listId', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: '   ',
+        channels: { email: [EmailConsent.Marketing] },
+      });
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('listId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should report rather than throw when an untyped caller omits channels', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // `channels` is required by the type, but plain-JS consumers can still omit it. Throwing a
+      // TypeError out of a fire-and-forget SDK method would be worse than reporting it.
+      expect(() =>
+        Klaviyo.createSubscription({ listId: 'ABC123' } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('channels')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    // A `channels` value that is present but malformed must never fall through to the broad grant —
+    // that would hand out marketing consent on every identified channel by accident, which is the
+    // exact failure mode the required-`channels` design exists to prevent.
+    it.each([
+      ['a string', 'allAvailable'],
+      ['a number', 7],
+      ['an array', ['email']],
+      ['null', null],
+      ['a boolean', true],
+    ])(
+      'should reject channels that is %s rather than granting broad consent',
+      (_label, channels) => {
+        const consoleErrorSpy = jest
+          .spyOn(console, 'error')
+          .mockImplementation();
+
+        expect(() =>
+          Klaviyo.createSubscription({ listId: 'ABC123', channels } as never)
+        ).not.toThrow();
+
+        expect(
+          NativeModules.KlaviyoReactNativeSdk.createSubscription
+        ).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('channels')
+        );
+        consoleErrorSpy.mockRestore();
+      }
+    );
+
+    // A validly-typed channels object can still request nothing, either because every key was
+    // omitted or because a key was misspelled. Either way the request would otherwise reach
+    // native as a subscription that grants no consent, with the caller never told why.
+    it('should reject an empty channels object rather than granting no consent silently', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({ listId: 'ABC123', channels: {} })
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('at least one channel')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject an unrecognized channel key rather than silently dropping it', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 'ABC123',
+          channels: { smss: [MessagingConsent.Marketing] } as never,
+        })
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('smss')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject a non-string listId rather than throwing on .trim()', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 12345,
+          channels: { email: [EmailConsent.Marketing] },
+        } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('listId')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject a consent list passed as a bare string', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Without validation this spread into ['m','a','r','k',...] and reached native as garbage.
+      expect(() =>
+        Klaviyo.createSubscription({
+          listId: 'ABC123',
+          channels: { email: 'marketing' },
+        } as never)
+      ).not.toThrow();
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('email')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject unsupported consent values', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { sms: ['open_tracking'] },
+      } as never);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('open_tracking')
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should reject a non-string customSource', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      Klaviyo.createSubscription({
+        listId: 'ABC123',
+        channels: { email: [EmailConsent.Marketing] },
+        customSource: 42,
+      } as never);
+
+      expect(
+        NativeModules.KlaviyoReactNativeSdk.createSubscription
+      ).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('customSource')
+      );
+      consoleErrorSpy.mockRestore();
     });
   });
 });

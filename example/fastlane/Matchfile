@@ -1,0 +1,13 @@
+git_url("git@github.com:klaviyo/mobile-certificates.git")
+storage_mode("git")
+
+# App Store distribution assets for the example app + its notification-service
+# extension. The distribution certificate (JPSUA6BRFN) is shared via the
+# mobile-certificates repo and reused across the mobile SDK repos — CI never
+# generates a new one.
+type("appstore")
+
+app_identifier([
+  "com.klaviyoreactnativesdkexample",
+  "com.klaviyoreactnativesdkexample.KlaviyoReactNativeSdkExampleExtension",
+])

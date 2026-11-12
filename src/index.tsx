@@ -9,6 +9,17 @@ import type { Event } from './Event';
 import type { FormConfiguration, FormLifecycleHandler } from './Forms';
 import { parseFormLifecycleEvent } from './Forms';
 import type { Geofence } from './Geofencing';
+import type { AuthTokenProvider } from './AuthToken';
+import {
+  AUTH_TOKEN_REQUESTED_EVENT,
+  classifyProviderError,
+  parseAuthTokenRequestedEvent,
+} from './AuthToken';
+import {
+  type Subscription,
+  formatSubscription,
+  validateSubscription,
+} from './Subscription';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -41,12 +52,26 @@ function isLocationAvailable(): boolean {
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
 
+// Track active auth token request subscription to prevent duplicate listeners
+let activeAuthTokenSubscription: { remove: () => void } | null = null;
+
+// The currently-registered provider. Captured so an in-flight provider() call
+// that resolves after unregister/re-register (e.g. logout) can be detected and
+// its now-stale result dropped rather than delivered to native.
+let activeAuthTokenProvider: AuthTokenProvider | null = null;
+
 /**
  * Implementation of the {@link KlaviyoInterface}
  */
 export const Klaviyo: KlaviyoInterface = {
   initialize(apiKey: string): void {
     KlaviyoReactNativeSdk.initialize(apiKey);
+  },
+  setLoggingEnabled(enabled: boolean): void {
+    KlaviyoReactNativeSdk.setLoggingEnabled(enabled);
+  },
+  isLoggingEnabled(callback: (enabled: boolean) => void): void {
+    KlaviyoReactNativeSdk.isLoggingEnabled(callback);
   },
   setProfile(profile: Profile): void {
     KlaviyoReactNativeSdk.setProfile(formatProfile(profile));
@@ -92,6 +117,16 @@ export const Klaviyo: KlaviyoInterface = {
   },
   createEvent(event: Event): void {
     KlaviyoReactNativeSdk.createEvent(event);
+  },
+  createSubscription(subscription: Subscription): void {
+    // Validate the whole shape up front: TypeScript can't police plain-JS callers, and reporting
+    // here beats throwing mid-marshalling or handing native a malformed payload.
+    const error = validateSubscription(subscription);
+    if (error !== null) {
+      console.error(`[Klaviyo] Error: ${error}`);
+      return;
+    }
+    KlaviyoReactNativeSdk.createSubscription(formatSubscription(subscription));
   },
   registerForInAppForms(configuration?: FormConfiguration): void {
     if (!isFormsAvailable()) return;
@@ -173,6 +208,76 @@ export const Klaviyo: KlaviyoInterface = {
       KlaviyoReactNativeSdk.unregisterFormLifecycleHandler();
     };
   },
+  registerAuthTokenProvider(provider: AuthTokenProvider): void {
+    // Clean up any existing subscription before re-registering so the new
+    // provider replaces the previous one. Mirror the native teardown done on
+    // re-registration for form lifecycle handlers: also unregister on the
+    // native side so pending token requests are drained and a prior provider's
+    // in-flight handler can't resolve a stale request.
+    if (activeAuthTokenSubscription) {
+      activeAuthTokenSubscription.remove();
+      KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
+      activeAuthTokenSubscription = null;
+    }
+
+    activeAuthTokenProvider = provider;
+
+    const eventEmitter = new NativeEventEmitter(
+      NativeModules.KlaviyoReactNativeSdk
+    );
+
+    activeAuthTokenSubscription = eventEmitter.addListener(
+      AUTH_TOKEN_REQUESTED_EVENT,
+      async (data: Record<string, unknown>) => {
+        const event = parseAuthTokenRequestedEvent(data);
+        if (event === null) {
+          return;
+        }
+
+        try {
+          const jwt = await provider();
+          // If the provider was unregistered or replaced while this fetch was
+          // in flight (e.g. logout), drop the result — do not deliver a token
+          // acquired for a now-inactive provider. Native already drained this
+          // request's continuation on unregister, so no response is owed.
+          if (activeAuthTokenProvider !== provider) {
+            return;
+          }
+          if (typeof jwt !== 'string' || jwt.length === 0) {
+            // Route an empty / non-string resolution through the failure path
+            // so native gets a clear signal rather than a bogus "success".
+            throw new Error('Auth token provider resolved without a token');
+          }
+          // NOTE: never log token contents; native side owns token logging.
+          KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, { jwt });
+        } catch (error) {
+          // Same in-flight guard for the rejection path: a late failure for an
+          // inactive provider is dropped rather than forwarded.
+          if (activeAuthTokenProvider !== provider) {
+            return;
+          }
+          const { message, isConnectivityError } = classifyProviderError(error);
+          console.error(
+            `[Klaviyo] Auth token provider failed for request ${event.id}: ${message}`
+          );
+          // Forward the connectivity flag so native can reconstitute a typed
+          // network error the SDK's connectivity-driven retry recognizes.
+          KlaviyoReactNativeSdk.respondToAuthTokenRequest(event.id, {
+            error: message,
+            isConnectivityError,
+          });
+        }
+      }
+    );
+
+    KlaviyoReactNativeSdk.registerAuthTokenProvider();
+  },
+  unregisterAuthTokenProvider(): void {
+    activeAuthTokenSubscription?.remove();
+    activeAuthTokenSubscription = null;
+    activeAuthTokenProvider = null;
+    KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -192,3 +297,15 @@ export type {
 } from './Forms';
 export type { KlaviyoDeepLinkAPI } from './KlaviyoDeepLinkAPI';
 export type { Geofence } from './Geofencing';
+export type { AuthTokenProvider, KlaviyoAuthTokenApi } from './AuthToken';
+export {
+  ALL_AVAILABLE_MARKETING,
+  EmailConsent,
+  MessagingConsent,
+  allAvailableMarketing,
+} from './Subscription';
+export type {
+  KlaviyoSubscriptionApi,
+  Subscription,
+  SubscriptionChannels,
+} from './Subscription';

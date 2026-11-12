@@ -47,6 +47,7 @@ export const FormLifecycleEventsModal: React.FC<
       onClose={onClose}
       title={`Form Lifecycle Events (${events.length})`}
       maxHeight="80%"
+      testID="forms_lifecycle_events_modal"
     >
       {events.length === 0 ? (
         <Text style={styles.emptyText}>
@@ -56,11 +57,15 @@ export const FormLifecycleEventsModal: React.FC<
       ) : (
         <FlatList<FormLifecycleLogEntry>
           data={events}
+          testID="forms_lifecycle_events_list"
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const { event, receivedAt } = item;
             return (
-              <View style={styles.eventItem}>
+              <View
+                style={styles.eventItem}
+                testID={`forms_lifecycle_event_row_${index}`}
+              >
                 <View style={styles.eventHeader}>
                   <Text style={styles.eventType}>{eventLabel(event.type)}</Text>
                   <Text style={styles.eventTime}>
@@ -96,6 +101,10 @@ export const FormLifecycleEventsModal: React.FC<
           style={[styles.button, styles.clearButton]}
           onPress={onClear}
           disabled={events.length === 0}
+          testID="forms_lifecycle_events_clear_button"
+          accessibilityRole="button"
+          accessibilityLabel="Clear form lifecycle events"
+          accessibilityState={{ disabled: events.length === 0 }}
         >
           <Text
             style={[
@@ -109,6 +118,9 @@ export const FormLifecycleEventsModal: React.FC<
         <TouchableOpacity
           style={[styles.button, styles.closeButton]}
           onPress={onClose}
+          testID="forms_lifecycle_events_close_button"
+          accessibilityRole="button"
+          accessibilityLabel="Close"
         >
           <Text style={styles.buttonText}>Close</Text>
         </TouchableOpacity>

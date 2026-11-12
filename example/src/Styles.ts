@@ -52,6 +52,9 @@ export const styles = StyleSheet.create({
     }),
   },
   sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
@@ -60,6 +63,13 @@ export const styles = StyleSheet.create({
   sectionHeaderText: {
     ...typography.sectionHeader,
     color: colors.text,
+  },
+  sectionHeaderActionIcon: {
+    fontSize: 18,
+    color: colors.secondaryText,
+  },
+  sectionHeaderActionIconDisabled: {
+    color: colors.disabled,
   },
 
   // Profile text field styles (label + input + button row)
@@ -253,6 +263,23 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  // Consent toggle styles
+  consentToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  consentToggleLabel: {
+    ...typography.body,
+    color: colors.text,
+    flexShrink: 1,
+    paddingRight: spacing.sm,
+  },
+  consentToggleLabelDisabled: {
+    color: colors.secondaryText,
+  },
+
   // Warning message styles
   warningContainer: {
     backgroundColor: colors.warningBackground,
@@ -273,5 +300,35 @@ export const styles = StyleSheet.create({
     color: colors.warningText,
     marginLeft: spacing.sm,
     marginTop: spacing.xs / 2,
+  },
+  // Opt-in spacing for a warning that sits above other content. Matches
+  // profileFieldContainer's bottom margin so the vertical rhythm lines up.
+  // Not folded into warningContainer, which renders as the only child in
+  // PushSection and would gain a trailing gap.
+  warningContainerWithBottomSpacing: {
+    marginBottom: spacing.md,
+  },
+  // Collapsible warning: tappable headline row + chevron. Mirrors the
+  // collapsible* styles so the affordance reads the same as the rest of the app,
+  // but keeps the warning palette.
+  warningHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  warningHeaderText: {
+    ...typography.body,
+    color: colors.warningText,
+    fontWeight: '600',
+    // Shrink rather than push the chevron off the row on narrow screens.
+    flexShrink: 1,
+    paddingRight: spacing.sm,
+  },
+  warningChevron: {
+    ...typography.body,
+    color: colors.warningText,
+  },
+  warningCollapsibleContent: {
+    marginTop: spacing.xs,
   },
 });

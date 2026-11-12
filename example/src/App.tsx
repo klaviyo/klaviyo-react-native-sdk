@@ -1,25 +1,15 @@
-// React / React Native
-import { useEffect, useState } from 'react';
-import { SectionList, SafeAreaView, Linking } from 'react-native';
+// Navigation
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Klaviyo SDK
 import { Klaviyo } from 'klaviyo-react-native-sdk';
 
-// Local components / styles
-import { styles } from './Styles';
-import { SectionHeader } from './components/SectionHeader';
-import { AppHeader } from './components/AppHeader';
-import { CompanyIdModal } from './components/CompanyIdModal';
-import { useCompanyId } from './hooks/useCompanyId';
-
-// Section components — each section owns the hook(s) it consumes, so state
-// changes in one section don't re-render sibling sections. No React.memo or
-// memoization gymnastics needed: App holds no hook-derived state, so its
-// children aren't re-rendered by unrelated hook updates.
-import { AnalyticsSection } from './sections/AnalyticsSection';
-import { FormsSection } from './sections/FormsSection';
-import { GeofencingSection } from './sections/GeofencingSection';
-import { PushSection } from './sections/PushSection';
+// Local screens / navigation types
+import { HomeScreen } from './screens/HomeScreen';
+import { AuthScreen } from './screens/AuthScreen';
+import { ConfigureResponseScreen } from './screens/ConfigureResponseScreen';
+import type { RootStackParamList } from './navigation/types';
 
 // RN Installation Step: Source your public API key.
 // This example uses `react-native-dotenv` to inline `KLAVIYO_API_KEY` from
@@ -43,93 +33,33 @@ if (API_KEY.length === 0 || API_KEY === PLACEHOLDER_API_KEY) {
 // commented references in the iOS AppDelegate and Android MainApplication
 Klaviyo.initialize(API_KEY);
 
-type SectionKey = 'analytics' | 'forms' | 'geofencing' | 'push';
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// SectionList data — each section corresponds to a feature domain. Each
-// section has a single item (the section key) whose content is rendered by
-// renderItem; the section title is surfaced via renderSectionHeader.
-// Defined at module scope so the reference is stable across renders.
-const SECTIONS: { title: string; data: SectionKey[] }[] = [
-  { title: 'Profile & Events', data: ['analytics'] },
-  { title: 'In-App Forms', data: ['forms'] },
-  { title: 'Geofencing & Location', data: ['geofencing'] },
-  { title: 'Push Notifications', data: ['push'] },
-];
-
-const renderSection = (sectionKey: SectionKey) => {
-  switch (sectionKey) {
-    case 'analytics':
-      return <AnalyticsSection />;
-    case 'forms':
-      return <FormsSection />;
-    case 'geofencing':
-      return <GeofencingSection />;
-    case 'push':
-      return <PushSection />;
-    default:
-      return null;
-  }
-};
-
+// The app is a single `SectionList` screen (`Home`) plus, since MAGE-879, a
+// push/navigation stack for the Auth feature's two secondary screens. `Home`
+// renders its own header (`AppHeader`) so the native stack header is hidden
+// for it; `AuthScreen`/`ConfigureResponse` use the native stack's header for
+// back navigation and (on ConfigureResponse) a "Done" button.
 export default function App() {
-  const { companyId, isOverridden, changeCompanyId, resetToDefault } =
-    useCompanyId();
-  const [settingsVisible, setSettingsVisible] = useState(false);
-
-  useEffect(() => {
-    // Deep linking handler
-    const handleUrl = (url: string) => {
-      if (Klaviyo.handleUniversalTrackingLink(url)) {
-        // Klaviyo is handling a universal click tracking link
-        console.log('[App] Klaviyo tracking link:', url);
-        return;
-      }
-
-      // If false, Klaviyo didn't handle this URL — route normally
-      // e.g., navigate using React Navigation: navigation.navigate(parseUrl(url))
-      console.log('Navigate to url', url);
-    };
-
-    // Handle cold-start deep links (app opened via URL)
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleUrl(url);
-      }
-    });
-
-    // Listen for deep link events while the app is running; return cleanup to prevent listener leak
-    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
-    return () => sub.remove();
-  }, []);
-
   return (
-    <SafeAreaView style={styles.container}>
-      <AppHeader onSettingsPress={() => setSettingsVisible(true)} />
-      <SectionList
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        sections={SECTIONS}
-        keyExtractor={(item) => item}
-        renderItem={({ item }) => renderSection(item)}
-        renderSectionHeader={({ section }) => (
-          <SectionHeader title={section.title} />
-        )}
-        stickySectionHeadersEnabled={false}
-      />
-      <CompanyIdModal
-        visible={settingsVisible}
-        currentCompanyId={companyId}
-        isOverridden={isOverridden}
-        onSave={(key) => {
-          changeCompanyId(key);
-          setSettingsVisible(false);
-        }}
-        onReset={() => {
-          resetToDefault();
-          setSettingsVisible(false);
-        }}
-        onClose={() => setSettingsVisible(false)}
-      />
-    </SafeAreaView>
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AuthScreen"
+          component={AuthScreen}
+          options={{ title: 'Auth' }}
+        />
+        <Stack.Screen
+          name="ConfigureResponse"
+          component={ConfigureResponseScreen}
+          options={{ title: 'Configure Response' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }

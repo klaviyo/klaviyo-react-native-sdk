@@ -2,6 +2,29 @@
 ENV['KLAVIYO_INCLUDE_FORMS'] = 'true'
 ENV['KLAVIYO_INCLUDE_LOCATION'] = 'true'
 
+# Build React-Core from source rather than using the prebuilt binary.
+#
+# Prebuilt React-Core became the default in React Native 0.84, not 0.86:
+# react_native_pods.rb forces ENV['RCT_USE_PREBUILT_RNCORE'] = '1' inside
+# use_react_native! unless it is explicitly '0'. This repo went 0.81 -> 0.86
+# in one step, so the change surfaced here even though it landed in 0.84.
+#
+# The prebuilt React-Core exposes its headers non-modularly. Because this Podfile
+# builds pods as static frameworks, every `#import <React/...>` from a pod that
+# gets a clang module map then trips -Wnon-modular-include-in-framework-module
+# under -Werror, and @react-native-firebase fails to compile. Prebuilt React-Core
+# also stops incidentally linking Photos, which RNFBApp's RNFBUtilsModule needs
+# for PHAsset but never declares in its podspec, so the app fails to link.
+#
+# Building from source keeps the header and link behaviour we had on 0.81, which
+# avoids patching a third-party pod's build settings from here. The cost is a
+# slower clean iOS build. Adopting prebuilt React-Core is tracked separately and
+# needs @react-native-firebase to declare Photos and support modular imports.
+#
+# The header incompatibility is confirmed upstream:
+# https://github.com/invertase/react-native-firebase/issues/8883
+ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+
 # Force @react-native-firebase pods to build as static frameworks.
 # The flag is a no-op in the default RN build
 # (static libraries all around) but is required when use_frameworks! is enabled
@@ -63,15 +86,6 @@ target 'KlaviyoReactNativeSdkExample' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
-
-    # fmt 11.x uses C++20 consteval — ensure it's compiled with C++20
-    installer.pods_project.targets.each do |target|
-      if target.name == 'fmt'
-        target.build_configurations.each do |build_config|
-          build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
-        end
-      end
-    end
   end
 end
 

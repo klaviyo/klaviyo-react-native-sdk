@@ -1,6 +1,7 @@
 import UIKit
 import React
 import React_RCTAppDelegate
+import ReactAppDependencyProvider
 import UserNotifications
 import FirebaseCore
 import KlaviyoSwift
@@ -56,6 +57,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     let launchOptionsWithURL = getLaunchOptionsWithURL(launchOptions)
 
     let delegate = ReactNativeDelegate()
+    delegate.dependencyProvider = RCTAppDependencyProvider()
     let factory = RCTReactNativeFactory(delegate: delegate)
     reactNativeDelegate = delegate
     reactNativeFactory = factory
