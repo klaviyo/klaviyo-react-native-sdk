@@ -62,6 +62,28 @@ export function useForms() {
     console.log('[useForms] registered → false');
   };
 
+  // Forms preview: the pasted token is held in memory only and never logged.
+  const [formsPreviewEnabled, setFormsPreviewEnabled] = useState(false);
+  const [formsPreviewToken, setFormsPreviewToken] = useState('');
+
+  const handleApplyFormsPreviewToken = useCallback(() => {
+    // An empty field clears the preview and returns to published forms.
+    const token = formsPreviewToken.trim();
+    if (token === '') {
+      Klaviyo.endFormsPreview();
+    } else {
+      Klaviyo.startFormsPreview(token);
+    }
+  }, [formsPreviewToken]);
+
+  const handleFormsPreviewEnabledChange = useCallback((enabled: boolean) => {
+    setFormsPreviewEnabled(enabled);
+    if (!enabled) {
+      Klaviyo.endFormsPreview();
+      setFormsPreviewToken('');
+    }
+  }, []);
+
   const handleShowEventsModal = useCallback(() => {
     setEventsModalVisible(true);
   }, []);
@@ -75,6 +97,11 @@ export function useForms() {
   }, []);
 
   return {
+    formsPreviewEnabled,
+    formsPreviewToken,
+    setFormsPreviewToken,
+    handleApplyFormsPreviewToken,
+    handleFormsPreviewEnabledChange,
     formsRegistered,
     handleRegisterForms,
     handleUnregisterForms,
