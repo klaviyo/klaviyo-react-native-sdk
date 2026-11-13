@@ -1,21 +1,114 @@
+# Baseline rules: SDK Dependabot Bot project, see the rules page.
 version: 2
 updates:
-  - package-ecosystem: github-actions
+  - package-ecosystem: npm
     directories:
-      - /
-      - /.github/actions/*
+      - '/'
     schedule:
       interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
-      github-actions:
+      npm-tooling-minor-patch:
+        applies-to: version-updates
         patterns:
           - '*'
-  - package-ecosystem: bundler
+        update-types:
+          - minor
+          - patch
+      npm-tooling-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+  - package-ecosystem: gradle
     directories:
-      - /.github/pins/fastlane
+      - '/android'
     schedule:
       interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
-      publish-gems:
+      gradle-shipped-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      gradle-shipped-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: 'com.github.klaviyo.klaviyo-android-sdk:*'
+  - package-ecosystem: gradle
+    directories:
+      - '/example/android'
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      gradle-example-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      gradle-example-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: 'com.github.klaviyo.klaviyo-android-sdk:*'
+  - package-ecosystem: bundler
+    directories:
+      - '/example'
+      - '/.github/pins/fastlane'
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      bundler-tooling-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      bundler-tooling-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+  - package-ecosystem: github-actions
+    directories:
+      - '/'
+      - '/.github/actions/*'
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      actions-security:
+        applies-to: security-updates
         patterns:
           - '*'
