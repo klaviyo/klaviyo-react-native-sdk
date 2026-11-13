@@ -3396,16 +3396,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-native-firebase/messaging@npm:^24.0.0":
-  version: 24.1.1
-  resolution: "@react-native-firebase/messaging@npm:24.1.1"
+"@react-native-firebase/messaging@npm:^27.1.0":
+  version: 27.1.0
+  resolution: "@react-native-firebase/messaging@npm:27.1.0"
   peerDependencies:
-    "@react-native-firebase/app": 24.1.1
+    "@react-native-firebase/app": 27.1.0
     expo: ">=47.0.0"
   peerDependenciesMeta:
     expo:
       optional: true
-  checksum: 31737143a547558acaf7deaf6610af1286ef3fcaa9939e710ae2dcc87265d46637e1a5f1e613bd59d1e0fd72c00e9ae7c48db576a39f45c1cdaa911c67772adf
+  checksum: f35190df881f46f3b4f94e8e95f39168f00d08dc2f55250a1a303de3a846a53653cdfa95a954a4a5b9b5f5bd0685770aac0d50cdc099333284af29b89378eb34
   languageName: node
   linkType: hard
 
@@ -9349,7 +9349,7 @@ __metadata:
     "@react-native-community/cli-platform-android": 20.1.0
     "@react-native-community/cli-platform-ios": 20.1.0
     "@react-native-firebase/app": ^24.0.0
-    "@react-native-firebase/messaging": ^24.0.0
+    "@react-native-firebase/messaging": ^27.1.0
     "@react-native/babel-preset": 0.86.3
     "@react-native/jest-preset": 0.86.3
     "@react-native/metro-config": 0.86.3
