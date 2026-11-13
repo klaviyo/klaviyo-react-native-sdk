@@ -121,7 +121,7 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     // Android Installation Step - add firebase dependency if using push
-    implementation 'com.google.firebase:firebase-messaging-ktx:24.0.0'
+    implementation 'com.google.firebase:firebase-messaging-ktx:24.1.2'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
