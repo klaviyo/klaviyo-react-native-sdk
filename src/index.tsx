@@ -136,6 +136,23 @@ export const Klaviyo: KlaviyoInterface = {
     if (!isFormsAvailable()) return;
     KlaviyoReactNativeSdk.unregisterFromInAppForms();
   },
+  startFormsPreview(token: string): void {
+    if (!isFormsAvailable()) return;
+    KlaviyoReactNativeSdk.startFormsPreview(token);
+  },
+  endFormsPreview(): void {
+    if (!isFormsAvailable()) return;
+    KlaviyoReactNativeSdk.endFormsPreview();
+  },
+  async handleFormsPreviewLink(url: string | null): Promise<boolean> {
+    if (!url) return false;
+    if (!isFormsAvailable()) return false;
+    try {
+      return await KlaviyoReactNativeSdk.handleFormsPreviewLink(url);
+    } catch {
+      return false;
+    }
+  },
   registerGeofencing(): void {
     if (!isLocationAvailable()) return;
     KlaviyoReactNativeSdk.registerGeofencing();
@@ -289,7 +306,7 @@ export {
   ProfileProperty,
 } from './Profile';
 export type { KlaviyoInterface } from './Klaviyo';
-export { FormLifecycleEventType } from './Forms';
+export { FormLifecycleEventType, FORMS_PREVIEW_TOKEN_KEY } from './Forms';
 export type {
   FormConfiguration,
   FormLifecycleEvent,
