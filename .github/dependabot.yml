@@ -45,32 +45,47 @@ updates:
           - '*'
     ignore:
       - dependency-name: 'com.github.klaviyo.klaviyo-android-sdk:*'
+      # Held until the build moves to AGP 9. Remove in that change.
+      - dependency-name: 'com.android.tools.build:gradle'
+        update-types:
+          - 'version-update:semver-major'
+  # Example apps are security-only: open-pull-requests-limit 0 turns off
+  # version updates but keeps security updates. The example is pinned to its
+  # framework versions and moves by hand with the SDK. Its npm packages are a
+  # workspace of the root, so they stay under the npm '/' entry.
   - package-ecosystem: gradle
     directories:
       - '/example/android'
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore
       include: scope
     groups:
-      gradle-example-minor-patch:
-        applies-to: version-updates
-        patterns:
-          - '*'
-        update-types:
-          - minor
-          - patch
       gradle-example-security:
         applies-to: security-updates
         patterns:
           - '*'
     ignore:
       - dependency-name: 'com.github.klaviyo.klaviyo-android-sdk:*'
+  # The example app's gems: security-only, as above.
   - package-ecosystem: bundler
     directories:
       - '/example'
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      bundler-example-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+  - package-ecosystem: bundler
+    directories:
       - '/.github/pins/fastlane'
     schedule:
       interval: monthly
