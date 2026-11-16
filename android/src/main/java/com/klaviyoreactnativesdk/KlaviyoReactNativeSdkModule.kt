@@ -66,6 +66,13 @@ class KlaviyoReactNativeSdkModule(
      * Part of the public contract, matching iOS and the JS layer's `InboxErrorCode.Unavailable`.
      */
     const val INBOX_UNAVAILABLE = "INBOX_UNAVAILABLE"
+
+    /**
+     * Name of the native-to-JS inbox invalidation event.
+     *
+     * Must match `INBOX_CHANGED_EVENT` in the JS layer. It carries no payload.
+     */
+    const val INBOX_CHANGED_EVENT = "klaviyo:inboxChanged"
   }
 
   private fun sendEvent(
@@ -781,12 +788,28 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun registerInboxChangeHandler() {
-    InboxBridgeProvider.bridge?.registerChangeHandler()
+    // No payload: the event is an invalidation, not a diff. `sendEvent` handles the
+    // catalyst-torn-down race and reports whether delivery was possible.
+    InboxBridgeProvider.bridge?.registerChangeHandler {
+      sendEvent(INBOX_CHANGED_EVENT, null)
+    }
   }
 
   @ReactMethod
   fun unregisterInboxChangeHandler() {
     InboxBridgeProvider.bridge?.unregisterChangeHandler()
+  }
+
+  /**
+   * Tears down the inbox change subscription when the module goes away.
+   *
+   * `invalidate` runs on a bridge reload (dev fast refresh, or a bridged instance being replaced),
+   * so without this the native collection would keep a listener alive across reloads and deliver
+   * into a dead catalyst instance.
+   */
+  override fun invalidate() {
+    InboxBridgeProvider.bridge?.unregisterChangeHandler()
+    super.invalidate()
   }
 
   // endregion

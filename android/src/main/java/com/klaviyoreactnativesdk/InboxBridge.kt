@@ -35,8 +35,16 @@ internal interface InboxBridge {
     promise: Promise,
   )
 
-  fun registerChangeHandler()
+  /**
+   * Starts delivering inbox change invalidations.
+   *
+   * [onChange] is invoked on the JS bridge's thread whenever the inbox may have changed. It must
+   * emit with no payload: the event is an invalidation, not a diff. Registering while already
+   * registered replaces the existing subscription rather than adding a second one.
+   */
+  fun registerChangeHandler(onChange: () -> Unit)
 
+  /** Stops delivering inbox change invalidations and cancels the collection. */
   fun unregisterChangeHandler()
 }
 

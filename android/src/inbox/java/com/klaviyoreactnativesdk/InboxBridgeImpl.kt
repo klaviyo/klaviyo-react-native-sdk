@@ -6,11 +6,14 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.WritableMap
 import com.klaviyo.core.Registry
+import com.klaviyo.inbox.InboxArchiveFilter
+import com.klaviyo.inbox.InboxChangeListener
 import com.klaviyo.inbox.InboxCursor
 import com.klaviyo.inbox.InboxException
 import com.klaviyo.inbox.InboxMessage
 import com.klaviyo.inbox.InboxPage
 import com.klaviyo.inbox.InboxQuery
+import com.klaviyo.inbox.InboxReadFilter
 import com.klaviyo.inbox.InboxResult
 import com.klaviyo.inbox.InboxStateChange
 import com.klaviyo.inbox.KlaviyoInbox
@@ -61,10 +64,42 @@ internal class InboxBridgeImpl : InboxBridge {
         ?.takeIf { it.hasKey(PAGE_SIZE) && it.getType(PAGE_SIZE) == ReadableType.Number }
         ?.getInt(PAGE_SIZE)
 
+    // The JS layer validates these before calling, so an unrecognized value here means a native
+    // caller bypassed it. Rejecting keeps the contract honest rather than silently substituting a
+    // default, which would return the wrong messages while looking like it worked.
+    val readFilter =
+      when (val raw = options?.filterOrNull(READ_FILTER)) {
+        null -> InboxReadFilter.ALL
+        "all" -> InboxReadFilter.ALL
+        "unread" -> InboxReadFilter.UNREAD
+        "read" -> InboxReadFilter.READ
+        else -> {
+          promise.reject(InboxErrorCode.STORAGE_FAILURE, "Unrecognized inbox readFilter '$raw'")
+          return
+        }
+      }
+
+    val archiveFilter =
+      when (val raw = options?.filterOrNull(ARCHIVE_FILTER)) {
+        null -> InboxArchiveFilter.ACTIVE
+        "active" -> InboxArchiveFilter.ACTIVE
+        "archived" -> InboxArchiveFilter.ARCHIVED
+        "all" -> InboxArchiveFilter.ALL
+        else -> {
+          promise.reject(
+            InboxErrorCode.STORAGE_FAILURE,
+            "Unrecognized inbox archiveFilter '$raw'",
+          )
+          return
+        }
+      }
+
     val query =
       InboxQuery(
         pageSize = pageSize ?: InboxQuery.DEFAULT_PAGE_SIZE,
         cursor = cursorToken?.let(::InboxCursor),
+        readFilter = readFilter,
+        archiveFilter = archiveFilter,
       )
 
     KlaviyoInbox.fetchPage(query) { result ->
@@ -125,25 +160,43 @@ internal class InboxBridgeImpl : InboxBridge {
   }
 
   /**
+   * The listener currently registered with the native SDK, or null when nothing is subscribed.
+   *
+   * Held so [unregisterChangeHandler] can remove exactly the instance that was added: the native SDK
+   * keys listeners by identity. Access is guarded by [changeLock].
+   */
+  private var changeListener: InboxChangeListener? = null
+  private val changeLock = Any()
+
+  /**
    * Starts forwarding inbox change invalidations to JS.
    *
-   * TODO(MAGE-1102): the Android SDK has no inbox invalidation API yet, so there is nothing to
-   * subscribe to and this is a no-op. The JS side already registers its `NativeEventEmitter`
-   * listener for `klaviyo:inboxChanged` and calls this method, so once the native SDK exposes a
-   * change signal the only work left is emitting that event — with no payload — from it.
-   *
-   * Until then consumers must query on launch, on resume, and after their own mutations, which the
-   * documented contract already requires.
+   * Delegates collection to the native SDK's `KlaviyoInbox.addChangeListener`, which collects
+   * `MobileInbox.changes` on the SDK's background dispatcher and delivers the callback on the main
+   * thread. Collecting the signal does not open the on-device store, so nothing here touches the
+   * database on the UI thread. The subscription is cancelled by
+   * [KlaviyoInbox.removeChangeListener], which is what [unregisterChangeHandler] calls — including
+   * from the module's `invalidate`, so it cannot leak across a reload.
    */
-  override fun registerChangeHandler() {
-    Registry.log.debug(
-      "Klaviyo React Native SDK: inbox change invalidation is not available on Android yet (MAGE-1102)",
-    )
+  override fun registerChangeHandler(onChange: () -> Unit) {
+    if (!isAvailable()) return
+
+    synchronized(changeLock) {
+      // Replace rather than stack: registering twice must not deliver every change twice.
+      changeListener?.let { KlaviyoInbox.removeChangeListener(it) }
+
+      val listener = InboxChangeListener { onChange() }
+      changeListener = listener
+      KlaviyoInbox.addChangeListener(listener)
+    }
   }
 
-  /** Stops forwarding inbox change invalidations. See [registerChangeHandler]. */
+  /** Stops forwarding inbox change invalidations and cancels the native collection. */
   override fun unregisterChangeHandler() {
-    // No native subscription exists yet (MAGE-1102), so there is nothing to tear down.
+    synchronized(changeLock) {
+      changeListener?.let { KlaviyoInbox.removeChangeListener(it) }
+      changeListener = null
+    }
   }
 
   /** Maps a native [InboxException] to the bridge's stable code. */
@@ -199,12 +252,21 @@ internal class InboxBridgeImpl : InboxBridge {
         },
       )
       putArray("actions", actionsArray)
-      if (sentAt != null) putDouble("sentAt", sentAt.toDouble()) else putNull("sentAt")
-      if (receivedAt != null) putDouble("receivedAt", receivedAt.toDouble()) else putNull("receivedAt")
+      // Local copies: these are public API properties from another module, so Kotlin can't smart
+      // cast them after a null check.
+      val sentAtValue = sentAt
+      val receivedAtValue = receivedAt
+      val badgeValue = badge
+      if (sentAtValue != null) putDouble("sentAt", sentAtValue.toDouble()) else putNull("sentAt")
+      if (receivedAtValue != null) {
+        putDouble("receivedAt", receivedAtValue.toDouble())
+      } else {
+        putNull("receivedAt")
+      }
       collapseId?.let { putString("collapseId", it) }
       // A null badge means "this push requested no badge change", which the JS layer preserves, so
       // it stays distinct from an omitted field.
-      if (badge != null) putInt("badge", badge) else putNull("badge")
+      if (badgeValue != null) putInt("badge", badgeValue) else putNull("badge")
       putBoolean("isRead", isRead)
       putBoolean("isArchived", isArchived)
       putString("source", source.rawValue)
@@ -218,8 +280,21 @@ internal class InboxBridgeImpl : InboxBridge {
       url?.let { putString("url", it) }
     }
 
+  /**
+   * Reads one filter value off the options map, or null when the key is absent.
+   *
+   * A key that is present but not a string is reported as the empty string so the caller's `when`
+   * rejects it, rather than being conflated with "not specified" and silently defaulted.
+   */
+  private fun ReadableMap.filterOrNull(key: String): String? {
+    if (!hasKey(key)) return null
+    return if (getType(key) == ReadableType.String) getString(key) ?: "" else ""
+  }
+
   private companion object Keys {
     const val PAGE_SIZE = "pageSize"
     const val CURSOR = "cursor"
+    const val READ_FILTER = "readFilter"
+    const val ARCHIVE_FILTER = "archiveFilter"
   }
 }
