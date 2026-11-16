@@ -2,16 +2,16 @@
 
 CI pieces used by all five Klaviyo mobile SDKs: klaviyo-android-sdk, klaviyo-swift-sdk, klaviyo-react-native-sdk, klaviyo-flutter-sdk and klaviyo-expo-plugin. Other SDKs call them at `@master`. This repo calls them by local path.
 
-| Piece | Kind | Path |
-| --- | --- | --- |
-| [notify-slack](#notify-slack) | composite action | `.github/shared/notify-slack` |
-| [promotion-check](#promotion-check) | composite action | `.github/shared/promotion-check` |
-| [pr-target-check](#pr-target-check) | composite action | `.github/shared/pr-target-check` |
-| [linear-release-sync](#linear-release-sync) | composite action | `.github/shared/linear-release-sync` |
-| [stale](#stale) | composite action | `.github/shared/stale` |
-| [remove-deploy-label](#remove-deploy-label) | composite action | `.github/shared/remove-deploy-label` |
-| [release-preflight](#release-preflight) | callable workflow | `.github/workflows/release-preflight.yml` |
-| [rel-branch-core](#rel-branch-core) | callable workflow | `.github/workflows/rel-branch-core.yml` |
+| Piece                                       | Kind              | Path                                      |
+| ------------------------------------------- | ----------------- | ----------------------------------------- |
+| [notify-slack](#notify-slack)               | composite action  | `.github/shared/notify-slack`             |
+| [promotion-check](#promotion-check)         | composite action  | `.github/shared/promotion-check`          |
+| [pr-target-check](#pr-target-check)         | composite action  | `.github/shared/pr-target-check`          |
+| [linear-release-sync](#linear-release-sync) | composite action  | `.github/shared/linear-release-sync`      |
+| [stale](#stale)                             | composite action  | `.github/shared/stale`                    |
+| [remove-deploy-label](#remove-deploy-label) | composite action  | `.github/shared/remove-deploy-label`      |
+| [release-preflight](#release-preflight)     | callable workflow | `.github/workflows/release-preflight.yml` |
+| [rel-branch-core](#rel-branch-core)         | callable workflow | `.github/workflows/rel-branch-core.yml`   |
 
 ## Changing the contract
 
@@ -26,20 +26,20 @@ Every SDK runs whatever is on `master` here, so a change lands in all five at on
 
 Posts, updates or replies to a Slack message as the MAGE CI bot. It never fails the calling job. Full input table: [notify-slack/README.md](notify-slack/README.md).
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `token` | no | `''` (empty skips with a notice) |
-| `channel` | no | `C08HFEC8W9W` |
-| `status` | no | `info` (`pending`, `success`, `failure`, `stopped`, `warning`, `info`) |
-| `title` | yes | |
-| `body` | no | `''` |
-| `fields` | no | `''` (lines of `Label: value`) |
-| `links` | no | `''` (lines of `Label\|URL`) |
-| `ts` | no | `''` (update this message) |
-| `thread_ts` | no | `''` (reply in this thread) |
-| `mention` | no | `''` |
-| `username` | no | `$SLACK_USERNAME`, else `MAGE CI` |
-| `icon_emoji` | no | `$SLACK_ICON_EMOJI`, else `:crystal_ball:` |
+| Input        | Required | Default                                                                |
+| ------------ | -------- | ---------------------------------------------------------------------- |
+| `token`      | no       | `''` (empty skips with a notice)                                       |
+| `channel`    | no       | `C08HFEC8W9W`                                                          |
+| `status`     | no       | `info` (`pending`, `success`, `failure`, `stopped`, `warning`, `info`) |
+| `title`      | yes      |                                                                        |
+| `body`       | no       | `''`                                                                   |
+| `fields`     | no       | `''` (lines of `Label: value`)                                         |
+| `links`      | no       | `''` (lines of `Label\|URL`)                                           |
+| `ts`         | no       | `''` (update this message)                                             |
+| `thread_ts`  | no       | `''` (reply in this thread)                                            |
+| `mention`    | no       | `''`                                                                   |
+| `username`   | no       | `$SLACK_USERNAME`, else `MAGE CI`                                      |
+| `icon_emoji` | no       | `$SLACK_ICON_EMOJI`, else `:crystal_ball:`                             |
 
 Outputs: `ts`, `channel`. Permissions: none. Secrets: `SLACK_BOT_TOKEN`, passed as `token`.
 
@@ -59,16 +59,16 @@ Checks whether every commit in a PR (minus commits already on the base by patch-
 
 The action runs the `promotion-check.sh` bundled beside it, never the PR head's copy. It checks out the PR head with full history into `path`.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `bump-files` | no | `''` (no commit is exempt). Newline-separated globs; `**` crosses `/`, `*` and `?` don't. |
-| `github-token` | no | `github.token` |
-| `repository` | no | `github.repository` |
-| `pr-number` | no | `github.event.pull_request.number` |
-| `base-ref` | no | `github.event.pull_request.base.ref` |
-| `head-sha` | no | `github.event.pull_request.head.sha` |
-| `dry-run` | no | `'false'` (`'true'` writes no comment) |
-| `path` | no | `_promotion-check` |
+| Input          | Required | Default                                                                                   |
+| -------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `bump-files`   | no       | `''` (no commit is exempt). Newline-separated globs; `**` crosses `/`, `*` and `?` don't. |
+| `github-token` | no       | `github.token`                                                                            |
+| `repository`   | no       | `github.repository`                                                                       |
+| `pr-number`    | no       | `github.event.pull_request.number`                                                        |
+| `base-ref`     | no       | `github.event.pull_request.base.ref`                                                      |
+| `head-sha`     | no       | `github.event.pull_request.head.sha`                                                      |
+| `dry-run`      | no       | `'false'` (`'true'` writes no comment)                                                    |
+| `path`         | no       | `_promotion-check`                                                                        |
 
 Outputs: none. Permissions: `contents: read`, `pull-requests: write`. Secrets: none.
 
@@ -111,15 +111,15 @@ DRY_RUN=true BUMP_FILES=$'package.json\n*.podspec' \
 
 Fails a PR into `protected-base` unless its head branch starts with an allowed prefix, its lowercased title matches `allowed-title-regex`, or it has `override-label`. While failing it adds `label` and posts one warning comment marked with `comment-marker`. A later pass removes both. API errors fail closed.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `github-token` | no | `github.token` (comment cleanup matches `github-actions[bot]`) |
-| `protected-base` | no | `master` |
-| `allowed-head-prefixes` | no | `rel/`, `ci/`, `docs/`, `dependabot/` (newline or comma separated) |
-| `allowed-title-regex` | no | `^(ci\|chore\|docs\|rel)(\([^)]*\))?!?:[[:space:]]` (empty disables) |
-| `label` | no | `needs: release branch` |
-| `override-label` | no | `manual-merge` |
-| `comment-marker` | no | `<!-- pr-target-check-warning -->` |
+| Input                   | Required | Default                                                              |
+| ----------------------- | -------- | -------------------------------------------------------------------- |
+| `github-token`          | no       | `github.token` (comment cleanup matches `github-actions[bot]`)       |
+| `protected-base`        | no       | `master`                                                             |
+| `allowed-head-prefixes` | no       | `rel/`, `ci/`, `docs/`, `dependabot/` (newline or comma separated)   |
+| `allowed-title-regex`   | no       | `^(ci\|chore\|docs\|rel)(\([^)]*\))?!?:[[:space:]]` (empty disables) |
+| `label`                 | no       | `needs: release branch`                                              |
+| `override-label`        | no       | `manual-merge`                                                       |
+| `comment-marker`        | no       | `<!-- pr-target-check-warning -->`                                   |
 
 Outputs: none. Permissions: `pull-requests: write`, `issues: write`. Secrets: none.
 
@@ -145,39 +145,39 @@ jobs:
 
 Checks out full history, runs `linear/linear-release-action` `sync` and then `complete` (only if sync succeeded). It skips a version containing `-` and a `release` event marked prerelease. Every step is `continue-on-error`.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `version` | yes | |
-| `token` | yes | |
-| `name` | no | `version` |
-| `ref` | no | `''` (checkout's default for the event) |
+| Input     | Required | Default                                 |
+| --------- | -------- | --------------------------------------- |
+| `version` | yes      |                                         |
+| `token`   | yes      |                                         |
+| `name`    | no       | `version`                               |
+| `ref`     | no       | `''` (checkout's default for the event) |
 
 Outputs: `synced`, `completed` (`'true'`/`'false'`). Permissions: `contents: read`. Secrets: `LINEAR_ACCESS_KEY`, passed as `token`.
 
 ```yaml
-  linear-release:
-    needs: publish
-    if: ${{ !inputs.dry_run }}
-    continue-on-error: true
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - uses: klaviyo/klaviyo-react-native-sdk/.github/shared/linear-release-sync@master
-        with:
-          version: ${{ needs.publish.outputs.version }}
-          token: ${{ secrets.LINEAR_ACCESS_KEY }}
-          ref: ${{ needs.publish.outputs.version }}
+linear-release:
+  needs: publish
+  if: ${{ !inputs.dry_run }}
+  continue-on-error: true
+  runs-on: ubuntu-24.04
+  permissions:
+    contents: read
+  steps:
+    - uses: klaviyo/klaviyo-react-native-sdk/.github/shared/linear-release-sync@master
+      with:
+        version: ${{ needs.publish.outputs.version }}
+        token: ${{ secrets.LINEAR_ACCESS_KEY }}
+        ref: ${{ needs.publish.outputs.version }}
 ```
 
 ## stale
 
 Runs `actions/stale` with the MAGE labels and messages. Only issues labeled `awaiting-reporter-response` or `missing-details` go stale (14 days, then closed 14 days later). PRs go stale after 16 days and close 14 days later. The `evergreen` label exempts both.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `github-token` | no | `github.token` |
-| `operations-per-run` | no | `'300'` |
+| Input                | Required | Default        |
+| -------------------- | -------- | -------------- |
+| `github-token`       | no       | `github.token` |
+| `operations-per-run` | no       | `'300'`        |
 
 Outputs: none. Permissions: `issues: write`, `pull-requests: write`. Secrets: none.
 
@@ -202,24 +202,24 @@ jobs:
 
 On a `pull_request` `labeled` event from a same-repo branch, removes the triggering label when it starts with `label-prefix`, so re-applying the label triggers again. On any other event, label or fork it does nothing. A label that is already gone isn't an error.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `github-token` | no | `github.token` |
-| `label-prefix` | no | `deploy-example-app` |
+| Input          | Required | Default              |
+| -------------- | -------- | -------------------- |
+| `github-token` | no       | `github.token`       |
+| `label-prefix` | no       | `deploy-example-app` |
 
 Outputs: `removed` (`'true'` when the triggering label matched). Permissions: `pull-requests: write`. Secrets: none.
 
 ```yaml
-  cleanup-label:
-    name: Remove deploy-example-app label
-    needs: [deploy-android, deploy-ios]
-    if: always() && github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: klaviyo/klaviyo-react-native-sdk/.github/shared/remove-deploy-label@master
+cleanup-label:
+  name: Remove deploy-example-app label
+  needs: [deploy-android, deploy-ios]
+  if: always() && github.event_name == 'pull_request'
+  runs-on: ubuntu-24.04
+  timeout-minutes: 5
+  permissions:
+    pull-requests: write
+  steps:
+    - uses: klaviyo/klaviyo-react-native-sdk/.github/shared/remove-deploy-label@master
 ```
 
 ## release-preflight
@@ -238,25 +238,25 @@ Runs the shared pre-publish checks, then finds or creates the draft release and 
 
 On failure it names the failed step, updates the pending message to failed (or posts a new one) and replies in its thread with the step.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `version` | yes | |
-| `ref` | no | `''` |
-| `prefer-rel-branch` | no | `false` |
-| `dry-run` | no | `false` |
-| `skip-ci-check` | no | `false` |
-| `required-workflows` | yes | |
-| `ci-event` | no | `pull_request` (empty counts every event) |
-| `ignore-workflows` | no | `''` |
-| `required-secrets` | no | `''` |
-| `sdk-checks` | no | `''` (bash run at the commit root; env `VERSION`, `SHA`, `PRERELEASE`) |
-| `sdk-name` | yes | |
-| `slack-username` | no | `''` |
-| `slack-icon-emoji` | no | `''` |
-| `slack-pending` | no | `true` |
-| `approval-instructions` | no | `Review the draft release notes, then approve the `release` environment on this run.` |
-| `triggered-by` | no | `''` (derived from the actor) |
-| `runs-on` | no | `ubuntu-24.04` |
+| Input                   | Required | Default                                                                               |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `version`               | yes      |                                                                                       |
+| `ref`                   | no       | `''`                                                                                  |
+| `prefer-rel-branch`     | no       | `false`                                                                               |
+| `dry-run`               | no       | `false`                                                                               |
+| `skip-ci-check`         | no       | `false`                                                                               |
+| `required-workflows`    | yes      |                                                                                       |
+| `ci-event`              | no       | `pull_request` (empty counts every event)                                             |
+| `ignore-workflows`      | no       | `''`                                                                                  |
+| `required-secrets`      | no       | `''`                                                                                  |
+| `sdk-checks`            | no       | `''` (bash run at the commit root; env `VERSION`, `SHA`, `PRERELEASE`)                |
+| `sdk-name`              | yes      |                                                                                       |
+| `slack-username`        | no       | `''`                                                                                  |
+| `slack-icon-emoji`      | no       | `''`                                                                                  |
+| `slack-pending`         | no       | `true`                                                                                |
+| `approval-instructions` | no       | `Review the draft release notes, then approve the `release` environment on this run.` |
+| `triggered-by`          | no       | `''` (derived from the actor)                                                         |
+| `runs-on`               | no       | `ubuntu-24.04`                                                                        |
 
 Outputs: `sha`, `short_sha`, `ref`, `prerelease`, `release_url`, `slack_ts`, `ci_skipped`.
 Permissions: `contents: write`, `actions: read`, `pull-requests: read`.
@@ -294,23 +294,23 @@ jobs:
 
 Creates `rel/X.Y.Z` from `base` with a `rel: bump version to X.Y.Z` commit by github-actions[bot]. It does nothing when the branch already exists. It then opens or labels the draft release PR into `release-pr-base`, dispatches `rel-branch.yml` in each `dispatch-targets` repo with `<dispatch-input>=rel/X.Y.Z` (only on the default next-minor train, and never for a prerelease), and posts to Slack. Each SDK keeps its own `rel-branch.yml` with its `schedule:`, `workflow_dispatch` inputs and any pin job, which can read this workflow's outputs.
 
-| Input | Required | Default |
-| --- | --- | --- |
-| `bump` | no | `minor` |
-| `steps` | no | `1` |
-| `version` | no | `''` (explicit X.Y.Z, overrides bump and steps) |
-| `base` | no | `master` |
-| `triggered_by` | no | `''` |
-| `sdk-name` | yes | |
-| `slack-username` | no | `''` |
-| `slack-icon-emoji` | no | `''` |
-| `bump-command` | yes | (bash at the repo root; env `VERSION`) |
-| `node-version-file` | no | `''` (set to set up Node.js before the bump) |
-| `dispatch-input` | no | `''` |
-| `dispatch-targets` | no | `''` (space-separated repo names under klaviyo/) |
-| `dispatch-label` | no | `''` (Slack text for the targets) |
-| `release-pr-base` | no | `master` |
-| `runs-on` | no | `ubuntu-latest` |
+| Input               | Required | Default                                          |
+| ------------------- | -------- | ------------------------------------------------ |
+| `bump`              | no       | `minor`                                          |
+| `steps`             | no       | `1`                                              |
+| `version`           | no       | `''` (explicit X.Y.Z, overrides bump and steps)  |
+| `base`              | no       | `master`                                         |
+| `triggered_by`      | no       | `''`                                             |
+| `sdk-name`          | yes      |                                                  |
+| `slack-username`    | no       | `''`                                             |
+| `slack-icon-emoji`  | no       | `''`                                             |
+| `bump-command`      | yes      | (bash at the repo root; env `VERSION`)           |
+| `node-version-file` | no       | `''` (set to set up Node.js before the bump)     |
+| `dispatch-input`    | no       | `''`                                             |
+| `dispatch-targets`  | no       | `''` (space-separated repo names under klaviyo/) |
+| `dispatch-label`    | no       | `''` (Slack text for the targets)                |
+| `release-pr-base`   | no       | `master`                                         |
+| `runs-on`           | no       | `ubuntu-latest`                                  |
 
 Outputs: `version`, `branch`, `created`, `pr_url`, `triggered_by`.
 Permissions: `contents: write`, `pull-requests: write`, `issues: write`.
