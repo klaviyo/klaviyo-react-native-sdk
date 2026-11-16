@@ -15,7 +15,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"FormLifecycleEvent", @"klaviyo:authTokenRequested"];
+    return @[@"FormLifecycleEvent", @"klaviyo:authTokenRequested", @"klaviyo:inboxChanged"];
 }
 
 // The values here eventually should come from the iOS SDK once exposed there.
@@ -25,6 +25,11 @@ RCT_EXPORT_MODULE()
         @"EVENT_NAMES": [KlaviyoBridge getEventTypesKeys],
         @"FORMS_AVAILABLE": @([KlaviyoBridge isFormsAvailable]),
         @"LOCATION_AVAILABLE": @([KlaviyoBridge isLocationAvailable]),
+        // Opt-in, unlike Forms and Location: only true when KLAVIYO_INCLUDE_INBOX is set at pod
+        // install time. The JS layer requires a positive true, so a build whose native module
+        // predates the inbox (and therefore exports no such constant) reports unavailable rather
+        // than failing on a missing selector.
+        @"INBOX_AVAILABLE": @([KlaviyoBridge isInboxAvailable]),
     };
 }
 
@@ -227,6 +232,70 @@ RCT_EXPORT_METHOD(respondToAuthTokenRequest: (NSString *)identifier response:(NS
         ? [response[@"isConnectivityError"] boolValue]
         : NO;
     [KlaviyoBridge respondToAuthTokenRequestWithId:identifier jwt:jwt error:error isConnectivityError:isConnectivityError];
+}
+
+#pragma mark - Mobile Inbox
+
+// Every inbox call rejects with an NSError whose `code` is one of the stable strings the JS layer
+// switches on ("INBOX_STORAGE_FAILURE", "INBOX_INVALID_CURSOR", "INBOX_UNAVAILABLE"). The native
+// Swift bridge does the mapping; this layer only forwards, so the two platforms cannot drift.
+
+RCT_EXPORT_METHOD(fetchInboxPage: (NSDictionary *)options
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    // Store reads are asynchronous and never touch the main thread, so no dispatch is added here.
+    [KlaviyoBridge fetchInboxPageWithOptions:options
+                                      resolve:^(NSDictionary *page) {
+                                          resolve(page);
+                                      }
+                                       reject:^(NSString *code, NSString *message) {
+                                           reject(code, message, nil);
+                                       }];
+}
+
+RCT_EXPORT_METHOD(fetchInboxUnreadCount: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge fetchInboxUnreadCountWithResolve:^(NSNumber *count) {
+        resolve(count);
+    } reject:^(NSString *code, NSString *message) {
+        reject(code, message, nil);
+    }];
+}
+
+RCT_EXPORT_METHOD(updateInboxMessageState: (NSString *)messageId
+                  state: (NSString *)state
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge updateInboxMessageStateWithId:messageId
+                                           state:state
+                                         resolve:^(BOOL messageExists) {
+                                             resolve(@(messageExists));
+                                         }
+                                          reject:^(NSString *code, NSString *message) {
+                                              reject(code, message, nil);
+                                          }];
+}
+
+RCT_EXPORT_METHOD(registerInboxChangeHandler) {
+    __weak __typeof__(self) weakSelf = self;
+    [KlaviyoBridge registerInboxChangeHandlerWithEmit:^BOOL{
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            // Module deallocated — nothing can consume the invalidation, so report failure and let
+            // the bridge stop iterating the native change signal.
+            return NO;
+        }
+        // `sendEventWithName:` must run on the main thread; the native change stream yields from a
+        // background task.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [strongSelf sendEventWithName:@"klaviyo:inboxChanged" body:nil];
+        });
+        return YES;
+    }];
+}
+
+RCT_EXPORT_METHOD(unregisterInboxChangeHandler) {
+    [KlaviyoBridge unregisterInboxChangeHandler];
 }
 
 @end

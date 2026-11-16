@@ -26,6 +26,13 @@ Pod::Spec.new do |s|
   if ENV['KLAVIYO_INCLUDE_FORMS'] != 'false'
     s.dependency "KlaviyoForms" ##, "5.6.0"
   end
+  # Optional Mobile Inbox. Opt-in, unlike the two above: set KLAVIYO_INCLUDE_INBOX=true to include
+  # it. Off by default because the native Inbox product this depends on is not released yet, so a
+  # default `pod install` cannot resolve it. The bridge guards every inbox call with
+  # `#if canImport(KlaviyoInbox)` and reports INBOX_UNAVAILABLE when the pod is absent.
+  if ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
+    s.dependency "KlaviyoInbox"
+  end
 
   s.default_subspecs = :none
 
