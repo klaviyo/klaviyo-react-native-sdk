@@ -30,6 +30,7 @@
       - [React Native Token Collection](#react-native-token-collection)
       - [Native Token Collection](#native-token-collection)
     - [Receiving Push Notifications](#receiving-push-notifications)
+      - [Android: Using React Native Firebase Messaging](#android-using-react-native-firebase-messaging)
     - [Rich Push](#rich-push)
     - [Push Action Buttons](#push-action-buttons)
     - [Badge Count](#badge-count)
@@ -356,7 +357,10 @@ forwarding differently by default:
   auto-registers its `KlaviyoPushService` (a `FirebaseMessagingService`) via manifest merge, so it
   forwards a token to Klaviyo whenever FCM delivers one, without any React Native code. You do not
   need to collect the token yourself on Android — though doing so is harmless: the native SDK only
-  sends a request when the complete push request state has changed.
+  sends a request when the complete push request state has changed. If your app also uses
+  `@react-native-firebase/messaging`, declare `KlaviyoPushService` in your app manifest so this keeps
+  working; see [Android: Using React Native Firebase
+  Messaging](#android-using-react-native-firebase-messaging).
 - **iOS — opt-in (off by default).** iOS token forwarding relies on app-delegate method swizzling,
   which is more invasive, so the native iOS SDK does not enable it implicitly. By default you set the
   APNs token manually, as shown below. Automatic forwarding on iOS is opt-in via `Info.plist` — see
@@ -503,6 +507,35 @@ native code. Note that either of these approaches is sufficient to inform the Kl
 You can send test notifications to a specific token using the
 [push notification preview](https://help.klaviyo.com/hc/en-us/articles/18011985278875)
 feature in order to test your integration.
+
+#### Android: Using React Native Firebase Messaging
+
+FCM delivers each `com.google.firebase.MESSAGING_EVENT` to exactly one `FirebaseMessagingService`.
+`@react-native-firebase/messaging` registers its own service, and it wins over the `KlaviyoPushService`
+that the native SDK contributes. Without a change, Klaviyo push notifications are never displayed and
+no error is logged.
+
+Declare `KlaviyoPushService` in your app's `android/app/src/main/AndroidManifest.xml`, inside
+`<application>`. Your app's own manifest is merged ahead of every library manifest, so this
+declaration is the one FCM picks:
+
+```xml
+<service
+    android:name="com.klaviyo.pushFcm.KlaviyoPushService"
+    android:exported="false">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+```
+
+If you subclass `KlaviyoPushService`, put your subclass's class name in `android:name` instead; see
+the [Android SDK's Advanced Setup](https://github.com/klaviyo/klaviyo-android-sdk#advanced-setup) for
+subclassing and custom handling.
+
+RN Firebase keeps receiving messages with this in place. It handles incoming messages in its own
+`BroadcastReceiver`, not in its service, so `messaging().onMessage` and
+`messaging().setBackgroundMessageHandler` still fire.
 
 #### Rich Push
 
