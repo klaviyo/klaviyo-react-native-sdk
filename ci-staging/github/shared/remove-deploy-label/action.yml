@@ -1,0 +1,46 @@
+name: Remove deploy label
+description: Removes the label that triggered a labeled pull_request run when it starts with the label prefix (deploy-example-app by default), so re-applying it triggers again. Does nothing on other events, unmatched labels or fork PRs. A label already gone is not an error.
+
+inputs:
+  github-token:
+    description: Token with pull-requests:write
+    required: false
+    default: ${{ github.token }}
+  label-prefix:
+    description: Prefix of the labels to remove
+    required: false
+    default: deploy-example-app
+
+outputs:
+  removed:
+    description: "'true' when the action ran the removal for the triggering label"
+    value: ${{ steps.gate.outputs.match }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check the triggering label
+      id: gate
+      shell: bash
+      env:
+        MATCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.label.name, inputs.label-prefix) }}
+      run: echo "match=$MATCH" >> "$GITHUB_OUTPUT"
+
+    - name: Remove label
+      if: steps.gate.outputs.match == 'true'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        LABEL_NAME: ${{ github.event.label.name }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          try {
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              name: process.env.LABEL_NAME,
+            });
+          } catch (e) {
+            if (e.status !== 404) throw e;
+          }

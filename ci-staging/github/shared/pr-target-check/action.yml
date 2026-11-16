@@ -1,0 +1,56 @@
+name: PR target check
+description: Fails a pull request into the protected base branch (default master) unless its head branch has an allowed prefix, its title matches the allowed regex, or it carries the override label. On failure adds a warning label and posts one warning comment; a later pass removes both.
+
+inputs:
+  github-token:
+    description: Token with pull-requests:write and issues:write. Comment cleanup matches comments by github-actions[bot], so pass github.token.
+    required: false
+    default: ${{ github.token }}
+  protected-base:
+    description: Base branch the check applies to. PRs into any other base pass.
+    required: false
+    default: master
+  allowed-head-prefixes:
+    description: Newline- or comma-separated head branch prefixes allowed to target the protected base
+    required: false
+    default: |
+      rel/
+      ci/
+      docs/
+      dependabot/
+  allowed-title-regex:
+    description: Bash extended regex matched against the lowercased PR title. Empty disables the title path.
+    required: false
+    default: '^(ci|chore|docs|rel)(\([^)]*\))?!?:[[:space:]]'
+  label:
+    description: Label added while the check fails
+    required: false
+    default: 'needs: release branch'
+  override-label:
+    description: Label that lets the PR merge to the protected base anyway
+    required: false
+    default: manual-merge
+  comment-marker:
+    description: Hidden marker that identifies the warning comment
+    required: false
+    default: '<!-- pr-target-check-warning -->'
+
+runs:
+  using: composite
+  steps:
+    - name: Validate source branch
+      shell: bash
+      env:
+        HEAD_REF: ${{ github.head_ref }}
+        EVENT_BASE_REF: ${{ github.base_ref }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        LABEL: ${{ inputs.label }}
+        OVERRIDE_LABEL: ${{ inputs.override-label }}
+        MARKER: ${{ inputs.comment-marker }}
+        PROTECTED_BASE: ${{ inputs.protected-base }}
+        ALLOWED_HEAD_PREFIXES: ${{ inputs.allowed-head-prefixes }}
+        TITLE_REGEX: ${{ inputs.allowed-title-regex }}
+      run: bash "$GITHUB_ACTION_PATH/pr-target-check.sh"

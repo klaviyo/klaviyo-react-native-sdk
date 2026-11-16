@@ -142,7 +142,7 @@ refs, derived app version, build number, commit, branch and build time to
 shows them in its info modal, and `.github/scripts/release-notes.sh` prints the
 same header for the store notes (500 chars on Play, 4000 on TestFlight; the
 release name and body are appended on `release: published` and cut first).
-`.github/actions/notify-slack` posts the Slack message. Uploads go
+`.github/shared/notify-slack` posts the Slack message. Uploads go
 through fastlane: `pilot` and `supply` for TestFlight and Play, plus What to
 Test on iOS.
 

@@ -1,0 +1,23 @@
+name: PR Target Branch Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+jobs:
+  check-pr-target:
+    name: Check PR targets a release branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout shared actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/shared
+          persist-credentials: false
+
+      - name: Validate source branch
+        uses: ./.github/shared/pr-target-check

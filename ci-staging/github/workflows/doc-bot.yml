@@ -1,0 +1,135 @@
+# Builds the TypeDoc API reference from master and publishes it to GitHub Pages
+# (https://klaviyo.github.io/klaviyo-react-native-sdk/) using the built-in GITHUB_TOKEN.
+# Requires Settings → Pages → Source = "GitHub Actions".
+name: Documentation Bot
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - '!src/__tests__/**'
+      - 'package.json'
+      - 'README.md'
+      - 'tsconfig.json'
+      - 'tsconfig.build.json'
+      - '.github/workflows/doc-bot.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  TRIGGERED_BY: ${{ github.event_name == 'schedule' && 'schedule' || (endsWith(github.triggering_actor || github.actor, '[bot]') && format('{0} (automation)', github.workflow) || github.triggering_actor || github.actor) }}
+  SLACK_USERNAME: React Native SDK
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
+
+# One Pages deployment at a time. Don't cancel an in-flight deploy; a newer push queues behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    name: Announce the docs deploy
+    # Only master is published, even if the workflow is dispatched from another branch.
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      slack_ts: ${{ steps.slack.outputs.ts }}
+    steps:
+      - name: Compute short commit
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Notify Slack docs deploy started
+        id: slack
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: pending
+          title: React Native SDK docs deploying to GitHub Pages
+          fields: |
+            Branch: `${{ github.ref_name }}`
+            Commit: `${{ env.SHORT_SHA }}`
+            Event: `${{ github.event_name }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+
+  build:
+    name: Build TypeDoc
+    needs: announce
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: read # configure-pages reads the Pages site config
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Generate docs
+        run: yarn generate-docs
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    # Only master is published, even if the workflow is dispatched from another branch.
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  notify:
+    name: Update the docs message
+    needs: [announce, build, deploy]
+    # Posts a new message when the announce failed to return a ts.
+    if: always() && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Compute short commit
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Update the Slack docs message
+        continue-on-error: true
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          ts: ${{ needs.announce.outputs.slack_ts }}
+          status: ${{ needs.deploy.result == 'success' && 'success' || contains(needs.*.result, 'failure') && 'failure' || 'stopped' }}
+          title: ${{ needs.deploy.result == 'success' && 'React Native SDK docs deployed to GitHub Pages' || contains(needs.*.result, 'failure') && '`Documentation Bot` workflow failed' || 'React Native SDK docs deploy stopped' }}
+          body: >-
+            ${{ contains(needs.*.result, 'failure') && needs.deploy.result != 'success' && 'Common issue: check the TypeDoc build and the GitHub Pages deploy (Settings → Pages → Source must be "GitHub Actions").' || '' }}
+          fields: |
+            Branch: `${{ github.ref_name }}`
+            Commit: `${{ env.SHORT_SHA }}`
+            Event: `${{ github.event_name }}`
+            Triggered by: `${{ env.TRIGGERED_BY }}`
+          links: ${{ needs.deploy.outputs.page_url && format('Docs|{0}', needs.deploy.outputs.page_url) || '' }}
