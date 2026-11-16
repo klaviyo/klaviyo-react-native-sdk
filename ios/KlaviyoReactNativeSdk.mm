@@ -30,6 +30,10 @@ RCT_EXPORT_MODULE()
         // predates the inbox (and therefore exports no such constant) reports unavailable rather
         // than failing on a missing selector.
         @"INBOX_AVAILABLE": @([KlaviyoBridge isInboxAvailable]),
+        // True only when the linked native inbox implements clear. iOS does; Android does not, so
+        // the JS layer surfaces this as `Klaviyo.capabilities.clear` instead of making callers
+        // discover it from a rejection.
+        @"INBOX_CLEAR_AVAILABLE": @([KlaviyoBridge isInboxClearAvailable]),
     };
 }
 
@@ -274,6 +278,30 @@ RCT_EXPORT_METHOD(updateInboxMessageState: (NSString *)messageId
                                           reject:^(NSString *code, NSString *message) {
                                               reject(code, message, nil);
                                           }];
+}
+
+RCT_EXPORT_METHOD(clearInboxMessage: (NSString *)messageId
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge clearInboxMessageWithId:messageId
+                                   resolve:^(BOOL removed) {
+                                       resolve(@(removed));
+                                   }
+                                    reject:^(NSString *code, NSString *message) {
+                                        reject(code, message, nil);
+                                    }];
+}
+
+RCT_EXPORT_METHOD(clearInboxMessages: (NSArray<NSString *> *)messageIds
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge clearInboxMessagesWithIds:messageIds
+                                     resolve:^(NSNumber *clearedCount) {
+                                         resolve(clearedCount);
+                                     }
+                                      reject:^(NSString *code, NSString *message) {
+                                          reject(code, message, nil);
+                                      }];
 }
 
 RCT_EXPORT_METHOD(registerInboxChangeHandler) {

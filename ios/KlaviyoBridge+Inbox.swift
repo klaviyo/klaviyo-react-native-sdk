@@ -32,6 +32,20 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Whether the linked native inbox implements the clear operations.
+    ///
+    /// `MobileInbox.clear(id:)` / `clear(ids:)` are iOS-only today; Android's native inbox has no
+    /// public equivalent. The JS layer reads this to answer `Klaviyo.capabilities.clear` without
+    /// provoking a failed call.
+    @objc
+    public static var isInboxClearAvailable: Bool {
+        #if canImport(KlaviyoInbox)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     // MARK: - Mobile Inbox
 
     /// Stable error codes the JS layer switches on. They are part of the public contract, so they
@@ -181,6 +195,56 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Removes one message from this device.
+    ///
+    /// Resolves `true` when a message was removed, `false` when this device had no such message
+    /// (including before `initialize`).
+    ///
+    /// Note that `resetProfile()` already clears the whole inbox, for every company, natively.
+    @objc
+    public static func clearInboxMessage(
+        id: String,
+        resolve: @escaping (Bool) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        Task {
+            do {
+                resolve(try await KlaviyoSDK().mobileInbox.clear(id: id))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
+    /// Removes several messages from this device.
+    ///
+    /// Resolves how many were removed. IDs this device does not have are skipped, and the count is
+    /// zero before `initialize`. The JS layer de-duplicates before calling.
+    @objc
+    public static func clearInboxMessages(
+        ids: [String],
+        resolve: @escaping (NSNumber) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        Task {
+            do {
+                resolve(NSNumber(value: try await KlaviyoSDK().mobileInbox.clear(ids: ids)))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
     /// Starts forwarding the native inbox change signal to JS.
     ///
     /// `MobileInbox.changes` is an `AsyncStream<Void>` that yields no value, so the emitted event
@@ -309,6 +373,12 @@ extension KlaviyoBridge {
         if let mediaUrl = message.mediaURL { payload["mediaUrl"] = mediaUrl.absoluteString }
         if let mediaType = message.mediaType { payload["mediaType"] = mediaType }
         if let collapseId = message.collapseID { payload["collapseId"] = collapseId }
+
+        // TODO(MAGE-1140): add `readUpdatedAt`, `archivedUpdatedAt`, `updatedAt` and `expiredAt`
+        // here as epoch milliseconds once `KlaviyoInbox.InboxMessage` exposes them publicly. Today
+        // they exist only on the package-internal stored record, and reaching into it would leak a
+        // persistence type across the bridge, so nothing is sent and the JS layer omits the fields.
+        // The JS parser already accepts them, so this needs no JS change when they land.
 
         return payload
     }
