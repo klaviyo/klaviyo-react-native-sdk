@@ -7,6 +7,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
@@ -160,6 +161,9 @@ class KlaviyoReactNativeSdkModule(
       // implementation registers a MobileInboxProvider from an init ContentProvider, so its
       // absence is exactly "the inbox artifact is not shipped".
       "INBOX_AVAILABLE" to (InboxBridgeProvider.bridge?.isAvailable() ?: false),
+      // False on Android today: the native inbox has no public clear. The JS layer surfaces this
+      // as `Klaviyo.capabilities.clear`, so callers can branch without provoking a rejection.
+      "INBOX_CLEAR_AVAILABLE" to (InboxBridgeProvider.bridge?.isClearAvailable() ?: false),
     )
 
   @ReactMethod
@@ -783,6 +787,24 @@ class KlaviyoReactNativeSdkModule(
     promise: Promise,
   ) {
     InboxBridgeProvider.bridge?.updateMessageState(messageId, state, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun clearInboxMessage(
+    messageId: String,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.clearMessage(messageId, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun clearInboxMessages(
+    messageIds: ReadableArray,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.clearMessages(messageIds.toArrayList().filterIsInstance<String>(), promise)
       ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
   }
 

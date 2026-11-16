@@ -39,7 +39,17 @@ internal class InboxBridgeImpl : InboxBridge {
     const val STORAGE_FAILURE = "INBOX_STORAGE_FAILURE"
     const val INVALID_CURSOR = "INBOX_INVALID_CURSOR"
     const val UNAVAILABLE = "INBOX_UNAVAILABLE"
+    const val UNSUPPORTED = "INBOX_UNSUPPORTED"
   }
+
+  /**
+   * Whether the native inbox implements clear.
+   *
+   * Always false on Android: `MobileInbox` exposes no public clear, only the internal
+   * `InboxRepository.clearByCompanyId` / `clearAll`, which nothing calls. Reaching into those would
+   * invent a contract the native SDK has not published, so this reports unsupported instead.
+   */
+  override fun isClearAvailable(): Boolean = false
 
   override fun isAvailable(): Boolean = Registry.isRegistered<MobileInboxProvider>()
 
@@ -160,6 +170,49 @@ internal class InboxBridgeImpl : InboxBridge {
   }
 
   /**
+   * Removes one message from this device.
+   *
+   * Unsupported on Android. `MobileInbox` has no public clear, and the internal
+   * `InboxRepository.clearByCompanyId` / `clearAll` are not called by anything upstream, so
+   * invoking them here would be inventing a native contract rather than bridging one.
+   *
+   * TODO(MAGE-1102 follow-up): replace this rejection with a call to `MobileInbox.clear(id:)` once
+   * the Android SDK ships a public clear, and flip [isClearAvailable] to match.
+   */
+  override fun clearMessage(
+    messageId: String,
+    promise: Promise,
+  ) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+    promise.reject(
+      InboxErrorCode.UNSUPPORTED,
+      "Inbox clear is not available on this platform or native version",
+    )
+  }
+
+  /**
+   * Removes several messages from this device.
+   *
+   * Unsupported on Android; see [clearMessage].
+   */
+  override fun clearMessages(
+    messageIds: List<String>,
+    promise: Promise,
+  ) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+    promise.reject(
+      InboxErrorCode.UNSUPPORTED,
+      "Inbox clear is not available on this platform or native version",
+    )
+  }
+
+  /**
    * The listener currently registered with the native SDK, or null when nothing is subscribed.
    *
    * Held so [unregisterChangeHandler] can remove exactly the instance that was added: the native SDK
@@ -270,6 +323,14 @@ internal class InboxBridgeImpl : InboxBridge {
       putBoolean("isRead", isRead)
       putBoolean("isArchived", isArchived)
       putString("source", source.rawValue)
+      // TODO(MAGE-1140): add `readUpdatedAt`, `archivedUpdatedAt` and `expiredAt` here once
+      // `com.klaviyo.inbox.InboxMessage` exposes them publicly. Today they live only on the Room
+      // entity (`readUpdatedAt`, `archivedUpdatedAt`, `expiresAt`), and reading that would leak a
+      // persistence type across the bridge. Android has no catch-all `updatedAt` in its model at
+      // all, so that field will stay absent here even after the per-state timestamps land.
+      //
+      // Note the naming mismatch to reconcile when that happens: Android calls the expiry field
+      // `expiresAt` while the wrapper and iOS use `expiredAt`. The wrapper key is `expiredAt`.
     }
   }
 

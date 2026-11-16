@@ -36,6 +36,36 @@ internal interface InboxBridge {
   )
 
   /**
+   * Removes one message from this device.
+   *
+   * Unsupported on Android: the native inbox has no public clear API. The implementation must
+   * reject with `INBOX_UNSUPPORTED` rather than reach into an internal API.
+   */
+  fun clearMessage(
+    messageId: String,
+    promise: Promise,
+  )
+
+  /**
+   * Removes several messages from this device.
+   *
+   * Unsupported on Android, for the same reason as [clearMessage]; rejects with
+   * `INBOX_UNSUPPORTED`.
+   */
+  fun clearMessages(
+    messageIds: List<String>,
+    promise: Promise,
+  )
+
+  /**
+   * Whether the clear operations are implemented by this build's native inbox.
+   *
+   * Constant per platform today, but read at call time so it cannot go stale if the native SDK
+   * grows a public clear.
+   */
+  fun isClearAvailable(): Boolean
+
+  /**
    * Starts delivering inbox change invalidations.
    *
    * [onChange] is invoked on the JS bridge's thread whenever the inbox may have changed. It must
