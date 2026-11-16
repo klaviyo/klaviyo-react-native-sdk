@@ -497,7 +497,13 @@ export type {
   Subscription,
   SubscriptionChannels,
 } from './Subscription';
-export { INBOX_CHANGED_EVENT, InboxError, InboxErrorCode } from './Inbox';
+export {
+  INBOX_CHANGED_EVENT,
+  InboxArchiveFilter,
+  InboxError,
+  InboxErrorCode,
+  InboxReadFilter,
+} from './Inbox';
 export type {
   InboxAction,
   InboxChangeHandler,

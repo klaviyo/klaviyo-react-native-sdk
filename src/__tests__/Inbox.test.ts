@@ -1,6 +1,8 @@
 import {
+  InboxArchiveFilter,
   InboxError,
   InboxErrorCode,
+  InboxReadFilter,
   formatInboxPageOptions,
   parseInboxMessage,
   parseInboxPage,
@@ -361,6 +363,60 @@ describe('validateInboxPageOptions', () => {
   ])('rejects a page size that is %s', (_label, pageSize) => {
     expect(validateInboxPageOptions({ pageSize })).toContain('pageSize');
   });
+
+  describe('filters', () => {
+    it.each(['all', 'unread', 'read'])('accepts the %s read filter', (f) => {
+      expect(validateInboxPageOptions({ readFilter: f })).toBeNull();
+    });
+
+    it.each(['active', 'archived', 'all'])(
+      'accepts the %s archive filter',
+      (f) => {
+        expect(validateInboxPageOptions({ archiveFilter: f })).toBeNull();
+      }
+    );
+
+    it('accepts both filters together with a cursor', () => {
+      expect(
+        validateInboxPageOptions({
+          cursor: 'abc',
+          readFilter: 'unread',
+          archiveFilter: 'archived',
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      ['an unknown read filter', { readFilter: 'deleted' }, 'readFilter'],
+      ['a differently-cased read filter', { readFilter: 'ALL' }, 'readFilter'],
+      ['a non-string read filter', { readFilter: 1 }, 'readFilter'],
+      ['a null read filter', { readFilter: null }, 'readFilter'],
+      [
+        'an unknown archive filter',
+        { archiveFilter: 'archivedOnly' },
+        'archiveFilter',
+      ],
+      [
+        'a differently-cased archive filter',
+        { archiveFilter: 'Active' },
+        'archiveFilter',
+      ],
+      ['a non-string archive filter', { archiveFilter: [] }, 'archiveFilter'],
+    ])('rejects %s', (_label, options, field) => {
+      // Rejected rather than defaulted: substituting a default would quietly return the wrong
+      // messages.
+      expect(validateInboxPageOptions(options)).toContain(field);
+    });
+
+    it('names the supported values so a caller can correct the call', () => {
+      expect(validateInboxPageOptions({ readFilter: 'nope' })).toContain(
+        'all, unread, read'
+      );
+      expect(validateInboxPageOptions({ archiveFilter: 'nope' })).toContain(
+        'active, archived, all'
+      );
+    });
+  });
 });
 
 describe('validateInboxCursor', () => {
@@ -431,6 +487,58 @@ describe('formatInboxPageOptions', () => {
     const cursor = 'token::with::separators';
 
     expect(formatInboxPageOptions({ cursor })).toEqual({ cursor });
+  });
+
+  it('forwards the filters', () => {
+    expect(
+      formatInboxPageOptions({
+        readFilter: 'unread',
+        archiveFilter: 'archived',
+      })
+    ).toEqual({ readFilter: 'unread', archiveFilter: 'archived' });
+  });
+
+  it('omits absent filters, so each platform default applies', () => {
+    const bridged = formatInboxPageOptions({ pageSize: 10 });
+
+    expect(bridged).toEqual({ pageSize: 10 });
+    expect(bridged).not.toHaveProperty('readFilter');
+    expect(bridged).not.toHaveProperty('archiveFilter');
+  });
+
+  it('forwards filters alongside a cursor', () => {
+    expect(
+      formatInboxPageOptions({
+        cursor: 'abc',
+        pageSize: 5,
+        readFilter: 'read',
+        archiveFilter: 'all',
+      })
+    ).toEqual({
+      cursor: 'abc',
+      pageSize: 5,
+      readFilter: 'read',
+      archiveFilter: 'all',
+    });
+  });
+});
+
+describe('filter constants', () => {
+  it('exposes the wire values the native SDKs accept', () => {
+    expect(Object.values(InboxReadFilter)).toEqual(['all', 'unread', 'read']);
+    expect(Object.values(InboxArchiveFilter)).toEqual([
+      'active',
+      'archived',
+      'all',
+    ]);
+  });
+
+  it('matches a plain string literal, so consumers can compare directly', () => {
+    const readFilter: string = InboxReadFilter.Unread;
+    const archiveFilter: string = InboxArchiveFilter.Archived;
+
+    expect(readFilter).toBe('unread');
+    expect(archiveFilter).toBe('archived');
   });
 });
 

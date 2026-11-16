@@ -141,7 +141,46 @@ export interface InboxPage {
 }
 
 /**
+ * Which messages a page returns by read state.
+ *
+ * The values are the wire format shared with the native SDKs.
+ */
+export const InboxReadFilter = {
+  /** Read and unread messages. */
+  All: 'all',
+  /** Unread messages only. */
+  Unread: 'unread',
+  /** Read messages only. */
+  Read: 'read',
+} as const;
+
+/** Union of valid {@link InboxPageOptions#readFilter} values. */
+export type InboxReadFilter =
+  (typeof InboxReadFilter)[keyof typeof InboxReadFilter];
+
+/**
+ * Which messages a page returns by archived state.
+ *
+ * The values are the wire format shared with the native SDKs.
+ */
+export const InboxArchiveFilter = {
+  /** Messages that are not archived. */
+  Active: 'active',
+  /** Archived messages only. */
+  Archived: 'archived',
+  /** Archived and not archived messages. */
+  All: 'all',
+} as const;
+
+/** Union of valid {@link InboxPageOptions#archiveFilter} values. */
+export type InboxArchiveFilter =
+  (typeof InboxArchiveFilter)[keyof typeof InboxArchiveFilter];
+
+/**
  * Which page of the inbox to fetch.
+ *
+ * The filters narrow which messages the pages are made of, and they are independent: a read filter
+ * of `'all'` with the default archive filter still leaves archived messages out.
  */
 export interface InboxPageOptions {
   /**
@@ -153,8 +192,22 @@ export interface InboxPageOptions {
   /**
    * {@link InboxPage#nextCursor} from the previous page, or omitted for the first page. Opaque:
    * never parse it.
+   *
+   * A cursor is only valid with the same {@link readFilter} and {@link archiveFilter} it was issued
+   * under. Passing it with different filters rejects with {@link InboxErrorCode.InvalidCursor}.
    */
   readonly cursor?: string;
+
+  /**
+   * Whether read messages, unread messages, or both are returned. Defaults to `'all'`.
+   */
+  readonly readFilter?: InboxReadFilter;
+
+  /**
+   * Whether archived messages, messages that are not archived, or both are returned. Defaults to
+   * `'active'`, so archived messages are hidden unless a page explicitly asks for them.
+   */
+  readonly archiveFilter?: InboxArchiveFilter;
 }
 
 /**
@@ -184,7 +237,14 @@ export interface KlaviyoInboxApi {
    * Pages run newest first by send time, or by the time this device received the push when the
    * send time is unknown.
    *
-   * @param options Page size and the cursor from a previous page
+   * The filters choose which messages the page is made of. They default to every unarchived
+   * message, read or unread — so archived messages are hidden unless
+   * {@link InboxPageOptions#archiveFilter} asks for them.
+   *
+   * A cursor only continues the query it came from: pass it back with the same filters that
+   * returned it, or the call rejects with {@link InboxErrorCode.InvalidCursor}.
+   *
+   * @param options Page size, cursor, and filters
    * @returns The page, with the cursor for the next one when there is more to read
    */
   fetchPage(options?: InboxPageOptions): Promise<InboxPage>;
@@ -250,7 +310,10 @@ export const INBOX_CHANGED_EVENT = 'klaviyo:inboxChanged';
 export const InboxErrorCode = {
   /** The on-device store could not complete the call. */
   StorageFailure: 'INBOX_STORAGE_FAILURE',
-  /** The cursor is malformed, or did not come from a page of this inbox. */
+  /**
+   * The cursor is malformed, did not come from a page of this inbox, or was issued under different
+   * filters than the ones it is being reused with.
+   */
   InvalidCursor: 'INBOX_INVALID_CURSOR',
   /** The native Inbox module is not linked into this build, or is not compatible with this SDK. */
   Unavailable: 'INBOX_UNAVAILABLE',
@@ -314,6 +377,10 @@ export function toInboxError(error: unknown): InboxError {
   return new InboxError(InboxErrorCode.StorageFailure, message);
 }
 
+const INBOX_READ_FILTERS: readonly string[] = Object.values(InboxReadFilter);
+const INBOX_ARCHIVE_FILTERS: readonly string[] =
+  Object.values(InboxArchiveFilter);
+
 /**
  * Validates the shape of {@link InboxPageOptions} at runtime, returning an error message or `null`
  * when valid.
@@ -337,13 +404,32 @@ export function validateInboxPageOptions(options: unknown): string | null {
     return 'Inbox page options must be an object when provided';
   }
 
-  const { pageSize } = options as InboxPageOptions;
+  const { pageSize, readFilter, archiveFilter } = options as InboxPageOptions;
 
   if (
     pageSize !== undefined &&
     (typeof pageSize !== 'number' || !Number.isFinite(pageSize))
   ) {
     return 'Inbox pageSize must be a finite number when provided';
+  }
+
+  // Filters are rejected rather than coerced: silently substituting the default would return the
+  // wrong messages while looking like it worked.
+  if (
+    readFilter !== undefined &&
+    (typeof readFilter !== 'string' || !INBOX_READ_FILTERS.includes(readFilter))
+  ) {
+    return `Inbox readFilter must be one of: ${INBOX_READ_FILTERS.join(', ')}`;
+  }
+
+  if (
+    archiveFilter !== undefined &&
+    (typeof archiveFilter !== 'string' ||
+      !INBOX_ARCHIVE_FILTERS.includes(archiveFilter))
+  ) {
+    return `Inbox archiveFilter must be one of: ${INBOX_ARCHIVE_FILTERS.join(
+      ', '
+    )}`;
   }
 
   return null;
@@ -431,6 +517,19 @@ export function parseInboxUpdateResult(raw: unknown): boolean {
 }
 
 /**
+ * The payload shape sent across the bridge for a page request.
+ *
+ * Filters are omitted when not specified, so each platform's own default applies. Both native SDKs
+ * default `readFilter` to all and `archiveFilter` to active, which is the documented JS default.
+ */
+type BridgedInboxPageOptions = {
+  pageSize?: number;
+  cursor?: string;
+  readFilter?: InboxReadFilter;
+  archiveFilter?: InboxArchiveFilter;
+};
+
+/**
  * Converts {@link InboxPageOptions} into the bridge payload, dropping absent fields so the native
  * side can tell "not specified" from a value.
  *
@@ -443,18 +542,24 @@ export function parseInboxUpdateResult(raw: unknown): boolean {
  */
 export function formatInboxPageOptions(
   options?: InboxPageOptions
-): { pageSize?: number; cursor?: string } | undefined {
+): BridgedInboxPageOptions | undefined {
   if (options === undefined || options === null) {
     return undefined;
   }
 
-  const bridged: { pageSize?: number; cursor?: string } = {};
+  const bridged: BridgedInboxPageOptions = {};
 
   if (options.pageSize !== undefined) {
     bridged.pageSize = Math.trunc(options.pageSize);
   }
   if (options.cursor !== undefined) {
     bridged.cursor = options.cursor;
+  }
+  if (options.readFilter !== undefined) {
+    bridged.readFilter = options.readFilter;
+  }
+  if (options.archiveFilter !== undefined) {
+    bridged.archiveFilter = options.archiveFilter;
   }
 
   return bridged;

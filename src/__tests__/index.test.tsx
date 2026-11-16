@@ -1649,6 +1649,73 @@ describe('Klaviyo SDK', () => {
         });
       });
 
+      it('forwards the filters', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({
+          readFilter: 'unread',
+          archiveFilter: 'archived',
+        });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          readFilter: 'unread',
+          archiveFilter: 'archived',
+        });
+      });
+
+      it('omits absent filters so each platform default applies', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({ pageSize: 10 });
+
+        const payload = (native().fetchInboxPage as jest.Mock).mock.calls[0][0];
+        expect(payload).toEqual({ pageSize: 10 });
+        expect(payload).not.toHaveProperty('readFilter');
+        expect(payload).not.toHaveProperty('archiveFilter');
+      });
+
+      it.each([
+        ['an unknown read filter', { readFilter: 'deleted' }],
+        ['an unknown archive filter', { archiveFilter: 'archivedOnly' }],
+        ['a non-string read filter', { readFilter: 1 }],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, options) => {
+          await expect(
+            Klaviyo.fetchPage(options as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().fetchInboxPage).not.toHaveBeenCalled();
+        }
+      );
+
+      it('rejects a cursor reused under different filters as INBOX_INVALID_CURSOR', async () => {
+        // Native validates the cursor against the filters that issued it. The wrapper must surface
+        // that as the stable code rather than a generic failure, since it is a caller mistake with
+        // a specific remedy (re-issue the cursor from a first page with these filters).
+        native().fetchInboxPage.mockRejectedValue(
+          Object.assign(new Error('cursor filter mismatch'), {
+            code: InboxErrorCode.InvalidCursor,
+          })
+        );
+
+        const promise = Klaviyo.fetchPage({
+          cursor: 'cursor-from-a-different-filter',
+          readFilter: 'unread',
+          archiveFilter: 'active',
+        });
+
+        await expect(promise).rejects.toBeInstanceOf(InboxError);
+        await expect(promise).rejects.toMatchObject({
+          code: InboxErrorCode.InvalidCursor,
+        });
+        // The cursor and filters are forwarded together, so native can do the comparison.
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          cursor: 'cursor-from-a-different-filter',
+          readFilter: 'unread',
+          archiveFilter: 'active',
+        });
+      });
+
       it('normalizes a codeless native rejection into a storage failure', async () => {
         native().fetchInboxPage.mockRejectedValue(new Error('bridge exploded'));
 
