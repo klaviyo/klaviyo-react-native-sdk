@@ -123,6 +123,45 @@ export interface InboxMessage {
    * Typed as an open string for the same reason as {@link InboxDestination#type}.
    */
   readonly source: string;
+
+  // Local state timestamps, all in milliseconds since the Unix epoch and all omitted when the
+  // native SDK does not report them.
+  //
+  // PLATFORM AVAILABILITY: neither native SDK exposes these on its public InboxMessage today —
+  // both keep them on internal storage types only. They are declared here, and parsed when
+  // present, so that the wrapper does not need another breaking release once the native SDKs
+  // surface them. Expect them to be absent on both platforms for now; treat absence as "unknown",
+  // never as "unchanged". Android additionally has no catch-all updatedAt in its storage model, so
+  // {@link updatedAt} will stay absent there even after the per-state timestamps land.
+
+  /**
+   * When the message's read state last changed, if the native SDK reports it.
+   *
+   * Set by marking a message read or unread; absent if it has never been toggled.
+   */
+  readonly readUpdatedAt?: number;
+
+  /**
+   * When the message's archived state last changed, if the native SDK reports it.
+   *
+   * Set by archiving or unarchiving; absent if it has never been toggled.
+   */
+  readonly archivedUpdatedAt?: number;
+
+  /**
+   * When the message was last modified in any way, if the native SDK reports it.
+   *
+   * Absent on Android, whose storage has no catch-all timestamp.
+   */
+  readonly updatedAt?: number;
+
+  /**
+   * When the message is due to expire, if the native SDK reports it.
+   *
+   * Named `expiredAt` here for consistency with the native iOS field and the MAGE-1722/MAGE-1723
+   * naming; Android's internal storage type calls the same value `expiresAt`.
+   */
+  readonly expiredAt?: number;
 }
 
 /**
@@ -221,6 +260,23 @@ export interface InboxPageOptions {
 export type InboxChangeHandler = () => void;
 
 /**
+ * Which optional inbox operations the linked native module supports.
+ *
+ * The inbox surface is largely identical across platforms, but a few operations exist on one
+ * native SDK before the other. Checking here lets a host branch without provoking a failed call.
+ */
+export interface InboxCapabilities {
+  /**
+   * Whether {@link KlaviyoInboxApi.clearMessage} and {@link KlaviyoInboxApi.clearMessages} are
+   * supported by the linked native module.
+   *
+   * `true` on iOS, whose native inbox has a public clear API. `false` on Android, which has no
+   * public clear yet, and `false` everywhere when the native inbox module is not in the build.
+   */
+  readonly clear: boolean;
+}
+
+/**
  * Interface for the Klaviyo Mobile Inbox API.
  *
  * A native failure rejects with an {@link InboxError} carrying a stable {@link InboxErrorCode}, and
@@ -230,6 +286,13 @@ export type InboxChangeHandler = () => void;
  * which is an {@link InboxErrorCode.InvalidCursor} because no page ever returned one.
  */
 export interface KlaviyoInboxApi {
+  /**
+   * Which optional operations the linked native module supports.
+   *
+   * Read-only and cheap: it reads the module's exported constants, so it is safe to call on every
+   * render.
+   */
+  readonly capabilities: InboxCapabilities;
   /**
    * Fetch one page of the current company's messages, newest first.
    *
@@ -277,6 +340,36 @@ export interface KlaviyoInboxApi {
   ): Promise<boolean>;
 
   /**
+   * Remove one message from this device.
+   *
+   * This is a local delete, not a server-side unsubscribe or a suppression: the message is gone
+   * from this device's store only. A later push with the same transmission is not re-created,
+   * because the store still records having seen it.
+   *
+   * iOS only today. On Android, and in any build without the native inbox module, this rejects
+   * with {@link InboxErrorCode.Unsupported} — check {@link InboxCapabilities#clear} to branch
+   * without provoking a rejection.
+   *
+   * @param messageId ID of the message to remove
+   * @returns `true` when a message was removed, `false` when this device had no such message
+   */
+  clearMessage(messageId: string): Promise<boolean>;
+
+  /**
+   * Remove several messages from this device.
+   *
+   * Behaves like {@link clearMessage} for each ID. Duplicate IDs are collapsed before crossing the
+   * bridge, so passing the same ID twice still counts once. IDs this device does not have are
+   * skipped rather than making the call fail.
+   *
+   * iOS only today; see {@link clearMessage} for the Android and unlinked-build behavior.
+   *
+   * @param messageIds IDs of the messages to remove
+   * @returns How many messages were removed
+   */
+  clearMessages(messageIds: readonly string[]): Promise<number>;
+
+  /**
    * Subscribe to inbox change invalidations.
    *
    * The handler fires when the inbox may have changed: a push was captured, a message's state was
@@ -317,6 +410,15 @@ export const InboxErrorCode = {
   InvalidCursor: 'INBOX_INVALID_CURSOR',
   /** The native Inbox module is not linked into this build, or is not compatible with this SDK. */
   Unavailable: 'INBOX_UNAVAILABLE',
+  /**
+   * The native Inbox module is linked, but does not implement this operation on this platform.
+   *
+   * Today that is {@link KlaviyoInboxApi.clearMessage} and
+   * {@link KlaviyoInboxApi.clearMessages} on Android, which has no public clear API yet. The module
+   * is present and every other inbox call works; only this one is missing. Check
+   * {@link InboxCapabilities#clear} to tell ahead of time rather than catching the rejection.
+   */
+  Unsupported: 'INBOX_UNSUPPORTED',
 } as const;
 
 /** Union of valid {@link InboxError} codes. */
@@ -476,6 +578,109 @@ export function validateInboxStateUpdate(
   }
 
   return null;
+}
+
+/**
+ * Largest number of IDs {@link KlaviyoInboxApi.clearMessages} accepts in one call.
+ *
+ * A bound rather than an undocumented native limit: the store removes IDs one at a time, so a
+ * pathologically large array would hold the bridge for a long time with no visible progress.
+ * Callers with more to clear should batch.
+ */
+export const MAX_INBOX_CLEAR_IDS = 1_000;
+
+/**
+ * Validates a {@link KlaviyoInboxApi.clearMessage} call at runtime, returning an error message or
+ * `null` when valid.
+ *
+ * @param messageId ID of the message to remove
+ */
+export function validateInboxClearMessage(messageId: unknown): string | null {
+  if (!isNonEmptyString(messageId)) {
+    return 'Inbox messageId is required and must be a non-empty string';
+  }
+
+  return null;
+}
+
+/**
+ * Validates and normalizes a {@link KlaviyoInboxApi.clearMessages} call at runtime.
+ *
+ * Returns an error message when the input is not a non-empty array of non-empty strings, or when it
+ * holds more than {@link MAX_INBOX_CLEAR_IDS} entries. On success, returns the de-duplicated IDs in
+ * their original order, ready to send across the bridge: passing the same ID twice should count
+ * once, and deduping here keeps that decision out of both native bridges.
+ *
+ * @param messageIds IDs of the messages to remove
+ */
+export function validateInboxClearMessages(
+  messageIds: unknown
+): { ids: string[] } | { error: string } {
+  if (!Array.isArray(messageIds)) {
+    return { error: 'Inbox messageIds must be an array of message IDs' };
+  }
+
+  if (messageIds.length === 0) {
+    return { error: 'Inbox messageIds must contain at least one message ID' };
+  }
+
+  const invalidIndex = messageIds.findIndex(
+    (messageId) => !isNonEmptyString(messageId)
+  );
+  if (invalidIndex !== -1) {
+    return {
+      error: `Inbox messageIds[${invalidIndex}] must be a non-empty string`,
+    };
+  }
+
+  // Dedupe before the size check, so a caller that repeats one ID many times is not rejected for a
+  // count that would never have reached native.
+  const ids = [...new Set(messageIds as string[])];
+
+  if (ids.length > MAX_INBOX_CLEAR_IDS) {
+    return {
+      error: `Inbox messageIds may contain at most ${MAX_INBOX_CLEAR_IDS} unique IDs per call`,
+    };
+  }
+
+  return { ids };
+}
+
+/**
+ * Coerces a bridged {@link KlaviyoInboxApi.clearMessage} result into a boolean.
+ *
+ * Only an explicit `true` means a message was removed; anything else is reported as `false`, so a
+ * host never claims to have deleted something native did not confirm.
+ *
+ * @param raw The value the native bridge resolved with
+ */
+export function parseInboxClearMessageResult(raw: unknown): boolean {
+  if (typeof raw === 'boolean') {
+    return raw;
+  }
+
+  console.warn(
+    `[Klaviyo] Inbox clear result is not a boolean: ${JSON.stringify(raw)}`
+  );
+  return false;
+}
+
+/**
+ * Coerces a bridged {@link KlaviyoInboxApi.clearMessages} result into a count.
+ *
+ * Anything that is not a finite, non-negative number is reported as zero rather than propagated.
+ *
+ * @param raw The value the native bridge resolved with
+ */
+export function parseInboxClearMessagesResult(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
+    return Math.trunc(raw);
+  }
+
+  console.warn(
+    `[Klaviyo] Inbox cleared count is not a non-negative number: ${JSON.stringify(raw)}`
+  );
+  return 0;
 }
 
 /**
@@ -736,6 +941,14 @@ export function parseInboxMessage(raw: unknown): InboxMessage | null {
   // `null` is meaningful here — it means "the push asked for no badge change" — so it is preserved
   // rather than collapsed into "absent".
   const badge = data.badge === null ? null : optionalNumber(data.badge);
+  // Local state timestamps. No native SDK exposes these yet, so today they are always absent; they
+  // are parsed anyway so a native release that starts sending them needs no JS change. A malformed
+  // value drops the field and warns, exactly like the other optional fields — it never fails the
+  // message.
+  const readUpdatedAt = optionalNumber(data.readUpdatedAt);
+  const archivedUpdatedAt = optionalNumber(data.archivedUpdatedAt);
+  const updatedAt = optionalNumber(data.updatedAt);
+  const expiredAt = optionalNumber(data.expiredAt);
 
   return {
     id,
@@ -755,6 +968,10 @@ export function parseInboxMessage(raw: unknown): InboxMessage | null {
     ...(sentAt !== undefined && { sentAt }),
     ...(receivedAt !== undefined && { receivedAt }),
     ...(badge !== undefined && { badge }),
+    ...(readUpdatedAt !== undefined && { readUpdatedAt }),
+    ...(archivedUpdatedAt !== undefined && { archivedUpdatedAt }),
+    ...(updatedAt !== undefined && { updatedAt }),
+    ...(expiredAt !== undefined && { expiredAt }),
   };
 }
 

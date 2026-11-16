@@ -3,12 +3,17 @@ import {
   InboxError,
   InboxErrorCode,
   InboxReadFilter,
+  MAX_INBOX_CLEAR_IDS,
   formatInboxPageOptions,
+  parseInboxClearMessageResult,
+  parseInboxClearMessagesResult,
   parseInboxMessage,
   parseInboxPage,
   parseInboxUnreadCount,
   parseInboxUpdateResult,
   toInboxError,
+  validateInboxClearMessage,
+  validateInboxClearMessages,
   validateInboxCursor,
   validateInboxPageOptions,
   validateInboxStateUpdate,
@@ -143,6 +148,89 @@ describe('parseInboxMessage', () => {
     const message = parseInboxMessage(validBridgedMessage({ badge: 'many' }));
 
     expect(message).not.toHaveProperty('badge');
+  });
+
+  describe('local state timestamps', () => {
+    // No native SDK exposes these on its public message type yet, so the fixtures below are ahead
+    // of what the bridges send. Parsing them now means a native release that starts sending them
+    // needs no JS change.
+    const TIMESTAMP_FIELDS = [
+      'readUpdatedAt',
+      'archivedUpdatedAt',
+      'updatedAt',
+      'expiredAt',
+    ] as const;
+
+    it.each(TIMESTAMP_FIELDS)('carries %s through as epoch ms', (field) => {
+      const message = parseInboxMessage(
+        validBridgedMessage({ [field]: 1_700_000_002_000 })
+      );
+
+      expect(message).toHaveProperty(field, 1_700_000_002_000);
+    });
+
+    it('carries all four together', () => {
+      const message = parseInboxMessage(
+        validBridgedMessage({
+          readUpdatedAt: 1,
+          archivedUpdatedAt: 2,
+          updatedAt: 3,
+          expiredAt: 4,
+        })
+      );
+
+      expect(message).toMatchObject({
+        readUpdatedAt: 1,
+        archivedUpdatedAt: 2,
+        updatedAt: 3,
+        expiredAt: 4,
+      });
+    });
+
+    it.each(TIMESTAMP_FIELDS)('omits %s when absent', (field) => {
+      const message = parseInboxMessage(validBridgedMessage());
+
+      expect(message).not.toHaveProperty(field);
+    });
+
+    it.each(TIMESTAMP_FIELDS)('omits %s when null', (field) => {
+      const message = parseInboxMessage(validBridgedMessage({ [field]: null }));
+
+      expect(message).not.toHaveProperty(field);
+    });
+
+    it.each(TIMESTAMP_FIELDS)(
+      'drops a malformed %s without failing the message',
+      (field) => {
+        // A future native field must never be able to make a message unusable, so these degrade
+        // the same way the other optional fields do.
+        const message = parseInboxMessage(
+          validBridgedMessage({ [field]: 'yesterday' })
+        );
+
+        expect(message).not.toBeNull();
+        expect(message?.id).toBe('msg-1');
+        expect(message).not.toHaveProperty(field);
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+      }
+    );
+
+    it('does not accept a numeric string even when it looks like a timestamp', () => {
+      const message = parseInboxMessage(
+        validBridgedMessage({ readUpdatedAt: '1700000002000' })
+      );
+
+      expect(message).not.toHaveProperty('readUpdatedAt');
+    });
+
+    it('keeps timestamps independent of the other optional fields', () => {
+      const message = parseInboxMessage(
+        validBridgedMessage({ sentAt: undefined, readUpdatedAt: 99 })
+      );
+
+      expect(message).toHaveProperty('readUpdatedAt', 99);
+      expect(message).not.toHaveProperty('sentAt');
+    });
   });
 
   it('drops non-finite timestamps rather than propagating NaN', () => {
@@ -520,6 +608,152 @@ describe('formatInboxPageOptions', () => {
       readFilter: 'read',
       archiveFilter: 'all',
     });
+  });
+});
+
+describe('validateInboxClearMessage', () => {
+  it('accepts a non-empty message ID', () => {
+    expect(validateInboxClearMessage('msg-1')).toBeNull();
+  });
+
+  it.each([
+    ['an empty string', ''],
+    ['a blank string', '   '],
+    ['a number', 42],
+    ['null', null],
+    ['undefined', undefined],
+  ])('rejects %s', (_label, messageId) => {
+    expect(validateInboxClearMessage(messageId)).toContain('messageId');
+  });
+});
+
+describe('validateInboxClearMessages', () => {
+  it('returns the IDs ready to send', () => {
+    expect(validateInboxClearMessages(['a', 'b'])).toEqual({ ids: ['a', 'b'] });
+  });
+
+  it('de-duplicates while preserving first-seen order', () => {
+    // Passing the same ID twice must count once, and the decision belongs here rather than in both
+    // native bridges.
+    const result = validateInboxClearMessages(['b', 'a', 'b', 'c', 'a']);
+
+    expect(result).toEqual({ ids: ['b', 'a', 'c'] });
+  });
+
+  it('accepts exactly the maximum number of IDs', () => {
+    const ids = Array.from(
+      { length: MAX_INBOX_CLEAR_IDS },
+      (_, i) => `msg-${i}`
+    );
+
+    expect(validateInboxClearMessages(ids)).toEqual({ ids });
+  });
+
+  it('rejects more than the maximum number of unique IDs', () => {
+    const ids = Array.from(
+      { length: MAX_INBOX_CLEAR_IDS + 1 },
+      (_, i) => `msg-${i}`
+    );
+
+    const result = validateInboxClearMessages(ids);
+
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain(
+      String(MAX_INBOX_CLEAR_IDS)
+    );
+  });
+
+  it('applies the maximum after de-duplication, not before', () => {
+    // A caller repeating one ID many times never sends more than one ID, so it must not be
+    // rejected for a count that could not have reached native.
+    const ids = Array.from({ length: MAX_INBOX_CLEAR_IDS + 500 }, () => 'same');
+
+    expect(validateInboxClearMessages(ids)).toEqual({ ids: ['same'] });
+  });
+
+  it.each([
+    ['a string', 'msg-1'],
+    ['a number', 1],
+    ['null', null],
+    ['undefined', undefined],
+    ['an object', {}],
+  ])('rejects %s', (_label, messageIds) => {
+    const result = validateInboxClearMessages(messageIds);
+
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain('array');
+  });
+
+  it('rejects an empty array', () => {
+    const result = validateInboxClearMessages([]);
+
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain('at least one');
+  });
+
+  it('names the index of a bad entry so the caller can fix it', () => {
+    const result = validateInboxClearMessages(['ok', '']);
+
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain('messageIds[1]');
+  });
+});
+
+describe('parseInboxClearMessageResult', () => {
+  let consoleWarnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('passes a boolean through', () => {
+    expect(parseInboxClearMessageResult(true)).toBe(true);
+    expect(parseInboxClearMessageResult(false)).toBe(false);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a string', 'true'],
+    ['a number', 1],
+    ['null', null],
+  ])('reports false and warns for %s', (_label, raw) => {
+    expect(parseInboxClearMessageResult(raw)).toBe(false);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('clear result')
+    );
+  });
+});
+
+describe('parseInboxClearMessagesResult', () => {
+  let consoleWarnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('returns a non-negative count, zero included', () => {
+    expect(parseInboxClearMessagesResult(0)).toBe(0);
+    expect(parseInboxClearMessagesResult(3)).toBe(3);
+  });
+
+  it.each([
+    ['a negative number', -1],
+    ['NaN', Number.NaN],
+    ['a string', '3'],
+    ['null', null],
+  ])('falls back to zero and warns for %s', (_label, raw) => {
+    expect(parseInboxClearMessagesResult(raw)).toBe(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('cleared count')
+    );
   });
 });
 

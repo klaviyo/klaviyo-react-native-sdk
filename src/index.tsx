@@ -21,6 +21,7 @@ import {
   validateSubscription,
 } from './Subscription';
 import {
+  type InboxCapabilities,
   type InboxChangeHandler,
   type InboxPage,
   type InboxPageOptions,
@@ -29,10 +30,14 @@ import {
   InboxError,
   InboxErrorCode,
   formatInboxPageOptions,
+  parseInboxClearMessageResult,
+  parseInboxClearMessagesResult,
   parseInboxPage,
   parseInboxUnreadCount,
   parseInboxUpdateResult,
   toInboxError,
+  validateInboxClearMessage,
+  validateInboxClearMessages,
   validateInboxCursor,
   validateInboxPageOptions,
   validateInboxStateUpdate,
@@ -51,6 +56,10 @@ const INBOX_UNAVAILABLE_MESSAGE =
   'Klaviyo Mobile Inbox is not available. The native Inbox module was not included in this build. ' +
   'To enable the inbox, ensure KLAVIYO_INCLUDE_INBOX is set to "true" in your Podfile (iOS) ' +
   'and klaviyoIncludeInbox is set to true in gradle.properties (Android).';
+const INBOX_CLEAR_UNSUPPORTED_MESSAGE =
+  'Klaviyo Mobile Inbox clear is not supported on this platform. The native Inbox module is ' +
+  'present, but has no public clear API yet (Android parity is pending). Check ' +
+  'Klaviyo.capabilities.clear before calling.';
 
 function isFormsAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
@@ -86,6 +95,18 @@ function isInboxAvailable(): boolean {
     return false;
   }
   return true;
+}
+
+/**
+ * Whether the linked native module supports the clear operations.
+ *
+ * A separate constant from `INBOX_AVAILABLE` because the two differ today: iOS has a public clear
+ * API and Android does not. A build whose inbox module predates the constant reports `false` for
+ * clear while every other inbox call keeps working, which is the honest answer.
+ */
+function isInboxClearAvailable(): boolean {
+  const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
+  return constants.INBOX_CLEAR_AVAILABLE === true;
 }
 
 // Track active lifecycle subscription to prevent duplicate listeners
@@ -422,6 +443,67 @@ export const Klaviyo: KlaviyoInterface = {
       throw toInboxError(nativeError);
     }
   },
+  get capabilities(): InboxCapabilities {
+    // A getter rather than a snapshot, so the answer reflects the currently-linked module even if
+    // it changes (for example across a dev reload). Neither read touches native beyond constants.
+    return {
+      clear: isInboxAvailable() && isInboxClearAvailable(),
+    };
+  },
+  async clearMessage(messageId: string): Promise<boolean> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+    if (!isInboxClearAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unsupported,
+        INBOX_CLEAR_UNSUPPORTED_MESSAGE
+      );
+    }
+
+    const error = validateInboxClearMessage(messageId);
+    if (error !== null) {
+      throw new TypeError(`[Klaviyo] ${error}`);
+    }
+
+    try {
+      return parseInboxClearMessageResult(
+        await KlaviyoReactNativeSdk.clearInboxMessage(messageId)
+      );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
+  async clearMessages(messageIds: readonly string[]): Promise<number> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+    if (!isInboxClearAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unsupported,
+        INBOX_CLEAR_UNSUPPORTED_MESSAGE
+      );
+    }
+
+    const validation = validateInboxClearMessages(messageIds);
+    if ('error' in validation) {
+      throw new TypeError(`[Klaviyo] ${validation.error}`);
+    }
+
+    try {
+      return parseInboxClearMessagesResult(
+        await KlaviyoReactNativeSdk.clearInboxMessages(validation.ids)
+      );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
   subscribe(handler: InboxChangeHandler): () => void {
     if (!isInboxAvailable()) return () => {};
 
@@ -503,9 +585,11 @@ export {
   InboxError,
   InboxErrorCode,
   InboxReadFilter,
+  MAX_INBOX_CLEAR_IDS,
 } from './Inbox';
 export type {
   InboxAction,
+  InboxCapabilities,
   InboxChangeHandler,
   InboxDestination,
   InboxMessage,
