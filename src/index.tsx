@@ -20,6 +20,23 @@ import {
   formatSubscription,
   validateSubscription,
 } from './Subscription';
+import {
+  type InboxChangeHandler,
+  type InboxPage,
+  type InboxPageOptions,
+  type InboxMessageState,
+  INBOX_CHANGED_EVENT,
+  InboxError,
+  InboxErrorCode,
+  formatInboxPageOptions,
+  parseInboxPage,
+  parseInboxUnreadCount,
+  parseInboxUpdateResult,
+  toInboxError,
+  validateInboxCursor,
+  validateInboxPageOptions,
+  validateInboxStateUpdate,
+} from './Inbox';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const FORMS_UNAVAILABLE_MESSAGE =
@@ -30,6 +47,10 @@ const LOCATION_UNAVAILABLE_MESSAGE =
   'Klaviyo Location (geofencing) is not available. The KlaviyoLocation module was not included in this build. ' +
   'To enable location, ensure KLAVIYO_INCLUDE_LOCATION is not set to "false" in your Podfile (iOS) ' +
   'and klaviyoIncludeLocation is not set to false in gradle.properties (Android).';
+const INBOX_UNAVAILABLE_MESSAGE =
+  'Klaviyo Mobile Inbox is not available. The native Inbox module was not included in this build. ' +
+  'To enable the inbox, ensure KLAVIYO_INCLUDE_INBOX is set to "true" in your Podfile (iOS) ' +
+  'and klaviyoIncludeInbox is set to true in gradle.properties (Android).';
 
 function isFormsAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
@@ -49,6 +70,24 @@ function isLocationAvailable(): boolean {
   return true;
 }
 
+/**
+ * Whether the native Inbox module is linked into this build.
+ *
+ * Unlike Forms and Location, this requires the constant to be positively `true` rather than merely
+ * not `false`: both are opt-in, but the inbox bridge methods did not exist before this SDK
+ * version, so a native module with no `INBOX_AVAILABLE` constant at all is too old to answer any
+ * inbox call. Treating that as available would turn a clean `INBOX_UNAVAILABLE` rejection into a
+ * `TypeError` from calling a method the module doesn't have.
+ */
+function isInboxAvailable(): boolean {
+  const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
+  if (constants.INBOX_AVAILABLE !== true) {
+    console.error(`[Klaviyo] ${INBOX_UNAVAILABLE_MESSAGE}`);
+    return false;
+  }
+  return true;
+}
+
 // Track active lifecycle subscription to prevent duplicate listeners
 let activeLifecycleSubscription: { remove: () => void } | null = null;
 
@@ -59,6 +98,20 @@ let activeAuthTokenSubscription: { remove: () => void } | null = null;
 // that resolves after unregister/re-register (e.g. logout) can be detected and
 // its now-stale result dropped rather than delivered to native.
 let activeAuthTokenProvider: AuthTokenProvider | null = null;
+
+/**
+ * Live inbox change handlers.
+ *
+ * One native listener backs every subscriber, and it is attached on the first
+ * `subscribe` and torn down when the last one unsubscribes — so an app that
+ * never uses the inbox never asks native to watch for changes, and one that
+ * does pays for a single bridge listener regardless of how many components
+ * listen.
+ */
+const inboxChangeHandlers = new Set<InboxChangeHandler>();
+
+// The single NativeEventEmitter subscription backing `inboxChangeHandlers`.
+let inboxChangeSubscription: { remove: () => void } | null = null;
 
 /**
  * Implementation of the {@link KlaviyoInterface}
@@ -295,6 +348,124 @@ export const Klaviyo: KlaviyoInterface = {
     activeAuthTokenProvider = null;
     KlaviyoReactNativeSdk.unregisterAuthTokenProvider();
   },
+  async fetchPage(options?: InboxPageOptions): Promise<InboxPage> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    // Arguments are validated here because TypeScript can't police plain-JS callers, and because a
+    // rejection with a clear message beats a bridge-level marshalling failure.
+    const optionsError = validateInboxPageOptions(options);
+    if (optionsError !== null) {
+      throw new TypeError(`[Klaviyo] ${optionsError}`);
+    }
+
+    const cursorError = validateInboxCursor(options?.cursor);
+    if (cursorError !== null) {
+      // A blank cursor is an inbox condition, not a type error: no page ever returned it.
+      throw new InboxError(
+        InboxErrorCode.InvalidCursor,
+        `[Klaviyo] ${cursorError}`
+      );
+    }
+
+    try {
+      return parseInboxPage(
+        await KlaviyoReactNativeSdk.fetchInboxPage(
+          formatInboxPageOptions(options) ?? null
+        )
+      );
+    } catch (error) {
+      throw toInboxError(error);
+    }
+  },
+  async fetchUnreadCount(): Promise<number> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    try {
+      return parseInboxUnreadCount(
+        await KlaviyoReactNativeSdk.fetchInboxUnreadCount()
+      );
+    } catch (error) {
+      throw toInboxError(error);
+    }
+  },
+  async updateMessageState(
+    messageId: string,
+    state: InboxMessageState
+  ): Promise<boolean> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    const error = validateInboxStateUpdate(messageId, state);
+    if (error !== null) {
+      throw new TypeError(`[Klaviyo] ${error}`);
+    }
+
+    try {
+      return parseInboxUpdateResult(
+        await KlaviyoReactNativeSdk.updateInboxMessageState(messageId, state)
+      );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
+  subscribe(handler: InboxChangeHandler): () => void {
+    if (!isInboxAvailable()) return () => {};
+
+    if (inboxChangeHandlers.size === 0) {
+      const eventEmitter = new NativeEventEmitter(
+        NativeModules.KlaviyoReactNativeSdk
+      );
+
+      // The native event carries no payload: it is an invalidation, not a delta, so nothing is
+      // parsed here and a no-argument handler is all that is invoked.
+      inboxChangeSubscription = eventEmitter.addListener(
+        INBOX_CHANGED_EVENT,
+        () => {
+          // Snapshot the handlers: one may unsubscribe (or subscribe) while being notified, and a
+          // Set being iterated must not be mutated underneath the iteration.
+          for (const registered of [...inboxChangeHandlers]) {
+            try {
+              registered();
+            } catch (error) {
+              // One host handler throwing must not stop the others from being notified, and it
+              // must not escape into the bridge's event dispatch.
+              console.error('[Klaviyo] Error in inbox change handler:', error);
+            }
+          }
+        }
+      );
+
+      // Ask native to start forwarding its change signal. Android has no invalidation API yet
+      // (MAGE-1102), so there this starts nothing; the listener above stays in place so the
+      // contract is identical on both platforms once Android emits.
+      KlaviyoReactNativeSdk.registerInboxChangeHandler();
+    }
+
+    inboxChangeHandlers.add(handler);
+
+    return () => {
+      inboxChangeHandlers.delete(handler);
+      if (inboxChangeHandlers.size === 0) {
+        inboxChangeSubscription?.remove();
+        inboxChangeSubscription = null;
+        KlaviyoReactNativeSdk.unregisterInboxChangeHandler();
+      }
+    };
+  },
 };
 
 export { type Event, type EventProperties, EventName } from './Event';
@@ -326,3 +497,14 @@ export type {
   Subscription,
   SubscriptionChannels,
 } from './Subscription';
+export { INBOX_CHANGED_EVENT, InboxError, InboxErrorCode } from './Inbox';
+export type {
+  InboxAction,
+  InboxChangeHandler,
+  InboxDestination,
+  InboxMessage,
+  InboxMessageState,
+  InboxPage,
+  InboxPageOptions,
+  KlaviyoInboxApi,
+} from './Inbox';
