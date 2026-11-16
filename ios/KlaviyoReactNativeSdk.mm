@@ -298,4 +298,12 @@ RCT_EXPORT_METHOD(unregisterInboxChangeHandler) {
     [KlaviyoBridge unregisterInboxChangeHandler];
 }
 
+// Runs on a bridge reload (dev fast refresh, or a bridged instance being replaced). Without this
+// the native change subscription would outlive the module and keep iterating the stream into a
+// dead bridge.
+- (void)invalidate {
+    [KlaviyoBridge unregisterInboxChangeHandler];
+    [super invalidate];
+}
+
 @end

@@ -59,8 +59,10 @@ extension KlaviyoBridge {
 
     /// Fetches one page of the inbox and maps it to the bridge's wire format.
     ///
-    /// `options` carries `pageSize` and/or `cursor`; both are optional and the native SDK clamps
-    /// `pageSize` itself. The cursor is passed through untouched: it is opaque to this bridge.
+    /// `options` carries `pageSize`, `cursor`, `readFilter` and/or `archiveFilter`. All are optional:
+    /// the native SDK clamps `pageSize` itself and applies its own defaults (all reads, active
+    /// archives) for an omitted filter. The cursor is passed through untouched — it is opaque to
+    /// this bridge — and native rejects it if the filters differ from the ones that issued it.
     @objc
     public static func fetchInboxPage(
         options: [String: Any]?,
@@ -71,14 +73,39 @@ extension KlaviyoBridge {
         let pageSize = options?["pageSize"] as? Int
         let cursorToken = options?["cursor"] as? String
 
+        // The JS layer validates these before calling, so an unrecognized value here means a native
+        // caller bypassed it. Rejecting keeps the contract honest rather than silently substituting
+        // a default, which would return the wrong messages while looking like it worked.
+        var readFilter = InboxReadFilter.all
+        var archiveFilter = InboxArchiveFilter.active
+        if let rawReadFilter = options?["readFilter"] {
+            guard let parsed = inboxReadFilter(from: rawReadFilter) else {
+                reject(
+                    InboxErrorCode.storageFailure,
+                    "Unrecognized inbox readFilter '\(rawReadFilter)'"
+                )
+                return
+            }
+            readFilter = parsed
+        }
+        if let rawArchiveFilter = options?["archiveFilter"] {
+            guard let parsed = inboxArchiveFilter(from: rawArchiveFilter) else {
+                reject(
+                    InboxErrorCode.storageFailure,
+                    "Unrecognized inbox archiveFilter '\(rawArchiveFilter)'"
+                )
+                return
+            }
+            archiveFilter = parsed
+        }
+
         Task {
-            // REQUIRES(native): `KlaviyoInbox.InboxCursor` must expose `token` publicly and offer
-            // a public `init(token:)` for the bridge to round-trip an opaque cursor. Until that
-            // lands upstream, enabling KLAVIYO_INCLUDE_INBOX does not compile on this path.
             let cursor = cursorToken.map { InboxCursor(token: $0) }
             let query = InboxQuery(
                 pageSize: pageSize ?? InboxQuery.defaultPageSize,
-                cursor: cursor
+                cursor: cursor,
+                readFilter: readFilter,
+                archiveFilter: archiveFilter
             )
 
             do {
@@ -97,14 +124,9 @@ extension KlaviyoBridge {
         #endif
     }
 
-    /// Counts unread, unarchived messages.
+    /// Counts unread, unarchived messages: the count an inbox badge shows.
     ///
-    /// The native iOS inbox has no unread-count API, while Android's `MobileInbox` does. Rather
-    /// than expose a platform-shaped API, this pages through the store and counts, so both
-    /// platforms answer the same question with the same semantics.
-    ///
-    /// TODO(MAGE-1140): replace with a native count once `KlaviyoInbox` exposes one — this reads
-    /// every unread page, which is O(inbox size) rather than O(1).
+    /// Both native SDKs compute this in the store, so it is O(1) rather than a paged scan.
     @objc
     public static func fetchInboxUnreadCount(
         resolve: @escaping (NSNumber) -> Void,
@@ -112,27 +134,8 @@ extension KlaviyoBridge {
     ) {
         #if canImport(KlaviyoInbox)
         Task {
-            let inbox = KlaviyoSDK().mobileInbox
-            var unread = 0
-            var cursor: InboxCursor?
-            // Bounded as a guard against a store that keeps returning a cursor for an empty page:
-            // an unbounded loop here would hang the promise rather than resolve it.
-            var pagesRead = 0
-            let maxPages = 1_000
-
             do {
-                repeat {
-                    let page = try await inbox.fetchPage(
-                        InboxQuery(pageSize: InboxQuery.maxPageSize, cursor: cursor)
-                    )
-                    unread += page.messages.filter { !$0.isRead && !$0.isArchived }.count
-                    cursor = page.nextCursor
-                    pagesRead += 1
-                } while cursor != nil && pagesRead < maxPages
-
-                if cursor != nil {
-                    NSLog("[Klaviyo] Warning: Inbox unread count stopped after \(maxPages) pages")
-                }
+                let unread = try await KlaviyoSDK().mobileInbox.fetchUnreadCount()
                 resolve(NSNumber(value: unread))
             } catch {
                 let payload = inboxErrorPayload(error)
@@ -232,6 +235,28 @@ extension KlaviyoBridge {
         }
     }
 
+    /// Maps one of the JS layer's read-filter strings onto the native `InboxReadFilter`.
+    private static func inboxReadFilter(from rawValue: Any) -> InboxReadFilter? {
+        guard let rawValue = rawValue as? String else { return nil }
+        switch rawValue {
+        case "all": return .all
+        case "unread": return .unread
+        case "read": return .read
+        default: return nil
+        }
+    }
+
+    /// Maps one of the JS layer's archive-filter strings onto the native `InboxArchiveFilter`.
+    private static func inboxArchiveFilter(from rawValue: Any) -> InboxArchiveFilter? {
+        guard let rawValue = rawValue as? String else { return nil }
+        switch rawValue {
+        case "active": return .active
+        case "archived": return .archived
+        case "all": return .all
+        default: return nil
+        }
+    }
+
     /// Maps a native `InboxError` to the bridge's stable code plus a diagnostic message.
     private static func inboxErrorPayload(_ error: Error) -> (String, String) {
         guard let inboxError = error as? InboxError else {
@@ -245,7 +270,7 @@ extension KlaviyoBridge {
         case .invalidCursor:
             return (
                 InboxErrorCode.invalidCursor,
-                "The inbox cursor is malformed or belongs to another inbox"
+                "The inbox cursor is malformed, belongs to another inbox, or was issued under different filters"
             )
         case .storageFailure:
             return (InboxErrorCode.storageFailure, "The inbox store could not complete the call")
