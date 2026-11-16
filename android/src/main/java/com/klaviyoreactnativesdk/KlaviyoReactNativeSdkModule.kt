@@ -7,6 +7,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
@@ -59,6 +60,20 @@ class KlaviyoReactNativeSdkModule(
     private const val EMAIL = "email"
     private const val SMS = "sms"
     private const val WHATSAPP = "whatsapp"
+
+    /**
+     * Stable error code for a build without the native inbox module.
+     *
+     * Part of the public contract, matching iOS and the JS layer's `InboxErrorCode.Unavailable`.
+     */
+    const val INBOX_UNAVAILABLE = "INBOX_UNAVAILABLE"
+
+    /**
+     * Name of the native-to-JS inbox invalidation event.
+     *
+     * Must match `INBOX_CHANGED_EVENT` in the JS layer. It carries no payload.
+     */
+    const val INBOX_CHANGED_EVENT = "klaviyo:inboxChanged"
   }
 
   private fun sendEvent(
@@ -141,6 +156,14 @@ class KlaviyoReactNativeSdkModule(
       "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
+      // Opt-in, unlike Forms and Location. True only when the inbox source set was compiled in
+      // (klaviyoIncludeInbox=true) AND the inbox module is actually on the classpath: the gated
+      // implementation registers a MobileInboxProvider from an init ContentProvider, so its
+      // absence is exactly "the inbox artifact is not shipped".
+      "INBOX_AVAILABLE" to (InboxBridgeProvider.bridge?.isAvailable() ?: false),
+      // False on Android today: the native inbox has no public clear. The JS layer surfaces this
+      // as `Klaviyo.capabilities.clear`, so callers can branch without provoking a rejection.
+      "INBOX_CLEAR_AVAILABLE" to (InboxBridgeProvider.bridge?.isClearAvailable() ?: false),
     )
 
   @ReactMethod
@@ -733,4 +756,83 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun removeListeners(count: Int) {}
+
+  // region Mobile Inbox
+  //
+  // These declarations deliberately reference no `com.klaviyo.inbox` type, so they compile in a
+  // default build that does not include the (still unpublished) inbox artifacts. The real work
+  // lives in `android/src/inbox/java` behind [InboxBridge], and `InboxBridgeProvider.bridge` is
+  // null when that source set was not compiled in — in which case every call rejects with the
+  // documented INBOX_UNAVAILABLE code. See android/build.gradle.
+
+  @ReactMethod
+  fun fetchInboxPage(
+    options: ReadableMap?,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.fetchPage(options, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun fetchInboxUnreadCount(promise: Promise) {
+    InboxBridgeProvider.bridge?.fetchUnreadCount(promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun updateInboxMessageState(
+    messageId: String,
+    state: String,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.updateMessageState(messageId, state, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun clearInboxMessage(
+    messageId: String,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.clearMessage(messageId, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun clearInboxMessages(
+    messageIds: ReadableArray,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.clearMessages(messageIds.toArrayList().filterIsInstance<String>(), promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun registerInboxChangeHandler() {
+    // No payload: the event is an invalidation, not a diff. `sendEvent` handles the
+    // catalyst-torn-down race and reports whether delivery was possible.
+    InboxBridgeProvider.bridge?.registerChangeHandler {
+      sendEvent(INBOX_CHANGED_EVENT, null)
+    }
+  }
+
+  @ReactMethod
+  fun unregisterInboxChangeHandler() {
+    InboxBridgeProvider.bridge?.unregisterChangeHandler()
+  }
+
+  /**
+   * Tears down the inbox change subscription when the module goes away.
+   *
+   * `invalidate` runs on a bridge reload (dev fast refresh, or a bridged instance being replaced),
+   * so without this the native collection would keep a listener alive across reloads and deliver
+   * into a dead catalyst instance.
+   */
+  override fun invalidate() {
+    InboxBridgeProvider.bridge?.unregisterChangeHandler()
+    super.invalidate()
+  }
+
+  // endregion
 }

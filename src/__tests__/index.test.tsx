@@ -1,5 +1,10 @@
 import { NativeModules } from 'react-native';
-import { Klaviyo } from '../index';
+import {
+  Klaviyo,
+  InboxError,
+  InboxErrorCode,
+  MAX_INBOX_CLEAR_IDS,
+} from '../index';
 import { EventName, type Event } from '../Event';
 import { ProfileProperty } from '../Profile';
 import {
@@ -51,6 +56,13 @@ jest.mock('react-native', () => {
         unregisterGeofencing: jest.fn(),
         getCurrentGeofences: jest.fn(),
         handleUniversalTrackingLink: jest.fn(),
+        fetchInboxPage: jest.fn(),
+        fetchInboxUnreadCount: jest.fn(),
+        updateInboxMessageState: jest.fn(),
+        clearInboxMessage: jest.fn(),
+        clearInboxMessages: jest.fn(),
+        registerInboxChangeHandler: jest.fn(),
+        unregisterInboxChangeHandler: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
           PROFILE_KEYS: {
             FIRST_NAME: 'first_name',
@@ -81,6 +93,8 @@ jest.mock('react-native', () => {
           },
           FORMS_AVAILABLE: true,
           LOCATION_AVAILABLE: true,
+          INBOX_AVAILABLE: true,
+          INBOX_CLEAR_AVAILABLE: true,
         }),
       },
     },
@@ -111,8 +125,9 @@ jest.mock('react-native', () => {
   };
 });
 
-// Helper to simulate native event emission
-function emitNativeEvent(eventName: string, data: any) {
+// Helper to simulate native event emission. `data` is optional because an invalidation event
+// carries no payload.
+function emitNativeEvent(eventName: string, data?: any) {
   eventListeners[eventName]?.forEach((listener) => listener(data));
 }
 
@@ -1488,6 +1503,758 @@ describe('Klaviyo SDK', () => {
         expect.stringContaining('customSource')
       );
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('mobile inbox', () => {
+    const native = () => NativeModules.KlaviyoReactNativeSdk;
+    const inboxEvent = 'klaviyo:inboxChanged';
+
+    /**
+     * Unsubscribes registered by the running test, torn down in `afterEach`. The key registry is
+     * module-level state, so without this a test that asserts on handler counts could see a
+     * leftover subscriber from an earlier one.
+     */
+    let inboxUnsubscribes: Array<() => void> = [];
+
+    /** Subscribes and records the unsubscribe handle for `afterEach` teardown. */
+    function subscribe(handler: () => void): () => void {
+      const unsubscribe = Klaviyo.subscribe(handler);
+      inboxUnsubscribes.push(unsubscribe);
+      return unsubscribe;
+    }
+
+    /** A bridged message as the native bridges emit one. */
+    function bridgedMessage(
+      overrides: Record<string, unknown> = {}
+    ): Record<string, unknown> {
+      return {
+        id: 'msg-1',
+        title: 'Hello',
+        body: 'World',
+        defaultDestination: { type: 'open_app' },
+        customData: { key: 'value' },
+        actions: [],
+        sentAt: 1_700_000_000_000,
+        receivedAt: 1_700_000_001_000,
+        badge: null,
+        isRead: false,
+        isArchived: false,
+        source: 'captured',
+        ...overrides,
+      };
+    }
+
+    afterEach(() => {
+      // The handler registry is module-level state shared across tests. Tear down anything a test
+      // left subscribed so ordering can't make a later test see a stale listener.
+      while (inboxUnsubscribes.length > 0) {
+        inboxUnsubscribes.pop()?.();
+      }
+      while (eventListeners[inboxEvent]?.length) {
+        eventListeners[inboxEvent]!.pop();
+      }
+    });
+
+    describe('fetchPage', () => {
+      it('resolves a parsed page and forwards no options for the first page', async () => {
+        native().fetchInboxPage.mockResolvedValue({
+          messages: [bridgedMessage()],
+          nextCursor: 'cursor-2',
+        });
+
+        const page = await Klaviyo.fetchPage();
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith(null);
+        expect(page.messages.map((message) => message.id)).toEqual(['msg-1']);
+        expect(page.nextCursor).toBe('cursor-2');
+      });
+
+      it('forwards page size and cursor', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({ pageSize: 50, cursor: 'cursor-2' });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          pageSize: 50,
+          cursor: 'cursor-2',
+        });
+      });
+
+      it('passes an out-of-range page size through for native to clamp', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({ pageSize: 5_000 });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          pageSize: 5_000,
+        });
+      });
+
+      it('passes the cursor through byte for byte', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+        const cursor = 'opaque::token::%%';
+
+        await Klaviyo.fetchPage({ cursor });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({ cursor });
+      });
+
+      it('drops malformed messages but keeps the page and its cursor', async () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        native().fetchInboxPage.mockResolvedValue({
+          messages: [bridgedMessage({ id: 'good' }), { isRead: 'no' }],
+          nextCursor: 'next',
+        });
+
+        const page = await Klaviyo.fetchPage();
+
+        expect(page.messages.map((message) => message.id)).toEqual(['good']);
+        expect(page.nextCursor).toBe('next');
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('rejects with a TypeError when options is not an object', async () => {
+        await expect(Klaviyo.fetchPage('nope' as never)).rejects.toBeInstanceOf(
+          TypeError
+        );
+        expect(native().fetchInboxPage).not.toHaveBeenCalled();
+      });
+
+      it('rejects with a TypeError for a non-numeric page size', async () => {
+        await expect(
+          Klaviyo.fetchPage({ pageSize: '20' } as never)
+        ).rejects.toBeInstanceOf(TypeError);
+        expect(native().fetchInboxPage).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['an empty cursor', ''],
+        ['a blank cursor', '   '],
+      ])(
+        'rejects %s as INBOX_INVALID_CURSOR without calling native',
+        async (_label, cursor) => {
+          const promise = Klaviyo.fetchPage({ cursor });
+
+          await expect(promise).rejects.toBeInstanceOf(InboxError);
+          await expect(promise).rejects.toMatchObject({
+            code: InboxErrorCode.InvalidCursor,
+          });
+          expect(native().fetchInboxPage).not.toHaveBeenCalled();
+        }
+      );
+
+      it('normalizes a native rejection into an InboxError with its code', async () => {
+        native().fetchInboxPage.mockRejectedValue(
+          Object.assign(new Error('bad cursor'), {
+            code: InboxErrorCode.InvalidCursor,
+          })
+        );
+
+        await expect(Klaviyo.fetchPage()).rejects.toMatchObject({
+          name: 'InboxError',
+          code: InboxErrorCode.InvalidCursor,
+        });
+      });
+
+      it('forwards the filters', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({
+          readFilter: 'unread',
+          archiveFilter: 'archived',
+        });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          readFilter: 'unread',
+          archiveFilter: 'archived',
+        });
+      });
+
+      it('omits absent filters so each platform default applies', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({ pageSize: 10 });
+
+        const payload = (native().fetchInboxPage as jest.Mock).mock.calls[0][0];
+        expect(payload).toEqual({ pageSize: 10 });
+        expect(payload).not.toHaveProperty('readFilter');
+        expect(payload).not.toHaveProperty('archiveFilter');
+      });
+
+      it.each([
+        ['an unknown read filter', { readFilter: 'deleted' }],
+        ['an unknown archive filter', { archiveFilter: 'archivedOnly' }],
+        ['a non-string read filter', { readFilter: 1 }],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, options) => {
+          await expect(
+            Klaviyo.fetchPage(options as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().fetchInboxPage).not.toHaveBeenCalled();
+        }
+      );
+
+      it('rejects a cursor reused under different filters as INBOX_INVALID_CURSOR', async () => {
+        // Native validates the cursor against the filters that issued it. The wrapper must surface
+        // that as the stable code rather than a generic failure, since it is a caller mistake with
+        // a specific remedy (re-issue the cursor from a first page with these filters).
+        native().fetchInboxPage.mockRejectedValue(
+          Object.assign(new Error('cursor filter mismatch'), {
+            code: InboxErrorCode.InvalidCursor,
+          })
+        );
+
+        const promise = Klaviyo.fetchPage({
+          cursor: 'cursor-from-a-different-filter',
+          readFilter: 'unread',
+          archiveFilter: 'active',
+        });
+
+        await expect(promise).rejects.toBeInstanceOf(InboxError);
+        await expect(promise).rejects.toMatchObject({
+          code: InboxErrorCode.InvalidCursor,
+        });
+        // The cursor and filters are forwarded together, so native can do the comparison.
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          cursor: 'cursor-from-a-different-filter',
+          readFilter: 'unread',
+          archiveFilter: 'active',
+        });
+      });
+
+      it('normalizes a codeless native rejection into a storage failure', async () => {
+        native().fetchInboxPage.mockRejectedValue(new Error('bridge exploded'));
+
+        await expect(Klaviyo.fetchPage()).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
+      });
+    });
+
+    describe('fetchUnreadCount', () => {
+      it('resolves the native count', async () => {
+        native().fetchInboxUnreadCount.mockResolvedValue(4);
+
+        await expect(Klaviyo.fetchUnreadCount()).resolves.toBe(4);
+      });
+
+      it('normalizes a garbage count to zero', async () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        native().fetchInboxUnreadCount.mockResolvedValue(undefined);
+
+        await expect(Klaviyo.fetchUnreadCount()).resolves.toBe(0);
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().fetchInboxUnreadCount.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(Klaviyo.fetchUnreadCount()).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
+      });
+    });
+
+    describe('updateMessageState', () => {
+      it.each(['read', 'unread', 'archived', 'unarchived'] as const)(
+        'forwards the %s state',
+        async (state) => {
+          native().updateInboxMessageState.mockResolvedValue(true);
+
+          await expect(
+            Klaviyo.updateMessageState('msg-1', state)
+          ).resolves.toBe(true);
+          expect(native().updateInboxMessageState).toHaveBeenCalledWith(
+            'msg-1',
+            state
+          );
+        }
+      );
+
+      it('resolves false when the message does not exist', async () => {
+        native().updateInboxMessageState.mockResolvedValue(false);
+
+        await expect(Klaviyo.updateMessageState('gone', 'read')).resolves.toBe(
+          false
+        );
+      });
+
+      it('reports false for a non-boolean native result', async () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        native().updateInboxMessageState.mockResolvedValue('true');
+
+        await expect(Klaviyo.updateMessageState('msg-1', 'read')).resolves.toBe(
+          false
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
+      it.each([
+        ['an empty message ID', '', 'read'],
+        ['a blank message ID', '   ', 'read'],
+        ['an unknown state', 'msg-1', 'deleted'],
+        ['a differently-cased state', 'msg-1', 'READ'],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, messageId, state) => {
+          await expect(
+            Klaviyo.updateMessageState(messageId, state as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().updateInboxMessageState).not.toHaveBeenCalled();
+        }
+      );
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().updateInboxMessageState.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(
+          Klaviyo.updateMessageState('msg-1', 'read')
+        ).rejects.toMatchObject({ code: InboxErrorCode.StorageFailure });
+      });
+    });
+
+    describe('capabilities', () => {
+      it('reports clear as supported when the native module says so', () => {
+        expect(Klaviyo.capabilities.clear).toBe(true);
+      });
+
+      it('reports clear as unsupported when the native module says so', () => {
+        // This is the Android shape today: inbox linked, no public clear.
+        const defaultConstants = native().getConstants();
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_CLEAR_AVAILABLE: false,
+        });
+
+        try {
+          expect(Klaviyo.capabilities.clear).toBe(false);
+        } finally {
+          native().getConstants.mockReturnValue(defaultConstants);
+        }
+      });
+
+      it('reports clear as unsupported when the module predates the constant', () => {
+        const consoleErrorSpy = jest
+          .spyOn(console, 'error')
+          .mockImplementation();
+        const defaultConstants = native().getConstants();
+        const withoutClear = {
+          ...(defaultConstants as Record<string, unknown>),
+        };
+        delete withoutClear.INBOX_CLEAR_AVAILABLE;
+        native().getConstants.mockReturnValue(withoutClear);
+
+        try {
+          expect(Klaviyo.capabilities.clear).toBe(false);
+        } finally {
+          native().getConstants.mockReturnValue(defaultConstants);
+          consoleErrorSpy.mockRestore();
+        }
+      });
+
+      it('reflects the current module rather than a snapshot', () => {
+        // A getter, so a dev reload that swaps the native module is picked up.
+        const defaultConstants = native().getConstants();
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_AVAILABLE: true,
+          INBOX_CLEAR_AVAILABLE: false,
+        });
+        expect(Klaviyo.capabilities.clear).toBe(false);
+
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_AVAILABLE: true,
+          INBOX_CLEAR_AVAILABLE: true,
+        });
+        expect(Klaviyo.capabilities.clear).toBe(true);
+
+        native().getConstants.mockReturnValue(defaultConstants);
+      });
+    });
+
+    describe('clearMessage', () => {
+      it('resolves true when a message was removed', async () => {
+        native().clearInboxMessage.mockResolvedValue(true);
+
+        await expect(Klaviyo.clearMessage('msg-1')).resolves.toBe(true);
+        expect(native().clearInboxMessage).toHaveBeenCalledWith('msg-1');
+      });
+
+      it('resolves false when this device had no such message', async () => {
+        native().clearInboxMessage.mockResolvedValue(false);
+
+        await expect(Klaviyo.clearMessage('gone')).resolves.toBe(false);
+      });
+
+      it('reports false for a non-boolean native result', async () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        native().clearInboxMessage.mockResolvedValue('true');
+
+        await expect(Klaviyo.clearMessage('msg-1')).resolves.toBe(false);
+        consoleWarnSpy.mockRestore();
+      });
+
+      it.each([
+        ['an empty message ID', ''],
+        ['a blank message ID', '   '],
+        ['a non-string message ID', 42],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, messageId) => {
+          await expect(
+            Klaviyo.clearMessage(messageId as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().clearInboxMessage).not.toHaveBeenCalled();
+        }
+      );
+
+      it('rejects INBOX_UNSUPPORTED without calling native when clear is unavailable', async () => {
+        const defaultConstants = native().getConstants();
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_CLEAR_AVAILABLE: false,
+        });
+
+        try {
+          const promise = Klaviyo.clearMessage('msg-1');
+
+          await expect(promise).rejects.toBeInstanceOf(InboxError);
+          await expect(promise).rejects.toMatchObject({
+            code: InboxErrorCode.Unsupported,
+          });
+          expect(native().clearInboxMessage).not.toHaveBeenCalled();
+        } finally {
+          native().getConstants.mockReturnValue(defaultConstants);
+        }
+      });
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().clearInboxMessage.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(Klaviyo.clearMessage('msg-1')).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
+      });
+    });
+
+    describe('clearMessages', () => {
+      it('resolves the number removed and forwards the IDs', async () => {
+        native().clearInboxMessages.mockResolvedValue(2);
+
+        await expect(Klaviyo.clearMessages(['a', 'b'])).resolves.toBe(2);
+        expect(native().clearInboxMessages).toHaveBeenCalledWith(['a', 'b']);
+      });
+
+      it('resolves zero when nothing matched', async () => {
+        native().clearInboxMessages.mockResolvedValue(0);
+
+        await expect(Klaviyo.clearMessages(['gone'])).resolves.toBe(0);
+      });
+
+      it('de-duplicates before crossing the bridge', async () => {
+        native().clearInboxMessages.mockResolvedValue(1);
+
+        await Klaviyo.clearMessages(['a', 'a', 'b', 'a']);
+
+        expect(native().clearInboxMessages).toHaveBeenCalledWith(['a', 'b']);
+      });
+
+      it('reports zero for a non-numeric native result', async () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        native().clearInboxMessages.mockResolvedValue(undefined);
+
+        await expect(Klaviyo.clearMessages(['a'])).resolves.toBe(0);
+        consoleWarnSpy.mockRestore();
+      });
+
+      it.each([
+        ['an empty array', []],
+        ['a non-array', 'msg-1'],
+        ['a bad entry', ['ok', '']],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, messageIds) => {
+          await expect(
+            Klaviyo.clearMessages(messageIds as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().clearInboxMessages).not.toHaveBeenCalled();
+        }
+      );
+
+      it('rejects more than the maximum number of unique IDs', async () => {
+        const ids = Array.from(
+          { length: MAX_INBOX_CLEAR_IDS + 1 },
+          (_, i) => `msg-${i}`
+        );
+
+        await expect(Klaviyo.clearMessages(ids)).rejects.toBeInstanceOf(
+          TypeError
+        );
+        expect(native().clearInboxMessages).not.toHaveBeenCalled();
+      });
+
+      it('rejects INBOX_UNSUPPORTED without calling native when clear is unavailable', async () => {
+        const defaultConstants = native().getConstants();
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_CLEAR_AVAILABLE: false,
+        });
+
+        try {
+          const promise = Klaviyo.clearMessages(['a']);
+
+          await expect(promise).rejects.toMatchObject({
+            code: InboxErrorCode.Unsupported,
+          });
+          expect(native().clearInboxMessages).not.toHaveBeenCalled();
+        } finally {
+          native().getConstants.mockReturnValue(defaultConstants);
+        }
+      });
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().clearInboxMessages.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(Klaviyo.clearMessages(['a'])).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
+      });
+    });
+
+    describe('subscribe', () => {
+      it('invokes the handler with no payload when native emits a change', () => {
+        const handler = jest.fn();
+        subscribe(handler);
+
+        emitNativeEvent(inboxEvent);
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        // The event is an invalidation, not a delta: nothing is passed to the handler.
+        expect(handler).toHaveBeenCalledWith();
+      });
+
+      it('starts and stops the native change signal around the first and last subscriber', () => {
+        const unsubscribe = subscribe(jest.fn());
+        expect(native().registerInboxChangeHandler).toHaveBeenCalledTimes(1);
+
+        unsubscribe();
+        expect(native().unregisterInboxChangeHandler).toHaveBeenCalledTimes(1);
+      });
+
+      it('adds only one native listener for multiple subscribers', () => {
+        subscribe(jest.fn());
+        subscribe(jest.fn());
+
+        // Both subscribers share the single underlying listener created by the first subscribe.
+        expect(eventListeners[inboxEvent]).toHaveLength(1);
+      });
+
+      it('notifies every subscriber', () => {
+        const handler1 = jest.fn();
+        const handler2 = jest.fn();
+        subscribe(handler1);
+        subscribe(handler2);
+
+        emitNativeEvent(inboxEvent);
+
+        expect(handler1).toHaveBeenCalledTimes(1);
+        expect(handler2).toHaveBeenCalledTimes(1);
+      });
+
+      it('removes the native listener when the last subscriber unsubscribes', () => {
+        const unsubscribe = subscribe(jest.fn());
+        mockRemove.mockClear();
+
+        unsubscribe();
+
+        expect(mockRemove).toHaveBeenCalledTimes(1);
+        expect(eventListeners[inboxEvent] ?? []).toHaveLength(0);
+      });
+
+      it('keeps the listener while another subscriber remains', () => {
+        const unsubscribe1 = subscribe(jest.fn());
+        const handler2 = jest.fn();
+        subscribe(handler2);
+        mockRemove.mockClear();
+
+        unsubscribe1();
+
+        expect(mockRemove).not.toHaveBeenCalled();
+        emitNativeEvent(inboxEvent);
+        expect(handler2).toHaveBeenCalledTimes(1);
+      });
+
+      it('stops notifying a handler after it unsubscribes', () => {
+        const handler = jest.fn();
+        const unsubscribe = subscribe(handler);
+        unsubscribe();
+
+        emitNativeEvent(inboxEvent);
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it('is safe to unsubscribe more than once', () => {
+        const handler = jest.fn();
+        const unsubscribe = subscribe(handler);
+
+        unsubscribe();
+        expect(() => unsubscribe()).not.toThrow();
+
+        emitNativeEvent(inboxEvent);
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it('registers a handler added twice only once', () => {
+        const handler = jest.fn();
+        const unsubscribe = subscribe(handler);
+        subscribe(handler);
+
+        emitNativeEvent(inboxEvent);
+        expect(handler).toHaveBeenCalledTimes(1);
+
+        // Either handle removes the handler entirely.
+        unsubscribe();
+        emitNativeEvent(inboxEvent);
+        expect(handler).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps notifying the other handlers when one throws', () => {
+        const consoleErrorSpy = jest
+          .spyOn(console, 'error')
+          .mockImplementation();
+        const throwing = jest.fn(() => {
+          throw new Error('handler blew up');
+        });
+        const healthy = jest.fn();
+        subscribe(throwing);
+        subscribe(healthy);
+
+        expect(() => emitNativeEvent(inboxEvent)).not.toThrow();
+        expect(healthy).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Error in inbox change handler'),
+          expect.any(Error)
+        );
+
+        consoleErrorSpy.mockRestore();
+      });
+
+      it('handles a handler unsubscribing from inside the notification', () => {
+        const handler2 = jest.fn();
+        let unsubscribe2 = () => {};
+        const handler1 = jest.fn(() => unsubscribe2());
+        subscribe(handler1);
+        unsubscribe2 = subscribe(handler2);
+
+        expect(() => emitNativeEvent(inboxEvent)).not.toThrow();
+        expect(handler1).toHaveBeenCalledTimes(1);
+        expect(handler2).toHaveBeenCalledTimes(1);
+
+        // The second change must not reach the handler that detached during the first.
+        emitNativeEvent(inboxEvent);
+        expect(handler1).toHaveBeenCalledTimes(2);
+        expect(handler2).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('when the native inbox module is not in the build', () => {
+      let consoleErrorSpy: jest.SpyInstance;
+      let defaultConstants: Record<string, unknown>;
+
+      beforeEach(() => {
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+        defaultConstants = native().getConstants();
+        native().getConstants.mockReturnValue({
+          ...defaultConstants,
+          INBOX_AVAILABLE: false,
+        });
+      });
+
+      afterEach(() => {
+        native().getConstants.mockReturnValue(defaultConstants);
+        consoleErrorSpy.mockRestore();
+      });
+
+      it.each([
+        ['fetchPage', () => Klaviyo.fetchPage()],
+        ['fetchUnreadCount', () => Klaviyo.fetchUnreadCount()],
+        ['updateMessageState', () => Klaviyo.updateMessageState('id', 'read')],
+      ])('rejects %s with INBOX_UNAVAILABLE', async (_label, call) => {
+        const promise = call();
+
+        await expect(promise).rejects.toBeInstanceOf(InboxError);
+        await expect(promise).rejects.toMatchObject({
+          code: InboxErrorCode.Unavailable,
+        });
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Mobile Inbox is not available')
+        );
+      });
+
+      it('does not call native', async () => {
+        await expect(Klaviyo.fetchPage()).rejects.toThrow();
+        await expect(Klaviyo.fetchUnreadCount()).rejects.toThrow();
+        await expect(
+          Klaviyo.updateMessageState('id', 'read')
+        ).rejects.toThrow();
+
+        expect(native().fetchInboxPage).not.toHaveBeenCalled();
+        expect(native().fetchInboxUnreadCount).not.toHaveBeenCalled();
+        expect(native().updateInboxMessageState).not.toHaveBeenCalled();
+      });
+
+      it('returns a no-op unsubscribe that touches no native method', () => {
+        const handler = jest.fn();
+        const unsubscribe = Klaviyo.subscribe(handler);
+
+        expect(() => unsubscribe()).not.toThrow();
+        expect(native().registerInboxChangeHandler).not.toHaveBeenCalled();
+        expect(native().unregisterInboxChangeHandler).not.toHaveBeenCalled();
+
+        emitNativeEvent(inboxEvent);
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    it('treats a missing INBOX_AVAILABLE constant as unavailable', async () => {
+      // A native module older than this SDK exports no such constant. Treating it as available
+      // would turn a clean INBOX_UNAVAILABLE rejection into a TypeError from calling a method the
+      // module does not have.
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const defaultConstants = native().getConstants();
+      native().getConstants.mockReturnValue({
+        PROFILE_KEYS: defaultConstants.PROFILE_KEYS,
+        EVENT_NAMES: defaultConstants.EVENT_NAMES,
+      });
+
+      try {
+        await expect(Klaviyo.fetchPage()).rejects.toMatchObject({
+          code: InboxErrorCode.Unavailable,
+        });
+      } finally {
+        native().getConstants.mockReturnValue(defaultConstants);
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 });

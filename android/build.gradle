@@ -61,6 +61,27 @@ def isNewArchitectureEnabled() {
   return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
 }
 
+// Whether to include the full location module (geofencing + location permissions).
+// Set klaviyoIncludeLocation=false in your gradle.properties to use lightweight location-core instead.
+def includeLocation = rootProject.hasProperty('klaviyoIncludeLocation')
+    ? rootProject.property('klaviyoIncludeLocation').toBoolean()
+    : true
+
+// Whether to include the full forms module (in-app forms rendering).
+// Set klaviyoIncludeForms=false in your gradle.properties to use lightweight forms-core instead.
+def includeForms = rootProject.hasProperty('klaviyoIncludeForms')
+    ? rootProject.property('klaviyoIncludeForms').toBoolean()
+    : true
+
+// Whether to include the Mobile Inbox module.
+//
+// Opt-in, unlike forms and location: set klaviyoIncludeInbox=true in your gradle.properties to
+// compile the inbox bridge. Off by default because the native inbox artifacts this depends on are
+// not published yet, so a default build cannot resolve them.
+def includeInbox = rootProject.hasProperty('klaviyoIncludeInbox')
+    ? rootProject.property('klaviyoIncludeInbox').toBoolean()
+    : false
+
 apply plugin: "com.android.library"
 // AGP 9 ships built-in Kotlin support and registers the `kotlin` extension
 // itself. Applying the Kotlin plugin on top of it fails configuration with
@@ -110,6 +131,19 @@ android {
     buildConfig true
   }
 
+  // Mobile Inbox is opt-in and its native artifacts are not published yet, so its implementation
+  // lives in `src/inbox/java` and is only added to the source set when klaviyoIncludeInbox=true.
+  // The `@ReactMethod` declarations stay in `src/main` (React Native's classic bridge only
+  // discovers methods declared on the concrete module class) and reach the implementation through
+  // `InboxBridgeProvider`, which resolves to nothing when this source set is absent.
+  sourceSets {
+    main {
+      if (includeInbox) {
+        java.srcDir "src/inbox/java"
+      }
+    }
+  }
+
   buildTypes {
     release {
       minifyEnabled false
@@ -138,18 +172,6 @@ if (rootProject.file("local.properties").canRead()) {
   localProperties.load(new FileInputStream(rootProject.file("local.properties")))
 }
 def reactNativeAndroidVersion = localProperties['reactNativeAndroidVersion'] ?: ""
-
-// Whether to include the full location module (geofencing + location permissions).
-// Set klaviyoIncludeLocation=false in your gradle.properties to use lightweight location-core instead.
-def includeLocation = rootProject.hasProperty('klaviyoIncludeLocation')
-    ? rootProject.property('klaviyoIncludeLocation').toBoolean()
-    : true
-
-// Whether to include the full forms module (in-app forms rendering).
-// Set klaviyoIncludeForms=false in your gradle.properties to use lightweight forms-core instead.
-def includeForms = rootProject.hasProperty('klaviyoIncludeForms')
-    ? rootProject.property('klaviyoIncludeForms').toBoolean()
-    : true
 
 dependencies {
   if (reactNativeAndroidVersion) {
@@ -182,6 +204,16 @@ dependencies {
     api "com.github.klaviyo.klaviyo-android-sdk:forms:$klaviyoAndroidSdkVersion"
   } else {
     implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
+  }
+
+  // Mobile Inbox: opt-in, and only when the bridge source set is compiled in.
+  //
+  // `inbox-core` defines the public interfaces and is what `src/inbox/java` compiles against;
+  // `inbox` registers the implementation at startup. Both artifacts are unpublished, so this
+  // block never runs in a default build.
+  if (includeInbox) {
+    implementation "com.github.klaviyo.klaviyo-android-sdk:inbox-core:$klaviyoAndroidSdkVersion"
+    api "com.github.klaviyo.klaviyo-android-sdk:inbox:$klaviyoAndroidSdkVersion"
   }
 }
 
