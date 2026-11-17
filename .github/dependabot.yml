@@ -109,6 +109,7 @@ updates:
     directories:
       - '/'
       - '/.github/actions/*'
+      - '/.github/shared/*'
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
