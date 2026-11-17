@@ -1,0 +1,67 @@
+name: Promotion check
+description: Proves every commit in a promotion PR (feat -> rel, rel -> master, back-merges) was already reviewed in its own PR, writes the result to the job summary and creates or updates one PR comment. Runs the script bundled with this action, never one from the PR head.
+
+inputs:
+  bump-files:
+    description: >-
+      Newline-separated glob patterns for the files the bot version bump edits. `**` crosses "/", `*` and `?` stop at "/". A commit by github-actions[bot] whose subject starts with "rel: bump version" and that only touches matching files is exempt. Empty exempts nothing.
+    required: false
+    default: ''
+  github-token:
+    description: Token with contents:read and pull-requests:write on the repository
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: owner/repo of the pull request
+    required: false
+    default: ${{ github.repository }}
+  pr-number:
+    description: Pull request number
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  base-ref:
+    description: Base branch name of the pull request
+    required: false
+    default: ${{ github.event.pull_request.base.ref }}
+  head-sha:
+    description: Head commit of the pull request
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  dry-run:
+    description: "'true' never writes a PR comment"
+    required: false
+    default: 'false'
+  path:
+    description: Workspace-relative directory to check out the PR head into
+    required: false
+    default: _promotion-check
+
+runs:
+  using: composite
+  steps:
+    - name: Copy promotion check script
+      shell: bash
+      run: cp "$GITHUB_ACTION_PATH/promotion-check.sh" "$RUNNER_TEMP/promotion-check.sh"
+
+    - name: Checkout PR head with full history
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.head-sha }}
+        token: ${{ inputs.github-token }}
+        fetch-depth: 0
+        persist-credentials: false
+        path: ${{ inputs.path }}
+
+    - name: Run promotion check
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ inputs.repository }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        BASE_REF: ${{ inputs.base-ref }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        BUMP_FILES: ${{ inputs.bump-files }}
+      run: bash "$RUNNER_TEMP/promotion-check.sh" "$REPO" "$PR_NUMBER" "origin/$BASE_REF" "$HEAD_SHA"
