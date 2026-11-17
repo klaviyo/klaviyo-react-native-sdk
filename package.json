@@ -73,7 +73,7 @@
     "@arethetypeswrong/cli": "^0.18.2",
     "@babel/core": "^7.25.2",
     "@evilmartians/lefthook": "^1.6.0",
-    "@react-native-community/cli": "20.1.0",
+    "@react-native-community/cli": "21.0.0",
     "@react-native/babel-preset": "0.86.3",
     "@react-native/eslint-config": "0.86.3",
     "@react-native/jest-preset": "0.86.3",
