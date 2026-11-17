@@ -1,0 +1,62 @@
+# Asks Reca for the morning Dependabot digest across all seven MAGE repos.
+# Posts one Slack message as Merlin that mentions Reca; Reca runs
+# /mage:dep-digest slack and replies in the thread. Triage logic lives in the
+# MAGE plugin, not here. This workflow only posts the trigger.
+name: Dependabot digest trigger
+
+on:
+  workflow_dispatch:
+  # TEST ONLY: remove before opening the real PR.
+  push:
+    branches: [test/dep-digest-trigger]
+  # Enable after the Merlin -> Reca test passes. Cron is UTC:
+  # 12:30 UTC = 7:30 ET in winter (EST), 8:30 ET in summer (EDT).
+  # schedule:
+  #   - cron: '30 12 * * 1-5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dep-digest-trigger
+  cancel-in-progress: false
+
+env:
+  SLACK_ACTION_DIR: _slack
+  SLACK_USERNAME: MAGE Dependabot Digest
+  SLACK_ICON_EMOJI: ':merlin-orb-react-native:'
+  # #mobile-app-growth-dependabot-reviews
+  DIGEST_CHANNEL: C0CB8HD3FQF
+  # Reca
+  RECA_MENTION: '<@U09DA0L0H1B>'
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out Slack action
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/actions
+          path: ${{ env.SLACK_ACTION_DIR }}
+          persist-credentials: false
+
+      - name: Ask Reca for the digest
+        id: post
+        timeout-minutes: 2
+        uses: ./_slack/.github/actions/notify-slack
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel: ${{ env.DIGEST_CHANNEL }}
+          mention: ${{ env.RECA_MENTION }}
+          status: info
+          title: run `/mage:dep-digest slack`
+
+      # notify-slack never fails the job, so check that a message was posted.
+      - name: Fail if nothing was posted
+        if: steps.post.outputs.ts == ''
+        run: |
+          echo "::error::Slack post failed. Check the notify-slack step log (is Merlin in the channel?)."
+          exit 1
