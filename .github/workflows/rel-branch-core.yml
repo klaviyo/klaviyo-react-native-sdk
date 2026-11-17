@@ -344,9 +344,7 @@ jobs:
           failed=0
           for wrapper in $TARGETS; do
             payload=$(jq -n --arg key "$NATIVE_INPUT" --arg branch "$BRANCH" --arg triggered_by "$TRIGGERED_BY" '{event_type: "native-rel-branch", client_payload: {($key): $branch, triggered_by: $triggered_by}}')
-            # gh api fails with HTTP 307 when a repo has been renamed and the POST uses the old name.
-            target=$(gh api "repos/klaviyo/$wrapper" --jq .full_name)
-            if printf '%s' "$payload" | gh api --method POST "repos/$target/dispatches" --input -; then
+            if printf '%s' "$payload" | gh api --method POST "repos/klaviyo/$wrapper/dispatches" --input -; then
               echo "Dispatched $wrapper"
             else
               echo "::warning::Could not dispatch $wrapper"

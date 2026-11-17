@@ -21,7 +21,7 @@ For agents and humans editing workflows and actions here. `CLAUDE.md` in this di
 - Inputs are additive only: a new input is optional and its default keeps today's behavior. To rename an input, accept both names.
 - A breaking change updates every caller in one batch.
 - `rel-branch-core.yml` reaches each wrapper with a `repository_dispatch` of type `native-rel-branch` (Contents: write on `X_REPO_PAT`), so a wrapper's `rel-branch.yml` needs `repository_dispatch: types: [native-rel-branch]` and reads its pin branch from `github.event.client_payload.<dispatch-input>`. Don't switch that back to `gh workflow run`, which needs Actions: write.
-- klaviyo-android-test-app and klaviyo-ios-test-app still keep their own copy of `notify-slack`; keep those byte-identical to `.github/shared/notify-slack`.
+- klaviyo-android-test-app and klaviyo-ios-test-app also call `notify-slack@master`.
 - This repo calls them by local path (`./.github/shared/<name>`, `./.github/workflows/<file>.yml`) when the job has this commit checked out.
 
 ## Workflow conventions
