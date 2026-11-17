@@ -1,5 +1,5 @@
 name: Stale
-description: Marks and closes stale issues and pull requests with the MAGE labels and messages, using actions/stale.
+description: Marks and closes stale issues and pull requests that carry a MAGE follow-up label, using actions/stale.
 
 inputs:
   github-token:
@@ -17,7 +17,7 @@ runs:
     - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
       with:
         repo-token: ${{ inputs.github-token }}
-        only-labels: 'awaiting-reporter-response,missing-details'
+        any-of-labels: 'awaiting-reporter-response,missing-details'
         remove-stale-when-updated: true
         days-before-issue-stale: 14
         days-before-issue-close: 14

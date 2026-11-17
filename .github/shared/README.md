@@ -172,7 +172,7 @@ linear-release:
 
 ## stale
 
-Runs `actions/stale` with the MAGE labels and messages. Only issues and PRs that carry both the `awaiting-reporter-response` and `missing-details` labels are processed (`only-labels` requires every listed label). Such an issue goes stale after 14 days and closes 14 days later; such a PR goes stale after 16 days and closes 14 days later. Anything without both labels is never marked stale or closed. `evergreen` exempts both; `investigating` and `awaiting-team` also exempt issues.
+Runs `actions/stale` with the MAGE labels and messages. Only issues and PRs labeled `awaiting-reporter-response` or `missing-details` (either one, `any-of-labels`) are processed. Such an issue is labeled `stale` after 14 days without activity and closed 14 days after that; such a PR is labeled `stale` after 16 days and closed 14 days after that. New activity removes the `stale` label. Items with neither label are left alone. `evergreen` exempts both; `investigating` and `awaiting-team` also exempt issues.
 
 | Input                | Required | Default        |
 | -------------------- | -------- | -------------- |
