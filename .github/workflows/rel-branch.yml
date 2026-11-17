@@ -5,6 +5,9 @@ name: Release Branch
 #
 # Run by hand or from the CLI (gh workflow run rel-branch.yml -f bump=minor).
 #
+# The native SDKs send a `native-rel-branch` repository_dispatch to pin their branch:
+# client_payload {android|ios: "rel/X.Y.Z", triggered_by: "<person>"}.
+#
 # The weekday schedule (13:00 UTC, Mon-Fri) runs with the defaults: bump=minor, steps=1, base=master.
 # That keeps a branch for the next minor release open: e.g. with 2.7.0 released it creates rel/2.8.0,
 # and no-ops until 2.8.0 is tagged, then creates rel/2.9.0 the next weekday morning.
@@ -43,6 +46,8 @@ on:
         type: string
         required: false
         default: ''
+  repository_dispatch:
+    types: [native-rel-branch]
   schedule:
     - cron: '0 13 * * 1-5'
 
@@ -77,7 +82,7 @@ jobs:
       steps: ${{ github.event_name != 'workflow_dispatch' && 1 || inputs.steps }}
       version: ${{ inputs.version }}
       base: ${{ inputs.base || 'master' }}
-      triggered_by: ${{ inputs.triggered_by }}
+      triggered_by: ${{ inputs.triggered_by || github.event.client_payload.triggered_by }}
       sdk-name: React Native SDK
       slack-username: React Native SDK
       slack-icon-emoji: ':merlin-orb-react-native:'
@@ -89,7 +94,7 @@ jobs:
   pin:
     name: Pin native SDKs
     needs: rel_branch
-    if: success() && (inputs.android != '' || inputs.ios != '')
+    if: success() && (inputs.android || github.event.client_payload.android || inputs.ios || github.event.client_payload.ios) != ''
     runs-on: macos-latest
     timeout-minutes: 45
     permissions:
@@ -99,8 +104,8 @@ jobs:
       VERSION: ${{ needs.rel_branch.outputs.version }}
       BRANCH: ${{ needs.rel_branch.outputs.branch }}
       PIN_BRANCH: chore/pin-natives-${{ needs.rel_branch.outputs.version }}
-      ANDROID: ${{ inputs.android }}
-      IOS: ${{ inputs.ios }}
+      ANDROID: ${{ inputs.android || github.event.client_payload.android }}
+      IOS: ${{ inputs.ios || github.event.client_payload.ios }}
     steps:
       - name: Check out release branch
         uses: actions/checkout@v7
