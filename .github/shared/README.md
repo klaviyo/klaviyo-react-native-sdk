@@ -232,7 +232,7 @@ Runs the shared pre-publish checks, then finds or creates the draft release and 
 4. The commit is on `master` or a `rel/*` branch.
 5. The tag doesn't exist (skipped on a `release` event). A failed tag lookup fails closed.
 6. `sdk-checks` passes (the SDK's own version stamps, pins, changelog and so on).
-7. CI is green, unless `skip-ci-check`. Every `required-workflows` entry must have a latest run with conclusion `success` on the merged PR's head (or the commit itself when it has no PR). Any other completed run that ended in a conclusion other than success, skipped or neutral, on the PR head or the commit, also blocks. `ignore-workflows` names runs that don't block. `ci-event` limits which runs count.
+7. CI is green, unless `skip-ci-check`. Every `required-workflows` entry must have a latest run with conclusion `success` on the merged PR's head (or the commit itself when it has no PR). A required run that ended `skipped` doesn't block, but it shows as a ⚠️ warning in the job summary and the Slack approval message. Any other completed run that ended in a conclusion other than success, skipped or neutral, on the PR head or the commit, also blocks. `ignore-workflows` names runs that don't block. `ci-event` limits which runs count.
 8. Finds the draft release or creates one with generated notes. An existing draft is retargeted to the commit and its notes are kept. A published release fails. Prereleases are never marked latest.
 9. Writes the job summary and posts the pending Slack message (skipped on dry runs or when `slack-pending` is false).
 

@@ -287,9 +287,17 @@ jobs:
             | . as $name
             | ([$runs[] | select(.name == $name)] | first) as $run
             | if $run == null then "  - \($name): no run found"
+              elif $run.status == "completed" and $run.conclusion == "skipped" then empty
               elif $run.status != "completed" or $run.conclusion != "success"
               then "  - \($name): \($run.status)/\($run.conclusion // "pending")"
               else empty end' <<<"$runs")
+          skipped=$(jq -r --argjson names "$required" '
+            [.[] | select(.name as $n | $names | index($n)) | select(.status == "completed" and .conclusion == "skipped") | .name]
+            | join(", ")' <<<"$runs")
+          if [ -n "$skipped" ]; then
+            echo "::warning::Required workflow skipped on $ci_sha, so it did not test this commit: $skipped"
+            echo "skipped_required=$skipped" >> "$GITHUB_OUTPUT"
+          fi
 
           shas="$ci_sha"
           [ "$ci_sha" != "$SHA" ] && shas="$shas $SHA"
@@ -354,6 +362,7 @@ jobs:
           RELEASE_URL: ${{ steps.draft.outputs.release_url }}
           DRY_RUN: ${{ inputs.dry-run }}
           SKIP_CI: ${{ inputs.skip-ci-check }}
+          SKIPPED_REQUIRED: ${{ steps.ci.outputs.skipped_required }}
           NEXT: ${{ inputs.approval-instructions }}
         run: |
           {
@@ -373,9 +382,21 @@ jobs:
             if [ "$SKIP_CI" = "true" ]; then
               echo "- ⚠️ **CI check skipped:** CI for this commit was not verified"
             fi
+            if [ -n "$SKIPPED_REQUIRED" ]; then
+              echo "- ⚠️ **Required workflow skipped:** $SKIPPED_REQUIRED did not test this commit"
+            fi
             echo
             echo "$NEXT"
           } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "slack_body<<SLACK_BODY_EOF"
+            if [ -n "$SKIPPED_REQUIRED" ]; then
+              echo ":warning: Required workflow skipped, so it did not test this commit: $SKIPPED_REQUIRED"
+              echo
+            fi
+            echo "$NEXT"
+            echo "SLACK_BODY_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack release awaiting approval
         id: slack_pending
@@ -386,7 +407,7 @@ jobs:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           status: pending
           title: ${{ inputs.sdk-name }} `${{ inputs.version }}` awaiting approval${{ inputs.skip-ci-check && ' (CI check skipped)' || '' }}
-          body: ${{ inputs.approval-instructions }}
+          body: ${{ steps.summary.outputs.slack_body }}
           fields: |
             Version: `${{ inputs.version }}`
             Commit: `${{ steps.resolve.outputs.short_sha }}`
