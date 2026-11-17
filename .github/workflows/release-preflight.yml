@@ -303,7 +303,7 @@ jobs:
           [ "$ci_sha" != "$SHA" ] && shas="$shas $SHA"
           for s in $shas; do
             [ "$s" = "$ci_sha" ] || runs=$(latest_runs "$s")
-            red=$(jq -r --argjson skip "$(jq -c --argjson a "$required" '. + $a' <<<"$ignored")" --arg sha "${s:0:7}" '
+            red=$(jq -r --argjson skip "$ignored" --arg sha "${s:0:7}" '
               .[]
               | select(.name as $n | $skip | index($n) | not)
               | select(.status == "completed" and (.conclusion | IN("success", "skipped", "neutral") | not))
