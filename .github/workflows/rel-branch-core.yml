@@ -3,7 +3,8 @@ name: Release Branch Core
 # Shared rel/X.Y.Z branch creation for every Klaviyo mobile SDK. Called from
 # each SDK's rel-branch.yml with `secrets: inherit` (X_REPO_PAT, SLACK_BOT_TOKEN).
 # Creates the branch from base with the bot version bump commit, opens its draft
-# release PR into master, dispatches wrapper pins and posts to Slack. Does
+# release PR into master, sends each wrapper a `native-rel-branch`
+# repository_dispatch for its pin and posts to Slack. Does
 # nothing when the branch already exists. See .github/shared/README.md.
 on:
   workflow_call:
@@ -57,12 +58,12 @@ on:
         default: ''
         type: string
       dispatch-input:
-        description: Input name each dispatch target's rel-branch.yml takes for this SDK's branch (e.g. android, ios, react_native)
+        description: client_payload key each dispatch target's rel-branch.yml reads for this SDK's branch (e.g. android, ios, react_native)
         required: false
         default: ''
         type: string
       dispatch-targets:
-        description: Space-separated klaviyo/<repo> names whose rel-branch.yml is dispatched with dispatch-input=<new branch> on the default next-minor train. Empty dispatches nothing.
+        description: Space-separated klaviyo/<repo> names sent a native-rel-branch repository_dispatch with dispatch-input=<new branch> on the default next-minor train. Empty dispatches nothing.
         required: false
         default: ''
         type: string
@@ -342,7 +343,8 @@ jobs:
 
           failed=0
           for wrapper in $TARGETS; do
-            if gh workflow run rel-branch.yml -R "klaviyo/$wrapper" --ref master -f "$NATIVE_INPUT=$BRANCH" -f "triggered_by=$TRIGGERED_BY"; then
+            payload=$(jq -n --arg key "$NATIVE_INPUT" --arg branch "$BRANCH" --arg triggered_by "$TRIGGERED_BY" '{event_type: "native-rel-branch", client_payload: {($key): $branch, triggered_by: $triggered_by}}')
+            if printf '%s' "$payload" | gh api --method POST "repos/klaviyo/$wrapper/dispatches" --input -; then
               echo "Dispatched $wrapper"
             else
               echo "::warning::Could not dispatch $wrapper"

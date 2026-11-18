@@ -292,7 +292,7 @@ jobs:
 
 ## rel-branch-core
 
-Creates `rel/X.Y.Z` from `base` with a `rel: bump version to X.Y.Z` commit by github-actions[bot]. It does nothing when the branch already exists. It then opens or labels the draft release PR into `release-pr-base`, dispatches `rel-branch.yml` in each `dispatch-targets` repo with `<dispatch-input>=rel/X.Y.Z` (only on the default next-minor train, and never for a prerelease), and posts to Slack. Each SDK keeps its own `rel-branch.yml` with its `schedule:`, `workflow_dispatch` inputs and any pin job, which can read this workflow's outputs.
+Creates `rel/X.Y.Z` from `base` with a `rel: bump version to X.Y.Z` commit by github-actions[bot]. It does nothing when the branch already exists. It then opens or labels the draft release PR into `release-pr-base`, sends each `dispatch-targets` repo a `repository_dispatch` of type `native-rel-branch` with `client_payload` `{<dispatch-input>: "rel/X.Y.Z", triggered_by: <value>}` (only on the default next-minor train, and never for a prerelease), and posts to Slack. Each SDK keeps its own `rel-branch.yml` with its `repository_dispatch: types: [native-rel-branch]` listener, `schedule:`, `workflow_dispatch` inputs and any pin job, which can read this workflow's outputs. That listener reads the payload through `github.event.client_payload`.
 
 | Input               | Required | Default                                          |
 | ------------------- | -------- | ------------------------------------------------ |
