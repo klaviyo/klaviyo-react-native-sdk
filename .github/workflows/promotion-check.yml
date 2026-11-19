@@ -1,0 +1,43 @@
+name: Promotion Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  promotion-check:
+    name: Promotion check
+    if: github.event.action != 'edited' || github.event.changes.base != null
+    runs-on: ubuntu-latest
+    concurrency:
+      group: promotion-check-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout shared actions from the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/shared
+          persist-credentials: false
+
+      - name: Checkout shared actions from the PR when the default branch has none
+        if: hashFiles('.github/shared/promotion-check/action.yml') == ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: .github/shared
+          persist-credentials: false
+
+      - name: Run promotion check
+        uses: ./.github/shared/promotion-check
+        with:
+          bump-files: |
+            package.json
+            ios/klaviyo-sdk-configuration.plist
+            android/src/main/res/values/strings.xml
+            example/android/app/build.gradle
+            example/ios/KlaviyoReactNativeSdkExample.xcodeproj/project.pbxproj

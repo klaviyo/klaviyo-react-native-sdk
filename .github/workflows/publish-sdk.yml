@@ -66,23 +66,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || inputs.version }}
 
-      - name: Checkout Slack action
-        if: always()
-        timeout-minutes: 2
-        continue-on-error: true
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Notify Slack npm publish started
         id: slack
         if: ${{ !inputs.dry_run }}
         timeout-minutes: 2
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts }}
@@ -153,7 +142,7 @@ jobs:
       - name: Notify Slack on success
         if: success() && !inputs.dry_run
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ steps.slack.outputs.ts }}
@@ -202,7 +191,7 @@ jobs:
       - name: Notify Slack on failure
         if: failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ steps.slack.outputs.ts }}
@@ -218,7 +207,7 @@ jobs:
       - name: Notify Slack on cancel
         if: cancelled() && steps.stop.outputs.timed_out != 'true' && steps.slack.outputs.ts != ''
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ steps.slack.outputs.ts }}
@@ -239,27 +228,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref || inputs.version }}
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Sync release to Linear
-        id: linear-sync
-        continue-on-error: true
-        uses: linear/linear-release-action@dd4fc407f860b9460d2cf0b3fb1edd8985cf443f # v0.18.2
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/linear-release-sync@master
         with:
-          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
-          command: sync
           version: ${{ needs.publish-sdk.outputs.version }}
-          name: ${{ needs.publish-sdk.outputs.version }}
-
-      - name: Complete release in Linear
-        if: steps.linear-sync.outcome == 'success'
-        continue-on-error: true
-        uses: linear/linear-release-action@dd4fc407f860b9460d2cf0b3fb1edd8985cf443f # v0.18.2
-        with:
-          access_key: ${{ secrets.LINEAR_ACCESS_KEY }}
-          command: complete
-          version: ${{ needs.publish-sdk.outputs.version }}
+          token: ${{ secrets.LINEAR_ACCESS_KEY }}
+          ref: ${{ inputs.ref || inputs.version }}

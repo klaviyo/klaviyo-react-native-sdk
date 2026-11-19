@@ -81,6 +81,7 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/**'
       - '.github/actions/**'
+      - '.github/shared/**'
       - 'AGENTS.md'
       - 'src/__tests__/**'
       - 'example/jest.config.js'
@@ -229,21 +230,11 @@ jobs:
           SHA: ${{ env.COMMIT_SHA }}
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
-      - name: Checkout Slack action
-        timeout-minutes: 2
-        continue-on-error: true
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Notify Slack deploy started
         id: slack
         timeout-minutes: 2
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts }}
@@ -297,18 +288,9 @@ jobs:
           SHA: ${{ env.COMMIT_SHA }}
         run: echo "SHORT_SHA=${SHA:0:7}" >> "$GITHUB_ENV"
 
-      - name: Checkout Slack action
-        continue-on-error: true
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Update the Slack deploy message
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.announce.outputs.slack_ts }}
@@ -571,7 +553,7 @@ jobs:
       - name: Notify Slack on success
         if: success()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack
+        uses: ./.github/shared/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
@@ -592,7 +574,7 @@ jobs:
       - name: Notify Slack on failure
         if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/notify-slack
+        uses: ./.github/shared/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
@@ -857,7 +839,7 @@ jobs:
       - name: Notify Slack on success
         if: success()
         continue-on-error: true
-        uses: ./.github/actions/notify-slack
+        uses: ./.github/shared/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
@@ -878,7 +860,7 @@ jobs:
       - name: Notify Slack on failure
         if: (failure() || (cancelled() && steps.stop.outputs.timed_out == 'true')) && steps.checkout.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/notify-slack
+        uses: ./.github/shared/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
@@ -973,7 +955,7 @@ jobs:
       - name: Warn on Slack when What to Test failed
         if: steps.setup_ruby.outcome == 'failure' || steps.install_fastlane.outcome == 'failure' || steps.write_key.outcome == 'failure' || steps.save_notes.outcome == 'failure' || steps.set_whats_new.outcome == 'failure'
         continue-on-error: true
-        uses: ./.github/actions/notify-slack
+        uses: ./.github/shared/notify-slack
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           thread_ts: ${{ inputs.slack_thread_ts || needs.announce.outputs.slack_ts }}
@@ -1000,25 +982,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: write
     steps:
-      - name: Remove label
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          LABEL_NAME: ${{ github.event.label.name }}
+      - name: Checkout shared actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          script: |
-            try {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                name: process.env.LABEL_NAME,
-              });
-            } catch (e) {
-              // 404 = label already gone (e.g. removed manually mid-run).
-              if (e.status !== 404) throw e;
-            }
+          sparse-checkout: .github/shared
+          persist-credentials: false
+
+      - name: Remove label
+        uses: ./.github/shared/remove-deploy-label
 
   # Edits the message that `announce` posted to its final result. A failed gate
   # (supersede-push-runs, checks or a preflight) skips both deploys, so it is
@@ -1099,19 +1073,9 @@ jobs:
             echo "title=$title"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Checkout Slack action
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: .github/actions
-          persist-credentials: false
-          path: _slack
-
       - name: Update the Slack deploy message
         continue-on-error: true
-        uses: ./_slack/.github/actions/notify-slack
+        uses: klaviyo/klaviyo-react-native-sdk/.github/shared/notify-slack@master
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           ts: ${{ needs.announce.outputs.slack_ts }}

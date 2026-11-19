@@ -1,0 +1,60 @@
+name: Linear release sync
+description: Syncs a released version to Linear, then completes the Linear release. Skips prereleases (a version with "-" or a release event marked prerelease). Never fails the calling job.
+
+inputs:
+  version:
+    description: Released version (X.Y.Z). A version containing "-" is skipped.
+    required: true
+  token:
+    description: Linear access key. Pass secrets.LINEAR_ACCESS_KEY.
+    required: true
+  name:
+    description: Linear release name. Defaults to the version.
+    required: false
+    default: ''
+  ref:
+    description: Ref to check out with full history before the sync. Defaults to the checkout action's default for the event.
+    required: false
+    default: ''
+
+outputs:
+  synced:
+    description: "'true' when the Linear sync succeeded"
+    value: ${{ steps.linear-sync.outcome == 'success' }}
+  completed:
+    description: "'true' when the Linear release was completed"
+    value: ${{ steps.linear-complete.outcome == 'success' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout full history for Linear sync
+      id: linear-checkout
+      if: ${{ !contains(inputs.version, '-') && github.event.release.prerelease != true }}
+      continue-on-error: true
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ inputs.ref }}
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Sync release to Linear
+      id: linear-sync
+      if: steps.linear-checkout.outcome == 'success'
+      continue-on-error: true
+      uses: linear/linear-release-action@dd4fc407f860b9460d2cf0b3fb1edd8985cf443f # v0.18.2
+      with:
+        access_key: ${{ inputs.token }}
+        command: sync
+        version: ${{ inputs.version }}
+        name: ${{ inputs.name || inputs.version }}
+
+    - name: Complete release in Linear
+      id: linear-complete
+      if: steps.linear-sync.outcome == 'success'
+      continue-on-error: true
+      uses: linear/linear-release-action@dd4fc407f860b9460d2cf0b3fb1edd8985cf443f # v0.18.2
+      with:
+        access_key: ${{ inputs.token }}
+        command: complete
+        version: ${{ inputs.version }}
