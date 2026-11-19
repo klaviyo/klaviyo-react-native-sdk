@@ -141,3 +141,9 @@ are managed:
   `AppDelegate.swift`, plus the `getLaunchOptionsWithURL` helper to forward any
   cold-start deep-link URL (React Native issue
   [#32350](https://github.com/facebook/react-native/issues/32350)).
+
+## Previewing Draft In-App Forms
+
+To see an unpublished in-app form, open it in the Klaviyo in-app form editor and click **Preview on device**. In the example app's **Forms** section, turn on **Forms preview**, paste the token and tap **Set**. The draft form appears and refreshes about every 4 seconds, so edits saved in the editor show up without restarting. Tokens expire after 30 minutes. Turn the toggle off to return to published forms. The token is held in memory only and never logged.
+
+You can also skip the paste: set the editor's deep link to the app's scheme (`klaviyotest://preview` on Android, `rntest://preview` on iOS) and scan the QR code. `HomeScreen`'s deep link handler passes the link to `Klaviyo.handleFormsPreviewLink`.

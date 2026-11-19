@@ -47,6 +47,12 @@ export interface Event {
   readonly value?: number;
 
   /**
+   * ISO 4217 currency code that `value` is denominated in, for example `USD`.
+   * The Klaviyo API rejects an event whose code is not valid ISO 4217.
+   */
+  readonly valueCurrency?: string;
+
+  /**
    * A unique identifier for an event. If the uniqueId is repeated for the same
    * profile and metric, only the first processed event will be recorded. If this is not
    * present, this will use the time to the second. Using the default, this limits only one
