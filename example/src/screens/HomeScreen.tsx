@@ -88,10 +88,10 @@ const SECTIONS: { title: string; data: SectionKey[] }[] = [
   { title: 'Auth', data: ['auth'] },
 ];
 
-const renderSection = (sectionKey: SectionKey) => {
+const renderSection = (sectionKey: SectionKey, companyId: string) => {
   switch (sectionKey) {
     case 'analytics':
-      return <AnalyticsSection />;
+      return <AnalyticsSection key={companyId} />;
     case 'subscriptions':
       return <SubscriptionSection />;
     case 'logging':
@@ -157,7 +157,7 @@ export function HomeScreen() {
         testID="home_section_list"
         sections={SECTIONS}
         keyExtractor={(item) => item}
-        renderItem={({ item }) => renderSection(item)}
+        renderItem={({ item }) => renderSection(item, companyId)}
         renderSectionHeader={({ section }) => (
           <SectionHeader title={section.title} />
         )}
