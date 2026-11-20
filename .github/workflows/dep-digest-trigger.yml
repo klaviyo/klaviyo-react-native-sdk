@@ -1,22 +1,16 @@
-# Asks Reca for the morning Dependabot digest across all seven MAGE repos.
-# Posts one plain-text Slack message as Merlin that mentions Reca; Reca runs
-# /mage:dep-digest slack and replies in the thread. Triage logic lives in the
-# MAGE plugin, not here. This workflow only posts the trigger.
-#
-# It calls chat.postMessage directly instead of notify-slack, because
-# notify-slack always sets a custom username (MAGE CI by default) and sends
-# blocks. This posts as the Merlin app itself, with plain text.
+# Replies in the morning review-report Slack thread with a scheduled message
+# that starts the Dependabot digest. The channel, the report's author and
+# prefix, and the reply text come from the DEP_DIGEST_TRIGGER secret (JSON:
+# channel, report_bot, report_prefix, text).
 name: Dependabot digest trigger
 
 on:
   workflow_dispatch:
-  # TEST ONLY: remove before opening the real PR.
-  push:
-    branches: [test/dep-digest-trigger]
-  # Enable after the Merlin -> Reca test passes. Cron is UTC:
-  # 12:30 UTC = 7:30 ET in winter (EST), 8:30 ET in summer (EDT).
+  # Enable after the thread test passes. Cron is UTC, so there is one line per
+  # DST offset and the job only proceeds at 08:xx America/New_York.
   # schedule:
-  #   - cron: '30 12 * * 1-5'
+  #   - cron: '10 13 * * 1-5'
+  #   - cron: '10 12 * * 1-5'
 
 permissions:
   contents: read
@@ -30,15 +24,54 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Ask Reca for the digest
+      - name: Reply in the review-report thread
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          # #mobile-app-growth-dependabot-reviews
-          CHANNEL: C0CB8HD3FQF
-          # Reca
-          TEXT: '<@U09DA0L0H1B> run `/mage:dep-digest slack`'
+          CONFIG: ${{ secrets.DEP_DIGEST_TRIGGER }}
+          EVENT: ${{ github.event_name }}
         run: |
-          payload=$(jq -n --arg c "$CHANNEL" --arg t "$TEXT" '{channel: $c, text: $t}')
+          if [ "$EVENT" = "schedule" ] && [ "$(TZ=America/New_York date +%H)" != "08" ]; then
+            echo "Outside 08:xx America/New_York (other DST offset); skipping."
+            exit 0
+          fi
+          if [ -z "$CONFIG" ] || ! jq -e . >/dev/null 2>&1 <<<"$CONFIG"; then
+            echo "::error::DEP_DIGEST_TRIGGER is not set or is not valid JSON."
+            exit 1
+          fi
+          channel=$(jq -r '.channel // empty' <<<"$CONFIG")
+          bot=$(jq -r '.report_bot // empty' <<<"$CONFIG")
+          prefix=$(jq -r '.report_prefix // empty' <<<"$CONFIG")
+          text=$(jq -r '.text // empty' <<<"$CONFIG")
+          for v in "$channel" "$bot" "$prefix" "$text"; do
+            [ -n "$v" ] && echo "::add-mask::$v"
+          done
+          if [ -z "$channel" ] || [ -z "$bot" ] || [ -z "$prefix" ] || [ -z "$text" ]; then
+            echo "::error::DEP_DIGEST_TRIGGER is missing a field."
+            exit 1
+          fi
+
+          oldest=$(TZ=America/New_York date -d 'today 00:00' +%s)
+          hist=$(curl -sS -G https://slack.com/api/conversations.history \
+            -H "Authorization: Bearer $SLACK_TOKEN" \
+            --data-urlencode "channel=$channel" \
+            --data-urlencode "oldest=$oldest" \
+            --data-urlencode "limit=100")
+          if [ "$(jq -r .ok <<<"$hist")" != "true" ]; then
+            echo "::error::Reading the channel failed: $(jq -r '[.error, .needed] | map(select(. != null)) | join(" needs ")' <<<"$hist")"
+            exit 1
+          fi
+
+          # Messages come newest first; take today's newest report.
+          report_ts=$(jq -r --arg bot "$bot" --arg p "$prefix" '
+            [.messages[] | select(.user == $bot and ((.text // "") | startswith($p)))][0].ts // empty
+          ' <<<"$hist")
+          if [ -z "$report_ts" ]; then
+            echo "::error::No report found in the channel today."
+            exit 1
+          fi
+
+          payload=$(jq -n --arg c "$channel" --arg t "$text" --arg ts "$report_ts" \
+            '{channel: $c, text: $t, thread_ts: $ts}')
           resp=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_TOKEN" \
             -H 'Content-Type: application/json; charset=utf-8' \
@@ -47,4 +80,4 @@ jobs:
             echo "::error::Slack post failed: $(jq -r .error <<<"$resp")"
             exit 1
           fi
-          echo "Posted ts=$(jq -r .ts <<<"$resp")"
+          echo "Posted the reply."
