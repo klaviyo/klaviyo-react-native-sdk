@@ -16,8 +16,8 @@ import {
   EMPTY_PAGES,
   filtersEqual,
   flattenPages,
-  withFirstPage,
   withNextPage,
+  withPages,
   type InboxFilters,
   type InboxPagesState,
 } from '../inbox/pages';
@@ -96,8 +96,11 @@ const INITIAL_STATE: InboxState = {
  * `fetchUnreadCount`, `updateMessageState`, `subscribe`, and `capabilities`.
  *
  * A fetch with no cursor replaces the pages (a refresh); a fetch with a cursor
- * appends. A change signal refetches the first page, because a cursor belongs
- * to the query that issued it and a change can move messages between pages.
+ * appends. A change signal, a state change or a return to the foreground reloads
+ * as many pages as are on screen, following fresh cursors from the first page,
+ * because a cursor belongs to the query that issued it and a change can move
+ * messages between pages. A pull-to-refresh or a filter change starts over at
+ * the first page.
  */
 export function useInbox() {
   const [state, setState] = useState<InboxState>(INITIAL_STATE);
@@ -110,11 +113,13 @@ export function useInbox() {
   const pageSizeRef = useRef<number>(DEFAULT_PAGE_SIZE);
   const nextCursorRef = useRef<string | null>(null);
   const isLoadingRef = useRef(false);
+  const loadedPageCountRef = useRef(0);
 
   filtersRef.current = state.filters;
   pageSizeRef.current = state.pageSize;
   nextCursorRef.current = state.pages.nextCursor;
   isLoadingRef.current = state.isLoading;
+  loadedPageCountRef.current = state.pages.pages.length;
 
   const refreshUnreadCount = useCallback(async () => {
     try {
@@ -130,37 +135,65 @@ export function useInbox() {
     }
   }, []);
 
-  const fetchFirstPage = useCallback(async () => {
-    const request = ++latestFirstPageRequest.current;
-    const options: InboxPageOptions = {
-      pageSize: pageSizeRef.current,
-      readFilter: filtersRef.current.read,
-      archiveFilter: filtersRef.current.archive,
-    };
-    setState((prev) => ({
-      ...prev,
-      isLoading: true,
-      errorMessage: null,
-    }));
-    try {
-      const page: InboxPage = await Klaviyo.fetchPage(options);
-      if (request !== latestFirstPageRequest.current) return;
+  /**
+   * Fetch `pageCount` consecutive pages from the first, each with the cursor the
+   * one before returned, and replace the loaded pages with them. It stops early
+   * when the inbox has fewer pages than that.
+   */
+  const fetchPages = useCallback(
+    async (pageCount: number) => {
+      const request = ++latestFirstPageRequest.current;
+      // A next-page fetch still in flight was issued against pages this replaces.
+      latestNextPageRequest.current++;
+      const base: InboxPageOptions = {
+        pageSize: pageSizeRef.current,
+        readFilter: filtersRef.current.read,
+        archiveFilter: filtersRef.current.archive,
+      };
       setState((prev) => ({
         ...prev,
-        pages: withFirstPage(page),
-        isLoading: false,
+        isLoading: true,
+        errorMessage: null,
       }));
-      // The unread count is independent of the page filters, so refresh it too.
-      await refreshUnreadCount();
-    } catch (error) {
-      if (request !== latestFirstPageRequest.current) return;
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        errorMessage: describeInboxError(error),
-      }));
-    }
-  }, [refreshUnreadCount]);
+      try {
+        const fetched: InboxPage[] = [];
+        let cursor: string | null = null;
+        for (let index = 0; index < pageCount; index++) {
+          const page: InboxPage = await Klaviyo.fetchPage(
+            cursor === null ? base : { ...base, cursor }
+          );
+          if (request !== latestFirstPageRequest.current) return;
+          fetched.push(page);
+          cursor = page.nextCursor ?? null;
+          if (cursor === null) break;
+        }
+        setState((prev) => ({
+          ...prev,
+          pages: withPages(fetched),
+          isLoading: false,
+        }));
+        // The unread count is independent of the page filters, so refresh it too.
+        await refreshUnreadCount();
+      } catch (error) {
+        if (request !== latestFirstPageRequest.current) return;
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          errorMessage: describeInboxError(error),
+        }));
+      }
+    },
+    [refreshUnreadCount]
+  );
+
+  /** Start over at the first page: initial load, pull-to-refresh, filter change. */
+  const fetchFirstPage = useCallback(() => fetchPages(1), [fetchPages]);
+
+  /** Fetch the pages on screen again, so a change does not collapse them to the first. */
+  const reloadLoadedPages = useCallback(
+    () => fetchPages(Math.max(1, loadedPageCountRef.current)),
+    [fetchPages]
+  );
 
   const loadNextPage = useCallback(async () => {
     const cursor = nextCursorRef.current;
@@ -222,9 +255,9 @@ export function useInbox() {
             ? null
             : `Message ${messageId} is not on this device, so its state was not changed. Retention may have removed it.`,
         }));
-        // The change signal also fires for an applied change, but refectching
+        // The change signal also fires for an applied change, but reloading
         // here keeps the row honest even if the signal is not delivered.
-        await fetchFirstPage();
+        await reloadLoadedPages();
       } catch (error) {
         setState((prev) => ({
           ...prev,
@@ -232,7 +265,7 @@ export function useInbox() {
         }));
       }
     },
-    [fetchFirstPage]
+    [reloadLoadedPages]
   );
 
   const clearStateNotice = useCallback(() => {
@@ -260,11 +293,11 @@ export function useInbox() {
     if (AppState?.addEventListener === undefined) return;
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
-        fireAndForget(fetchFirstPage());
+        fireAndForget(reloadLoadedPages());
       }
     });
     return () => subscription.remove();
-  }, [state.available, fetchFirstPage]);
+  }, [state.available, reloadLoadedPages]);
 
   // Subscribe to the wrapper's change signal. Delivery is best effort and not
   // replayed, so this is an extra trigger on top of the foreground refetch.
@@ -276,10 +309,10 @@ export function useInbox() {
         changeSignalCount: prev.changeSignalCount + 1,
         lastChangeAt: Date.now(),
       }));
-      fireAndForget(fetchFirstPage());
+      fireAndForget(reloadLoadedPages());
     });
     return unsubscribe;
-  }, [state.available, fetchFirstPage]);
+  }, [state.available, reloadLoadedPages]);
 
   const messages = useMemo(() => flattenPages(state.pages), [state.pages]);
 

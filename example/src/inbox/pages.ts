@@ -80,6 +80,17 @@ export function withNextPage(
 }
 
 /**
+ * Build the state from consecutive pages fetched in one pass (the first page,
+ * then each page its cursor led to). The first page is always kept, even when
+ * empty, so an empty inbox reads as loaded; later empty pages are dropped.
+ */
+export function withPages(fetched: readonly InboxPage[]): InboxPagesState {
+  const [first, ...rest] = fetched;
+  if (first === undefined) return EMPTY_PAGES;
+  return rest.reduce(withNextPage, withFirstPage(first));
+}
+
+/**
  * Whether the two filter sets would produce the same query. Used to decide
  * whether a filter change needs a refetch (and a cursor reset).
  */

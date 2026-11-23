@@ -213,6 +213,98 @@ describe('InboxScreen', () => {
     ).toBeTruthy();
   });
 
+  /**
+   * Two single-message pages, so a state change on page 2 has to keep page 2.
+   * The mock follows cursors the way the SDK does: no cursor is page 1.
+   */
+  function mockTwoPages(page2: Partial<InboxMessage> = {}) {
+    mockFetchPage.mockImplementation(async (options: unknown) => {
+      const { cursor } = options as { cursor?: string };
+      return cursor === undefined
+        ? { messages: [message()], nextCursor: 'cursor-2' }
+        : {
+            messages: [
+              message({ id: 'msg-2', title: 'Second message', ...page2 }),
+            ],
+          };
+    });
+  }
+
+  async function loadSecondPage() {
+    await render(<InboxScreen />);
+    fireEvent.press(
+      await screen.findByTestId(InboxTestIDs.FETCH_NEXT_PAGE_BUTTON)
+    );
+    await screen.findByText('Second message');
+  }
+
+  it('keeps the loaded pages after a state change on a later page', async () => {
+    mockTwoPages();
+    await loadSecondPage();
+
+    fireEvent.press(screen.getByTestId(InboxTestIDs.archiveToggle('msg-2')));
+    await waitFor(() =>
+      expect(mockUpdateMessageState).toHaveBeenCalledWith('msg-2', 'archived')
+    );
+
+    // Both pages are fetched again, so page 2 is still on screen.
+    await waitFor(() => {
+      const cursors = mockFetchPage.mock.calls.map(
+        ([options]) => (options as { cursor?: string }).cursor
+      );
+      expect(cursors.slice(-2)).toEqual([undefined, 'cursor-2']);
+    });
+    expect(await screen.findByText('Second message')).toBeTruthy();
+    expect(screen.getByTestId(InboxTestIDs.pageHeader(2))).toBeTruthy();
+  });
+
+  it('keeps the loaded pages when the wrapper signals a change', async () => {
+    mockTwoPages();
+    await loadSecondPage();
+    const callsBefore = mockFetchPage.mock.calls.length;
+
+    await act(async () => {
+      changeHandler!();
+    });
+
+    await waitFor(() =>
+      expect(mockFetchPage.mock.calls.length).toBe(callsBefore + 2)
+    );
+    expect(screen.getByText('Second message')).toBeTruthy();
+    expect(screen.getByTestId(InboxTestIDs.pageHeader(2))).toBeTruthy();
+  });
+
+  it('drops a page that a state change emptied, without losing the others', async () => {
+    mockTwoPages();
+    await loadSecondPage();
+    // Archiving msg-2 removes it from the active list, so page 2 comes back empty.
+    mockFetchPage.mockImplementation(async (options: unknown) => {
+      const { cursor } = options as { cursor?: string };
+      return cursor === undefined
+        ? { messages: [message()], nextCursor: 'cursor-2' }
+        : { messages: [] };
+    });
+
+    fireEvent.press(screen.getByTestId(InboxTestIDs.archiveToggle('msg-2')));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Second message')).toBeNull()
+    );
+    expect(screen.getByText('First message')).toBeTruthy();
+    expect(screen.queryByTestId(InboxTestIDs.pageHeader(2))).toBeNull();
+  });
+
+  it('starts over at the first page when a filter changes', async () => {
+    mockTwoPages();
+    await loadSecondPage();
+    mockFetchPage.mockClear();
+
+    fireEvent.press(screen.getByTestId(InboxTestIDs.readFilter('unread')));
+
+    await waitFor(() => expect(mockFetchPage).toHaveBeenCalledTimes(1));
+    expect(mockFetchPage.mock.calls[0]?.[0]).not.toHaveProperty('cursor');
+  });
+
   it('refetches when the wrapper signals a change', async () => {
     mockFetchPage.mockResolvedValue({ messages: [message()] });
 

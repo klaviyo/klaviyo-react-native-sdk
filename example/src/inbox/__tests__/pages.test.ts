@@ -8,6 +8,7 @@ import {
   pagesSummary,
   withFirstPage,
   withNextPage,
+  withPages,
 } from '../pages';
 import type { InboxMessage, InboxPage } from 'klaviyo-react-native-sdk';
 
@@ -114,5 +115,35 @@ describe('pagesSummary', () => {
     expect(pagesSummary(withFirstPage(page(['a', 'b'])))).toBe(
       '2 messages in 1 page'
     );
+  });
+});
+
+describe('withPages', () => {
+  it('builds the same state as a first page followed by each next page', () => {
+    const fetched = [page(['a'], 'c2'), page(['b'], 'c3'), page(['c'])];
+
+    const state = withPages(fetched);
+
+    expect(state).toEqual(
+      withNextPage(
+        withNextPage(withFirstPage(fetched[0]!), fetched[1]!),
+        fetched[2]!
+      )
+    );
+    expect(state.pages.map((messages) => messages.map((m) => m.id))).toEqual([
+      ['a'],
+      ['b'],
+      ['c'],
+    ]);
+    expect(state.nextCursor).toBeNull();
+  });
+
+  it('keeps an empty first page but drops an empty later page', () => {
+    expect(withPages([page([])]).hasLoaded).toBe(true);
+    expect(withPages([page(['a'], 'c2'), page([])]).pages).toHaveLength(1);
+  });
+
+  it('is the empty state when nothing was fetched', () => {
+    expect(withPages([])).toBe(EMPTY_PAGES);
   });
 });
