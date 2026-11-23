@@ -361,7 +361,7 @@ check_commit() {
 
   case "$chosen_status" in
     approved)
-      local detail="@${approvers//,/, @}" after_text
+      local detail="\`@${approvers//,/\`, \`@}\`" after_text
       if [ "$after_known" = "1" ]; then
         after_text="$after_count commits after approval"
         if [ "$after_count" -gt 0 ]; then
@@ -376,7 +376,7 @@ check_commit() {
       if pr_all_unowned "$chosen"; then
         add_row "$sha" 1 "$chosen" "no review required (unowned paths)" ""
       else
-        add_row "$sha" 0 "$chosen" "merged by @${merged_by:-unknown} without a qualifying approval" "" "$BYPASS"
+        add_row "$sha" 0 "$chosen" "merged by \`@${merged_by:-unknown}\` without a qualifying approval" "" "$BYPASS"
       fi
       ;;
   esac
