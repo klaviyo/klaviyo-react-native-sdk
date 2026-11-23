@@ -6,4 +6,6 @@ export type RootStackParamList = {
   Home: undefined;
   AuthScreen: undefined;
   ConfigureResponse: { responseId: string };
+  /** The Mobile Inbox validation screen (MAGE-1781). */
+  InboxScreen: undefined;
 };

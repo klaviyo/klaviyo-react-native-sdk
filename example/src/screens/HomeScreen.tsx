@@ -37,6 +37,7 @@ import { AnalyticsSection } from '../sections/AnalyticsSection';
 import { FormsSection } from '../sections/FormsSection';
 import { GeofencingSection } from '../sections/GeofencingSection';
 import { PushSection } from '../sections/PushSection';
+import { InboxSection } from '../sections/InboxSection';
 import { AuthSection } from '../sections/AuthSection';
 import { SubscriptionSection } from '../sections/SubscriptionSection';
 import { LoggingSection } from '../sections/LoggingSection';
@@ -71,6 +72,7 @@ type SectionKey =
   | 'forms'
   | 'geofencing'
   | 'push'
+  | 'inbox'
   | 'logging'
   | 'auth';
 
@@ -84,6 +86,7 @@ const SECTIONS: { title: string; data: SectionKey[] }[] = [
   { title: 'In-App Forms', data: ['forms'] },
   { title: 'Geofencing & Location', data: ['geofencing'] },
   { title: 'Push Notifications', data: ['push'] },
+  { title: 'Mobile Inbox', data: ['inbox'] },
   { title: 'SDK Logging', data: ['logging'] },
   { title: 'Auth', data: ['auth'] },
 ];
@@ -102,6 +105,8 @@ const renderSection = (sectionKey: SectionKey) => {
       return <GeofencingSection />;
     case 'push':
       return <PushSection />;
+    case 'inbox':
+      return <InboxSection />;
     case 'auth':
       return <AuthSection />;
     default:

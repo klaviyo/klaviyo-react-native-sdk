@@ -331,4 +331,225 @@ export const styles = StyleSheet.create({
   warningCollapsibleContent: {
     marginTop: spacing.xs,
   },
+
+  // Inbox screen styles. The Inbox is a validation tool, so it follows the
+  // test apps' mail-client look: unread bold on white, read on grey, archived
+  // tinted red, and a red unread badge.
+  inboxSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  inboxSummaryColumn: {
+    flex: 1,
+  },
+  inboxSummaryHeadline: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  inboxSummarySubtext: {
+    ...typography.label,
+    color: colors.secondaryText,
+    marginTop: spacing.xs / 2,
+  },
+  inboxUnreadBadge: {
+    minWidth: 24,
+    minHeight: 24,
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: colors.destructive,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  inboxUnreadBadgeText: {
+    color: colors.buttonText,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  inboxFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  inboxFilterLabel: {
+    ...typography.label,
+    color: colors.secondaryText,
+    width: 56,
+  },
+  inboxFilterOptions: {
+    flex: 1,
+    flexDirection: 'row',
+    marginHorizontal: -spacing.xs / 2,
+  },
+  inboxFilterButton: {
+    ...buttonBase,
+    flex: 1,
+    minHeight: 36,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    marginHorizontal: spacing.xs / 2,
+  },
+  inboxFilterButtonActive: {
+    backgroundColor: colors.activeButtonTint,
+  },
+  inboxFilterButtonText: {
+    ...typography.label,
+    color: colors.primary,
+  },
+  inboxStateNotice: {
+    backgroundColor: '#FBDADA',
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  inboxStateNoticeText: {
+    ...typography.label,
+    color: colors.destructive,
+  },
+  inboxError: {
+    ...typography.label,
+    color: colors.destructive,
+    marginBottom: spacing.sm,
+  },
+  inboxPageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.disabledBackground,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: 1,
+  },
+  inboxPageHeaderText: {
+    ...typography.label,
+    color: colors.secondaryText,
+  },
+  inboxMessageRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  inboxMessageRowUnread: {
+    backgroundColor: colors.cardBackground,
+  },
+  inboxMessageRowRead: {
+    backgroundColor: colors.disabledBackground,
+  },
+  inboxMessageRowArchived: {
+    backgroundColor: '#FBDADA',
+  },
+  inboxMessageTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inboxUnreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+    marginRight: spacing.sm,
+  },
+  inboxUnreadDotHidden: {
+    backgroundColor: 'transparent',
+  },
+  inboxMessageTitle: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+  },
+  inboxMessageTitleUnread: {
+    fontWeight: '700',
+  },
+  inboxMessageBody: {
+    ...typography.label,
+    color: colors.secondaryText,
+    marginTop: spacing.xs / 2,
+  },
+  inboxMessageTime: {
+    fontSize: 12,
+    color: colors.secondaryText,
+    marginTop: spacing.xs / 2,
+  },
+  inboxMessageActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  inboxStateButton: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginRight: spacing.sm,
+  },
+  inboxStateButtonText: {
+    ...typography.label,
+    color: colors.primary,
+  },
+  inboxDetailsToggle: {
+    marginLeft: 'auto',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  inboxDetailsToggleText: {
+    ...typography.label,
+    color: colors.primary,
+  },
+  inboxDetails: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  inboxDetailRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.xs / 2,
+  },
+  inboxDetailLabel: {
+    ...typography.label,
+    color: colors.secondaryText,
+    width: 128,
+  },
+  inboxDetailValue: {
+    fontSize: 12,
+    color: colors.text,
+    flex: 1,
+    fontFamily: Platform.select({
+      ios: 'Courier',
+      android: 'monospace',
+    }),
+  },
+  inboxEmpty: {
+    ...typography.label,
+    color: colors.secondaryText,
+    paddingVertical: spacing.lg,
+    textAlign: 'center',
+  },
+  inboxFooter: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  inboxFooterText: {
+    ...typography.label,
+    color: colors.secondaryText,
+    marginTop: spacing.xs,
+  },
+  inboxRefreshButton: {
+    ...buttonBase,
+    marginTop: spacing.sm,
+  },
+  inboxDiagnosticsValue: {
+    ...typography.label,
+    color: colors.text,
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: spacing.sm,
+  },
 });
