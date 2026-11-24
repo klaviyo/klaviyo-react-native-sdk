@@ -452,9 +452,7 @@ export const Klaviyo: KlaviyoInterface = {
         }
       );
 
-      // Ask native to start forwarding its change signal. Android has no invalidation API yet
-      // (MAGE-1102), so there this starts nothing; the listener above stays in place so the
-      // contract is identical on both platforms once Android emits.
+      // Ask native to start forwarding its change signal.
       KlaviyoReactNativeSdk.registerInboxChangeHandler();
     }
 
