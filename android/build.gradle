@@ -75,9 +75,10 @@ def includeForms = rootProject.hasProperty('klaviyoIncludeForms')
 
 // Whether to include the Mobile Inbox module.
 //
-// Opt-in, unlike forms and location: set klaviyoIncludeInbox=true in your gradle.properties to
-// compile the inbox bridge. Off by default because the native inbox artifacts this depends on are
-// not published yet, so a default build cannot resolve them.
+// Mobile Inbox is opt-in: it is left out unless klaviyoIncludeInbox=true is set in your
+// gradle.properties. This is the reverse of forms and location above, which are included unless set
+// to false. It is off by default because the native inbox artifacts this depends on are not
+// published yet, so a default build cannot resolve them.
 def includeInbox = rootProject.hasProperty('klaviyoIncludeInbox')
     ? rootProject.property('klaviyoIncludeInbox').toBoolean()
     : false
