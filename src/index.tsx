@@ -70,11 +70,8 @@ function isLocationAvailable(): boolean {
 /**
  * Whether the native Inbox module is linked into this build.
  *
- * Unlike Forms and Location, this requires the constant to be positively `true` rather than merely
- * not `false`: both are opt-in, but the inbox bridge methods did not exist before this SDK
- * version, so a native module with no `INBOX_AVAILABLE` constant at all is too old to answer any
- * inbox call. Treating that as available would turn a clean `INBOX_UNAVAILABLE` rejection into a
- * `TypeError` from calling a method the module doesn't have.
+ * Unlike Forms and Location, which are included by default, Inbox is not, so it is opt-in and only
+ * available when `INBOX_AVAILABLE` is `true`.
  */
 function isInboxAvailable(): boolean {
   const constants = KlaviyoReactNativeSdk.getConstants?.() ?? {};
