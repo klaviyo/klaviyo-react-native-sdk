@@ -2,13 +2,8 @@
 //  KlaviyoBridge+Inbox.swift
 //  klaviyo-react-native-sdk
 //
-//  Mobile Inbox forwarding. Split out of KlaviyoBridge.swift so the existing bridge does not grow
-//  another several hundred lines, and so the whole inbox surface lives in one file.
-//
-//  The native InBox product is opt-in: the podspec only adds the `KlaviyoInbox` dependency when
-//  `KLAVIYO_INCLUDE_INBOX=true`, so the default build compiles without it. Every method below is
-//  guarded by `#if canImport(KlaviyoInbox)` and falls back to an `INBOX_UNAVAILABLE` rejection, so
-//  this file compiles either way.
+//  Mobile Inbox forwarding. KlaviyoInbox is opt-in, so every method is guarded by
+//  `#if canImport(KlaviyoInbox)` and rejects with `INBOX_UNAVAILABLE` when it is not linked.
 //
 
 import Foundation
@@ -19,10 +14,6 @@ import KlaviyoSwift
 
 extension KlaviyoBridge {
     /// Whether the native Inbox module is linked into this build.
-    ///
-    /// Opt-in, unlike Forms and Location: the podspec only adds the `KlaviyoInbox` dependency when
-    /// `KLAVIYO_INCLUDE_INBOX` is `true`, so the default build reports `false` and every inbox call
-    /// rejects with `INBOX_UNAVAILABLE`.
     @objc
     public static var isInboxAvailable: Bool {
         #if canImport(KlaviyoInbox)
@@ -34,35 +25,22 @@ extension KlaviyoBridge {
 
     // MARK: - Mobile Inbox
 
-    /// Stable error codes the JS layer switches on. They are part of the public contract, so they
-    /// are spelled out here rather than derived from anything upstream. Android's bridge keeps a
-    /// byte-identical set.
+    /// The codes an inbox call rejects with.
     private enum InboxErrorCode {
         static let storageFailure = "INBOX_STORAGE_FAILURE"
         static let invalidCursor = "INBOX_INVALID_CURSOR"
         static let unavailable = "INBOX_UNAVAILABLE"
     }
 
-    /// Mutable inbox state.
-    ///
-    /// A Swift extension cannot declare a stored property, so the change subscription lives in this
-    /// file-scoped holder instead of on `KlaviyoBridge` itself. Iterating `MobileInbox.changes`
-    /// keeps the stream alive, so it must be cancelled — not merely dropped — to stop delivering.
-    ///
-    /// Register and unregister are both reachable from the JS bridge and can interleave with an
-    /// in-flight register, so access is serialized through `lock`: a task started by a register
-    /// that lost the race is cancelled rather than leaked.
+    /// Holds the change subscription, since an extension cannot declare a stored property. The
+    /// task must be cancelled, not just dropped, to stop it. Access is serialized through `lock`.
     private enum InboxState {
         static var changeTask: Task<Void, Never>?
         static let lock = NSLock()
     }
 
-    /// Fetches one page of the inbox and maps it to the bridge's wire format.
-    ///
-    /// `options` carries `pageSize`, `cursor`, `readFilter` and/or `archiveFilter`. All are optional:
-    /// the native SDK clamps `pageSize` itself and applies its own defaults (all reads, active
-    /// archives) for an omitted filter. The cursor is passed through untouched — it is opaque to
-    /// this bridge — and native rejects it if the filters differ from the ones that issued it.
+    /// Fetches one page of the inbox. Every option is optional: native clamps `pageSize` and applies
+    /// its own filter defaults, and the cursor is passed through untouched.
     @objc
     public static func fetchInboxPage(
         options: [String: Any]?,
@@ -73,9 +51,7 @@ extension KlaviyoBridge {
         let pageSize = options?["pageSize"] as? Int
         let cursorToken = options?["cursor"] as? String
 
-        // The JS layer validates these before calling, so an unrecognized value here means a native
-        // caller bypassed it. Rejecting keeps the contract honest rather than silently substituting
-        // a default, which would return the wrong messages while looking like it worked.
+        // Reject an unrecognized filter rather than substituting a default.
         var readFilter = InboxReadFilter.all
         var archiveFilter = InboxArchiveFilter.active
         if let rawReadFilter = options?["readFilter"] {
@@ -124,9 +100,7 @@ extension KlaviyoBridge {
         #endif
     }
 
-    /// Counts unread, unarchived messages: the count an inbox badge shows.
-    ///
-    /// Both native SDKs compute this in the store, so it is O(1) rather than a paged scan.
+    /// Counts unread, unarchived messages.
     @objc
     public static func fetchInboxUnreadCount(
         resolve: @escaping (NSNumber) -> Void,
@@ -147,10 +121,8 @@ extension KlaviyoBridge {
         #endif
     }
 
-    /// Applies a local read/archived state to one message.
-    ///
-    /// Resolves `true` when the message exists, whether or not the change altered it; `false` when
-    /// it does not, for example because retention removed it.
+    /// Applies a local read/archived state to one message. Resolves `true` when the message exists,
+    /// whether or not the state changed, and `false` when it does not.
     @objc
     public static func updateInboxMessageState(
         id: String,
@@ -159,9 +131,7 @@ extension KlaviyoBridge {
         reject: @escaping (String, String) -> Void
     ) {
         #if canImport(KlaviyoInbox)
-        // The JS layer validates the state before calling, so an unrecognized value here means a
-        // native caller bypassed it. Rejecting keeps the contract honest rather than silently
-        // applying something else.
+        // Reject an unrecognized state rather than applying something else.
         guard let messageState = inboxMessageState(from: state) else {
             reject(InboxErrorCode.storageFailure, "Unrecognized inbox message state '\(state)'")
             return
@@ -181,11 +151,8 @@ extension KlaviyoBridge {
         #endif
     }
 
-    /// Starts forwarding the native inbox change signal to JS.
-    ///
-    /// `MobileInbox.changes` is an `AsyncStream<Void>` that yields no value, so the emitted event
-    /// carries no payload by design: it is an invalidation, not a durable delivery. A change that
-    /// happens while the app is suspended is never replayed.
+    /// Starts forwarding the native inbox change signal to JS. The event carries no payload: it is
+    /// an invalidation, not a durable delivery.
     @objc
     public static func registerInboxChangeHandler(emit: @escaping @Sendable () -> Bool) {
         #if canImport(KlaviyoInbox)
@@ -195,8 +162,7 @@ extension KlaviyoBridge {
         let changes = KlaviyoSDK().mobileInbox.changes
         let task = Task {
             for await _ in changes {
-                // Stop pulling if the JS bridge went away (module deallocated); iterating a stream
-                // nobody consumes would keep the subscription alive for nothing.
+                // The module was deallocated, so stop iterating.
                 guard emit() else { return }
             }
         }
@@ -206,8 +172,7 @@ extension KlaviyoBridge {
         InboxState.changeTask = task
         InboxState.lock.unlock()
 
-        // A concurrent unregister landed between the teardown above and storing this task, so
-        // nothing owns it any more. Cancel it rather than leaking a live subscription.
+        // Cancel a task a concurrent register stored in the meantime, rather than leaking it.
         replaced?.cancel()
         #endif
     }
@@ -224,7 +189,7 @@ extension KlaviyoBridge {
     }
 
     #if canImport(KlaviyoInbox)
-    /// Maps one of the JS layer's state strings onto the native `InboxMessageState`.
+    /// Maps a state string onto the native `InboxMessageState`.
     private static func inboxMessageState(from rawValue: String) -> InboxMessageState? {
         switch rawValue {
         case "read": return .read
@@ -235,7 +200,7 @@ extension KlaviyoBridge {
         }
     }
 
-    /// Maps one of the JS layer's read-filter strings onto the native `InboxReadFilter`.
+    /// Maps a read-filter string onto the native `InboxReadFilter`.
     private static func inboxReadFilter(from rawValue: Any) -> InboxReadFilter? {
         guard let rawValue = rawValue as? String else { return nil }
         switch rawValue {
@@ -246,7 +211,7 @@ extension KlaviyoBridge {
         }
     }
 
-    /// Maps one of the JS layer's archive-filter strings onto the native `InboxArchiveFilter`.
+    /// Maps an archive-filter string onto the native `InboxArchiveFilter`.
     private static func inboxArchiveFilter(from rawValue: Any) -> InboxArchiveFilter? {
         guard let rawValue = rawValue as? String else { return nil }
         switch rawValue {
@@ -257,7 +222,7 @@ extension KlaviyoBridge {
         }
     }
 
-    /// Maps a native `InboxError` to the bridge's stable code plus a diagnostic message.
+    /// Maps a native `InboxError` to a rejection code and message.
     private static func inboxErrorPayload(_ error: Error) -> (String, String) {
         guard let inboxError = error as? InboxError else {
             return (
@@ -277,11 +242,8 @@ extension KlaviyoBridge {
         }
     }
 
-    /// Converts a public `InboxMessage` into the bridge's wire format.
-    ///
-    /// Only normalized, public values cross here — never a stored record or a raw push payload.
-    /// `sentAt` and `receivedAt` always cross, as epoch milliseconds: the native message guarantees
-    /// both, so the JS layer treats a message without them as malformed and skips it.
+    /// Converts a public `InboxMessage` into the bridge's wire format, with timestamps as epoch
+    /// milliseconds.
     private static func inboxMessagePayload(_ message: InboxMessage) -> [String: Any] {
         var payload: [String: Any] = [
             "id": message.id,
@@ -296,8 +258,7 @@ extension KlaviyoBridge {
             },
             "sentAt": epochMilliseconds(message.sentAt),
             "receivedAt": epochMilliseconds(message.receivedAt),
-            // Always present: `null` means the push requested no badge change, which the JS layer
-            // preserves, so it is distinct from an omitted field.
+            // `null` means the push requested no badge change.
             "badge": message.badge.flatMap(inboxBadgeValue) ?? NSNull(),
             "isRead": message.isRead,
             "isArchived": message.isArchived,
@@ -313,10 +274,8 @@ extension KlaviyoBridge {
         return payload
     }
 
-    /// Converts an `InboxDestination` into the bridge's wire format.
-    ///
-    /// The type crosses as its raw string so a destination the native SDK adds later reaches JS
-    /// without a bridge change.
+    /// Converts an `InboxDestination` into the bridge's wire format. The type crosses as its raw
+    /// string.
     private static func inboxDestinationPayload(_ destination: InboxDestination) -> [String: Any] {
         var payload: [String: Any] = ["type": destination.type.rawValue]
         if let url = destination.url {
@@ -325,9 +284,8 @@ extension KlaviyoBridge {
         return payload
     }
 
-    /// Flattens the native badge structure to the single number a host can apply: the Klaviyo badge
-    /// value when the push set one, otherwise the raw `aps.badge`. Nil when neither is present, so
-    /// the caller emits `NSNull` rather than a misleading `0`.
+    /// Flattens the native badge to a single number: the Klaviyo badge value when the push set one,
+    /// otherwise `aps.badge`. Nil when neither is present.
     private static func inboxBadgeValue(_ badge: InboxBadge) -> Int? {
         badge.value ?? badge.apsBadge
     }
