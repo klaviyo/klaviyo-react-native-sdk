@@ -26,6 +26,11 @@ if (localPropertiesFile.exists() && localPropertiesFile.canRead()) {
         substitute module("com.github.klaviyo.klaviyo-android-sdk:forms-core") using project(":sdk:forms-core")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:location") using project(":sdk:location")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:location-core") using project(":sdk:location-core")
+        // Mobile Inbox is opt-in (klaviyoIncludeInbox=true) and unpublished. These substitutions
+        // only take effect when the local SDK checkout has the modules, which is what makes it
+        // possible to compile the gated `src/inbox` source set at all.
+        substitute module("com.github.klaviyo.klaviyo-android-sdk:inbox") using project(":sdk:inbox")
+        substitute module("com.github.klaviyo.klaviyo-android-sdk:inbox-core") using project(":sdk:inbox-core")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:push-fcm") using project(":sdk:push-fcm")
       }
     }
