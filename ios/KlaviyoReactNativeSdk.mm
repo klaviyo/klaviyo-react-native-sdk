@@ -25,10 +25,7 @@ RCT_EXPORT_MODULE()
         @"EVENT_NAMES": [KlaviyoBridge getEventTypesKeys],
         @"FORMS_AVAILABLE": @([KlaviyoBridge isFormsAvailable]),
         @"LOCATION_AVAILABLE": @([KlaviyoBridge isLocationAvailable]),
-        // Opt-in, unlike Forms and Location: only true when KLAVIYO_INCLUDE_INBOX is set at pod
-        // install time. The JS layer requires a positive true, so a build whose native module
-        // predates the inbox (and therefore exports no such constant) reports unavailable rather
-        // than failing on a missing selector.
+        // Opt-in: only true when KLAVIYO_INCLUDE_INBOX is set at pod install time.
         @"INBOX_AVAILABLE": @([KlaviyoBridge isInboxAvailable]),
     };
 }
@@ -236,14 +233,9 @@ RCT_EXPORT_METHOD(respondToAuthTokenRequest: (NSString *)identifier response:(NS
 
 #pragma mark - Mobile Inbox
 
-// Every inbox call rejects with an NSError whose `code` is one of the stable strings the JS layer
-// switches on ("INBOX_STORAGE_FAILURE", "INBOX_INVALID_CURSOR", "INBOX_UNAVAILABLE"). The native
-// Swift bridge does the mapping; this layer only forwards, so the two platforms cannot drift.
-
 RCT_EXPORT_METHOD(fetchInboxPage: (NSDictionary *)options
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject) {
-    // Store reads are asynchronous and never touch the main thread, so no dispatch is added here.
     [KlaviyoBridge fetchInboxPageWithOptions:options
                                       resolve:^(NSDictionary *page) {
                                           resolve(page);
@@ -298,9 +290,7 @@ RCT_EXPORT_METHOD(unregisterInboxChangeHandler) {
     [KlaviyoBridge unregisterInboxChangeHandler];
 }
 
-// Runs on a bridge reload (dev fast refresh, or a bridged instance being replaced). Without this
-// the native change subscription would outlive the module and keep iterating the stream into a
-// dead bridge.
+// Cancels the native subscription when the bridge reloads.
 - (void)invalidate {
     [KlaviyoBridge unregisterInboxChangeHandler];
     [super invalidate];
