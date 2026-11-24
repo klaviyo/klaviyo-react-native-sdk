@@ -14,9 +14,7 @@ import com.facebook.react.bridge.ReadableMap
  * included.
  *
  * The implementation lives in `android/src/inbox/java`, which `android/build.gradle` only adds to
- * the source set when `klaviyoIncludeInbox=true`. Packaging the inbox dependency properly — the
- * same way Forms and Location are packaged — is a later pass; at that point this indirection can
- * be dropped and the implementation inlined here.
+ * the source set when `klaviyoIncludeInbox=true`.
  */
 internal interface InboxBridge {
   /** Whether the native inbox module is present and usable in this build. */
