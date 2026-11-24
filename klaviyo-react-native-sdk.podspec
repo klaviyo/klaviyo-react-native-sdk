@@ -26,10 +26,7 @@ Pod::Spec.new do |s|
   if ENV['KLAVIYO_INCLUDE_FORMS'] != 'false'
     s.dependency "KlaviyoForms" ##, "5.6.0"
   end
-  # Mobile Inbox is opt-in: it is left out unless KLAVIYO_INCLUDE_INBOX is exactly 'true'. This is
-  # the reverse of Forms and Location above, which are included unless set to 'false'. The bridge
-  # guards every inbox call with `#if canImport(KlaviyoInbox)` and reports INBOX_UNAVAILABLE when the
-  # pod is absent.
+  # Mobile Inbox is opt-in: it is only included when KLAVIYO_INCLUDE_INBOX is 'true'.
   include_inbox = ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
   s.dependency "KlaviyoInbox" if include_inbox
 
