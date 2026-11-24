@@ -290,10 +290,4 @@ RCT_EXPORT_METHOD(unregisterInboxChangeHandler) {
     [KlaviyoBridge unregisterInboxChangeHandler];
 }
 
-// Cancels the native subscription when the bridge reloads.
-- (void)invalidate {
-    [KlaviyoBridge unregisterInboxChangeHandler];
-    [super invalidate];
-}
-
 @end
