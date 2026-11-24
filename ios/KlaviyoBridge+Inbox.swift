@@ -280,8 +280,8 @@ extension KlaviyoBridge {
     /// Converts a public `InboxMessage` into the bridge's wire format.
     ///
     /// Only normalized, public values cross here — never a stored record or a raw push payload.
-    /// `sentAt` and `receivedAt` cross as epoch milliseconds or `NSNull`, matching Android's
-    /// nullable `Long`s; the JS layer drops an absent value rather than surfacing `null`.
+    /// `sentAt` and `receivedAt` always cross, as epoch milliseconds: the native message guarantees
+    /// both, so the JS layer treats a message without them as malformed and skips it.
     private static func inboxMessagePayload(_ message: InboxMessage) -> [String: Any] {
         var payload: [String: Any] = [
             "id": message.id,
@@ -294,7 +294,7 @@ extension KlaviyoBridge {
                     "destination": inboxDestinationPayload(action.destination)
                 ] as [String: Any]
             },
-            "sentAt": message.sentAt.map { epochMilliseconds($0) } ?? NSNull(),
+            "sentAt": epochMilliseconds(message.sentAt),
             "receivedAt": epochMilliseconds(message.receivedAt),
             // Always present: `null` means the push requested no badge change, which the JS layer
             // preserves, so it is distinct from an omitted field.
