@@ -290,7 +290,7 @@ internal class InboxBridgeImpl : InboxBridge {
       url?.let { putString("url", it) }
     }
 
-  /** Maps one of the JS layer's state strings onto the native [InboxStateChange]. */
+  /** Maps a state string onto the native [InboxStateChange]. */
   private fun toStateChange(raw: String): InboxStateChange? =
     when (raw) {
       "read" -> InboxStateChange.MARK_READ
@@ -300,7 +300,7 @@ internal class InboxBridgeImpl : InboxBridge {
       else -> null
     }
 
-  /** Maps one of the JS layer's read-filter strings onto the native [InboxReadFilter]. */
+  /** Maps a read-filter string onto the native [InboxReadFilter]. */
   private fun toReadFilter(raw: String): InboxReadFilter? =
     when (raw) {
       "all" -> InboxReadFilter.ALL
@@ -309,7 +309,7 @@ internal class InboxBridgeImpl : InboxBridge {
       else -> null
     }
 
-  /** Maps one of the JS layer's archive-filter strings onto the native [InboxArchiveFilter]. */
+  /** Maps an archive-filter string onto the native [InboxArchiveFilter]. */
   private fun toArchiveFilter(raw: String): InboxArchiveFilter? =
     when (raw) {
       "active" -> InboxArchiveFilter.ACTIVE
