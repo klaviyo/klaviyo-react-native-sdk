@@ -353,6 +353,22 @@ export interface KlaviyoInboxApi {
   ): Promise<number>;
 
   /**
+   * Remove every message this device has for the current company.
+   *
+   * This is a local delete, not a server-side unsubscribe or a suppression: the messages are gone
+   * from this device's store only. Messages for other companies on the device are left alone.
+   * It does not replace the clear on a profile reset: calling `resetProfile()` already clears the
+   * inbox in full, for every company, natively, so one profile's messages are never shown to the
+   * next.
+   *
+   * {@link subscribe} handlers fire once, and not at all when there was nothing to remove.
+   *
+   * @returns How many messages were removed. 0 when there were none, and before the SDK is
+   *   initialized
+   */
+  clearAll(): Promise<number>;
+
+  /**
    * Subscribe to inbox change invalidations.
    *
    * The handler fires when the inbox may have changed: a push was captured, a message's state was
