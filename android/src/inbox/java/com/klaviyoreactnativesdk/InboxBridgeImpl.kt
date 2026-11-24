@@ -187,6 +187,20 @@ internal class InboxBridgeImpl : InboxBridge {
     }
   }
 
+  override fun clearAll(promise: Promise) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+
+    KlaviyoInbox.clearAll { result ->
+      when (result) {
+        is InboxResult.Success -> promise.resolve(result.value)
+        is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
+      }
+    }
+  }
+
   /** The registered change listener, held so it can be removed. Guarded by [changeLock]. */
   private var changeListener: InboxChangeListener? = null
   private val changeLock = Any()
