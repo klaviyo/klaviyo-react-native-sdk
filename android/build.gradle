@@ -74,10 +74,7 @@ def includeForms = rootProject.hasProperty('klaviyoIncludeForms')
     : true
 
 // Whether to include the Mobile Inbox module.
-//
-// Mobile Inbox is opt-in: it is left out unless klaviyoIncludeInbox=true is set in your
-// gradle.properties. This is the reverse of forms and location above, which are included unless set
-// to false.
+// Set klaviyoIncludeInbox=true in your gradle.properties to include it; it is excluded by default.
 def includeInbox = rootProject.hasProperty('klaviyoIncludeInbox')
     ? rootProject.property('klaviyoIncludeInbox').toBoolean()
     : false
@@ -131,11 +128,8 @@ android {
     buildConfig true
   }
 
-  // Mobile Inbox is opt-in, so its implementation lives in `src/inbox/java` and is only added to
-  // the source set when klaviyoIncludeInbox=true.
-  // The `@ReactMethod` declarations stay in `src/main` (React Native's classic bridge only
-  // discovers methods declared on the concrete module class) and reach the implementation through
-  // `InboxBridgeProvider`, which resolves to nothing when this source set is absent.
+  // Mobile Inbox's implementation lives in `src/inbox/java`, which is only compiled when
+  // klaviyoIncludeInbox=true. See `InboxBridge.kt`.
   sourceSets {
     main {
       if (includeInbox) {
@@ -206,10 +200,8 @@ dependencies {
     implementation "com.github.klaviyo.klaviyo-android-sdk:forms-core:$klaviyoAndroidSdkVersion"
   }
 
-  // Mobile Inbox: opt-in, and only when the bridge source set is compiled in.
-  //
-  // `inbox-core` defines the public interfaces and is what `src/inbox/java` compiles against;
-  // `inbox` registers the implementation at startup. This block never runs in a default build.
+  // Mobile Inbox: `inbox-core` is what `src/inbox/java` compiles against, and `inbox` registers the
+  // implementation.
   if (includeInbox) {
     implementation "com.github.klaviyo.klaviyo-android-sdk:inbox-core:$klaviyoAndroidSdkVersion"
     api "com.github.klaviyo.klaviyo-android-sdk:inbox:$klaviyoAndroidSdkVersion"
