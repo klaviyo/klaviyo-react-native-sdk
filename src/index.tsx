@@ -22,6 +22,7 @@ import {
 } from './Subscription';
 import {
   type InboxChangeHandler,
+  type InboxFilter,
   type InboxPage,
   type InboxPageOptions,
   type InboxMessageState,
@@ -30,6 +31,7 @@ import {
   InboxErrorCode,
   parseInboxPage,
   toInboxError,
+  validateInboxFilterUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from './Inbox';
@@ -422,6 +424,32 @@ export const Klaviyo: KlaviyoInterface = {
       throw toInboxError(nativeError);
     }
   },
+  async updateMessageStates(
+    state: InboxMessageState,
+    filter: InboxFilter
+  ): Promise<number> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    const error = validateInboxFilterUpdate(state, filter);
+    if (error !== null) {
+      throw new TypeError(`[Klaviyo] ${error}`);
+    }
+
+    try {
+      return await KlaviyoReactNativeSdk.updateInboxMessageStates(
+        state,
+        filter.readFilter,
+        filter.archiveFilter
+      );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
   subscribe(handler: InboxChangeHandler): () => void {
     if (!isInboxAvailable()) return () => {};
 
@@ -500,6 +528,7 @@ export {
   InboxArchiveFilter,
   InboxError,
   InboxErrorCode,
+  InboxFilter,
   InboxReadFilter,
 } from './Inbox';
 export type {
