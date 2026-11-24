@@ -450,6 +450,20 @@ export const Klaviyo: KlaviyoInterface = {
       throw toInboxError(nativeError);
     }
   },
+  async clearAll(): Promise<number> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    try {
+      return await KlaviyoReactNativeSdk.clearInbox();
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
   subscribe(handler: InboxChangeHandler): () => void {
     if (!isInboxAvailable()) return () => {};
 
