@@ -284,6 +284,15 @@ RCT_EXPORT_METHOD(updateInboxMessageStates: (NSString *)state
                                               }];
 }
 
+RCT_EXPORT_METHOD(clearInbox: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge clearInboxWithResolve:^(NSNumber *clearedCount) {
+        resolve(clearedCount);
+    } reject:^(NSString *code, NSString *message) {
+        reject(code, message, nil);
+    }];
+}
+
 RCT_EXPORT_METHOD(registerInboxChangeHandler) {
     __weak __typeof__(self) weakSelf = self;
     [KlaviyoBridge registerInboxChangeHandlerWithEmit:^BOOL{

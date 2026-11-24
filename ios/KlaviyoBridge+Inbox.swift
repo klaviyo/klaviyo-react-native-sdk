@@ -193,6 +193,27 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Removes every message this device has for the current company, and resolves how many were
+    /// removed. Messages for other companies are left alone.
+    @objc
+    public static func clearInbox(
+        resolve: @escaping (NSNumber) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        Task {
+            do {
+                resolve(NSNumber(value: try await KlaviyoSDK().mobileInbox.clearAll()))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
     /// Starts forwarding the native inbox change signal to JS. The event carries no payload: it is
     /// an invalidation, not a durable delivery.
     @objc
