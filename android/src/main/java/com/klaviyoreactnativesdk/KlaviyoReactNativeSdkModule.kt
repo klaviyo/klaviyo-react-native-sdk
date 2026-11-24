@@ -60,18 +60,10 @@ class KlaviyoReactNativeSdkModule(
     private const val SMS = "sms"
     private const val WHATSAPP = "whatsapp"
 
-    /**
-     * Stable error code for a build without the native inbox module.
-     *
-     * Part of the public contract, matching iOS and the JS layer's `InboxErrorCode.Unavailable`.
-     */
+    /** Error code for a build without the native inbox module. */
     const val INBOX_UNAVAILABLE = "INBOX_UNAVAILABLE"
 
-    /**
-     * Name of the native-to-JS inbox invalidation event.
-     *
-     * Must match `INBOX_CHANGED_EVENT` in the JS layer. It carries no payload.
-     */
+    /** Name of the inbox invalidation event. It carries no payload. */
     const val INBOX_CHANGED_EVENT = "klaviyo:inboxChanged"
   }
 
@@ -155,10 +147,7 @@ class KlaviyoReactNativeSdkModule(
       "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
-      // Opt-in, unlike Forms and Location. True only when the inbox source set was compiled in
-      // (klaviyoIncludeInbox=true) AND the inbox module is actually on the classpath: the gated
-      // implementation registers a MobileInboxProvider from an init ContentProvider, so its
-      // absence is exactly "the inbox artifact is not shipped".
+      // Opt-in: only true when klaviyoIncludeInbox=true and the inbox module is on the classpath.
       "INBOX_AVAILABLE" to (InboxBridgeProvider.bridge?.isAvailable() ?: false),
     )
 
@@ -755,11 +744,8 @@ class KlaviyoReactNativeSdkModule(
 
   // region Mobile Inbox
   //
-  // These declarations deliberately reference no `com.klaviyo.inbox` type, so they compile in a
-  // default build that does not include the inbox artifacts. The real work
-  // lives in `android/src/inbox/java` behind [InboxBridge], and `InboxBridgeProvider.bridge` is
-  // null when that source set was not compiled in — in which case every call rejects with the
-  // documented INBOX_UNAVAILABLE code. See android/build.gradle.
+  // These reference no `com.klaviyo.inbox` type, so they compile without the inbox artifacts. Every
+  // call rejects with INBOX_UNAVAILABLE when [InboxBridgeProvider.bridge] is null.
 
   @ReactMethod
   fun fetchInboxPage(
@@ -788,8 +774,7 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun registerInboxChangeHandler() {
-    // No payload: the event is an invalidation, not a diff. `sendEvent` handles the
-    // catalyst-torn-down race and reports whether delivery was possible.
+    // No payload: the event is an invalidation, not a diff.
     InboxBridgeProvider.bridge?.registerChangeHandler {
       sendEvent(INBOX_CHANGED_EVENT, null)
     }
@@ -800,13 +785,7 @@ class KlaviyoReactNativeSdkModule(
     InboxBridgeProvider.bridge?.unregisterChangeHandler()
   }
 
-  /**
-   * Tears down the inbox change subscription when the module goes away.
-   *
-   * `invalidate` runs on a bridge reload (dev fast refresh, or a bridged instance being replaced),
-   * so without this the native collection would keep a listener alive across reloads and deliver
-   * into a dead catalyst instance.
-   */
+  /** Removes the inbox change listener, which the native SDK holds until it is removed. */
   override fun invalidate() {
     InboxBridgeProvider.bridge?.unregisterChangeHandler()
     super.invalidate()

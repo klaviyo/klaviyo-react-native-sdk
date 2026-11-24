@@ -4,17 +4,12 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReadableMap
 
 /**
- * Indirection between the React module and the Mobile Inbox bridge implementation.
+ * Indirection between the React module and the Mobile Inbox implementation.
  *
- * The inbox artifacts are opt-in and are not on the classpath in a default build, but React
- * Native's classic bridge only discovers `@ReactMethod`s declared on the concrete module class
- * (`JavaModuleWrapper.findMethods` reads `declaredMethods`), so the inbox methods have to be
- * declared in `KlaviyoReactNativeSdkModule` either way. This interface keeps those declarations
- * free of any `com.klaviyo.inbox` type, so they compile whether or not the inbox module is
- * included.
- *
- * The implementation lives in `android/src/inbox/java`, which `android/build.gradle` only adds to
- * the source set when `klaviyoIncludeInbox=true`.
+ * React Native's classic bridge only discovers `@ReactMethod`s declared on the concrete module
+ * class, so the inbox methods are declared in `KlaviyoReactNativeSdkModule` either way. This
+ * interface keeps those declarations free of any `com.klaviyo.inbox` type, so they compile whether
+ * or not the inbox module is included. The implementation lives in `android/src/inbox/java`.
  */
 internal interface InboxBridge {
   /** Whether the native inbox module is present and usable in this build. */
@@ -33,26 +28,16 @@ internal interface InboxBridge {
     promise: Promise,
   )
 
-  /**
-   * Starts delivering inbox change invalidations.
-   *
-   * [onChange] is invoked on the JS bridge's thread whenever the inbox may have changed. It must
-   * emit with no payload: the event is an invalidation, not a diff. Registering while already
-   * registered replaces the existing subscription rather than adding a second one.
-   */
+  /** Starts delivering inbox change invalidations. Registering again replaces the subscription. */
   fun registerChangeHandler(onChange: () -> Unit)
 
-  /** Stops delivering inbox change invalidations and cancels the collection. */
+  /** Stops delivering inbox change invalidations. */
   fun unregisterChangeHandler()
 }
 
 /**
- * Locates the [InboxBridge] implementation, if this build has one.
- *
- * The implementation is loaded by name rather than referenced directly so that a default build —
- * which has no inbox artifacts and compiles no implementation — still links. When the class is
- * absent, [bridge] is null and every inbox call rejects with `INBOX_UNAVAILABLE`, which is the
- * documented contract for a build without the module.
+ * Locates the [InboxBridge] implementation, if this build has one. It is loaded by name so a
+ * default build, which compiles no implementation, still links. [bridge] is null when it is absent.
  */
 internal object InboxBridgeProvider {
   private const val IMPLEMENTATION_CLASS = "com.klaviyoreactnativesdk.InboxBridgeImpl"
@@ -67,8 +52,7 @@ internal object InboxBridgeProvider {
         .getDeclaredConstructor()
         .newInstance() as InboxBridge
     } catch (e: ClassNotFoundException) {
-      // Expected in a default build: the implementation is compiled only when
-      // klaviyoIncludeInbox=true.
+      // Expected in a default build.
       null
     } catch (e: ReflectiveOperationException) {
       com.klaviyo.core.Registry.log
