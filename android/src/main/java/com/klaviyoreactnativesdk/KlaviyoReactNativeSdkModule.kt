@@ -756,7 +756,7 @@ class KlaviyoReactNativeSdkModule(
   // region Mobile Inbox
   //
   // These declarations deliberately reference no `com.klaviyo.inbox` type, so they compile in a
-  // default build that does not include the (still unpublished) inbox artifacts. The real work
+  // default build that does not include the inbox artifacts. The real work
   // lives in `android/src/inbox/java` behind [InboxBridge], and `InboxBridgeProvider.bridge` is
   // null when that source set was not compiled in — in which case every call rejects with the
   // documented INBOX_UNAVAILABLE code. See android/build.gradle.
