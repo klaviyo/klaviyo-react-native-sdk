@@ -773,6 +773,17 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun updateInboxMessageStates(
+    state: String,
+    readFilter: String,
+    archiveFilter: String,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.updateMessageStates(state, readFilter, archiveFilter, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
   fun registerInboxChangeHandler() {
     // No payload: the event is an invalidation, not a diff.
     InboxBridgeProvider.bridge?.registerChangeHandler {
