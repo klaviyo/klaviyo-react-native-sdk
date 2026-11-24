@@ -252,17 +252,13 @@ internal class InboxBridgeImpl : InboxBridge {
         },
       )
       putArray("actions", actionsArray)
-      // Local copies: these are public API properties from another module, so Kotlin can't smart
-      // cast them after a null check.
-      val sentAtValue = sentAt
-      val receivedAtValue = receivedAt
+      // Both timestamps are always present: the native message guarantees them, so the JS layer
+      // treats a message without them as malformed and skips it.
+      putDouble("sentAt", sentAt.toDouble())
+      putDouble("receivedAt", receivedAt.toDouble())
+      // A local copy: `badge` is a public API property from another module, so Kotlin can't smart
+      // cast it after a null check.
       val badgeValue = badge
-      if (sentAtValue != null) putDouble("sentAt", sentAtValue.toDouble()) else putNull("sentAt")
-      if (receivedAtValue != null) {
-        putDouble("receivedAt", receivedAtValue.toDouble())
-      } else {
-        putNull("receivedAt")
-      }
       collapseId?.let { putString("collapseId", it) }
       // A null badge means "this push requested no badge change", which the JS layer preserves, so
       // it stays distinct from an omitted field.
