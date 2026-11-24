@@ -3,13 +3,9 @@ import {
   InboxError,
   InboxErrorCode,
   InboxReadFilter,
-  formatInboxPageOptions,
   parseInboxMessage,
   parseInboxPage,
-  parseInboxUnreadCount,
-  parseInboxUpdateResult,
   toInboxError,
-  validateInboxCursor,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from '../Inbox';
@@ -443,25 +439,6 @@ describe('validateInboxPageOptions', () => {
   });
 });
 
-describe('validateInboxCursor', () => {
-  it('accepts an absent cursor', () => {
-    expect(validateInboxCursor(undefined)).toBeNull();
-  });
-
-  it('accepts a non-empty cursor', () => {
-    expect(validateInboxCursor('opaque-token')).toBeNull();
-  });
-
-  it.each([
-    ['an empty string', ''],
-    ['a blank string', '   '],
-    ['a number', 42],
-    ['null', null],
-  ])('rejects %s', (_label, cursor) => {
-    expect(validateInboxCursor(cursor)).toContain('cursor');
-  });
-});
-
 describe('validateInboxStateUpdate', () => {
   it.each(['read', 'unread', 'archived', 'unarchived'])(
     'accepts the %s state',
@@ -487,66 +464,6 @@ describe('validateInboxStateUpdate', () => {
   });
 });
 
-describe('formatInboxPageOptions', () => {
-  it('returns undefined when there are no options, so native sees "first page"', () => {
-    expect(formatInboxPageOptions(undefined)).toBeUndefined();
-    expect(formatInboxPageOptions(null as never)).toBeUndefined();
-  });
-
-  it('drops absent fields', () => {
-    expect(formatInboxPageOptions({})).toEqual({});
-    expect(formatInboxPageOptions({ pageSize: 20 })).toEqual({ pageSize: 20 });
-    expect(formatInboxPageOptions({ cursor: 'abc' })).toEqual({
-      cursor: 'abc',
-    });
-  });
-
-  it('truncates a fractional page size, which the bridge marshals as an int', () => {
-    expect(formatInboxPageOptions({ pageSize: 20.9 })).toEqual({
-      pageSize: 20,
-    });
-  });
-
-  it('passes a cursor through untouched', () => {
-    const cursor = 'token::with::separators';
-
-    expect(formatInboxPageOptions({ cursor })).toEqual({ cursor });
-  });
-
-  it('forwards the filters', () => {
-    expect(
-      formatInboxPageOptions({
-        readFilter: 'unread',
-        archiveFilter: 'archived',
-      })
-    ).toEqual({ readFilter: 'unread', archiveFilter: 'archived' });
-  });
-
-  it('omits absent filters, so each platform default applies', () => {
-    const bridged = formatInboxPageOptions({ pageSize: 10 });
-
-    expect(bridged).toEqual({ pageSize: 10 });
-    expect(bridged).not.toHaveProperty('readFilter');
-    expect(bridged).not.toHaveProperty('archiveFilter');
-  });
-
-  it('forwards filters alongside a cursor', () => {
-    expect(
-      formatInboxPageOptions({
-        cursor: 'abc',
-        pageSize: 5,
-        readFilter: 'read',
-        archiveFilter: 'all',
-      })
-    ).toEqual({
-      cursor: 'abc',
-      pageSize: 5,
-      readFilter: 'read',
-      archiveFilter: 'all',
-    });
-  });
-});
-
 describe('filter constants', () => {
   it('exposes the wire values the native SDKs accept', () => {
     expect(Object.values(InboxReadFilter)).toEqual(['all', 'unread', 'read']);
@@ -563,72 +480,6 @@ describe('filter constants', () => {
 
     expect(readFilter).toBe('unread');
     expect(archiveFilter).toBe('archived');
-  });
-});
-
-describe('parseInboxUnreadCount', () => {
-  let consoleWarnSpy: jest.SpyInstance;
-
-  beforeEach(() => {
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-  });
-
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-  });
-
-  it('returns a non-negative count', () => {
-    expect(parseInboxUnreadCount(0)).toBe(0);
-    expect(parseInboxUnreadCount(7)).toBe(7);
-  });
-
-  it('truncates a fractional count', () => {
-    expect(parseInboxUnreadCount(3.9)).toBe(3);
-  });
-
-  it.each([
-    ['a negative number', -1],
-    ['NaN', Number.NaN],
-    ['a string', '7'],
-    ['null', null],
-    ['undefined', undefined],
-  ])('falls back to zero and warns for %s', (_label, raw) => {
-    expect(parseInboxUnreadCount(raw)).toBe(0);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('unread count')
-    );
-  });
-});
-
-describe('parseInboxUpdateResult', () => {
-  let consoleWarnSpy: jest.SpyInstance;
-
-  beforeEach(() => {
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-  });
-
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-  });
-
-  it('passes a boolean through', () => {
-    expect(parseInboxUpdateResult(true)).toBe(true);
-    expect(parseInboxUpdateResult(false)).toBe(false);
-    expect(consoleWarnSpy).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ['a string', 'true'],
-    ['a number', 1],
-    ['null', null],
-    ['undefined', undefined],
-  ])('reports false and warns for %s', (_label, raw) => {
-    // Anything but an explicit true: a host must not assume a message was updated when native did
-    // not say so.
-    expect(parseInboxUpdateResult(raw)).toBe(false);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('update result')
-    );
   });
 });
 

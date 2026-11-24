@@ -392,7 +392,7 @@ const INBOX_ARCHIVE_FILTERS: readonly string[] =
  * argument types are checked here. An out-of-range `pageSize` is deliberately *not* an error: the
  * native SDKs clamp it to 1–100, so this layer only rejects values the bridge cannot marshal.
  *
- * The cursor is checked separately by {@link validateInboxCursor} because a bad cursor is a
+ * The cursor is checked in `fetchPage` instead, because a bad cursor is a
  * different failure — it surfaces as {@link InboxErrorCode.InvalidCursor} rather than a caller
  * type error.
  *
@@ -439,24 +439,6 @@ export function validateInboxPageOptions(options: unknown): string | null {
 }
 
 /**
- * Validates an {@link InboxPageOptions#cursor} at runtime, returning an error message or `null`
- * when valid.
- *
- * A blank cursor is rejected here rather than sent to native: it cannot be a token any page
- * returned, and the native SDKs would reject it anyway. Only the *presence and type* are checked —
- * the token itself stays opaque.
- *
- * @param cursor The cursor to validate
- */
-export function validateInboxCursor(cursor: unknown): string | null {
-  if (cursor !== undefined && !isNonEmptyString(cursor)) {
-    return 'Inbox cursor must be a non-empty string when provided';
-  }
-
-  return null;
-}
-
-/**
  * Validates an {@link KlaviyoInboxApi.updateMessageState} call at runtime, returning an error
  * message or `null` when valid.
  *
@@ -479,93 +461,6 @@ export function validateInboxStateUpdate(
   }
 
   return null;
-}
-
-/**
- * Coerces a bridged unread count into a number.
- *
- * Anything that is not a finite, non-negative number is reported as zero rather than propagated:
- * a count is a display value, and a garbage one is worse than none.
- *
- * @param raw The value the native bridge resolved with
- */
-export function parseInboxUnreadCount(raw: unknown): number {
-  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
-    return Math.trunc(raw);
-  }
-
-  console.warn(
-    `[Klaviyo] Inbox unread count is not a non-negative number: ${JSON.stringify(raw)}`
-  );
-  return 0;
-}
-
-/**
- * Coerces a bridged {@link KlaviyoInboxApi.updateMessageState} result into a boolean.
- *
- * Only an explicit `true` means the message existed; anything else is reported as `false`, which
- * is the safe answer — a host must not assume a message was updated when native did not say so.
- *
- * @param raw The value the native bridge resolved with
- */
-export function parseInboxUpdateResult(raw: unknown): boolean {
-  if (typeof raw === 'boolean') {
-    return raw;
-  }
-
-  console.warn(
-    `[Klaviyo] Inbox update result is not a boolean: ${JSON.stringify(raw)}`
-  );
-  return false;
-}
-
-/**
- * The payload shape sent across the bridge for a page request.
- *
- * Filters are omitted when not specified, so each platform's own default applies. Both native SDKs
- * default `readFilter` to all and `archiveFilter` to active, which is the documented JS default.
- */
-type BridgedInboxPageOptions = {
-  pageSize?: number;
-  cursor?: string;
-  readFilter?: InboxReadFilter;
-  archiveFilter?: InboxArchiveFilter;
-};
-
-/**
- * Converts {@link InboxPageOptions} into the bridge payload, dropping absent fields so the native
- * side can tell "not specified" from a value.
- *
- * `pageSize` is truncated to an integer because the bridge marshals it as an int; the range is left
- * to the native SDK, which clamps it.
- *
- * Expects data that has already passed {@link validateInboxPageOptions}.
- *
- * @param options The options to convert
- */
-export function formatInboxPageOptions(
-  options?: InboxPageOptions
-): BridgedInboxPageOptions | undefined {
-  if (options === undefined || options === null) {
-    return undefined;
-  }
-
-  const bridged: BridgedInboxPageOptions = {};
-
-  if (options.pageSize !== undefined) {
-    bridged.pageSize = Math.trunc(options.pageSize);
-  }
-  if (options.cursor !== undefined) {
-    bridged.cursor = options.cursor;
-  }
-  if (options.readFilter !== undefined) {
-    bridged.readFilter = options.readFilter;
-  }
-  if (options.archiveFilter !== undefined) {
-    bridged.archiveFilter = options.archiveFilter;
-  }
-
-  return bridged;
 }
 
 /** Returns a string only when the value is one, so absent and non-string values stay absent. */

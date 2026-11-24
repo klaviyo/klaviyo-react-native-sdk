@@ -28,16 +28,13 @@ import {
   INBOX_CHANGED_EVENT,
   InboxError,
   InboxErrorCode,
-  formatInboxPageOptions,
   parseInboxPage,
-  parseInboxUnreadCount,
-  parseInboxUpdateResult,
   toInboxError,
-  validateInboxCursor,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from './Inbox';
 import { NativeEventEmitter, NativeModules } from 'react-native';
+import { isNonEmptyString } from './validation';
 
 const FORMS_UNAVAILABLE_MESSAGE =
   'Klaviyo In-App Forms is not available. The KlaviyoForms module was not included in this build. ' +
@@ -363,19 +360,26 @@ export const Klaviyo: KlaviyoInterface = {
       throw new TypeError(`[Klaviyo] ${optionsError}`);
     }
 
-    const cursorError = validateInboxCursor(options?.cursor);
-    if (cursorError !== null) {
+    if (options?.cursor !== undefined && !isNonEmptyString(options.cursor)) {
       // A blank cursor is an inbox condition, not a type error: no page ever returned it.
       throw new InboxError(
         InboxErrorCode.InvalidCursor,
-        `[Klaviyo] ${cursorError}`
+        '[Klaviyo] Inbox cursor must be a non-empty string when provided'
       );
     }
 
     try {
       return parseInboxPage(
         await KlaviyoReactNativeSdk.fetchInboxPage(
-          formatInboxPageOptions(options) ?? null
+          options
+            ? {
+                ...options,
+                // The bridge marshals an int; the 1-100 range is native's to clamp.
+                ...(options.pageSize !== undefined && {
+                  pageSize: Math.trunc(options.pageSize),
+                }),
+              }
+            : null
         )
       );
     } catch (error) {
@@ -391,9 +395,7 @@ export const Klaviyo: KlaviyoInterface = {
     }
 
     try {
-      return parseInboxUnreadCount(
-        await KlaviyoReactNativeSdk.fetchInboxUnreadCount()
-      );
+      return await KlaviyoReactNativeSdk.fetchInboxUnreadCount();
     } catch (error) {
       throw toInboxError(error);
     }
@@ -415,8 +417,9 @@ export const Klaviyo: KlaviyoInterface = {
     }
 
     try {
-      return parseInboxUpdateResult(
-        await KlaviyoReactNativeSdk.updateInboxMessageState(messageId, state)
+      return await KlaviyoReactNativeSdk.updateInboxMessageState(
+        messageId,
+        state
       );
     } catch (nativeError) {
       throw toInboxError(nativeError);

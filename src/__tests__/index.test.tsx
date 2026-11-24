@@ -1573,6 +1573,17 @@ describe('Klaviyo SDK', () => {
         });
       });
 
+      it('truncates a fractional page size, since the bridge marshals an int', async () => {
+        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+
+        await Klaviyo.fetchPage({ pageSize: 20.9, cursor: 'c' });
+
+        expect(native().fetchInboxPage).toHaveBeenCalledWith({
+          pageSize: 20,
+          cursor: 'c',
+        });
+      });
+
       it('passes an out-of-range page size through for native to clamp', async () => {
         native().fetchInboxPage.mockResolvedValue({ messages: [] });
 
@@ -1732,14 +1743,6 @@ describe('Klaviyo SDK', () => {
         await expect(Klaviyo.fetchUnreadCount()).resolves.toBe(4);
       });
 
-      it('normalizes a garbage count to zero', async () => {
-        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-        native().fetchInboxUnreadCount.mockResolvedValue(undefined);
-
-        await expect(Klaviyo.fetchUnreadCount()).resolves.toBe(0);
-        consoleWarnSpy.mockRestore();
-      });
-
       it('normalizes a native rejection into an InboxError', async () => {
         native().fetchInboxUnreadCount.mockRejectedValue(
           Object.assign(new Error('store'), {
@@ -1775,16 +1778,6 @@ describe('Klaviyo SDK', () => {
         await expect(Klaviyo.updateMessageState('gone', 'read')).resolves.toBe(
           false
         );
-      });
-
-      it('reports false for a non-boolean native result', async () => {
-        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-        native().updateInboxMessageState.mockResolvedValue('true');
-
-        await expect(Klaviyo.updateMessageState('msg-1', 'read')).resolves.toBe(
-          false
-        );
-        consoleWarnSpy.mockRestore();
       });
 
       it.each([
