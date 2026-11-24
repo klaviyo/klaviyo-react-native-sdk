@@ -34,13 +34,13 @@ OPTIONS:
 
   --inbox
       Opt in to the Mobile Inbox module on both platforms.
-      The native inbox artifacts are unpublished, so this points them at the
-      dev ref given by --android/--ios (branch, commit or local path). Off by
+      Points the native inbox artifacts at the dev ref given by
+      --android/--ios (branch, commit or local path). Off by
       default; a build without it reports INBOX_UNAVAILABLE for every inbox call.
 
   --no-inbox
       Opt back out of the Mobile Inbox module, removing the Gradle property.
-      The podspec is unaffected until the next `pod install` without
+      The podspec is unaffected until the next pod install without
       KLAVIYO_INCLUDE_INBOX=true.
 
 EXAMPLES:
@@ -54,9 +54,9 @@ EXAMPLES:
   ./configure-sdk.sh --android [branch/commit/filepath]
   ./configure-sdk.sh --ios [branch/commit/filepath]
 
-  # Opt in to Mobile Inbox against unreleased native branches
-  ./configure-sdk.sh --android aw/mage-1102-filters \\
-                     --ios isobellelim/mage-1739-ios-inbox-filters --inbox
+  # Opt in to Mobile Inbox against native dev refs
+  ./configure-sdk.sh --android [branch/commit/filepath] \\
+                     --ios [branch/commit/filepath] --inbox
 EOF
 }
 
@@ -432,8 +432,8 @@ function configure_pods() {
   # List of dependencies
   dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms" "KlaviyoLocation")
 
-  # KlaviyoInbox is unpublished and opt-in, so it is only overridden to the dev ref when the inbox
-  # module was requested. Without this the Podfile would pin a pod that the podspec does not depend
+  # KlaviyoInbox is opt-in, so it is only overridden to the dev ref when the inbox module was
+  # requested. Without this the Podfile would pin a pod that the podspec does not depend
   # on, and `pod install` would fail on an unsatisfiable dependency.
   if [[ "$include_inbox" == true ]]; then
     dependencies+=("KlaviyoInbox")
@@ -478,9 +478,9 @@ function configure_pods() {
 
 # Enable or disable the opt-in Mobile Inbox module.
 #
-# Unlike forms and location, inbox is off by default: its native artifacts are not published, so a
-# default build must not reference them. Enabling sets the Gradle property the library and example
-# app read, and the env var the podspec reads at `pod install` time.
+# Unlike forms and location, inbox is off by default, so a default build does not reference its
+# native artifacts. Enabling sets the Gradle property the library and example app read, and the
+# env var the podspec reads at `pod install` time.
 #
 # Persisted into tracked files (android/gradle.properties, example/android/gradle.properties) so a
 # subsequent plain `yarn example ios|android` keeps the setting, mirroring how the Android SDK
@@ -489,7 +489,7 @@ function configure_inbox() {
   local enabled="$1"
   local android_property_file="./android/gradle.properties"
   local example_property_file="./example/android/gradle.properties"
-  local inbox_marker="# Mobile Inbox (opt-in; native artifacts are unpublished)"
+  local inbox_marker="# Mobile Inbox (opt-in)"
 
   local property_files=("$android_property_file" "$example_property_file")
   local property_file
