@@ -37,6 +37,9 @@ internal interface InboxBridge {
     promise: Promise,
   )
 
+  /** Removes every message for the current company, resolving how many were removed. */
+  fun clearAll(promise: Promise)
+
   /** Starts delivering inbox change invalidations. Registering again replaces the subscription. */
   fun registerChangeHandler(onChange: () -> Unit)
 
