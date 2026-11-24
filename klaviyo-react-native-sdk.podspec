@@ -26,9 +26,10 @@ Pod::Spec.new do |s|
   if ENV['KLAVIYO_INCLUDE_FORMS'] != 'false'
     s.dependency "KlaviyoForms" ##, "5.6.0"
   end
-  # Mobile Inbox is opt-in: it is only included when KLAVIYO_INCLUDE_INBOX is 'true'.
-  include_inbox = ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
-  s.dependency "KlaviyoInbox" if include_inbox
+  # Optional inbox; excluded by default, set to 'true' to include
+  if ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
+    s.dependency "KlaviyoInbox"
+  end
 
   s.default_subspecs = :none
 
