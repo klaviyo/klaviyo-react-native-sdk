@@ -67,14 +67,26 @@ PY
 case "$platform" in
   ios)
     unzip -o -q "$artifact" 'Payload/*.app/Info.plist' -d "$WORK"
-    plist=$(find "$WORK/Payload" -name Info.plist | head -1)
-    [ -n "$plist" ] || fail "No Payload/*.app/Info.plist in $artifact"
+    app_plists=("$WORK"/Payload/*.app/Info.plist)
+    [ "${#app_plists[@]}" -eq 1 ] && [ -f "${app_plists[0]}" ] \
+      || fail "Expected one app Info.plist in $artifact"
+    plist=${app_plists[0]}
     actual_code=$(read_plist_value "$plist" CFBundleVersion) || fail "CFBundleVersion missing in $plist"
     actual_name=$(read_plist_value "$plist" CFBundleShortVersionString) || fail "CFBundleShortVersionString missing in $plist"
     if [ -n "$expected_full" ]; then
       actual_full=$(read_plist_value "$plist" KlaviyoAppVersion) || fail "KlaviyoAppVersion missing in $plist"
       [ "$actual_full" = "$expected_full" ] \
         || fail "$platform artifact $artifact has KlaviyoAppVersion '$actual_full', expected '$expected_full' — refusing to upload"
+    fi
+    if [ -n "${EXPECTED_IPHONEOS_SDK_MAJOR:-}" ]; then
+      unzip -o -q "$artifact" 'Payload/*.app/PlugIns/*.appex/Info.plist' -d "$WORK" \
+        || fail "No extension Info.plist in $artifact"
+      for bundle_plist in "$plist" "${plist%/Info.plist}"/PlugIns/*.appex/Info.plist; do
+        sdk_name=$(read_plist_value "$bundle_plist" DTSDKName) || fail "DTSDKName missing in $bundle_plist"
+        [[ "$sdk_name" == "iphoneos$EXPECTED_IPHONEOS_SDK_MAJOR".* ]] \
+          || fail "${bundle_plist#"$WORK"/} has DTSDKName '$sdk_name', expected iphoneos$EXPECTED_IPHONEOS_SDK_MAJOR.x"
+        echo "Verified ${bundle_plist#"$WORK"/}: $sdk_name"
+      done
     fi
     ;;
   android)
