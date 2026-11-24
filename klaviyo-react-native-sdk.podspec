@@ -27,13 +27,9 @@ Pod::Spec.new do |s|
     s.dependency "KlaviyoForms" ##, "5.6.0"
   end
   # Mobile Inbox is opt-in: it is left out unless KLAVIYO_INCLUDE_INBOX is exactly 'true'. This is
-  # the reverse of Forms and Location above, which are included unless set to 'false'. It is off by
-  # default because the native Inbox product is not released yet, so a default `pod install` could
-  # not resolve it. The bridge guards every inbox call with `#if canImport(KlaviyoInbox)` and
-  # reports INBOX_UNAVAILABLE when the pod is absent.
-  #
-  # `./configure-sdk.sh --ios=<branch|commit|path> --inbox` opts in and points the pod at an
-  # unreleased klaviyo-swift-sdk ref, via the example app's Podfile.
+  # the reverse of Forms and Location above, which are included unless set to 'false'. The bridge
+  # guards every inbox call with `#if canImport(KlaviyoInbox)` and reports INBOX_UNAVAILABLE when the
+  # pod is absent.
   include_inbox = ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
   s.dependency "KlaviyoInbox" if include_inbox
 
