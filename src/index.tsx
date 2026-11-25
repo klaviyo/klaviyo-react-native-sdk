@@ -436,8 +436,11 @@ export const Klaviyo: KlaviyoInterface = {
         INBOX_CHANGED_EVENT,
         () => {
           // Snapshot the handlers: one may unsubscribe (or subscribe) while being notified, and a
-          // Set being iterated must not be mutated underneath the iteration.
+          // Set being iterated must not be mutated underneath the iteration. A handler that
+          // unsubscribes another during this notification must not still reach it, so each is
+          // checked against the live set before it is called.
           for (const registered of [...inboxChangeHandlers]) {
+            if (!inboxChangeHandlers.has(registered)) continue;
             try {
               registered();
             } catch (error) {

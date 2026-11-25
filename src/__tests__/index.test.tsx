@@ -1936,12 +1936,26 @@ describe('Klaviyo SDK', () => {
 
         expect(() => emitNativeEvent(inboxEvent)).not.toThrow();
         expect(handler1).toHaveBeenCalledTimes(1);
-        expect(handler2).toHaveBeenCalledTimes(1);
+        // It detached before its turn in the same notification, so it is never called.
+        expect(handler2).not.toHaveBeenCalled();
 
-        // The second change must not reach the handler that detached during the first.
         emitNativeEvent(inboxEvent);
         expect(handler1).toHaveBeenCalledTimes(2);
-        expect(handler2).toHaveBeenCalledTimes(1);
+        expect(handler2).not.toHaveBeenCalled();
+      });
+
+      it('still notifies the handlers that remain after one unsubscribes another', () => {
+        const handler3 = jest.fn();
+        const handler2 = jest.fn();
+        let unsubscribe2 = () => {};
+        const handler1 = jest.fn(() => unsubscribe2());
+        subscribe(handler1);
+        unsubscribe2 = subscribe(handler2);
+        subscribe(handler3);
+
+        emitNativeEvent(inboxEvent);
+        expect(handler2).not.toHaveBeenCalled();
+        expect(handler3).toHaveBeenCalledTimes(1);
       });
     });
 
