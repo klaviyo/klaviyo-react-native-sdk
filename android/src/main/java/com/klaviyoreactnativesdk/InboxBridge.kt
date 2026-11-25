@@ -28,6 +28,17 @@ internal interface InboxBridge {
     promise: Promise,
   )
 
+  /**
+   * Reports a click on a stored message, or on one of its buttons. Resolves whether the click was
+   * queued, which it is not when the message or button is not found.
+   */
+  fun trackMessageClick(
+    messageId: String,
+    actionId: String?,
+    properties: ReadableMap?,
+    promise: Promise,
+  )
+
   /** Applies a state to every message matching a filter, resolving how many changed. */
   fun updateMessageStates(
     state: String,

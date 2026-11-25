@@ -151,6 +151,38 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Reports a click on a stored message, or on one of its buttons, as a Clicked App Inbox Message
+    /// event. Resolves `true` when the click was queued, and `false` when the message or button is
+    /// not found. A click never changes the message's read or archived state.
+    @objc
+    public static func trackInboxMessageClick(
+        id: String,
+        actionId: String?,
+        properties: [String: AnyObject]?,
+        resolve: @escaping (Bool) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        let clickProperties = (fixNSNumberTypes(properties as Any) as? [String: Any]) ?? [:]
+
+        Task {
+            do {
+                let queued = try await KlaviyoSDK().mobileInbox.trackMessageClick(
+                    messageID: id,
+                    actionID: actionId,
+                    properties: clickProperties
+                )
+                resolve(queued)
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
     /// Applies a local read/archived state to every message that matches a filter. Resolves how many
     /// messages changed. Both filters are required, since a bulk change has no safe default.
     @objc

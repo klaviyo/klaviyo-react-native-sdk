@@ -61,6 +61,7 @@ jest.mock('react-native', () => {
         fetchInboxPage: jest.fn(),
         fetchInboxUnreadCount: jest.fn(),
         updateInboxMessageState: jest.fn(),
+        trackInboxMessageClick: jest.fn(),
         updateInboxMessageStates: jest.fn(),
         clearInbox: jest.fn(),
         registerInboxChangeHandler: jest.fn(),
@@ -1814,6 +1815,78 @@ describe('Klaviyo SDK', () => {
         await expect(
           Klaviyo.updateMessageState('msg-1', 'read')
         ).rejects.toMatchObject({ code: InboxErrorCode.StorageFailure });
+      });
+    });
+
+    describe('trackMessageClick', () => {
+      it('forwards a body click with no button or properties', async () => {
+        native().trackInboxMessageClick.mockResolvedValue(true);
+
+        await expect(Klaviyo.trackMessageClick('msg-1')).resolves.toBe(true);
+        expect(native().trackInboxMessageClick).toHaveBeenCalledWith(
+          'msg-1',
+          null,
+          null
+        );
+      });
+
+      it('forwards the tapped button and the extra properties', async () => {
+        native().trackInboxMessageClick.mockResolvedValue(true);
+
+        await Klaviyo.trackMessageClick('msg-1', {
+          actionId: 'a1',
+          properties: { screen: 'inbox', position: 3 },
+        });
+
+        expect(native().trackInboxMessageClick).toHaveBeenCalledWith(
+          'msg-1',
+          'a1',
+          { screen: 'inbox', position: 3 }
+        );
+      });
+
+      it('resolves false when no click was queued', async () => {
+        native().trackInboxMessageClick.mockResolvedValue(false);
+
+        await expect(Klaviyo.trackMessageClick('gone')).resolves.toBe(false);
+      });
+
+      it('does not change message state', async () => {
+        native().trackInboxMessageClick.mockResolvedValue(true);
+
+        await Klaviyo.trackMessageClick('msg-1');
+
+        expect(native().updateInboxMessageState).not.toHaveBeenCalled();
+        expect(native().updateInboxMessageStates).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['an empty message ID', '', undefined],
+        ['a blank message ID', '   ', undefined],
+        ['an empty actionId', 'msg-1', { actionId: '' }],
+        ['a non-string actionId', 'msg-1', { actionId: 7 }],
+        ['an array for properties', 'msg-1', { properties: ['a'] }],
+        ['a non-object options value', 'msg-1', 'inbox'],
+      ])(
+        'rejects %s with a TypeError without calling native',
+        async (_label, messageId, options) => {
+          await expect(
+            Klaviyo.trackMessageClick(messageId, options as never)
+          ).rejects.toBeInstanceOf(TypeError);
+          expect(native().trackInboxMessageClick).not.toHaveBeenCalled();
+        }
+      );
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().trackInboxMessageClick.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(Klaviyo.trackMessageClick('msg-1')).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
       });
     });
 

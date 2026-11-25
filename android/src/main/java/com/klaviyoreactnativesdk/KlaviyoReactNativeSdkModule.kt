@@ -773,6 +773,17 @@ class KlaviyoReactNativeSdkModule(
   }
 
   @ReactMethod
+  fun trackInboxMessageClick(
+    messageId: String,
+    actionId: String?,
+    properties: ReadableMap?,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.trackMessageClick(messageId, actionId, properties, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
   fun updateInboxMessageStates(
     state: String,
     readFilter: String,
