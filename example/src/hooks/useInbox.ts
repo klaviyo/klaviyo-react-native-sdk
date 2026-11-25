@@ -23,22 +23,6 @@ import {
 } from '../inbox/pages';
 
 /**
- * Whether the linked native build includes the Mobile Inbox module.
- *
- * The wrapper reports this through its capabilities getter. It is positive
- * only when the native bridge exports `INBOX_AVAILABLE`, so a build from before
- * the inbox existed reads as unavailable rather than failing every call.
- */
-function inboxIsAvailable(): boolean {
-  try {
-    // The capabilities getter is cheap and does not cross the bridge.
-    return Klaviyo.capabilities !== undefined;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Start a promise whose result is handled inside it. The hook's fetchers record
  * their own errors, so a caller that does not await one still needs to say so
  * explicitly rather than leave a floating promise.
@@ -93,7 +77,8 @@ const INITIAL_STATE: InboxState = {
 
 /**
  * Drives the Inbox screen from the wrapper's public inbox API only: `fetchPage`,
- * `fetchUnreadCount`, `updateMessageState`, `subscribe`, and `capabilities`.
+ * `fetchUnreadCount`, `updateMessageState` and `subscribe`. A build without the native Inbox
+ * module is detected from the `INBOX_UNAVAILABLE` rejection of the first fetch.
  *
  * A fetch with no cursor replaces the pages (a refresh); a fetch with a cursor
  * appends. A change signal, a state change or a return to the foreground reloads
@@ -104,6 +89,8 @@ const INITIAL_STATE: InboxState = {
  */
 export function useInbox() {
   const [state, setState] = useState<InboxState>(INITIAL_STATE);
+  // Only a pull-to-refresh or the Refresh button, not every load, shows the refresh spinner.
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Guards against a stale fetch overwriting a newer one, the way the Android
   // test app's view model tracks request counts.
@@ -176,6 +163,13 @@ export function useInbox() {
         await refreshUnreadCount();
       } catch (error) {
         if (request !== latestFirstPageRequest.current) return;
+        if (
+          error instanceof InboxError &&
+          error.code === InboxErrorCode.Unavailable
+        ) {
+          setState((prev) => ({ ...prev, available: false, isLoading: false }));
+          return;
+        }
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -224,16 +218,23 @@ export function useInbox() {
     }
   }, []);
 
-  const refresh = useCallback(() => {
-    return fetchFirstPage();
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchFirstPage();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [fetchFirstPage]);
 
   const setFilters = useCallback(
     (next: InboxFilters) => {
       if (filtersEqual(next, filtersRef.current)) return;
       filtersRef.current = next;
-      setState((prev) => ({ ...prev, filters: next }));
-      // The cursor was issued under the old filters, so start over.
+      // The pages and cursor were issued under the old filters. Drop them now, so a failed
+      // replacement fetch cannot leave a cursor that Load next page would send with the new filters.
+      nextCursorRef.current = null;
+      setState((prev) => ({ ...prev, filters: next, pages: EMPTY_PAGES }));
       fireAndForget(fetchFirstPage());
     },
     [fetchFirstPage]
@@ -276,9 +277,6 @@ export function useInbox() {
 
   // Initial fetch, on mount.
   useEffect(() => {
-    const available = inboxIsAvailable();
-    setState((prev) => ({ ...prev, available }));
-    if (!available) return;
     fireAndForget(fetchFirstPage());
     // fetchFirstPage reads refs for the current filters and page size, so it is
     // stable across renders and safe to call once.
@@ -318,6 +316,7 @@ export function useInbox() {
 
   return {
     ...state,
+    isRefreshing,
     messages,
     refresh,
     loadNextPage,

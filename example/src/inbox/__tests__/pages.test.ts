@@ -18,6 +18,8 @@ function message(id: string): InboxMessage {
     defaultDestination: { type: 'open_app' },
     customData: {},
     actions: [],
+    sentAt: 0,
+    receivedAt: 0,
     isRead: false,
     isArchived: false,
     source: 'captured',

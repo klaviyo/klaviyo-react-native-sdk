@@ -22,7 +22,6 @@ export const InboxTestIDs = {
   CHANGE_SIGNAL_COUNT: 'inbox_change_signal_count_text',
   LAST_CHANGE: 'inbox_last_change_text',
   NEXT_CURSOR: 'inbox_next_cursor_text',
-  CAPABILITIES: 'inbox_capabilities_text',
 
   // Page size
   PAGE_SIZE_STEPPER: 'inbox_page_size_stepper',

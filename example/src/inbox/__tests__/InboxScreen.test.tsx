@@ -8,6 +8,7 @@ import {
 import type { InboxMessage, InboxPage } from 'klaviyo-react-native-sdk';
 
 import { InboxScreen } from '../InboxScreen';
+import { MockInboxError } from '../MockInboxError';
 import { InboxTestIDs } from '../testIDs';
 
 // A controllable fake of the wrapper's public inbox surface. The screen may
@@ -21,29 +22,28 @@ const mockSubscribe = jest.fn((_handler: () => void) => {
   };
 });
 let changeHandler: (() => void) | null = null;
-let mockCapabilities: { clear: boolean } | undefined = { clear: true };
 
-jest.mock('klaviyo-react-native-sdk', () => ({
-  InboxError: require('../MockInboxError').MockInboxError,
-  InboxErrorCode: {
-    StorageFailure: 'INBOX_STORAGE_FAILURE',
-    InvalidCursor: 'INBOX_INVALID_CURSOR',
-    Unavailable: 'INBOX_UNAVAILABLE',
-    Unsupported: 'INBOX_UNSUPPORTED',
-  },
-  InboxReadFilter: { All: 'all', Unread: 'unread', Read: 'read' },
-  InboxArchiveFilter: { Active: 'active', Archived: 'archived', All: 'all' },
-  Klaviyo: {
-    get capabilities() {
-      return mockCapabilities;
+jest.mock(
+  'klaviyo-react-native-sdk',
+  () => ({
+    InboxError: require('../MockInboxError').MockInboxError,
+    InboxErrorCode: {
+      StorageFailure: 'INBOX_STORAGE_FAILURE',
+      InvalidCursor: 'INBOX_INVALID_CURSOR',
+      Unavailable: 'INBOX_UNAVAILABLE',
     },
-    fetchPage: (options: unknown) => mockFetchPage(options),
-    fetchUnreadCount: () => mockFetchUnreadCount(),
-    updateMessageState: (id: string, state: string) =>
-      mockUpdateMessageState(id, state),
-    subscribe: (handler: () => void) => mockSubscribe(handler),
-  },
-}));
+    InboxReadFilter: { All: 'all', Unread: 'unread', Read: 'read' },
+    InboxArchiveFilter: { Active: 'active', Archived: 'archived', All: 'all' },
+    Klaviyo: {
+      fetchPage: (options: unknown) => mockFetchPage(options),
+      fetchUnreadCount: () => mockFetchUnreadCount(),
+      updateMessageState: (id: string, state: string) =>
+        mockUpdateMessageState(id, state),
+      subscribe: (handler: () => void) => mockSubscribe(handler),
+    },
+  }),
+  { virtual: true }
+);
 
 // AppState is absent in this jest preset; the hook treats it as optional and
 // skips the foreground refetch, so no mock is needed here.
@@ -56,6 +56,7 @@ function message(overrides: Partial<InboxMessage> = {}): InboxMessage {
     defaultDestination: { type: 'open_app' },
     customData: {},
     actions: [],
+    sentAt: Date.UTC(2026, 10, 20, 9, 59, 0),
     receivedAt: Date.UTC(2026, 10, 20, 10, 0, 0),
     isRead: false,
     isArchived: false,
@@ -67,7 +68,6 @@ function message(overrides: Partial<InboxMessage> = {}): InboxMessage {
 beforeEach(() => {
   jest.clearAllMocks();
   changeHandler = null;
-  mockCapabilities = { clear: true };
   mockSubscribe.mockImplementation((handler) => {
     changeHandler = handler;
     return () => {
@@ -185,6 +185,46 @@ describe('InboxScreen', () => {
       )
     );
     expect(mockFetchPage.mock.calls.at(-1)?.[0]).not.toHaveProperty('cursor');
+  });
+
+  it('drops the old cursor when a filter change fetch fails', async () => {
+    mockFetchPage.mockResolvedValueOnce({
+      messages: [message()],
+      nextCursor: 'cursor-2',
+    });
+    mockFetchPage.mockRejectedValueOnce(new Error('store failed'));
+
+    await render(<InboxScreen />);
+    await screen.findByTestId(InboxTestIDs.message('msg-1'));
+    expect(
+      screen.getByTestId(InboxTestIDs.FETCH_NEXT_PAGE_BUTTON)
+    ).toBeTruthy();
+
+    fireEvent.press(
+      await screen.findByTestId(InboxTestIDs.readFilter('unread'))
+    );
+
+    await screen.findByTestId(InboxTestIDs.ERROR);
+    // The cursor was issued under the old filters, so it must not be offered again.
+    expect(
+      screen.queryByTestId(InboxTestIDs.FETCH_NEXT_PAGE_BUTTON)
+    ).toBeNull();
+    expect(screen.queryByTestId(InboxTestIDs.message('msg-1'))).toBeNull();
+  });
+
+  it('refetches from the first page on pull-to-refresh', async () => {
+    mockFetchPage.mockResolvedValue({ messages: [message()] });
+
+    await render(<InboxScreen />);
+    const list = await screen.findByTestId(InboxTestIDs.SCREEN);
+    mockFetchPage.mockClear();
+
+    await act(async () => {
+      await list.props.refreshControl.props.onRefresh();
+    });
+
+    expect(mockFetchPage).toHaveBeenCalledTimes(1);
+    expect(mockFetchPage.mock.calls[0]?.[0]).not.toHaveProperty('cursor');
   });
 
   it('loads the next page with the cursor from the previous page', async () => {
@@ -331,13 +371,14 @@ describe('InboxScreen', () => {
   });
 
   it('shows the unavailable state when the native module is not linked', async () => {
-    mockCapabilities = undefined;
+    mockFetchPage.mockRejectedValue(
+      new MockInboxError('INBOX_UNAVAILABLE', 'Inbox is not in this build')
+    );
 
     await render(<InboxScreen />);
 
     const unavailable = await screen.findByTestId(InboxTestIDs.UNAVAILABLE);
     expect(unavailable).toHaveTextContent(/not linked into this app/);
-    expect(mockFetchPage).not.toHaveBeenCalled();
   });
 
   it('shows message details only when asked', async () => {

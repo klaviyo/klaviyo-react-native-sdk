@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -84,6 +85,12 @@ export function InboxScreen() {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       testID={InboxTestIDs.SCREEN}
+      refreshControl={
+        <RefreshControl
+          refreshing={inbox.isRefreshing}
+          onRefresh={inbox.refresh}
+        />
+      }
     >
       <View style={styles.section}>
         <InboxSummary inbox={inbox} />
