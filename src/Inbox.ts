@@ -106,11 +106,11 @@ export interface InboxMessage {
   readonly collapseId?: string;
 
   /**
-   * The app-icon badge count the push requested, or `null` when the push requested no badge change.
+   * The app-icon badge count the push requested, or `null` when it requested no badge change.
    *
-   * The native SDKs model this as a platform-specific structure (iOS carries an `aps` badge, a
-   * value and a notification count). This bridge flattens it to the single number a host can apply.
-   * This is *not* the inbox's unread count — use {@link KlaviyoInboxApi.fetchUnreadCount} for that.
+   * iOS only: the Klaviyo `badge_value` when the push set one, otherwise `aps.badge`. Android has no
+   * per-message badge, so it is always `null` there. This is *not* the inbox's unread count — use
+   * {@link KlaviyoInboxApi.fetchUnreadCount} for that.
    */
   readonly badge?: number | null;
 
