@@ -9,6 +9,7 @@ import com.klaviyo.core.Registry
 import com.klaviyo.inbox.InboxArchiveFilter
 import com.klaviyo.inbox.InboxChangeListener
 import com.klaviyo.inbox.InboxCursor
+import com.klaviyo.inbox.InboxDestination
 import com.klaviyo.inbox.InboxException
 import com.klaviyo.inbox.InboxMessage
 import com.klaviyo.inbox.InboxPage
@@ -217,11 +218,9 @@ internal class InboxBridgeImpl : InboxBridge {
       putArray("actions", actionsArray)
       putDouble("sentAt", sentAt.toDouble())
       putDouble("receivedAt", receivedAt.toDouble())
-      // A local copy, since `badge` comes from another module and can't be smart cast.
-      val badgeValue = badge
       collapseId?.let { putString("collapseId", it) }
-      // A null badge means the push requested no badge change.
-      if (badgeValue != null) putInt("badge", badgeValue) else putNull("badge")
+      // Android has no per-message app-icon badge, so this is always null.
+      putNull("badge")
       putBoolean("isRead", isRead)
       putBoolean("isArchived", isArchived)
       putString("source", source.rawValue)
@@ -229,7 +228,7 @@ internal class InboxBridgeImpl : InboxBridge {
   }
 
   /** Converts a destination to the bridge's wire format, its type as the raw string. */
-  private fun com.klaviyo.inbox.InboxDestination.toWritableMap(): WritableMap =
+  private fun InboxDestination.toWritableMap(): WritableMap =
     Arguments.createMap().apply {
       putString("type", type.rawValue)
       url?.let { putString("url", it) }

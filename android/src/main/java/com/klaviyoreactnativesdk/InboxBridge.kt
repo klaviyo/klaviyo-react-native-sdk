@@ -2,6 +2,7 @@ package com.klaviyoreactnativesdk
 
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReadableMap
+import com.klaviyo.core.Registry
 
 /**
  * Indirection between the React module and the Mobile Inbox implementation.
@@ -55,8 +56,7 @@ internal object InboxBridgeProvider {
       // Expected in a default build.
       null
     } catch (e: ReflectiveOperationException) {
-      com.klaviyo.core.Registry.log
-        .error("Unable to load the Mobile Inbox bridge implementation", e)
+      Registry.log.error("Unable to load the Mobile Inbox bridge implementation", e)
       null
     }
 }
