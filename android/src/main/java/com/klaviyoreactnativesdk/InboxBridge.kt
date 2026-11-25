@@ -28,6 +28,17 @@ internal interface InboxBridge {
     promise: Promise,
   )
 
+  /** Applies a state to every message matching a filter, resolving how many changed. */
+  fun updateMessageStates(
+    state: String,
+    readFilter: String,
+    archiveFilter: String,
+    promise: Promise,
+  )
+
+  /** Removes every message for the current company, resolving how many were removed. */
+  fun clearAll(promise: Promise)
+
   /** Starts delivering inbox change invalidations. Registering again replaces the subscription. */
   fun registerChangeHandler(onChange: () -> Unit)
 
