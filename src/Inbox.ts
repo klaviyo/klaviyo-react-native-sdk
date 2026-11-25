@@ -187,8 +187,8 @@ export type InboxArchiveFilter =
  */
 export interface InboxPageOptions {
   /**
-   * Messages per page. The native SDKs clamp this to 1–100 and default it to 20, so a value outside
-   * that range is corrected rather than rejected.
+   * Messages per page. Defaults to 20. A fractional value is truncated and one outside 1–100 is
+   * clamped to that range, rather than rejected, so both platforms get the same page size.
    */
   readonly pageSize?: number;
 
@@ -326,6 +326,25 @@ export const InboxErrorCode = {
 export type InboxErrorCode =
   (typeof InboxErrorCode)[keyof typeof InboxErrorCode];
 
+/** Smallest and largest page a single `fetchPage` call returns. */
+export const INBOX_MIN_PAGE_SIZE = 1;
+export const INBOX_MAX_PAGE_SIZE = 100;
+
+/**
+ * Truncates a page size to an integer and clamps it to the supported range.
+ *
+ * The bridge marshals an int, and a finite value such as `1e20` does not fit one on iOS, where it
+ * would fall back to the default size while Android clamps it to the maximum.
+ *
+ * @param pageSize A finite number
+ */
+export function clampInboxPageSize(pageSize: number): number {
+  return Math.min(
+    INBOX_MAX_PAGE_SIZE,
+    Math.max(INBOX_MIN_PAGE_SIZE, Math.trunc(pageSize))
+  );
+}
+
 const KNOWN_INBOX_ERROR_CODES: readonly string[] =
   Object.values(InboxErrorCode);
 
@@ -336,10 +355,19 @@ const KNOWN_INBOX_ERROR_CODES: readonly string[] =
  * contract.
  */
 export class InboxError extends Error {
-  /** Stable failure code. Compare against {@link InboxErrorCode}, never against `message`. */
-  readonly code: InboxErrorCode;
+  /**
+   * Stable failure code. Compare against {@link InboxErrorCode}, never against `message`.
+   *
+   * It is one of {@link InboxErrorCode}, or another string when the native module is newer than
+   * this SDK and reports a code this version does not know. Handle the known codes and treat any
+   * other as a failed call.
+   */
+  readonly code: InboxErrorCode | (string & Record<never, never>);
 
-  constructor(code: InboxErrorCode, message: string) {
+  constructor(
+    code: InboxErrorCode | (string & Record<never, never>),
+    message: string
+  ) {
     super(message);
     this.name = 'InboxError';
     this.code = code;
@@ -372,7 +400,7 @@ export function toInboxError(error: unknown): InboxError {
         `[Klaviyo] Unrecognized inbox error code: ${rawCode}. This SDK may be older than the native module.`
       );
     }
-    return new InboxError(rawCode as InboxErrorCode, message);
+    return new InboxError(rawCode, message);
   }
 
   // A rejection with no code at all came from the bridge rather than the native SDK's own error
@@ -389,8 +417,8 @@ const INBOX_ARCHIVE_FILTERS: readonly string[] =
  * when valid.
  *
  * TypeScript cannot police plain-JavaScript callers, and this data crosses the native bridge, so
- * argument types are checked here. An out-of-range `pageSize` is deliberately *not* an error: the
- * native SDKs clamp it to 1–100, so this layer only rejects values the bridge cannot marshal.
+ * argument types are checked here. An out-of-range `pageSize` is deliberately *not* an error:
+ * `fetchPage` clamps it to 1–100, so this layer only rejects values the bridge cannot marshal.
  *
  * The cursor is checked in `fetchPage` instead, because a bad cursor is a
  * different failure — it surfaces as {@link InboxErrorCode.InvalidCursor} rather than a caller

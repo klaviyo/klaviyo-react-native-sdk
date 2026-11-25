@@ -28,6 +28,7 @@ import {
   INBOX_CHANGED_EVENT,
   InboxError,
   InboxErrorCode,
+  clampInboxPageSize,
   parseInboxPage,
   toInboxError,
   validateInboxPageOptions,
@@ -102,7 +103,7 @@ let activeAuthTokenProvider: AuthTokenProvider | null = null;
  * does pays for a single bridge listener regardless of how many components
  * listen.
  */
-const inboxChangeHandlers = new Set<InboxChangeHandler>();
+const inboxChangeHandlers = new Map<InboxChangeHandler, object>();
 
 // The single NativeEventEmitter subscription backing `inboxChangeHandlers`.
 let inboxChangeSubscription: { remove: () => void } | null = null;
@@ -371,9 +372,8 @@ export const Klaviyo: KlaviyoInterface = {
           options
             ? {
                 ...options,
-                // The bridge marshals an int; the 1-100 range is native's to clamp.
                 ...(options.pageSize !== undefined && {
-                  pageSize: Math.trunc(options.pageSize),
+                  pageSize: clampInboxPageSize(options.pageSize),
                 }),
               }
             : null
@@ -439,7 +439,7 @@ export const Klaviyo: KlaviyoInterface = {
           // Set being iterated must not be mutated underneath the iteration. A handler that
           // unsubscribes another during this notification must not still reach it, so each is
           // checked against the live set before it is called.
-          for (const registered of [...inboxChangeHandlers]) {
+          for (const registered of [...inboxChangeHandlers.keys()]) {
             if (!inboxChangeHandlers.has(registered)) continue;
             try {
               registered();
@@ -456,9 +456,14 @@ export const Klaviyo: KlaviyoInterface = {
       KlaviyoReactNativeSdk.registerInboxChangeHandler();
     }
 
-    inboxChangeHandlers.add(handler);
+    // Each registration has an identity, shared by repeat subscriptions of the same function. A
+    // cleanup only removes the registration it was issued for, so an old handle called after the
+    // handler unsubscribed and subscribed again does not remove the new one.
+    const registration = inboxChangeHandlers.get(handler) ?? {};
+    inboxChangeHandlers.set(handler, registration);
 
     return () => {
+      if (inboxChangeHandlers.get(handler) !== registration) return;
       inboxChangeHandlers.delete(handler);
       if (inboxChangeHandlers.size === 0) {
         inboxChangeSubscription?.remove();

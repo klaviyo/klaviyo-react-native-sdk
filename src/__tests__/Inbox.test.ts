@@ -519,6 +519,9 @@ describe('toInboxError', () => {
     );
 
     expect(error.code).toBe('INBOX_QUOTA_EXCEEDED');
+    // The type admits a code this SDK does not know, so a caller can compare against any string.
+    const code: string = error.code;
+    expect(code).toBe('INBOX_QUOTA_EXCEEDED');
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining('INBOX_QUOTA_EXCEEDED')
     );

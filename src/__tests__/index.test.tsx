@@ -1584,15 +1584,25 @@ describe('Klaviyo SDK', () => {
         });
       });
 
-      it('passes an out-of-range page size through for native to clamp', async () => {
-        native().fetchInboxPage.mockResolvedValue({ messages: [] });
+      it.each([
+        [5_000, 100],
+        [1e20, 100],
+        [100.9, 100],
+        [0, 1],
+        [-5, 1],
+        [0.5, 1],
+      ])(
+        'clamps a page size of %p to %p, so both platforms get the same size',
+        async (requested, sent) => {
+          native().fetchInboxPage.mockResolvedValue({ messages: [] });
 
-        await Klaviyo.fetchPage({ pageSize: 5_000 });
+          await Klaviyo.fetchPage({ pageSize: requested });
 
-        expect(native().fetchInboxPage).toHaveBeenCalledWith({
-          pageSize: 5_000,
-        });
-      });
+          expect(native().fetchInboxPage).toHaveBeenCalledWith({
+            pageSize: sent,
+          });
+        }
+      );
 
       it('passes the cursor through byte for byte', async () => {
         native().fetchInboxPage.mockResolvedValue({ messages: [] });
@@ -1890,6 +1900,31 @@ describe('Klaviyo SDK', () => {
 
         emitNativeEvent(inboxEvent);
         expect(handler).not.toHaveBeenCalled();
+      });
+
+      it('does not let an old cleanup remove a later subscription of the same handler', () => {
+        const handler = jest.fn();
+        const unsubscribeFirst = subscribe(handler);
+        unsubscribeFirst();
+        subscribe(handler);
+
+        // The first handle was already spent, so calling it again must leave the new one alone.
+        unsubscribeFirst();
+
+        emitNativeEvent(inboxEvent);
+        expect(handler).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps native observation running when an old cleanup is called after resubscribing', () => {
+        const handler = jest.fn();
+        const unsubscribeFirst = subscribe(handler);
+        unsubscribeFirst();
+        subscribe(handler);
+        native().unregisterInboxChangeHandler.mockClear();
+
+        unsubscribeFirst();
+
+        expect(native().unregisterInboxChangeHandler).not.toHaveBeenCalled();
       });
 
       it('registers a handler added twice only once', () => {
