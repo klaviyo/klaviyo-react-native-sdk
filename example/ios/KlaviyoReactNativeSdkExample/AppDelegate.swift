@@ -1,7 +1,5 @@
 import UIKit
 import React
-import React_RCTAppDelegate
-import ReactAppDependencyProvider
 import UserNotifications
 import FirebaseCore
 import KlaviyoSwift
@@ -16,9 +14,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
   // Change to false if you don't want debug alerts or logs.
   private let isDebug = true
 
-  var window: UIWindow?
-  var reactNativeDelegate: ReactNativeDelegate?
-  var reactNativeFactory: RCTReactNativeFactory?
+  weak var window: UIWindow?
 
   func application(
     _ application: UIApplication,
@@ -51,23 +47,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     // after the user grants location permission. Calling it from AppDelegate is
     // the "earliest possible" option but not required; the Swift SDK's
     // registerGeofencing() is safe to invoke from JS once RN init completes.
-
-    // See `getLaunchOptionsWithURL` below — workaround for a React Native
-    // cold-start deep-link issue from terminated-state remote notifications.
-    let launchOptionsWithURL = getLaunchOptionsWithURL(launchOptions)
-
-    let delegate = ReactNativeDelegate()
-    delegate.dependencyProvider = RCTAppDependencyProvider()
-    let factory = RCTReactNativeFactory(delegate: delegate)
-    reactNativeDelegate = delegate
-    reactNativeFactory = factory
-
-    window = UIWindow(frame: UIScreen.main.bounds)
-    factory.startReactNative(
-      withModuleName: "KlaviyoReactNativeSdkExample",
-      in: window,
-      launchOptions: launchOptionsWithURL
-    )
 
     return true
   }
@@ -113,7 +92,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
   ) {
     // iOS Installation Step: call `handleReceivingPush` and pass the arguments
     // below. If you want to intercept urls instead of them being routed to the
-    // system (which would call `application:openURL:options:`), implement the
+    // system (which would call `scene:openURLContexts:`), implement the
     // `deepLinkHandler` below.
     Push.handleReceivingPush(
       response: response,
@@ -168,42 +147,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     completionHandler([.banner, .list, .badge, .sound])
   }
 
-  // iOS Installation Step: Implement this method to receive deep links. See
-  // https://github.com/klaviyo/klaviyo-swift-sdk?tab=readme-ov-file#deep-linking
-  // Calling `RCTLinkingManager` is required for your React Native listeners to
-  // be called.
-  func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-  ) -> Bool {
-    return RCTLinkingManager.application(app, open: url, options: options)
-  }
-
-  // iOS Installation Step: Implement this method to handle Universal Links
-  // (https://). This is required for Klaviyo universal tracking links and
-  // other HTTPS deep links. Calling `RCTLinkingManager` forwards the universal
-  // link to your React Native code.
-  func application(
-    _ application: UIApplication,
-    continue userActivity: NSUserActivity,
-    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-  ) -> Bool {
-    return RCTLinkingManager.application(
-      application,
-      continue: userActivity,
-      restorationHandler: restorationHandler
-    )
-  }
-
-  // iOS Installation Step: if you want to reset the app badge count whenever
-  // the app becomes active, implement this delegate method and set the badge
-  // count to 0. Note that this may sometimes mean that the user would miss the
-  // notification.
-  func applicationDidBecomeActive(_ application: UIApplication) {
-    Push.updateBadgeCount(0)
-  }
-
   // iOS Installation Step: Handle silent push notifications (content-available: 1).
   // This method fires for both pure silent pushes and standard pushes that carry
   // content-available. Only forward pure silent pushes (no aps.alert) for
@@ -238,27 +181,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     // so will cause iOS to throttle or stop delivering silent push
     // notifications to your app.
     completionHandler(.newData)
-  }
-
-  // MARK: - Private Helpers
-
-  // iOS Installation Step: call this method from
-  // `application:didFinishLaunchingWithOptions:` before handing launchOptions
-  // to RCTReactNativeFactory. Workaround for a React Native issue where, if
-  // the app is terminated, the deep link isn't sent to the RN layer when it
-  // is coming from a remote notification.
-  // https://github.com/facebook/react-native/issues/32350
-  private func getLaunchOptionsWithURL(
-    _ launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> [UIApplication.LaunchOptionsKey: Any] {
-    var opts: [UIApplication.LaunchOptionsKey: Any] = launchOptions ?? [:]
-    if let remoteNotification = opts[.remoteNotification] as? [String: Any],
-       let urlString = remoteNotification["url"] as? String,
-       opts[.url] == nil,
-       let url = URL(string: urlString) {
-      opts[.url] = url
-    }
-    return opts
   }
 }
 
@@ -317,21 +239,5 @@ extension AppDelegate {
         completionHandler()
       }
     }
-  }
-}
-
-// MARK: - React Native bridge bundle URL resolver
-
-class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
-  override func sourceURL(for bridge: RCTBridge) -> URL? {
-    return self.bundleURL()
-  }
-
-  override func bundleURL() -> URL? {
-#if DEBUG
-    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
-#else
-    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
-#endif
   }
 }

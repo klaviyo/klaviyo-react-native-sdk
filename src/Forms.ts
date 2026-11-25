@@ -18,6 +18,44 @@ export interface KlaviyoFormsApi {
   unregisterFromInAppForms(): void;
 
   /**
+   * Start a draft in-app forms preview session with a preview token from the Klaviyo form editor.
+   *
+   * Starting a preview is like unregistering and registering again: if forms are registered, the
+   * current session is torn down, dismissing any form on screen, and a new session starts that
+   * loads draft forms. If {@link registerForInAppForms} hasn't been called yet, the token is held
+   * and the preview starts when forms register; no forms are shown before then.
+   *
+   * A preview token is a short-lived credential for on-device testing of draft forms. The native
+   * SDKs keep it in memory only and never persist or log it. A malformed token is ignored and
+   * changes nothing. {@link unregisterFromInAppForms} also ends the preview.
+   * @param token The preview token
+   */
+  startFormsPreview(token: string): void;
+
+  /**
+   * End the draft in-app forms preview session. If forms are registered, they restart with
+   * published forms.
+   */
+  endFormsPreview(): void;
+
+  /**
+   * Start a forms preview from a deep link, such as the link or QR code from the Klaviyo form
+   * editor's **Preview on device** button.
+   *
+   * Forwards the link to the native SDK and resolves `true` only when the native SDK started a
+   * preview — that is, the link carries a well-formed `klaviyo-forms-preview` token. Resolves
+   * `false`, changing nothing, for a null, empty, or non-preview link, for an unparsable link,
+   * and on any native failure, so call it first from your deep link handling (for example a
+   * `Linking` URL listener) and fall through when it resolves `false`.
+   *
+   * Never rejects: safe to call before [Klaviyo.initialize] for cold-start links; the native
+   * SDKs hold the token until forms register.
+   * @param url The deep link that opened the app
+   * @returns Resolves `true` if the link started a forms preview, `false` otherwise
+   */
+  handleFormsPreviewLink(url: string | null): Promise<boolean>;
+
+  /**
    * Register a handler to receive form lifecycle events.
    * @param handler Function to be called when form lifecycle events occur
    * @returns A function to unsubscribe from lifecycle events
@@ -34,6 +72,11 @@ export interface FormConfiguration {
    */
   readonly sessionTimeoutDuration: number;
 }
+
+/**
+ * Key carrying a forms preview token as a deep link query parameter
+ */
+export const FORMS_PREVIEW_TOKEN_KEY = 'klaviyo-forms-preview';
 
 /**
  * String constants for form lifecycle event types.

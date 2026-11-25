@@ -62,6 +62,10 @@ target 'KlaviyoReactNativeSdkExample' do
   use_frameworks! :linkage => :static
 
   # Insert override klaviyo-swift-sdk pods below this line when needed
+  pod 'KlaviyoCore', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.7.0'
+  pod 'KlaviyoSwift', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.7.0'
+  pod 'KlaviyoForms', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.7.0'
+  pod 'KlaviyoLocation', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.7.0'
 
   # Setup permissions for react-native-permissions
   setup_permissions([
@@ -86,12 +90,24 @@ target 'KlaviyoReactNativeSdkExample' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    minimum_ios_version = min_ios_version_supported
+    minimum_deployment_target = Gem::Version.new(minimum_ios_version)
+    installer.pods_project.targets.each do |pod_target|
+      pod_target.build_configurations.each do |build_config|
+        deployment_target = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_s
+        next unless deployment_target.match?(/\A\d+(?:\.\d+)*\z/)
+        next unless Gem::Version.new(deployment_target) < minimum_deployment_target
+
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum_ios_version
+      end
+    end
   end
 end
 
 target 'KlaviyoReactNativeSdkExampleExtension' do
   use_frameworks! :linkage => :static
   # Insert override klaviyo-swift-sdk extension pod below this line when needed
-  pod 'KlaviyoSwiftExtension'
+  pod 'KlaviyoSwiftExtension', :git => 'https://github.com/klaviyo/klaviyo-swift-sdk.git', :branch => 'rel/5.7.0'
 end
 

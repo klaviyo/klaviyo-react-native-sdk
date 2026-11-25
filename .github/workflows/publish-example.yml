@@ -590,7 +590,7 @@ jobs:
 
   deploy-ios:
     name: Publish to TestFlight
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     environment:
       name: testflight
@@ -608,7 +608,7 @@ jobs:
       app_id: ${{ steps.result.outputs.app_id }}
       notes: ${{ steps.result.outputs.notes }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      EXPECTED_IPHONEOS_SDK_MAJOR: '27'
     # Run on release / push always; on workflow_dispatch when platform is
     # `both` or `ios`; on labeled PR when the label is `deploy-example-app`
     # (umbrella) or `deploy-example-app:ios`. Skipped (not failed) when the
@@ -625,6 +625,13 @@ jobs:
     steps:
       - name: Record job start
         run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Verify iOS SDK
+        run: |
+          xcodebuild -version
+          sdk_version=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "iPhoneOS SDK: $sdk_version"
+          [[ "$sdk_version" == "$EXPECTED_IPHONEOS_SDK_MAJOR".* ]]
 
       - name: Compute short commit
         env:
@@ -1000,7 +1007,16 @@ jobs:
   report:
     name: Update the deploy message
     needs:
-      [announce, progress, supersede-push-runs, checks, preflight-android, preflight-ios, deploy-android, deploy-ios]
+      [
+        announce,
+        progress,
+        supersede-push-runs,
+        checks,
+        preflight-android,
+        preflight-ios,
+        deploy-android,
+        deploy-ios,
+      ]
     if: always() && (needs.announce.outputs.slack_ts != '' || inputs.slack_thread_ts != '')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
