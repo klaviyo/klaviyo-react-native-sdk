@@ -268,6 +268,22 @@ RCT_EXPORT_METHOD(updateInboxMessageState: (NSString *)messageId
                                           }];
 }
 
+RCT_EXPORT_METHOD(trackInboxMessageClick: (NSString *)messageId
+                  actionId: (NSString *)actionId
+                  properties: (NSDictionary *)properties
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge trackInboxMessageClickWithId:messageId
+                                       actionId:actionId
+                                     properties:properties
+                                        resolve:^(BOOL queued) {
+                                            resolve(@(queued));
+                                        }
+                                         reject:^(NSString *code, NSString *message) {
+                                             reject(code, message, nil);
+                                         }];
+}
+
 RCT_EXPORT_METHOD(updateInboxMessageStates: (NSString *)state
                   readFilter: (NSString *)readFilter
                   archiveFilter: (NSString *)archiveFilter

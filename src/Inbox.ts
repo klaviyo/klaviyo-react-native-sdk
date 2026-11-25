@@ -257,6 +257,24 @@ export interface InboxPageOptions {
 export type InboxChangeHandler = () => void;
 
 /**
+ * Extra data recorded with a click on an inbox message.
+ */
+export interface InboxClickOptions {
+  /**
+   * The ID of the button that was tapped, from {@link InboxAction.id}. Omit it for a tap on the
+   * message itself.
+   */
+  readonly actionId?: string;
+
+  /**
+   * Extra properties to record on the click event, such as which UI element the user tapped.
+   * They are added last, so a key that matches one of the SDK's own properties, such as
+   * `Action Type`, is ignored in favor of the SDK's value.
+   */
+  readonly properties?: Record<string, Object>;
+}
+
+/**
  * Interface for the Klaviyo Mobile Inbox API.
  *
  * A native failure rejects with an {@link InboxError} carrying a stable {@link InboxErrorCode}, and
@@ -310,6 +328,28 @@ export interface KlaviyoInboxApi {
   updateMessageState(
     messageId: string,
     state: InboxMessageState
+  ): Promise<boolean>;
+
+  /**
+   * Report that the user tapped a message, or one of its buttons, as a `Clicked App Inbox Message`
+   * event for the current profile.
+   *
+   * Call this when the user taps, separately from {@link updateMessageState}: a click never marks a
+   * message read or archived, and a state change never records a click. The SDK does not open the
+   * destination, so navigation stays with your app.
+   *
+   * The click is queued and sent with the rest of the SDK's analytics, so it is kept while offline
+   * and retried. It is recorded from the message stored on this device, so nothing is recorded
+   * once the message is gone.
+   *
+   * @param messageId ID of the tapped message
+   * @param options The tapped button, and any extra properties to record
+   * @returns `true` when the click was queued; `false` when this device has no message with
+   *   `messageId`, the message has no button `options.actionId`, or the SDK is not initialized yet
+   */
+  trackMessageClick(
+    messageId: string,
+    options?: InboxClickOptions
   ): Promise<boolean>;
 
   /**
@@ -547,6 +587,47 @@ export function validateInboxStateUpdate(
     !(INBOX_MESSAGE_STATES as readonly string[]).includes(state)
   ) {
     return `Inbox state must be one of: ${INBOX_MESSAGE_STATES.join(', ')}`;
+  }
+
+  return null;
+}
+
+/**
+ * Validates an {@link KlaviyoInboxApi.trackMessageClick} call at runtime, returning an error
+ * message or `null` when valid.
+ *
+ * @param messageId ID of the tapped message
+ * @param options The tapped button, and any extra properties to record
+ */
+export function validateInboxClick(
+  messageId: unknown,
+  options: unknown
+): string | null {
+  if (!isNonEmptyString(messageId)) {
+    return 'Inbox messageId is required and must be a non-empty string';
+  }
+
+  if (options === undefined || options === null) {
+    return null;
+  }
+
+  if (typeof options !== 'object' || Array.isArray(options)) {
+    return 'Inbox click options must be an object';
+  }
+
+  const { actionId, properties } = options as Record<string, unknown>;
+
+  if (actionId !== undefined && !isNonEmptyString(actionId)) {
+    return 'Inbox click actionId must be a non-empty string when provided';
+  }
+
+  if (
+    properties !== undefined &&
+    (properties === null ||
+      typeof properties !== 'object' ||
+      Array.isArray(properties))
+  ) {
+    return 'Inbox click properties must be an object when provided';
   }
 
   return null;

@@ -22,6 +22,7 @@ import {
 } from './Subscription';
 import {
   type InboxChangeHandler,
+  type InboxClickOptions,
   type InboxFilter,
   type InboxPage,
   type InboxPageOptions,
@@ -31,6 +32,7 @@ import {
   InboxErrorCode,
   parseInboxPage,
   toInboxError,
+  validateInboxClick,
   validateInboxFilterUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
@@ -424,6 +426,32 @@ export const Klaviyo: KlaviyoInterface = {
       throw toInboxError(nativeError);
     }
   },
+  async trackMessageClick(
+    messageId: string,
+    options?: InboxClickOptions
+  ): Promise<boolean> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    const error = validateInboxClick(messageId, options);
+    if (error !== null) {
+      throw new TypeError(`[Klaviyo] ${error}`);
+    }
+
+    try {
+      return await KlaviyoReactNativeSdk.trackInboxMessageClick(
+        messageId,
+        options?.actionId ?? null,
+        options?.properties ?? null
+      );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
   async updateMessageStates(
     state: InboxMessageState,
     filter: InboxFilter
@@ -548,6 +576,7 @@ export {
 export type {
   InboxAction,
   InboxChangeHandler,
+  InboxClickOptions,
   InboxDestination,
   InboxMessage,
   InboxMessageState,

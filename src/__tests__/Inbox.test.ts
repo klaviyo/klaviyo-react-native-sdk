@@ -7,6 +7,7 @@ import {
   parseInboxMessage,
   parseInboxPage,
   toInboxError,
+  validateInboxClick,
   validateInboxFilterUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
@@ -438,6 +439,49 @@ describe('validateInboxPageOptions', () => {
         'active, archived, all'
       );
     });
+  });
+});
+
+describe('validateInboxClick', () => {
+  it.each([
+    ['no options', undefined],
+    ['null options', null],
+    ['an empty options object', {}],
+    ['a button', { actionId: 'a1' }],
+    ['properties', { properties: { screen: 'inbox' } }],
+    ['a button and properties', { actionId: 'a1', properties: { n: 1 } }],
+  ])('accepts %s', (_label, options) => {
+    expect(validateInboxClick('msg-1', options)).toBeNull();
+  });
+
+  it.each([
+    ['an empty message ID', ''],
+    ['a blank message ID', '   '],
+    ['a non-string message ID', 42],
+  ])('rejects %s', (_label, messageId) => {
+    expect(validateInboxClick(messageId, undefined)).toContain('messageId');
+  });
+
+  it.each([
+    ['an empty actionId', { actionId: '' }],
+    ['a non-string actionId', { actionId: 3 }],
+  ])('rejects %s', (_label, options) => {
+    expect(validateInboxClick('msg-1', options)).toContain('actionId');
+  });
+
+  it.each([
+    ['null properties', { properties: null }],
+    ['array properties', { properties: [] }],
+    ['string properties', { properties: 'x' }],
+  ])('rejects %s', (_label, options) => {
+    expect(validateInboxClick('msg-1', options)).toContain('properties');
+  });
+
+  it.each([
+    ['a string', 'inbox'],
+    ['an array', []],
+  ])('rejects %s as the options', (_label, options) => {
+    expect(validateInboxClick('msg-1', options)).toContain('options');
   });
 });
 

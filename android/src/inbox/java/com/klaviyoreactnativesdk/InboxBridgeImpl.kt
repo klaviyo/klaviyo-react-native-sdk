@@ -19,6 +19,7 @@ import com.klaviyo.inbox.InboxResult
 import com.klaviyo.inbox.InboxStateChange
 import com.klaviyo.inbox.KlaviyoInbox
 import com.klaviyo.inbox.MobileInboxProvider
+import java.io.Serializable
 
 /**
  * Mobile Inbox bridge implementation. Compiled only when `klaviyoIncludeInbox=true`, and loaded
@@ -135,6 +136,33 @@ internal class InboxBridgeImpl : InboxBridge {
       }
 
     KlaviyoInbox.updateMessageState(messageId, change) { result ->
+      when (result) {
+        is InboxResult.Success -> promise.resolve(result.value)
+        is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
+      }
+    }
+  }
+
+  override fun trackMessageClick(
+    messageId: String,
+    actionId: String?,
+    properties: ReadableMap?,
+    promise: Promise,
+  ) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+
+    // A value that is not Serializable cannot be recorded on the event, so it is left out
+    val clickProperties: Map<String, Serializable?> =
+      properties
+        ?.toHashMap()
+        ?.mapNotNull { (key, value) -> (value as? Serializable)?.let { key to it } }
+        ?.toMap()
+        ?: emptyMap()
+
+    KlaviyoInbox.trackMessageClick(messageId, actionId, clickProperties) { result ->
       when (result) {
         is InboxResult.Success -> promise.resolve(result.value)
         is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
