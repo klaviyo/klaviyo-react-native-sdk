@@ -30,6 +30,8 @@
         "example/Gemfile",
         "example/Gemfile.lock",
         "example/ios",
+        "ios/Podfile",
+        "ios/Podfile.lock",
         "!example/ios/build",
         "!example/ios/Pods"
       ],

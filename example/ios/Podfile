@@ -90,6 +90,18 @@ target 'KlaviyoReactNativeSdkExample' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    minimum_ios_version = min_ios_version_supported
+    minimum_deployment_target = Gem::Version.new(minimum_ios_version)
+    installer.pods_project.targets.each do |pod_target|
+      pod_target.build_configurations.each do |build_config|
+        deployment_target = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_s
+        next unless deployment_target.match?(/\A\d+(?:\.\d+)*\z/)
+        next unless Gem::Version.new(deployment_target) < minimum_deployment_target
+
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum_ios_version
+      end
+    end
   end
 end
 
