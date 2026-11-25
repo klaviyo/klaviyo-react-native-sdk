@@ -52,6 +52,7 @@
     - [Prerequisites](#prerequisites-2)
     - [Setup](#setup-2)
     - [Unregistering from Geofencing](#unregistering-from-geofencing)
+  - [Mobile Inbox](#mobile-inbox)
   - [SDK Logging](#sdk-logging)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
@@ -931,6 +932,30 @@ Klaviyo.unregisterGeofencing();
 ```
 
 After unregistering, the SDK will stop monitoring geofences and will no longer report geofence transition events. You can call `registerGeofencing()` again to resume monitoring.
+
+## Mobile Inbox
+
+### Module Configuration
+
+Unlike In-App Forms and Geofencing, the Mobile Inbox module is **not** included by default. Opt in on each platform you ship:
+
+**iOS** — In your `Podfile`, before the `target` block:
+
+```ruby
+ENV['KLAVIYO_INCLUDE_INBOX'] = 'true'
+```
+
+Then run `pod install`.
+
+**Android** — In your app's `gradle.properties`:
+
+```properties
+klaviyoIncludeInbox=true
+```
+
+If the module is not included, inbox calls log an error and reject with an `InboxError` whose code is `INBOX_UNAVAILABLE`. `Klaviyo.subscribe` is the exception: it logs the error and returns a no-op unsubscribe function.
+
+> **Note:** The native Inbox modules are not yet released, so a build that opts in needs native Android and iOS SDK versions that contain them.
 
 ## SDK Logging
 

@@ -32,17 +32,6 @@ OPTIONS:
   -s, --skip-pod-install
       Skip running 'pod install' after iOS configuration
 
-  --inbox
-      Opt in to the Mobile Inbox module on both platforms.
-      Points the native inbox artifacts at the dev ref given by
-      --android/--ios (branch, commit or local path). Off by
-      default; a build without it reports INBOX_UNAVAILABLE for every inbox call.
-
-  --no-inbox
-      Opt back out of the Mobile Inbox module, removing the Gradle property.
-      The podspec is unaffected until the next pod install without
-      KLAVIYO_INCLUDE_INBOX=true.
-
 EXAMPLES:
   # Use both local SDKs with default paths
   ./configure-sdk.sh --local
@@ -53,10 +42,6 @@ EXAMPLES:
   # Dev pin: a branch, commit or filepath
   ./configure-sdk.sh --android [branch/commit/filepath]
   ./configure-sdk.sh --ios [branch/commit/filepath]
-
-  # Opt in to Mobile Inbox against native dev refs
-  ./configure-sdk.sh --android [branch/commit/filepath] \\
-                     --ios [branch/commit/filepath] --inbox
 EOF
 }
 
@@ -75,8 +60,6 @@ is_local=false
 android_value=""
 ios_value=""
 skip_pod_install=false
-include_inbox=false
-inbox_explicitly_disabled=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -118,15 +101,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     -s|--skip-pod-install)
       skip_pod_install=true
-      shift
-      ;;
-    --inbox)
-      include_inbox=true
-      shift
-      ;;
-    --no-inbox)
-      include_inbox=false
-      inbox_explicitly_disabled=true
       shift
       ;;
     -*)
@@ -388,7 +362,6 @@ function configure_pods() {
   sed -i '' "/pod 'KlaviyoSwift'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoForms'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoLocation'/d" "$podfile"
-  sed -i '' "/pod 'KlaviyoInbox'/d" "$podfile"
   sed -i '' "/pod 'KlaviyoSwiftExtension'/d" "$podfile"
 
   # Restore podspec
@@ -432,13 +405,6 @@ function configure_pods() {
   # List of dependencies
   dependencies=("KlaviyoCore" "KlaviyoSwift" "KlaviyoForms" "KlaviyoLocation")
 
-  # KlaviyoInbox is opt-in, so it is only overridden to the dev ref when the inbox module was
-  # requested. Without this the Podfile would pin a pod that the podspec does not depend
-  # on, and `pod install` would fail on an unsatisfiable dependency.
-  if [[ "$include_inbox" == true ]]; then
-    dependencies+=("KlaviyoInbox")
-  fi
-
   # Find the line number of the target block
   target_line=$(grep -n "# Insert override klaviyo-swift-sdk pods below this line when needed" "$podfile" | cut -d: -f1)
 
@@ -476,57 +442,7 @@ function configure_pods() {
   echo "Added KlaviyoSwiftExtension dependency to $podfile"
 }
 
-# Enable or disable the opt-in Mobile Inbox module.
-#
-# Unlike forms and location, inbox is off by default, so a default build does not reference its
-# native artifacts. Enabling sets the Gradle property the library and example app read, and the
-# env var the podspec reads at `pod install` time.
-#
-# Persisted into tracked files (android/gradle.properties, example/android/gradle.properties) so a
-# subsequent plain `yarn example ios|android` keeps the setting, mirroring how the Android SDK
-# version pin is stored. Pass --no-inbox to turn it back off.
-function configure_inbox() {
-  local enabled="$1"
-  local android_property_file="./android/gradle.properties"
-  local example_property_file="./example/android/gradle.properties"
-  local inbox_marker="# Mobile Inbox (opt-in)"
-
-  local property_files=("$android_property_file" "$example_property_file")
-  local property_file
-  for property_file in "${property_files[@]}"; do
-    # Drop any previous marker + value so re-running is idempotent.
-    if grep -q "^klaviyoIncludeInbox=" "$property_file" 2>/dev/null; then
-      sed -i '' "/^$inbox_marker\$/d" "$property_file"
-      sed -i '' "/^klaviyoIncludeInbox=/d" "$property_file"
-    fi
-
-    if [[ "$enabled" == "true" ]]; then
-      # Append after the last line so the file's existing grouping is untouched.
-      printf '\n%s\nklaviyoIncludeInbox=true\n' "$inbox_marker" >> "$property_file"
-    fi
-  done
-
-  if [[ "$enabled" == "true" ]]; then
-    echo "Mobile Inbox enabled (klaviyoIncludeInbox=true, KLAVIYO_INCLUDE_INBOX=true)"
-    echo "Remember to export KLAVIYO_INCLUDE_INBOX=true before 'pod install' in example/ios."
-  else
-    echo "Mobile Inbox disabled (default)"
-  fi
-}
-
 # Execute configuration based on values
-if [[ "$include_inbox" == true || "$inbox_explicitly_disabled" == true ]]; then
-  if [[ "$include_inbox" == true ]]; then
-    configure_inbox "true"
-    # The podspec gates the KlaviyoInbox dependency on this at `pod install` time, so export it for
-    # the pod update below. A host app integrating this SDK sets it in its own environment.
-    export KLAVIYO_INCLUDE_INBOX=true
-  else
-    configure_inbox "false"
-  fi
-  echo
-fi
-
 if [[ "$android_value" != "skip" ]]; then
   configure_android_gradle "$android_value"
   echo
@@ -546,11 +462,7 @@ if [[ "$ios_value" != "skip" ]]; then
   else
     echo "Running 'pod update' for Klaviyo pods..."
     cd ./example/ios || { echo "Error: Directory ./example/ios not found."; exit 1; }
-    local pod_names="KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension"
-    if [[ "$include_inbox" == true ]]; then
-      pod_names="$pod_names KlaviyoInbox"
-    fi
-    bundle exec pod update $pod_names
+    bundle exec pod update KlaviyoCore KlaviyoSwift KlaviyoForms KlaviyoLocation KlaviyoSwiftExtension
     echo "Pod refresh completed successfully."
   fi
 fi
