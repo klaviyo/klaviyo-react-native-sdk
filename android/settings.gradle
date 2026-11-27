@@ -26,6 +26,9 @@ if (localPropertiesFile.exists() && localPropertiesFile.canRead()) {
         substitute module("com.github.klaviyo.klaviyo-android-sdk:forms-core") using project(":sdk:forms-core")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:location") using project(":sdk:location")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:location-core") using project(":sdk:location-core")
+        // Mobile Inbox (klaviyoIncludeInbox=true)
+        substitute module("com.github.klaviyo.klaviyo-android-sdk:inbox") using project(":sdk:inbox")
+        substitute module("com.github.klaviyo.klaviyo-android-sdk:inbox-core") using project(":sdk:inbox-core")
         substitute module("com.github.klaviyo.klaviyo-android-sdk:push-fcm") using project(":sdk:push-fcm")
       }
     }

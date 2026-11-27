@@ -59,6 +59,12 @@ class KlaviyoReactNativeSdkModule(
     private const val EMAIL = "email"
     private const val SMS = "sms"
     private const val WHATSAPP = "whatsapp"
+
+    /** Error code for a build without the native inbox module. */
+    const val INBOX_UNAVAILABLE = "INBOX_UNAVAILABLE"
+
+    /** Name of the inbox invalidation event. It carries no payload. */
+    const val INBOX_CHANGED_EVENT = "klaviyo:inboxChanged"
   }
 
   private fun sendEvent(
@@ -141,6 +147,8 @@ class KlaviyoReactNativeSdkModule(
       "EVENT_NAMES" to eventNames,
       "FORMS_AVAILABLE" to Registry.isRegistered<FormsProvider>(),
       "LOCATION_AVAILABLE" to Registry.isRegistered<GeofencingProvider>(),
+      // Opt-in: only true when klaviyoIncludeInbox=true and the inbox module is on the classpath.
+      "INBOX_AVAILABLE" to (InboxBridgeProvider.bridge?.isAvailable() ?: false),
     )
 
   @ReactMethod
@@ -733,4 +741,55 @@ class KlaviyoReactNativeSdkModule(
 
   @ReactMethod
   fun removeListeners(count: Int) {}
+
+  // region Mobile Inbox
+  //
+  // These reference no `com.klaviyo.inbox` type, so they compile without the inbox artifacts. Every
+  // call rejects with INBOX_UNAVAILABLE when [InboxBridgeProvider.bridge] is null.
+
+  @ReactMethod
+  fun fetchInboxPage(
+    options: ReadableMap?,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.fetchPage(options, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun fetchInboxUnreadCount(promise: Promise) {
+    InboxBridgeProvider.bridge?.fetchUnreadCount(promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun updateInboxMessageState(
+    messageId: String,
+    state: String,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.updateMessageState(messageId, state, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun registerInboxChangeHandler() {
+    // No payload: the event is an invalidation, not a diff.
+    InboxBridgeProvider.bridge?.registerChangeHandler {
+      sendEvent(INBOX_CHANGED_EVENT, null)
+    }
+  }
+
+  @ReactMethod
+  fun unregisterInboxChangeHandler() {
+    InboxBridgeProvider.bridge?.unregisterChangeHandler()
+  }
+
+  /** Removes the inbox change listener, which the native SDK holds until it is removed. */
+  override fun invalidate() {
+    InboxBridgeProvider.bridge?.unregisterChangeHandler()
+    super.invalidate()
+  }
+
+  // endregion
 }

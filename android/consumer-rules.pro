@@ -34,3 +34,8 @@
 #
 # Tracked: MAGE-1199 (klaviyo-android-sdk)
 -keep class androidx.work.impl.WorkDatabase_Impl { <init>(); }
+
+# Mobile Inbox bridge implementation. `InboxBridgeProvider` loads it with `Class.forName`, which R8
+# cannot see, so without this rule a minified build would strip it. Inert in a default build, where
+# the class does not exist.
+-keep class com.klaviyoreactnativesdk.InboxBridgeImpl { <init>(); }
