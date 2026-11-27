@@ -353,6 +353,31 @@ export interface KlaviyoInboxApi {
   ): Promise<number>;
 
   /**
+   * Put the messages with the given IDs into a local state, for example to archive the messages a
+   * user selected. The by-ID form of {@link updateMessageStates}, applied to the current company's
+   * messages in one change, so {@link subscribe} handlers fire once.
+   *
+   * IDs that match no message of the current company are ignored, a repeated ID counts once, and a
+   * message already in `state` is not changed, so it is not counted and repeating the call returns
+   * 0. An empty list returns 0.
+   *
+   * ```ts
+   * const archived = await Klaviyo.updateMessageStatesByIds('archived', selectedIds);
+   * ```
+   *
+   * The state is local to this device, like {@link updateMessageState}.
+   *
+   * @param state The state to apply
+   * @param messageIds The IDs of the messages to apply it to
+   * @returns How many messages changed. 0 when none did, when `messageIds` is empty, and before
+   *   the SDK is initialized
+   */
+  updateMessageStatesByIds(
+    state: InboxMessageState,
+    messageIds: readonly string[]
+  ): Promise<number>;
+
+  /**
    * Remove every message this device has for the current company.
    *
    * This is a local delete, not a server-side unsubscribe or a suppression: the messages are gone
@@ -575,6 +600,35 @@ export function validateInboxStateUpdate(
     !(INBOX_MESSAGE_STATES as readonly string[]).includes(state)
   ) {
     return `Inbox state must be one of: ${INBOX_MESSAGE_STATES.join(', ')}`;
+  }
+
+  return null;
+}
+
+/**
+ * Validates an {@link KlaviyoInboxApi.updateMessageStatesByIds} call at runtime, returning an error
+ * message or `null` when valid.
+ *
+ * @param state The state to apply
+ * @param messageIds The IDs of the messages to apply it to
+ */
+export function validateInboxIdsUpdate(
+  state: unknown,
+  messageIds: unknown
+): string | null {
+  if (
+    typeof state !== 'string' ||
+    !(INBOX_MESSAGE_STATES as readonly string[]).includes(state)
+  ) {
+    return `Inbox state must be one of: ${INBOX_MESSAGE_STATES.join(', ')}`;
+  }
+
+  if (!Array.isArray(messageIds)) {
+    return 'Inbox messageIds must be an array of non-empty strings';
+  }
+
+  if (!messageIds.every(isNonEmptyString)) {
+    return 'Inbox messageIds must contain only non-empty strings';
   }
 
   return null;

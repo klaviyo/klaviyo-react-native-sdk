@@ -8,6 +8,7 @@ import {
   parseInboxPage,
   toInboxError,
   validateInboxFilterUpdate,
+  validateInboxIdsUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from '../Inbox';
@@ -478,6 +479,50 @@ describe('InboxFilter', () => {
     expect(
       InboxFilter.where(InboxReadFilter.Unread, InboxArchiveFilter.Active)
     ).toEqual({ readFilter: 'unread', archiveFilter: 'active' });
+  });
+});
+
+describe('validateInboxIdsUpdate', () => {
+  it.each(['read', 'unread', 'archived', 'unarchived'])(
+    'accepts the %s state with IDs',
+    (state) => {
+      expect(validateInboxIdsUpdate(state, ['a', 'b'])).toBeNull();
+    }
+  );
+
+  it('accepts an empty list, which native treats as nothing to change', () => {
+    expect(validateInboxIdsUpdate('read', [])).toBeNull();
+  });
+
+  it('accepts duplicate IDs, which native counts once', () => {
+    expect(validateInboxIdsUpdate('read', ['a', 'a'])).toBeNull();
+  });
+
+  it.each([
+    ['an unknown state', 'deleted'],
+    ['a differently-cased state', 'READ'],
+    ['a non-string state', 1],
+  ])('rejects %s', (_label, state) => {
+    expect(validateInboxIdsUpdate(state, ['a'])).toContain('state');
+  });
+
+  it.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['a string', 'a'],
+    ['an object', { 0: 'a' }],
+    ['a number', 1],
+  ])('rejects %s as the IDs', (_label, ids) => {
+    expect(validateInboxIdsUpdate('read', ids)).toContain('messageIds');
+  });
+
+  it.each([
+    ['an empty ID', ['a', '']],
+    ['a blank ID', ['a', '   ']],
+    ['a non-string ID', ['a', 42]],
+    ['a null ID', ['a', null]],
+  ])('rejects a list containing %s', (_label, ids) => {
+    expect(validateInboxIdsUpdate('read', ids)).toContain('messageIds');
   });
 });
 
