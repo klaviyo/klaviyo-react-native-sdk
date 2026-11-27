@@ -2,6 +2,7 @@ package com.klaviyoreactnativesdk
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.WritableMap
@@ -181,6 +182,45 @@ internal class InboxBridgeImpl : InboxBridge {
       }
 
     KlaviyoInbox.updateMessageState(change, InboxFilter.where(read, archive)) { result ->
+      when (result) {
+        is InboxResult.Success -> promise.resolve(result.value)
+        is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
+      }
+    }
+  }
+
+  override fun updateMessageStatesByIds(
+    state: String,
+    messageIds: ReadableArray,
+    promise: Promise,
+  ) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+
+    // Reject an unrecognized state rather than apply something else to the listed messages.
+    val change =
+      toStateChange(state) ?: run {
+        promise.reject(
+          InboxErrorCode.STORAGE_FAILURE,
+          "Unrecognized inbox message state '$state'",
+        )
+        return
+      }
+
+    val ids =
+      List(messageIds.size()) { index ->
+        messageIds.getString(index) ?: run {
+          promise.reject(
+            InboxErrorCode.STORAGE_FAILURE,
+            "Inbox message ID at index $index is not a string",
+          )
+          return
+        }
+      }
+
+    KlaviyoInbox.updateMessageState(change, ids) { result ->
       when (result) {
         is InboxResult.Success -> promise.resolve(result.value)
         is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
