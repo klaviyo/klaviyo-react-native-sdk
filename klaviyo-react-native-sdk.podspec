@@ -26,6 +26,10 @@ Pod::Spec.new do |s|
   if ENV['KLAVIYO_INCLUDE_FORMS'] != 'false'
     s.dependency "KlaviyoForms" ##, "5.6.0"
   end
+  # Optional inbox; excluded by default, set to 'true' to include
+  if ENV['KLAVIYO_INCLUDE_INBOX'] == 'true'
+    s.dependency "KlaviyoInbox"
+  end
 
   s.default_subspecs = :none
 
