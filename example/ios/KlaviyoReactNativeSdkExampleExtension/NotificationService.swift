@@ -10,6 +10,9 @@
 import KlaviyoSwiftExtension
 import UIKit
 import UserNotifications
+#if canImport(KlaviyoInboxExtension)
+import KlaviyoInboxExtension
+#endif
 
 class NotificationService: UNNotificationServiceExtension {
     var request: UNNotificationRequest!
@@ -23,9 +26,17 @@ class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
-        if let bestAttemptContent = bestAttemptContent {
+        guard let bestAttemptContent = bestAttemptContent else { return }
+
+        // Optional Mobile Inbox: capture the push first, then continue with rich push handling.
+        // Capture is only compiled in when the KlaviyoInboxExtension pod is linked.
+        let userInfo = request.content.userInfo
+        Task {
+            #if canImport(KlaviyoInboxExtension)
+            await KlaviyoInboxExtensionSDK.capture(userInfo: userInfo)
+            #endif
             KlaviyoExtensionSDK.handleNotificationServiceDidReceivedRequest(
-                request: self.request,
+                request: request,
                 bestAttemptContent: bestAttemptContent,
                 contentHandler: contentHandler)
         }

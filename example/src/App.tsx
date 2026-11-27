@@ -9,6 +9,7 @@ import { Klaviyo } from 'klaviyo-react-native-sdk';
 import { HomeScreen } from './screens/HomeScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { ConfigureResponseScreen } from './screens/ConfigureResponseScreen';
+import { InboxScreen } from './inbox/InboxScreen';
 import type { RootStackParamList } from './navigation/types';
 
 // RN Installation Step: Source your public API key.
@@ -58,6 +59,11 @@ export default function App() {
           name="ConfigureResponse"
           component={ConfigureResponseScreen}
           options={{ title: 'Configure Response' }}
+        />
+        <Stack.Screen
+          name="InboxScreen"
+          component={InboxScreen}
+          options={{ title: 'Inbox' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
