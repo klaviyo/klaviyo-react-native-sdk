@@ -7,6 +7,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
@@ -780,6 +781,16 @@ class KlaviyoReactNativeSdkModule(
     promise: Promise,
   ) {
     InboxBridgeProvider.bridge?.updateMessageStates(state, readFilter, archiveFilter, promise)
+      ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+  }
+
+  @ReactMethod
+  fun updateInboxMessageStatesByIds(
+    state: String,
+    messageIds: ReadableArray,
+    promise: Promise,
+  ) {
+    InboxBridgeProvider.bridge?.updateMessageStatesByIds(state, messageIds, promise)
       ?: promise.reject(INBOX_UNAVAILABLE, "KlaviyoInbox is not linked into this build")
   }
 

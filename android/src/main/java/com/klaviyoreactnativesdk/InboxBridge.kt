@@ -1,6 +1,7 @@
 package com.klaviyoreactnativesdk
 
 import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.klaviyo.core.Registry
 
@@ -34,6 +35,13 @@ internal interface InboxBridge {
     state: String,
     readFilter: String,
     archiveFilter: String,
+    promise: Promise,
+  )
+
+  /** Applies a state to the messages with the given IDs, resolving how many changed. */
+  fun updateMessageStatesByIds(
+    state: String,
+    messageIds: ReadableArray,
     promise: Promise,
   )
 

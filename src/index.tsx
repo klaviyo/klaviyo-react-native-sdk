@@ -33,6 +33,7 @@ import {
   parseInboxPage,
   toInboxError,
   validateInboxFilterUpdate,
+  validateInboxIdsUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from './Inbox';
@@ -446,6 +447,30 @@ export const Klaviyo: KlaviyoInterface = {
         filter.readFilter,
         filter.archiveFilter
       );
+    } catch (nativeError) {
+      throw toInboxError(nativeError);
+    }
+  },
+  async updateMessageStatesByIds(
+    state: InboxMessageState,
+    messageIds: readonly string[]
+  ): Promise<number> {
+    if (!isInboxAvailable()) {
+      throw new InboxError(
+        InboxErrorCode.Unavailable,
+        INBOX_UNAVAILABLE_MESSAGE
+      );
+    }
+
+    const error = validateInboxIdsUpdate(state, messageIds);
+    if (error !== null) {
+      throw new TypeError(`[Klaviyo] ${error}`);
+    }
+
+    try {
+      return await KlaviyoReactNativeSdk.updateInboxMessageStatesByIds(state, [
+        ...messageIds,
+      ]);
     } catch (nativeError) {
       throw toInboxError(nativeError);
     }
