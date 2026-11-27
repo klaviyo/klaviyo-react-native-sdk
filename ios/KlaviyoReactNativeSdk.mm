@@ -284,6 +284,20 @@ RCT_EXPORT_METHOD(updateInboxMessageStates: (NSString *)state
                                               }];
 }
 
+RCT_EXPORT_METHOD(updateInboxMessageStatesByIds: (NSString *)state
+                  ids: (NSArray<NSString *> *)ids
+                  resolver: (RCTPromiseResolveBlock)resolve
+                  rejecter: (RCTPromiseRejectBlock)reject) {
+    [KlaviyoBridge updateInboxMessageStatesByIdsWithState:state
+                                                      ids:ids
+                                                  resolve:^(NSNumber *changedCount) {
+                                                      resolve(changedCount);
+                                                  }
+                                                   reject:^(NSString *code, NSString *message) {
+                                                       reject(code, message, nil);
+                                                   }];
+}
+
 RCT_EXPORT_METHOD(clearInbox: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject) {
     [KlaviyoBridge clearInboxWithResolve:^(NSNumber *clearedCount) {

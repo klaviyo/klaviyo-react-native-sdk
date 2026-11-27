@@ -193,6 +193,36 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Applies a local read/archived state to the messages with the given IDs. Resolves how many
+    /// messages changed.
+    @objc
+    public static func updateInboxMessageStatesByIds(
+        state: String,
+        ids: [String],
+        resolve: @escaping (NSNumber) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        // Reject an unrecognized state rather than apply something else to the listed messages.
+        guard let messageState = inboxMessageState(from: state) else {
+            reject(InboxErrorCode.storageFailure, "Unrecognized inbox message state '\(state)'")
+            return
+        }
+
+        Task {
+            do {
+                let changed = try await KlaviyoSDK().mobileInbox.setMessageState(messageState, for: ids)
+                resolve(NSNumber(value: changed))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
     /// Removes every message this device has for the current company, and resolves how many were
     /// removed. Messages for other companies are left alone.
     @objc
