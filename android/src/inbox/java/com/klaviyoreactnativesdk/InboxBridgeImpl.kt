@@ -11,6 +11,7 @@ import com.klaviyo.inbox.InboxChangeListener
 import com.klaviyo.inbox.InboxCursor
 import com.klaviyo.inbox.InboxDestination
 import com.klaviyo.inbox.InboxException
+import com.klaviyo.inbox.InboxFilter
 import com.klaviyo.inbox.InboxMessage
 import com.klaviyo.inbox.InboxPage
 import com.klaviyo.inbox.InboxQuery
@@ -56,28 +57,29 @@ internal class InboxBridgeImpl : InboxBridge {
         ?.getInt(PAGE_SIZE)
 
     // Reject an unrecognized filter rather than substituting a default.
+    val rawReadFilter = options?.filterOrNull(READ_FILTER)
     val readFilter =
-      when (val raw = options?.filterOrNull(READ_FILTER)) {
-        null -> InboxReadFilter.ALL
-        "all" -> InboxReadFilter.ALL
-        "unread" -> InboxReadFilter.UNREAD
-        "read" -> InboxReadFilter.READ
-        else -> {
-          promise.reject(InboxErrorCode.STORAGE_FAILURE, "Unrecognized inbox readFilter '$raw'")
+      if (rawReadFilter == null) {
+        InboxReadFilter.ALL
+      } else {
+        toReadFilter(rawReadFilter) ?: run {
+          promise.reject(
+            InboxErrorCode.STORAGE_FAILURE,
+            "Unrecognized inbox readFilter '$rawReadFilter'",
+          )
           return
         }
       }
 
+    val rawArchiveFilter = options?.filterOrNull(ARCHIVE_FILTER)
     val archiveFilter =
-      when (val raw = options?.filterOrNull(ARCHIVE_FILTER)) {
-        null -> InboxArchiveFilter.ACTIVE
-        "active" -> InboxArchiveFilter.ACTIVE
-        "archived" -> InboxArchiveFilter.ARCHIVED
-        "all" -> InboxArchiveFilter.ALL
-        else -> {
+      if (rawArchiveFilter == null) {
+        InboxArchiveFilter.ACTIVE
+      } else {
+        toArchiveFilter(rawArchiveFilter) ?: run {
           promise.reject(
             InboxErrorCode.STORAGE_FAILURE,
-            "Unrecognized inbox archiveFilter '$raw'",
+            "Unrecognized inbox archiveFilter '$rawArchiveFilter'",
           )
           return
         }
@@ -125,21 +127,74 @@ internal class InboxBridgeImpl : InboxBridge {
 
     // Reject an unrecognized state rather than applying something else.
     val change =
-      when (state) {
-        "read" -> InboxStateChange.MARK_READ
-        "unread" -> InboxStateChange.MARK_UNREAD
-        "archived" -> InboxStateChange.ARCHIVE
-        "unarchived" -> InboxStateChange.UNARCHIVE
-        else -> {
-          promise.reject(
-            InboxErrorCode.STORAGE_FAILURE,
-            "Unrecognized inbox message state '$state'",
-          )
-          return
-        }
+      toStateChange(state) ?: run {
+        promise.reject(
+          InboxErrorCode.STORAGE_FAILURE,
+          "Unrecognized inbox message state '$state'",
+        )
+        return
       }
 
     KlaviyoInbox.updateMessageState(messageId, change) { result ->
+      when (result) {
+        is InboxResult.Success -> promise.resolve(result.value)
+        is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
+      }
+    }
+  }
+
+  override fun updateMessageStates(
+    state: String,
+    readFilter: String,
+    archiveFilter: String,
+    promise: Promise,
+  ) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+
+    // Reject an unrecognized value rather than apply a bulk change to the wrong messages.
+    val change =
+      toStateChange(state) ?: run {
+        promise.reject(
+          InboxErrorCode.STORAGE_FAILURE,
+          "Unrecognized inbox message state '$state'",
+        )
+        return
+      }
+    val read =
+      toReadFilter(readFilter) ?: run {
+        promise.reject(
+          InboxErrorCode.STORAGE_FAILURE,
+          "Unrecognized inbox readFilter '$readFilter'",
+        )
+        return
+      }
+    val archive =
+      toArchiveFilter(archiveFilter) ?: run {
+        promise.reject(
+          InboxErrorCode.STORAGE_FAILURE,
+          "Unrecognized inbox archiveFilter '$archiveFilter'",
+        )
+        return
+      }
+
+    KlaviyoInbox.updateMessageState(change, InboxFilter.where(read, archive)) { result ->
+      when (result) {
+        is InboxResult.Success -> promise.resolve(result.value)
+        is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
+      }
+    }
+  }
+
+  override fun clearAll(promise: Promise) {
+    if (!isAvailable()) {
+      promise.reject(InboxErrorCode.UNAVAILABLE, "KlaviyoInbox is not linked into this build")
+      return
+    }
+
+    KlaviyoInbox.clearAll { result ->
       when (result) {
         is InboxResult.Success -> promise.resolve(result.value)
         is InboxResult.Failure -> promise.reject(result.exception.code(), result.exception.message)
@@ -232,6 +287,34 @@ internal class InboxBridgeImpl : InboxBridge {
     Arguments.createMap().apply {
       putString("type", type.rawValue)
       url?.let { putString("url", it) }
+    }
+
+  /** Maps a state string onto the native [InboxStateChange]. */
+  private fun toStateChange(raw: String): InboxStateChange? =
+    when (raw) {
+      "read" -> InboxStateChange.MARK_READ
+      "unread" -> InboxStateChange.MARK_UNREAD
+      "archived" -> InboxStateChange.ARCHIVE
+      "unarchived" -> InboxStateChange.UNARCHIVE
+      else -> null
+    }
+
+  /** Maps a read-filter string onto the native [InboxReadFilter]. */
+  private fun toReadFilter(raw: String): InboxReadFilter? =
+    when (raw) {
+      "all" -> InboxReadFilter.ALL
+      "unread" -> InboxReadFilter.UNREAD
+      "read" -> InboxReadFilter.READ
+      else -> null
+    }
+
+  /** Maps an archive-filter string onto the native [InboxArchiveFilter]. */
+  private fun toArchiveFilter(raw: String): InboxArchiveFilter? =
+    when (raw) {
+      "active" -> InboxArchiveFilter.ACTIVE
+      "archived" -> InboxArchiveFilter.ARCHIVED
+      "all" -> InboxArchiveFilter.ALL
+      else -> null
     }
 
   /**

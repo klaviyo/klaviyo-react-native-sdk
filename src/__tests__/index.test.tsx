@@ -1,5 +1,12 @@
 import { NativeModules } from 'react-native';
-import { Klaviyo, InboxError, InboxErrorCode } from '../index';
+import {
+  Klaviyo,
+  InboxArchiveFilter,
+  InboxError,
+  InboxErrorCode,
+  InboxFilter,
+  InboxReadFilter,
+} from '../index';
 import { EventName, type Event } from '../Event';
 import { ProfileProperty } from '../Profile';
 import {
@@ -54,6 +61,8 @@ jest.mock('react-native', () => {
         fetchInboxPage: jest.fn(),
         fetchInboxUnreadCount: jest.fn(),
         updateInboxMessageState: jest.fn(),
+        updateInboxMessageStates: jest.fn(),
+        clearInbox: jest.fn(),
         registerInboxChangeHandler: jest.fn(),
         unregisterInboxChangeHandler: jest.fn(),
         getConstants: jest.fn().mockReturnValue({
@@ -1818,6 +1827,89 @@ describe('Klaviyo SDK', () => {
       });
     });
 
+    describe('updateMessageStates', () => {
+      it.each(['read', 'unread', 'archived', 'unarchived'] as const)(
+        'forwards the %s state with its filter',
+        async (state) => {
+          native().updateInboxMessageStates.mockResolvedValue(3);
+
+          await expect(
+            Klaviyo.updateMessageStates(
+              state,
+              InboxFilter.where(
+                InboxReadFilter.Unread,
+                InboxArchiveFilter.Active
+              )
+            )
+          ).resolves.toBe(3);
+          expect(native().updateInboxMessageStates).toHaveBeenCalledWith(
+            state,
+            'unread',
+            'active'
+          );
+        }
+      );
+
+      it('sends allMessages as all and all', async () => {
+        native().updateInboxMessageStates.mockResolvedValue(0);
+
+        await Klaviyo.updateMessageStates('archived', InboxFilter.allMessages);
+
+        expect(native().updateInboxMessageStates).toHaveBeenCalledWith(
+          'archived',
+          'all',
+          'all'
+        );
+      });
+
+      it('resolves zero when nothing changed', async () => {
+        native().updateInboxMessageStates.mockResolvedValue(0);
+
+        await expect(
+          Klaviyo.updateMessageStates('read', InboxFilter.allMessages)
+        ).resolves.toBe(0);
+      });
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().updateInboxMessageStates.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(
+          Klaviyo.updateMessageStates('read', InboxFilter.allMessages)
+        ).rejects.toMatchObject({ code: InboxErrorCode.StorageFailure });
+      });
+    });
+
+    describe('clearAll', () => {
+      it('resolves how many messages were removed', async () => {
+        native().clearInbox.mockResolvedValue(5);
+
+        await expect(Klaviyo.clearAll()).resolves.toBe(5);
+        expect(native().clearInbox).toHaveBeenCalledWith();
+      });
+
+      it('resolves zero when there was nothing to remove', async () => {
+        native().clearInbox.mockResolvedValue(0);
+
+        await expect(Klaviyo.clearAll()).resolves.toBe(0);
+      });
+
+      it('normalizes a native rejection into an InboxError', async () => {
+        native().clearInbox.mockRejectedValue(
+          Object.assign(new Error('store'), {
+            code: InboxErrorCode.StorageFailure,
+          })
+        );
+
+        await expect(Klaviyo.clearAll()).rejects.toMatchObject({
+          code: InboxErrorCode.StorageFailure,
+        });
+      });
+    });
+
     describe('subscribe', () => {
       it('invokes the handler with no payload when native emits a change', () => {
         const handler = jest.fn();
@@ -2016,6 +2108,11 @@ describe('Klaviyo SDK', () => {
         ['fetchPage', () => Klaviyo.fetchPage()],
         ['fetchUnreadCount', () => Klaviyo.fetchUnreadCount()],
         ['updateMessageState', () => Klaviyo.updateMessageState('id', 'read')],
+        [
+          'updateMessageStates',
+          () => Klaviyo.updateMessageStates('read', InboxFilter.allMessages),
+        ],
+        ['clearAll', () => Klaviyo.clearAll()],
       ])('rejects %s with INBOX_UNAVAILABLE', async (_label, call) => {
         const promise = call();
 
@@ -2034,10 +2131,16 @@ describe('Klaviyo SDK', () => {
         await expect(
           Klaviyo.updateMessageState('id', 'read')
         ).rejects.toThrow();
+        await expect(
+          Klaviyo.updateMessageStates('read', InboxFilter.allMessages)
+        ).rejects.toThrow();
+        await expect(Klaviyo.clearAll()).rejects.toThrow();
 
         expect(native().fetchInboxPage).not.toHaveBeenCalled();
         expect(native().fetchInboxUnreadCount).not.toHaveBeenCalled();
         expect(native().updateInboxMessageState).not.toHaveBeenCalled();
+        expect(native().updateInboxMessageStates).not.toHaveBeenCalled();
+        expect(native().clearInbox).not.toHaveBeenCalled();
       });
 
       it('returns a no-op unsubscribe that touches no native method', () => {

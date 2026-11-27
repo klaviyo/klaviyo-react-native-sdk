@@ -151,6 +151,69 @@ extension KlaviyoBridge {
         #endif
     }
 
+    /// Applies a local read/archived state to every message that matches a filter. Resolves how many
+    /// messages changed. Both filters are required, since a bulk change has no safe default.
+    @objc
+    public static func updateInboxMessageStates(
+        state: String,
+        readFilter: String,
+        archiveFilter: String,
+        resolve: @escaping (NSNumber) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        // Reject an unrecognized value rather than apply a bulk change to the wrong messages.
+        guard let messageState = inboxMessageState(from: state) else {
+            reject(InboxErrorCode.storageFailure, "Unrecognized inbox message state '\(state)'")
+            return
+        }
+        guard let read = inboxReadFilter(from: readFilter) else {
+            reject(InboxErrorCode.storageFailure, "Unrecognized inbox readFilter '\(readFilter)'")
+            return
+        }
+        guard let archive = inboxArchiveFilter(from: archiveFilter) else {
+            reject(InboxErrorCode.storageFailure, "Unrecognized inbox archiveFilter '\(archiveFilter)'")
+            return
+        }
+
+        Task {
+            do {
+                let changed = try await KlaviyoSDK().mobileInbox.setMessageState(
+                    messageState,
+                    matching: .where(read: read, archive: archive)
+                )
+                resolve(NSNumber(value: changed))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
+    /// Removes every message this device has for the current company, and resolves how many were
+    /// removed. Messages for other companies are left alone.
+    @objc
+    public static func clearInbox(
+        resolve: @escaping (NSNumber) -> Void,
+        reject: @escaping (String, String) -> Void
+    ) {
+        #if canImport(KlaviyoInbox)
+        Task {
+            do {
+                resolve(NSNumber(value: try await KlaviyoSDK().mobileInbox.clearAll()))
+            } catch {
+                let payload = inboxErrorPayload(error)
+                reject(payload.0, payload.1)
+            }
+        }
+        #else
+        reject(InboxErrorCode.unavailable, "KlaviyoInbox is not linked into this build")
+        #endif
+    }
+
     /// Starts forwarding the native inbox change signal to JS. The event carries no payload: it is
     /// an invalidation, not a durable delivery.
     @objc

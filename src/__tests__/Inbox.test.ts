@@ -2,10 +2,12 @@ import {
   InboxArchiveFilter,
   InboxError,
   InboxErrorCode,
+  InboxFilter,
   InboxReadFilter,
   parseInboxMessage,
   parseInboxPage,
   toInboxError,
+  validateInboxFilterUpdate,
   validateInboxPageOptions,
   validateInboxStateUpdate,
 } from '../Inbox';
@@ -461,6 +463,96 @@ describe('validateInboxStateUpdate', () => {
     ['a non-string state', 1],
   ])('rejects %s', (_label, state) => {
     expect(validateInboxStateUpdate('msg-1', state)).toContain('state');
+  });
+});
+
+describe('InboxFilter', () => {
+  it('allMessages matches every message', () => {
+    expect(InboxFilter.allMessages).toEqual({
+      readFilter: InboxReadFilter.All,
+      archiveFilter: InboxArchiveFilter.All,
+    });
+  });
+
+  it('where builds a filter from a read and an archive state', () => {
+    expect(
+      InboxFilter.where(InboxReadFilter.Unread, InboxArchiveFilter.Active)
+    ).toEqual({ readFilter: 'unread', archiveFilter: 'active' });
+  });
+});
+
+describe('validateInboxFilterUpdate', () => {
+  it.each(['read', 'unread', 'archived', 'unarchived'])(
+    'accepts the %s state with allMessages',
+    (state) => {
+      expect(
+        validateInboxFilterUpdate(state, InboxFilter.allMessages)
+      ).toBeNull();
+    }
+  );
+
+  it.each(Object.values(InboxReadFilter))(
+    'accepts the %s read filter',
+    (read) => {
+      expect(
+        validateInboxFilterUpdate(
+          'read',
+          InboxFilter.where(read, InboxArchiveFilter.All)
+        )
+      ).toBeNull();
+    }
+  );
+
+  it.each(Object.values(InboxArchiveFilter))(
+    'accepts the %s archive filter',
+    (archive) => {
+      expect(
+        validateInboxFilterUpdate(
+          'archived',
+          InboxFilter.where(InboxReadFilter.All, archive)
+        )
+      ).toBeNull();
+    }
+  );
+
+  it.each([
+    ['an unknown state', 'deleted'],
+    ['a differently-cased state', 'READ'],
+    ['a non-string state', 1],
+  ])('rejects %s', (_label, state) => {
+    expect(validateInboxFilterUpdate(state, InboxFilter.allMessages)).toContain(
+      'state'
+    );
+  });
+
+  it.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['a string', 'all'],
+    ['a number', 1],
+  ])(
+    'rejects %s as the filter, since there is no default',
+    (_label, filter) => {
+      expect(validateInboxFilterUpdate('read', filter)).toContain('filter');
+    }
+  );
+
+  it.each([
+    ['a missing readFilter', { archiveFilter: 'all' }],
+    ['an unknown readFilter', { readFilter: 'seen', archiveFilter: 'all' }],
+    ['a non-string readFilter', { readFilter: 1, archiveFilter: 'all' }],
+  ])('rejects %s', (_label, filter) => {
+    expect(validateInboxFilterUpdate('read', filter)).toContain('readFilter');
+  });
+
+  it.each([
+    ['a missing archiveFilter', { readFilter: 'all' }],
+    ['an unknown archiveFilter', { readFilter: 'all', archiveFilter: 'old' }],
+    ['a non-string archiveFilter', { readFilter: 'all', archiveFilter: true }],
+  ])('rejects %s', (_label, filter) => {
+    expect(validateInboxFilterUpdate('read', filter)).toContain(
+      'archiveFilter'
+    );
   });
 });
 

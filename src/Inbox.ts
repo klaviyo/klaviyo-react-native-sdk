@@ -180,6 +180,39 @@ export type InboxArchiveFilter =
   (typeof InboxArchiveFilter)[keyof typeof InboxArchiveFilter];
 
 /**
+ * Which messages a bulk call such as {@link KlaviyoInboxApi.updateMessageStates} applies to, by read
+ * state and archived state.
+ *
+ * Unlike {@link InboxPageOptions}, which leaves archived messages out unless it asks for them, a
+ * filter has no default: a call that changes many messages always says which ones. Build one with
+ * {@link InboxFilter.where}, or use {@link InboxFilter.allMessages} for every message.
+ */
+export interface InboxFilter {
+  /** Whether read messages, unread messages, or both match. */
+  readonly readFilter: InboxReadFilter;
+  /** Whether archived messages, messages that are not archived, or both match. */
+  readonly archiveFilter: InboxArchiveFilter;
+}
+
+export const InboxFilter = {
+  /** Matches every message, read or unread, archived or not. */
+  allMessages: {
+    readFilter: InboxReadFilter.All,
+    archiveFilter: InboxArchiveFilter.All,
+  },
+
+  /**
+   * Matches the messages in the given read and archive states.
+   *
+   * @param read Whether read messages, unread messages, or both match
+   * @param archive Whether archived messages, messages that are not archived, or both match
+   */
+  where(read: InboxReadFilter, archive: InboxArchiveFilter): InboxFilter {
+    return { readFilter: read, archiveFilter: archive };
+  },
+} as const;
+
+/**
  * Which page of the inbox to fetch.
  *
  * The filters narrow which messages the pages are made of, and they are independent: a read filter
@@ -278,6 +311,62 @@ export interface KlaviyoInboxApi {
     messageId: string,
     state: InboxMessageState
   ): Promise<boolean>;
+
+  /**
+   * Put every message that matches `filter` into a local state, for example to mark everything
+   * read. The bulk form of {@link updateMessageState}, applied to the current company's messages
+   * in one change, so {@link subscribe} handlers fire once.
+   *
+   * A message already in `state` is never matched, so it is not counted and not changed, and
+   * repeating the call returns 0. That means a filter that allows only such messages changes
+   * nothing: `'read'` with `{ readFilter: 'read' }`, `'unread'` with `{ readFilter: 'unread' }`,
+   * `'archived'` with `{ archiveFilter: 'archived' }`, or `'unarchived'` with
+   * `{ archiveFilter: 'active' }`. To unarchive, ask for archived messages.
+   *
+   * ```ts
+   * // Archive everything.
+   * await Klaviyo.updateMessageStates('archived', InboxFilter.allMessages);
+   *
+   * // Mark everything in the visible inbox as read.
+   * await Klaviyo.updateMessageStates(
+   *   'read',
+   *   InboxFilter.where(InboxReadFilter.Unread, InboxArchiveFilter.Active)
+   * );
+   *
+   * // Restore archived messages.
+   * await Klaviyo.updateMessageStates(
+   *   'unarchived',
+   *   InboxFilter.where(InboxReadFilter.All, InboxArchiveFilter.Archived)
+   * );
+   * ```
+   *
+   * The state is local to this device, like {@link updateMessageState}.
+   *
+   * @param state The state to apply
+   * @param filter Which messages to apply it to. Required: there is no default.
+   * @returns How many messages changed. 0 when none did, when the filter cannot match (see above),
+   *   and before the SDK is initialized
+   */
+  updateMessageStates(
+    state: InboxMessageState,
+    filter: InboxFilter
+  ): Promise<number>;
+
+  /**
+   * Remove every message this device has for the current company.
+   *
+   * This is a local delete, not a server-side unsubscribe or a suppression: the messages are gone
+   * from this device's store only. Messages for other companies on the device are left alone.
+   * It does not replace the clear on a profile reset: calling `resetProfile()` already clears the
+   * inbox in full, for every company, natively, so one profile's messages are never shown to the
+   * next.
+   *
+   * {@link subscribe} handlers fire once, and not at all when there was nothing to remove.
+   *
+   * @returns How many messages were removed. 0 when there were none, and before the SDK is
+   *   initialized
+   */
+  clearAll(): Promise<number>;
 
   /**
    * Subscribe to inbox change invalidations.
@@ -486,6 +575,48 @@ export function validateInboxStateUpdate(
     !(INBOX_MESSAGE_STATES as readonly string[]).includes(state)
   ) {
     return `Inbox state must be one of: ${INBOX_MESSAGE_STATES.join(', ')}`;
+  }
+
+  return null;
+}
+
+/**
+ * Validates an {@link KlaviyoInboxApi.updateMessageStates} call at runtime, returning an error
+ * message or `null` when valid.
+ *
+ * Both filter fields are required. A bulk change with a missing filter would have to guess which
+ * messages the caller meant, and the wrong guess changes or hides data, so it is rejected instead.
+ *
+ * @param state The state to apply
+ * @param filter Which messages to apply it to
+ */
+export function validateInboxFilterUpdate(
+  state: unknown,
+  filter: unknown
+): string | null {
+  if (
+    typeof state !== 'string' ||
+    !(INBOX_MESSAGE_STATES as readonly string[]).includes(state)
+  ) {
+    return `Inbox state must be one of: ${INBOX_MESSAGE_STATES.join(', ')}`;
+  }
+
+  if (typeof filter !== 'object' || filter === null) {
+    return 'Inbox filter is required: use InboxFilter.allMessages or InboxFilter.where(read, archive)';
+  }
+
+  const { readFilter, archiveFilter } = filter as Record<string, unknown>;
+  if (
+    typeof readFilter !== 'string' ||
+    !INBOX_READ_FILTERS.includes(readFilter)
+  ) {
+    return `Inbox filter readFilter must be one of: ${INBOX_READ_FILTERS.join(', ')}`;
+  }
+  if (
+    typeof archiveFilter !== 'string' ||
+    !INBOX_ARCHIVE_FILTERS.includes(archiveFilter)
+  ) {
+    return `Inbox filter archiveFilter must be one of: ${INBOX_ARCHIVE_FILTERS.join(', ')}`;
   }
 
   return null;
